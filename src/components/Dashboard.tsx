@@ -259,10 +259,10 @@ export function Dashboard() {
       title: 'Vendas hoje',
       value: `R$ ${todayRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
       icon: DollarSign,
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-100',
+      color: 'text-green-600',
+      bgColor: 'bg-green-100',
       count: todaySales.length,
-      gradient: 'from-yellow-500 to-yellow-600',
+      gradient: 'from-green-500 to-green-600',
       trend: todayRevenue > 0 ? 'up' : 'neutral'
     },
     {
@@ -272,7 +272,7 @@ export function Dashboard() {
       color: 'text-green-600',
       bgColor: 'bg-green-100',
       percentage: todayRevenue > 0 ? ((todayReceived / todayRevenue) * 100).toFixed(1) : '0',
-      gradient: 'from-green-500 to-green-600',
+      gradient: 'from-green-400 to-green-500',
       trend: todayReceived > 0 ? 'up' : 'neutral'
     },
     {
@@ -332,64 +332,33 @@ export function Dashboard() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="bg-gradient-to-r from-yellow-600 via-green-600 to-green-700 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden"
-      >
-        <div className="absolute inset-0 bg-gradient-to-r from-yellow-600/20 to-green-700/20 backdrop-blur-sm"></div>
-        {/* Background Logo */}
-        <div className="absolute right-8 top-1/2 transform -translate-y-1/2 opacity-20">
-          <img 
-            src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
-            alt="RevGold Logo" 
-            className="h-32 w-auto"
-          />
-        </div>
-        <div className="relative z-10">
-          <div className="flex items-center justify-between">
-            <div>
-              <motion.h1 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2, duration: 0.6 }}
-                className="text-4xl font-bold mb-2"
-              >
-                Dashboard RevGold
-              </motion.h1>
-              <motion.p 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4, duration: 0.6 }}
-                className="text-yellow-100 text-lg mb-4"
-              >
-                Gestão Financeira Completa com Analytics Avançados
-              </motion.p>
-              <motion.div 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.6, duration: 0.6 }}
-                className="flex items-center text-yellow-100"
-              >
-                <Calendar className="w-5 h-5 mr-2" />
-                <span>
-                  {currentTime.toLocaleDateString('pt-BR', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
-                </span>
-                <Clock className="w-5 h-5 ml-6 mr-2" />
-                <span>
-                  {currentTime.toLocaleTimeString('pt-BR')}
-                </span>
-              </motion.div>
+      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Dashboard RevGold
+            </h1>
+            <p className="text-gray-600 text-lg mb-4">
+              Gestão Financeira Completa
+            </p>
+            <div className="flex items-center text-gray-600">
+              <Calendar className="w-5 h-5 mr-2" />
+              <span>
+                {currentTime.toLocaleDateString('pt-BR', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </span>
+              <Clock className="w-5 h-5 ml-6 mr-2" />
+              <span>
+                {currentTime.toLocaleTimeString('pt-BR')}
+              </span>
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -402,22 +371,14 @@ export function Dashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1, duration: 0.6 }}
               whileHover={{ scale: 1.05, y: -8 }}
-              className="card relative overflow-hidden hover-lift bg-gradient-to-br from-white to-gray-50"
+              className="card relative overflow-hidden hover-lift"
             >
-              {/* Background Logo */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-5">
-                <img 
-                  src="/f7d2460f-1324-48db-b983-026fdd18be94.jpg" 
-                  alt="RevGold Background" 
-                  className="w-24 h-24 object-contain"
-                />
-              </div>
-              <div className="relative z-10">
+              <div>
                 <div className="flex items-center justify-between mb-4">
                   <motion.div 
                     whileHover={{ rotate: 360 }}
                     transition={{ duration: 0.6 }}
-                    className={`p-4 rounded-2xl bg-gradient-to-br ${metric.gradient} shadow-2xl`}
+                    className={`p-3 rounded-lg bg-gradient-to-br ${metric.gradient} shadow-lg`}
                   >
                     <Icon className="w-6 h-6 text-white" />
                   </motion.div>
@@ -466,10 +427,10 @@ export function Dashboard() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2, duration: 0.6 }}
-          className="bg-white rounded-3xl p-6 shadow-xl border border-gray-100"
+          className="bg-white rounded-lg p-6 shadow-lg border border-gray-200"
         >
           <div className="flex items-center mb-6">
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-500 to-blue-600 shadow-lg">
+            <div className="p-3 rounded-lg bg-green-600 shadow-lg">
               <Zap className="w-6 h-6 text-white" />
             </div>
             <div className="ml-4">
@@ -541,10 +502,10 @@ export function Dashboard() {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4, duration: 0.6 }}
-          className="bg-white rounded-3xl p-6 shadow-xl border border-gray-100"
+          className="bg-white rounded-lg p-6 shadow-lg border border-gray-200"
         >
           <div className="flex items-center mb-6">
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 shadow-lg">
+            <div className="p-3 rounded-lg bg-green-500 shadow-lg">
               <Target className="w-6 h-6 text-white" />
             </div>
             <div className="ml-4">

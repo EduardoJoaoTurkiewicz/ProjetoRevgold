@@ -20,9 +20,9 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-green-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-yellow-200 shadow-xl sticky top-0 z-50">
+      <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
@@ -31,7 +31,7 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
                 alt="RevGold Logo" 
                 className="h-10 w-auto"
               />
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold text-green-600">
                 RevGold System
               </h1>
             </div>
@@ -41,15 +41,7 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
 
       <div className="flex">
         {/* Sidebar */}
-        <nav className="w-64 bg-white/95 backdrop-blur-md shadow-xl border-r border-yellow-200 min-h-screen relative overflow-hidden">
-          {/* Background Logo */}
-          <div className="absolute inset-0 flex items-center justify-center opacity-5">
-            <img 
-              src="/f7d2460f-1324-48db-b983-026fdd18be94.jpg" 
-              alt="RevGold Background" 
-              className="w-48 h-48 object-contain"
-            />
-          </div>
+        <nav className="w-64 bg-white shadow-lg border-r border-gray-200 min-h-screen">
           <div className="p-6">
             <ul className="space-y-2">
               {menuItems.map((item) => {
@@ -58,10 +50,10 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
                   <li key={item.id}>
                     <button
                       onClick={() => onPageChange(item.id)}
-                      className={`relative z-10 w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 ${
+                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 ${
                         currentPage === item.id
-                          ? 'bg-gradient-to-r from-yellow-500 to-green-500 text-white shadow-lg'
-                          : 'text-gray-700 hover:bg-yellow-50 hover:text-yellow-700'
+                          ? 'bg-green-600 text-white shadow-md'
+                          : 'text-gray-700 hover:bg-green-50 hover:text-green-700'
                       }`}
                     >
                       <Icon className="h-5 w-5" />

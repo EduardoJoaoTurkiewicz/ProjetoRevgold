@@ -102,17 +102,8 @@ export function Boletos() {
       )}
 
       {/* Boletos List */}
-      <div className="card relative overflow-hidden">
-        {/* Background Logo */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-5">
-          <img 
-            src="/f7d2460f-1324-48db-b983-026fdd18be94.jpg" 
-            alt="RevGold Background" 
-            className="w-64 h-64 object-contain"
-          />
-        </div>
-        
-        <div className="relative z-10">
+      <div className="card">
+        <div>
           {state.boletos.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full table-auto">
@@ -129,7 +120,7 @@ export function Boletos() {
                 </thead>
                 <tbody>
                   {state.boletos.map(boleto => (
-                    <tr key={boleto.id} className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-yellow-50 hover:to-green-50 transition-all duration-300">
+                    <tr key={boleto.id} className="border-b border-gray-100 hover:bg-green-50 transition-all duration-300">
                       <td className="py-4 px-6 text-sm font-medium">{boleto.client}</td>
                       <td className="py-4 px-6 text-sm font-semibold text-green-600">
                         R$ {boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
