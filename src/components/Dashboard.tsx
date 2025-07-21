@@ -16,7 +16,11 @@ import {
   Zap,
   ArrowUpRight,
   ArrowDownRight,
-  TrendingDown as TrendingDownIcon
+  TrendingDown as TrendingDownIcon,
+  Briefcase,
+  Receipt,
+  FileText,
+  Building2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
@@ -32,13 +36,18 @@ import {
   RadialBarChart,
   RadialBar,
   ComposedChart,
+  ScatterChart,
+  Scatter,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
-  Treemap
+  Treemap,
+  FunnelChart,
+  Funnel,
+  LabelList
 } from 'recharts';
 import { useApp } from '../context/AppContext';
 
@@ -256,44 +265,44 @@ export function Dashboard() {
 
   const metrics = [
     {
-      title: 'Vendas hoje',
+      title: 'Faturamento Hoje',
       value: `R$ ${todayRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-      icon: DollarSign,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
+      icon: Briefcase,
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-100',
       count: todaySales.length,
-      gradient: 'from-green-500 to-green-600',
+      gradient: 'from-emerald-600 to-emerald-700',
       trend: todayRevenue > 0 ? 'up' : 'neutral'
     },
     {
-      title: 'Valor recebido hoje',
+      title: 'Recebimentos Hoje',
       value: `R$ ${todayReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
       icon: TrendingUp,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-100',
       percentage: todayRevenue > 0 ? ((todayReceived / todayRevenue) * 100).toFixed(1) : '0',
-      gradient: 'from-green-400 to-green-500',
+      gradient: 'from-blue-600 to-blue-700',
       trend: todayReceived > 0 ? 'up' : 'neutral'
     },
     {
-      title: 'Dívidas feitas hoje',
-      value: `${todayDebts.length}`,
-      icon: AlertTriangle,
+      title: 'Gastos Hoje',
+      value: `R$ ${todayExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      icon: CreditCard,
       color: 'text-red-600',
       bgColor: 'bg-red-100',
-      count: todayDebts.length,
+      count: todayDebts.length + todayEmployeePaymentsDue.length + todayEmployeePaymentsMade.length,
       gradient: 'from-red-500 to-red-600',
       trend: todayDebts.length > 0 ? 'down' : 'up'
     },
     {
-      title: 'Valor pago hoje',
-      value: `R$ ${todayExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-      icon: DollarSign,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
-      count: todayDebts.length + todayEmployeePaymentsDue.length + todayEmployeePaymentsMade.length,
-      gradient: 'from-blue-500 to-blue-600',
-      trend: todayExpenses > 0 ? 'down' : 'up'
+      title: 'Saldo Líquido',
+      value: `R$ ${(todayReceived - todayExpenses).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      icon: Target,
+      color: todayReceived - todayExpenses >= 0 ? 'text-emerald-600' : 'text-red-600',
+      bgColor: todayReceived - todayExpenses >= 0 ? 'bg-emerald-100' : 'bg-red-100',
+      count: todaySales.length,
+      gradient: todayReceived - todayExpenses >= 0 ? 'from-emerald-500 to-emerald-600' : 'from-red-500 to-red-600',
+      trend: todayReceived - todayExpenses >= 0 ? 'up' : 'down'
     }
   ];
 
@@ -330,20 +339,117 @@ export function Dashboard() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-8">
       {/* Header */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-8">
-        <div className="flex items-center justify-between">
+      <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 rounded-3xl p-8 shadow-2xl border border-slate-300 mb-8">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Dashboard RevGold
+            <h1 className="text-4xl lg:text-5xl font-bold text-white mb-3 drop-shadow-lg">
+              Central de Comando
             </h1>
-            <p className="text-gray-600 text-lg mb-4">
-              Gestão Financeira Completa
+            <p className="text-slate-200 text-xl mb-4">
+              Sistema Integrado de Gestão Empresarial
             </p>
-            <div className="flex items-center text-gray-600">
-              <Calendar className="w-5 h-5 mr-2" />
-              <span>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 text-slate-300">
+              <div className="flex items-center">
+                <Calendar className="w-5 h-5 mr-2" />
+                <span>
+                  {currentTime.toLocaleDateString('pt-BR', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </span>
+              </div>
+              <div className="flex items-center">
+                <Clock className="w-5 h-5 mr-2" />
+                <span className="font-mono text-lg">
+                  {currentTime.toLocaleTimeString('pt-BR')}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col items-end">
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+              <div className="text-right">
+                <p className="text-slate-300 text-sm mb-1">Lucro Mensal</p>
+                <p className="text-3xl font-bold text-white">
+                  R$ {(monthlyRevenue - state.debts.filter(debt => {
+                    const debtDate = new Date(debt.date);
+                    return debtDate.getMonth() === currentMonth && debtDate.getFullYear() === currentYear;
+                  }).reduce((sum, debt) => sum + debt.totalValue, 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div className="text-right mt-2">
+                <p className="text-slate-300 text-sm">Meta: R$ 500.000,00</p>
+                <div className="w-32 bg-white/20 rounded-full h-2 mt-1">
+                  <div 
+                    className="bg-emerald-400 h-2 rounded-full transition-all duration-1000" 
+                    style={{ 
+                      width: `${Math.min(100, ((monthlyRevenue - state.debts.filter(debt => {
+                        const debtDate = new Date(debt.date);
+                        return debtDate.getMonth() === currentMonth && debtDate.getFullYear() === currentYear;
+                      }).reduce((sum, debt) => sum + debt.totalValue, 0)) / 500000) * 100)}%` 
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <div className="bg-white rounded-2xl p-6 shadow-xl border border-slate-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-600 text-sm font-medium">Vendas Mês</p>
+              <p className="text-2xl font-bold text-slate-900">{monthlySales.length}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-blue-100">
+              <DollarSign className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-2xl p-6 shadow-xl border border-slate-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-600 text-sm font-medium">Cheques Ativos</p>
+              <p className="text-2xl font-bold text-slate-900">{state.checks.length}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-purple-100">
+              <FileText className="w-6 h-6 text-purple-600" />
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-2xl p-6 shadow-xl border border-slate-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-600 text-sm font-medium">Boletos</p>
+              <p className="text-2xl font-bold text-slate-900">{state.boletos.length}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-orange-100">
+              <Receipt className="w-6 h-6 text-orange-600" />
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-2xl p-6 shadow-xl border border-slate-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-600 text-sm font-medium">Funcionários</p>
+              <p className="text-2xl font-bold text-slate-900">{state.employees.filter(e => e.isActive).length}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-emerald-100">
+              <Users className="w-6 h-6 text-emerald-600" />
+            </div>
+          </div>
+        </div>
+      </div>
                 {currentTime.toLocaleDateString('pt-BR', { 
                   weekday: 'long', 
                   year: 'numeric', 
@@ -361,7 +467,7 @@ export function Dashboard() {
       </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         {metrics.map((metric, index) => {
           const Icon = metric.icon;
           return (
@@ -370,21 +476,21 @@ export function Dashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1, duration: 0.6 }}
-              whileHover={{ scale: 1.05, y: -8 }}
-              className="card relative overflow-hidden hover-lift"
+              whileHover={{ scale: 1.02, y: -4 }}
+              className="bg-white rounded-3xl p-6 shadow-xl border border-slate-200 relative overflow-hidden hover-lift"
             >
-              <div>
-                <div className="flex items-center justify-between mb-4">
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-6">
                   <motion.div 
                     whileHover={{ rotate: 360 }}
                     transition={{ duration: 0.6 }}
-                    className={`p-3 rounded-lg bg-gradient-to-br ${metric.gradient} shadow-lg`}
+                    className={`p-4 rounded-2xl bg-gradient-to-br ${metric.gradient} shadow-xl`}
                   >
-                    <Icon className="w-6 h-6 text-white" />
+                    <Icon className="w-7 h-7 text-white" />
                   </motion.div>
                   <div className="text-right">
                     {metric.trend && (
-                      <div className={`flex items-center text-xs font-medium ${
+                      <div className={`flex items-center text-xs font-bold ${
                         metric.trend === 'up' ? 'text-green-600' : 
                         metric.trend === 'down' ? 'text-red-600' : 'text-gray-500'
                       }`}>
@@ -395,26 +501,27 @@ export function Dashboard() {
                       </div>
                     )}
                     {metric.count !== undefined && (
-                      <div className="text-sm text-gray-500 font-medium">{metric.count} item(s)</div>
+                      <div className="text-sm text-slate-500 font-bold">{metric.count} item(s)</div>
                     )}
                     {metric.percentage && (
-                      <div className="text-sm text-gray-500 font-medium">{metric.percentage}%</div>
+                      <div className="text-sm text-slate-500 font-bold">{metric.percentage}%</div>
                     )}
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">{metric.title}</p>
+                  <p className="text-sm font-bold text-slate-600 mb-2">{metric.title}</p>
                   <motion.p 
                     key={`${metric.title}-${animationKey}`}
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.4 }}
-                    className="text-xl xl:text-2xl font-bold text-gray-900"
+                    className="text-2xl xl:text-3xl font-bold text-slate-900"
                   >
                     {metric.value}
                   </motion.p>
                 </div>
               </div>
+              <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-slate-50 opacity-50" />
             </motion.div>
           );
         })}
@@ -427,71 +534,73 @@ export function Dashboard() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2, duration: 0.6 }}
-          className="bg-white rounded-lg p-6 shadow-lg border border-gray-200"
+          className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-200"
         >
-          <div className="flex items-center mb-6">
-            <div className="p-3 rounded-lg bg-green-600 shadow-lg">
-              <Zap className="w-6 h-6 text-white" />
+          <div className="flex items-center mb-8">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-700 shadow-xl">
+              <Zap className="w-8 h-8 text-white" />
             </div>
-            <div className="ml-4">
-              <h3 className="text-xl font-bold text-gray-900">Fluxo de Caixa</h3>
-              <p className="text-sm text-gray-600">Entradas vs Saídas dos últimos 7 dias</p>
+            <div className="ml-6">
+              <h3 className="text-2xl font-bold text-slate-900">Fluxo de Caixa Semanal</h3>
+              <p className="text-slate-600 font-medium">Análise detalhada dos últimos 7 dias</p>
             </div>
           </div>
           
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={350}>
             <ComposedChart data={cashFlowData} key={`cashflow-${animationKey}`}>
               <defs>
                 <linearGradient id="colorEntrada" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                  <stop offset="5%" stopColor="#059669" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#059669" stopOpacity={0.1}/>
                 </linearGradient>
                 <linearGradient id="colorSaida" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
                   <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis 
                 dataKey="date" 
-                stroke="#64748b"
-                fontSize={12}
+                stroke="#475569"
+                fontSize={13}
+                fontWeight="600"
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis 
-                stroke="#64748b"
-                fontSize={12}
+                stroke="#475569"
+                fontSize={13}
+                fontWeight="600"
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Legend />
+              <Legend wrapperStyle={{ fontWeight: '600' }} />
               <Bar
                 dataKey="entrada"
-                fill="#10b981"
+                fill="#059669"
                 name="Entradas"
-                radius={[4, 4, 0, 0]}
+                radius={[6, 6, 0, 0]}
                 animationDuration={2000}
               />
               <Bar
                 dataKey="saida"
                 fill="#ef4444"
                 name="Saídas"
-                radius={[4, 4, 0, 0]}
+                radius={[6, 6, 0, 0]}
                 animationDuration={2000}
                 animationDelay={300}
               />
               <Line
                 type="monotone"
                 dataKey="saldo"
-                stroke="#3b82f6"
-                strokeWidth={3}
+                stroke="#1e40af"
+                strokeWidth={4}
                 name="Saldo"
                 animationDuration={2000}
                 animationDelay={600}
-                dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
+                dot={{ fill: '#1e40af', strokeWidth: 3, r: 6 }}
               />
             </ComposedChart>
           </ResponsiveContainer>
@@ -502,19 +611,19 @@ export function Dashboard() {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4, duration: 0.6 }}
-          className="bg-white rounded-lg p-6 shadow-lg border border-gray-200"
+          className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-200"
         >
-          <div className="flex items-center mb-6">
-            <div className="p-3 rounded-lg bg-green-500 shadow-lg">
-              <Target className="w-6 h-6 text-white" />
+          <div className="flex items-center mb-8">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-600 to-purple-700 shadow-xl">
+              <Target className="w-8 h-8 text-white" />
             </div>
-            <div className="ml-4">
-              <h3 className="text-xl font-bold text-gray-900">Indicadores de Performance</h3>
-              <p className="text-sm text-gray-600">Métricas de desempenho em tempo real</p>
+            <div className="ml-6">
+              <h3 className="text-2xl font-bold text-slate-900">KPIs Empresariais</h3>
+              <p className="text-slate-600 font-medium">Indicadores chave de performance</p>
             </div>
           </div>
           
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={350}>
             <RadialBarChart 
               cx="50%" 
               cy="50%" 
@@ -525,33 +634,138 @@ export function Dashboard() {
             >
               <RadialBar
                 minAngle={15}
-                label={{ position: 'insideStart', fill: '#fff', fontSize: 12 }}
+                label={{ position: 'insideStart', fill: '#fff', fontSize: 14, fontWeight: 'bold' }}
                 background
                 clockWise
                 dataKey="value"
-                cornerRadius={10}
+                cornerRadius={15}
                 fill="#8884d8"
                 animationDuration={2000}
               />
               <Legend 
-                iconSize={10}
+                iconSize={12}
                 layout="vertical"
                 verticalAlign="middle"
                 align="right"
+                wrapperStyle={{ fontWeight: '600' }}
                 formatter={(value, entry) => (
-                  <span style={{ color: entry.color, fontWeight: 500 }}>
+                  <span style={{ color: entry.color, fontWeight: 600 }}>
                     {value}
                   </span>
                 )}
               />
               <Tooltip 
                 formatter={(value) => [`${Number(value).toFixed(1)}%`, 'Performance']}
+                contentStyle={{ fontWeight: '600' }}
               />
             </RadialBarChart>
           </ResponsiveContainer>
         </motion.div>
       </div>
 
+      {/* New Advanced Charts Row */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        {/* Sales Funnel */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8, duration: 0.6 }}
+          className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-200"
+        >
+          <div className="flex items-center mb-8">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 shadow-xl">
+              <Building2 className="w-8 h-8 text-white" />
+            </div>
+            <div className="ml-6">
+              <h3 className="text-2xl font-bold text-slate-900">Funil de Vendas</h3>
+              <p className="text-slate-600 font-medium">Conversão por etapa do processo</p>
+            </div>
+          </div>
+          
+          <ResponsiveContainer width="100%" height={350}>
+            <FunnelChart key={`funnel-${animationKey}`}>
+              <Tooltip 
+                formatter={(value, name) => [`${value}`, name]}
+                contentStyle={{ fontWeight: '600' }}
+              />
+              <Funnel
+                dataKey="value"
+                data={[
+                  { name: 'Leads Gerados', value: state.sales.length + 50, fill: '#3b82f6' },
+                  { name: 'Propostas Enviadas', value: state.sales.length + 20, fill: '#6366f1' },
+                  { name: 'Negociações', value: state.sales.length + 10, fill: '#8b5cf6' },
+                  { name: 'Vendas Fechadas', value: state.sales.length, fill: '#059669' }
+                ]}
+                animationDuration={2000}
+              >
+                <LabelList position="center" fill="#fff" stroke="none" fontSize={14} fontWeight="bold" />
+              </Funnel>
+            </FunnelChart>
+          </ResponsiveContainer>
+        </motion.div>
+
+        {/* Scatter Plot - Revenue vs Time */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.0, duration: 0.6 }}
+          className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-200"
+        >
+          <div className="flex items-center mb-8">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-rose-600 to-rose-700 shadow-xl">
+              <Activity className="w-8 h-8 text-white" />
+            </div>
+            <div className="ml-6">
+              <h3 className="text-2xl font-bold text-slate-900">Dispersão de Vendas</h3>
+              <p className="text-slate-600 font-medium">Valor vs Frequência de vendas</p>
+            </div>
+          </div>
+          
+          <ResponsiveContainer width="100%" height={350}>
+            <ScatterChart key={`scatter-${animationKey}`}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis 
+                type="number" 
+                dataKey="x" 
+                name="Dia do Mês"
+                stroke="#475569"
+                fontSize={13}
+                fontWeight="600"
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis 
+                type="number" 
+                dataKey="y" 
+                name="Valor"
+                stroke="#475569"
+                fontSize={13}
+                fontWeight="600"
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
+              />
+              <Tooltip 
+                cursor={{ strokeDasharray: '3 3' }}
+                formatter={(value, name) => [
+                  name === 'Valor' ? `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : value,
+                  name
+                ]}
+                contentStyle={{ fontWeight: '600' }}
+              />
+              <Scatter
+                name="Vendas"
+                data={state.sales.map(sale => ({
+                  x: new Date(sale.date).getDate(),
+                  y: sale.totalValue
+                }))}
+                fill="#059669"
+                animationDuration={2000}
+              />
+            </ScatterChart>
+          </ResponsiveContainer>
+        </motion.div>
+      </div>
       {/* Additional Charts Row */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
         {/* Payment Methods Pie Chart */}
@@ -559,27 +773,27 @@ export function Dashboard() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.6, duration: 0.6 }}
-          className="bg-white rounded-3xl p-6 shadow-xl border border-gray-100"
+          className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-200"
         >
-          <div className="flex items-center mb-6">
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 shadow-lg">
-              <PieChart className="w-6 h-6 text-white" />
+          <div className="flex items-center mb-8">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-600 to-orange-700 shadow-xl">
+              <PieChart className="w-8 h-8 text-white" />
             </div>
-            <div className="ml-4">
-              <h3 className="text-xl font-bold text-gray-900">Métodos de Pagamento</h3>
-              <p className="text-sm text-gray-600">Distribuição por tipo de pagamento</p>
+            <div className="ml-6">
+              <h3 className="text-2xl font-bold text-slate-900">Métodos de Pagamento</h3>
+              <p className="text-slate-600 font-medium">Distribuição por modalidade</p>
             </div>
           </div>
           
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={350}>
             <RechartsPieChart key={`pie-${animationKey}`}>
               <Pie
                 data={pieChartData}
                 cx="50%"
                 cy="50%"
-                outerRadius={100}
-                innerRadius={40}
-                paddingAngle={5}
+                outerRadius={120}
+                innerRadius={50}
+                paddingAngle={8}
                 dataKey="value"
                 animationBegin={0}
                 animationDuration={2000}
@@ -589,16 +803,17 @@ export function Dashboard() {
                     key={`cell-${index}`} 
                     fill={COLORS[index % COLORS.length]}
                     stroke="#fff"
-                    strokeWidth={2}
+                    strokeWidth={3}
                   />
                 ))}
               </Pie>
               <Tooltip content={<CustomPieTooltip />} />
               <Legend 
                 verticalAlign="bottom" 
-                height={36}
+                height={40}
+                wrapperStyle={{ fontWeight: '600' }}
                 formatter={(value, entry) => (
-                  <span style={{ color: entry.color, fontWeight: 500 }}>
+                  <span style={{ color: entry.color, fontWeight: 600 }}>
                     {value}
                   </span>
                 )}
@@ -612,52 +827,53 @@ export function Dashboard() {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.8, duration: 0.6 }}
-          className="bg-white rounded-3xl p-6 shadow-xl border border-gray-100"
+          className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-200"
         >
-          <div className="flex items-center mb-6">
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg">
-              <BarChart3 className="w-6 h-6 text-white" />
+          <div className="flex items-center mb-8">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-cyan-600 to-cyan-700 shadow-xl">
+              <BarChart3 className="w-8 h-8 text-white" />
             </div>
-            <div className="ml-4">
-              <h3 className="text-xl font-bold text-gray-900">Top Produtos Vendidos</h3>
-              <p className="text-sm text-gray-600">Produtos mais vendidos por quantidade</p>
+            <div className="ml-6">
+              <h3 className="text-2xl font-bold text-slate-900">Produtos Mais Vendidos</h3>
+              <p className="text-slate-600 font-medium">Ranking por volume de vendas</p>
             </div>
           </div>
           
-          <div className="space-y-4">
+          <div className="space-y-6">
             {topProducts.map((product, index) => (
               <motion.div
                 key={product.name}
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1, duration: 0.4 }}
-                className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl hover:from-gray-100 hover:to-gray-200 transition-all duration-300"
+                className="flex items-center justify-between p-6 bg-gradient-to-r from-slate-50 to-slate-100 rounded-2xl hover:from-slate-100 hover:to-slate-200 transition-all duration-300 shadow-lg hover:shadow-xl"
               >
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                    index === 0 ? 'bg-yellow-500' :
-                    index === 1 ? 'bg-gray-400' :
-                    index === 2 ? 'bg-orange-600' :
-                    'bg-blue-500'
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg ${
+                    index === 0 ? 'bg-gradient-to-br from-yellow-500 to-yellow-600' :
+                    index === 1 ? 'bg-gradient-to-br from-slate-400 to-slate-500' :
+                    index === 2 ? 'bg-gradient-to-br from-orange-600 to-orange-700' :
+                    'bg-gradient-to-br from-blue-500 to-blue-600'
                   }`}>
                     {index + 1}
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">{product.name}</p>
-                    <p className="text-sm text-gray-600">{product.quantity} vendas</p>
+                    <p className="font-bold text-slate-900 text-lg">{product.name}</p>
+                    <p className="text-sm text-slate-600 font-medium">{product.quantity} unidades vendidas</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-gray-900">
+                  <p className="font-bold text-slate-900 text-lg">
                     R$ {product.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
+                  <p className="text-sm text-slate-600 font-medium">Faturamento</p>
                 </div>
               </motion.div>
             ))}
             
             {topProducts.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <BarChart3 className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <div className="text-center py-12 text-slate-500">
+                <BarChart3 className="w-16 h-16 mx-auto mb-4 text-slate-300" />
                 <p>Nenhum produto vendido ainda.</p>
               </div>
             )}
@@ -670,57 +886,59 @@ export function Dashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6, duration: 0.6 }}
-        className="bg-white rounded-3xl p-6 shadow-xl border border-gray-100"
+        className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-200"
       >
-        <div className="flex items-center mb-6">
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-500 to-red-500 shadow-lg">
-            <BarChart3 className="w-6 h-6 text-white" />
+        <div className="flex items-center mb-8">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-600 to-red-600 shadow-xl">
+            <BarChart3 className="w-8 h-8 text-white" />
           </div>
-          <div className="ml-4">
-            <h3 className="text-xl font-bold text-gray-900">Comparativo Mensal</h3>
-            <p className="text-sm text-gray-600">Vendas, gastos e lucro dos últimos 6 meses</p>
+          <div className="ml-6">
+            <h3 className="text-2xl font-bold text-slate-900">Análise Comparativa Mensal</h3>
+            <p className="text-slate-600 font-medium">Performance financeira dos últimos 6 meses</p>
           </div>
         </div>
         
-        <ResponsiveContainer width="100%" height={400}>
+        <ResponsiveContainer width="100%" height={450}>
           <BarChart data={monthlyComparisonData} key={`bar-${animationKey}`}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis 
               dataKey="month" 
-              stroke="#64748b"
-              fontSize={12}
+              stroke="#475569"
+              fontSize={14}
+              fontWeight="600"
               tickLine={false}
               axisLine={false}
             />
             <YAxis 
-              stroke="#64748b"
-              fontSize={12}
+              stroke="#475569"
+              fontSize={14}
+              fontWeight="600"
               tickLine={false}
               axisLine={false}
               tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
             />
             <Tooltip content={<CustomTooltip />} />
-            <Legend />
+            <Legend wrapperStyle={{ fontWeight: '600' }} />
             <Bar 
               dataKey="vendas" 
-              fill="#10b981" 
+              fill="#059669" 
               name="Vendas"
-              radius={[4, 4, 0, 0]}
+              radius={[6, 6, 0, 0]}
               animationDuration={2000}
             />
             <Bar 
               dataKey="gastos" 
               fill="#ef4444" 
               name="Gastos"
-              radius={[4, 4, 0, 0]}
+              radius={[6, 6, 0, 0]}
               animationDuration={2000}
               animationDelay={300}
             />
             <Bar 
               dataKey="lucro" 
-              fill="#3b82f6" 
+              fill="#1e40af" 
               name="Lucro"
-              radius={[4, 4, 0, 0]}
+              radius={[6, 6, 0, 0]}
               animationDuration={2000}
               animationDelay={600}
             />
@@ -734,15 +952,15 @@ export function Dashboard() {
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 1.0, duration: 0.6 }}
-        className="card"
+        className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-200"
       >
-        <div className="flex items-center mb-6">
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
-            <TrendingDownIcon className="w-6 h-6 text-white" />
+        <div className="flex items-center mb-8">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 shadow-xl">
+            <TrendingDownIcon className="w-8 h-8 text-white" />
           </div>
-          <div className="ml-4">
-            <h3 className="text-xl font-bold text-gray-900">Gastos de Hoje</h3>
-            <p className="text-sm text-gray-600">
+          <div className="ml-6">
+            <h3 className="text-2xl font-bold text-slate-900">Despesas do Dia</h3>
+            <p className="text-slate-600 font-medium">
               {(() => {
                 const totalItems = todayDebts.length + todayEmployeePaymentsDue.length + todayEmployeePaymentsMade.length;
                 
@@ -752,7 +970,7 @@ export function Dashboard() {
           </div>
         </div>
         
-        <div className="space-y-4 max-h-96 overflow-y-auto">
+        <div className="space-y-6 max-h-96 overflow-y-auto">
           {(() => {
             const allExpenses = [
               ...todayDebts.map(debt => ({
@@ -794,35 +1012,35 @@ export function Dashboard() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1, duration: 0.4 }}
-                  className="p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-xl border border-red-200 hover:shadow-lg transition-all duration-300"
+                  className="p-6 bg-gradient-to-r from-red-50 to-red-100 rounded-2xl border border-red-200 hover:shadow-xl transition-all duration-300"
                 >
                   <div className="flex justify-between items-start">
-                    <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-lg ${
+                    <div className="flex items-start gap-4">
+                      <div className={`p-3 rounded-xl shadow-lg ${
                         expense.type === 'debt' ? 'bg-red-100' : 'bg-orange-100'
                       }`}>
                         {expense.type === 'debt' ? (
-                          <TrendingDownIcon className="w-4 h-4 text-red-600" />
+                          <TrendingDownIcon className="w-6 h-6 text-red-600" />
                         ) : (
-                          <Users className="w-4 h-4 text-orange-600" />
+                          <Users className="w-6 h-6 text-orange-600" />
                         )}
                       </div>
                       <div>
-                        <h4 className="font-bold text-red-900">{expense.description}</h4>
-                        <p className="text-sm text-red-700">{expense.details}</p>
-                        <p className="text-xs text-red-600 mt-1">{expense.company}</p>
+                        <h4 className="font-bold text-red-900 text-lg">{expense.description}</h4>
+                        <p className="text-sm text-red-700 font-medium">{expense.details}</p>
+                        <p className="text-xs text-red-600 mt-1 font-medium">{expense.company}</p>
                         {expense.paymentDescription && (
-                          <p className="text-xs text-red-500 mt-1 italic">
+                          <p className="text-xs text-red-500 mt-2 italic font-medium">
                             Como será pago: {expense.paymentDescription}
                           </p>
                         )}
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-red-900">
+                      <p className="font-bold text-red-900 text-lg">
                         R$ {expense.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
-                      <span className={`px-2 py-1 rounded-full text-xs ${
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
                         expense.status === 'Pago' ? 'bg-green-100 text-green-700' : 
                         expense.status === 'Devido' ? 'bg-orange-100 text-orange-700' :
                         'bg-red-100 text-red-700'
@@ -834,36 +1052,37 @@ export function Dashboard() {
                 </motion.div>
               ))
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                <CheckCircle className="w-12 h-12 mx-auto mb-2 text-green-500" />
-                <p>Nenhum gasto registrado para hoje!</p>
+              <div className="text-center py-12 text-slate-500">
+                <CheckCircle className="w-16 h-16 mx-auto mb-4 text-emerald-500" />
+                <p className="text-lg font-medium">Nenhuma despesa registrada para hoje!</p>
               </div>
             );
           })()}
         </div>
       </motion.div>
+
       {/* Status Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Today's Items */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8, duration: 0.6 }}
-          className="bg-white rounded-3xl p-6 shadow-xl border border-gray-100"
+          className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-200"
         >
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Clock className="w-5 h-5 mr-2 text-blue-600" />
+          <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
+            <Clock className="w-6 h-6 mr-3 text-blue-600" />
             Vencimentos Hoje
           </h3>
           
-          <div className="space-y-3">
+          <div className="space-y-4">
             {todayChecks.length > 0 && (
               <motion.div 
-                whileHover={{ scale: 1.02 }}
-                className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200"
+                whileHover={{ scale: 1.01 }}
+                className="p-6 bg-gradient-to-r from-blue-50 to-blue-100 rounded-2xl border border-blue-200 shadow-lg"
               >
-                <h4 className="font-medium text-blue-900 mb-2">Cheques ({todayChecks.length})</h4>
-                <p className="text-sm text-blue-700">
+                <h4 className="font-bold text-blue-900 mb-2 text-lg">Cheques ({todayChecks.length})</h4>
+                <p className="text-sm text-blue-700 font-medium">
                   Total: R$ {todayChecks.reduce((sum, check) => sum + check.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
               </motion.div>
@@ -871,20 +1090,20 @@ export function Dashboard() {
             
             {todayInstallments.length > 0 && (
               <motion.div 
-                whileHover={{ scale: 1.02 }}
-                className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl border border-green-200"
+                whileHover={{ scale: 1.01 }}
+                className="p-6 bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-2xl border border-emerald-200 shadow-lg"
               >
-                <h4 className="font-medium text-green-900 mb-2">Parcelas ({todayInstallments.length})</h4>
-                <p className="text-sm text-green-700">
+                <h4 className="font-bold text-emerald-900 mb-2 text-lg">Parcelas ({todayInstallments.length})</h4>
+                <p className="text-sm text-emerald-700 font-medium">
                   Total: R$ {todayInstallments.reduce((sum, inst) => sum + inst.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
               </motion.div>
             )}
             
             {todayChecks.length === 0 && todayInstallments.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <CheckCircle className="w-12 h-12 mx-auto mb-2 text-green-500" />
-                <p>Nenhum vencimento hoje!</p>
+              <div className="text-center py-12 text-slate-500">
+                <CheckCircle className="w-16 h-16 mx-auto mb-4 text-emerald-500" />
+                <p className="font-medium text-lg">Nenhum vencimento hoje!</p>
               </div>
             )}
           </div>
@@ -895,21 +1114,21 @@ export function Dashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.0, duration: 0.6 }}
-          className="bg-white rounded-3xl p-6 shadow-xl border border-gray-100"
+          className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-200"
         >
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <AlertTriangle className="w-5 h-5 mr-2 text-red-600" />
+          <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
+            <AlertTriangle className="w-6 h-6 mr-3 text-red-600" />
             Itens Vencidos
           </h3>
           
-          <div className="space-y-3">
+          <div className="space-y-4">
             {overdueChecks.length > 0 && (
               <motion.div 
-                whileHover={{ scale: 1.02 }}
-                className="p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-xl border border-red-200"
+                whileHover={{ scale: 1.01 }}
+                className="p-6 bg-gradient-to-r from-red-50 to-red-100 rounded-2xl border border-red-200 shadow-lg"
               >
-                <h4 className="font-medium text-red-900 mb-2">Cheques ({overdueChecks.length})</h4>
-                <p className="text-sm text-red-700">
+                <h4 className="font-bold text-red-900 mb-2 text-lg">Cheques ({overdueChecks.length})</h4>
+                <p className="text-sm text-red-700 font-medium">
                   Total: R$ {overdueChecks.reduce((sum, check) => sum + check.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
               </motion.div>
@@ -917,20 +1136,20 @@ export function Dashboard() {
             
             {overdueInstallments.length > 0 && (
               <motion.div 
-                whileHover={{ scale: 1.02 }}
-                className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl border border-orange-200"
+                whileHover={{ scale: 1.01 }}
+                className="p-6 bg-gradient-to-r from-orange-50 to-orange-100 rounded-2xl border border-orange-200 shadow-lg"
               >
-                <h4 className="font-medium text-orange-900 mb-2">Parcelas ({overdueInstallments.length})</h4>
-                <p className="text-sm text-orange-700">
+                <h4 className="font-bold text-orange-900 mb-2 text-lg">Parcelas ({overdueInstallments.length})</h4>
+                <p className="text-sm text-orange-700 font-medium">
                   Total: R$ {overdueInstallments.reduce((sum, inst) => sum + inst.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
               </motion.div>
             )}
             
             {overdueChecks.length === 0 && overdueInstallments.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <CheckCircle className="w-12 h-12 mx-auto mb-2 text-green-500" />
-                <p>Nenhum item vencido!</p>
+              <div className="text-center py-12 text-slate-500">
+                <CheckCircle className="w-16 h-16 mx-auto mb-4 text-emerald-500" />
+                <p className="font-medium text-lg">Nenhum item vencido!</p>
               </div>
             )}
           </div>
@@ -941,51 +1160,51 @@ export function Dashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.2, duration: 0.6 }}
-          className="bg-white rounded-3xl p-6 shadow-xl border border-gray-100"
+          className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-200"
         >
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Target className="w-5 h-5 mr-2 text-purple-600" />
+          <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
+            <Target className="w-6 h-6 mr-3 text-purple-600" />
             Resumo Mensal
           </h3>
           
-          <div className="space-y-4">
+          <div className="space-y-6">
             <motion.div 
-              whileHover={{ scale: 1.02 }}
-              className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl"
+              whileHover={{ scale: 1.01 }}
+              className="p-6 bg-gradient-to-r from-purple-50 to-purple-100 rounded-2xl shadow-lg"
             >
               <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-purple-700">Vendas</span>
-                <span className="text-lg font-bold text-purple-900">{monthlySales.length}</span>
+                <span className="text-sm font-bold text-purple-700">Vendas</span>
+                <span className="text-2xl font-bold text-purple-900">{monthlySales.length}</span>
               </div>
-              <div className="text-sm text-purple-600">
+              <div className="text-sm text-purple-600 font-medium">
                 R$ {monthlyRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </motion.div>
             
             <motion.div 
-              whileHover={{ scale: 1.02 }}
-              className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl"
+              whileHover={{ scale: 1.01 }}
+              className="p-6 bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-2xl shadow-lg"
             >
               <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-green-700">Recebido</span>
-                <span className="text-lg font-bold text-green-900">
+                <span className="text-sm font-bold text-emerald-700">Recebido</span>
+                <span className="text-2xl font-bold text-emerald-900">
                   {monthlyRevenue > 0 ? ((monthlyReceived / monthlyRevenue) * 100).toFixed(1) : 0}%
                 </span>
               </div>
-              <div className="text-sm text-green-600">
+              <div className="text-sm text-emerald-600 font-medium">
                 R$ {monthlyReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </motion.div>
             
             <motion.div 
-              whileHover={{ scale: 1.02 }}
-              className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl"
+              whileHover={{ scale: 1.01 }}
+              className="p-6 bg-gradient-to-r from-slate-50 to-slate-100 rounded-2xl shadow-lg"
             >
               <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">Cheques Ativos</span>
-                <span className="text-lg font-bold text-gray-900">{state.checks.length}</span>
+                <span className="text-sm font-bold text-slate-700">Cheques Ativos</span>
+                <span className="text-2xl font-bold text-slate-900">{state.checks.length}</span>
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-slate-600 font-medium">
                 R$ {state.checks.reduce((sum, check) => sum + check.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
             </motion.div>
@@ -998,10 +1217,10 @@ export function Dashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 2.0, duration: 0.6 }}
-        className="bg-white rounded-3xl p-6 shadow-xl border border-gray-100"
+        className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-200"
       >
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <Activity className="w-5 h-5 mr-2 text-emerald-600" />
+        <h3 className="text-2xl font-bold text-slate-900 mb-6 flex items-center">
+          <Activity className="w-6 h-6 mr-3 text-emerald-600" />
           Atividade Recente
         </h3>
         
@@ -1009,11 +1228,11 @@ export function Dashboard() {
           <div className="overflow-x-auto">
             <table className="min-w-full table-auto">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Data</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Cliente</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Valor</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Status</th>
+                <tr className="border-b-2 border-slate-200 bg-slate-50">
+                  <th className="text-left py-4 px-6 font-bold text-slate-700">Data</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700">Cliente</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700">Valor</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -1023,20 +1242,20 @@ export function Dashboard() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1, duration: 0.4 }}
-                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                    className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
                   >
-                    <td className="py-3 px-4 text-sm">
+                    <td className="py-4 px-6 text-sm font-medium">
                       {new Date(sale.date).toLocaleDateString('pt-BR')}
                     </td>
-                    <td className="py-3 px-4 text-sm font-medium">{sale.client}</td>
-                    <td className="py-3 px-4 text-sm font-semibold">
+                    <td className="py-4 px-6 text-sm font-bold">{sale.client}</td>
+                    <td className="py-4 px-6 text-sm font-bold text-emerald-600">
                       R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="py-3 px-4 text-sm">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        sale.status === 'pago' ? 'bg-green-100 text-green-700' :
-                        sale.status === 'parcial' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-red-100 text-red-700'
+                    <td className="py-4 px-6 text-sm">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                        sale.status === 'pago' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                        sale.status === 'parcial' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                        'bg-red-100 text-red-800 border-red-200'
                       }`}>
                         {sale.status === 'pago' ? 'Pago' :
                          sale.status === 'parcial' ? 'Parcial' : 'Pendente'}
@@ -1048,7 +1267,7 @@ export function Dashboard() {
             </table>
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-8">Nenhuma atividade recente.</p>
+          <p className="text-slate-500 text-center py-12 font-medium text-lg">Nenhuma atividade recente.</p>
         )}
       </motion.div>
     </div>
