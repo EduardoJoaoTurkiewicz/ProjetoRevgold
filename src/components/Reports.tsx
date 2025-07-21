@@ -3,7 +3,8 @@ import { useApp } from '../context/AppContext';
 import { TrendingUp, TrendingDown, DollarSign, Calendar, Users, Receipt } from 'lucide-react';
 
 export const Reports: React.FC = () => {
-  const { sales, debts, checks, employees } = useApp();
+  const { state } = useApp();
+  const { sales, debts, checks, employees } = state;
 
   const today = new Date().toDateString();
   
