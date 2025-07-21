@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { User, Sale, Debt, Check, Installment, Product, Employee, EmployeePayment } from '../types';
+import { User, Sale, Debt, Check, Installment, Product, Employee, EmployeePayment, Boleto } from '../types';
 
 interface AppState {
   user: User | null;
   sales: Sale[];
   debts: Debt[];
   checks: Check[];
+  boletos: Boleto[];
   installments: Installment[];
   employees: Employee[];
   employeePayments: EmployeePayment[];
@@ -22,6 +23,9 @@ type AppAction =
   | { type: 'ADD_CHECK'; payload: Check }
   | { type: 'UPDATE_CHECK'; payload: Check }
   | { type: 'DELETE_CHECK'; payload: string }
+  | { type: 'ADD_BOLETO'; payload: Boleto }
+  | { type: 'UPDATE_BOLETO'; payload: Boleto }
+  | { type: 'DELETE_BOLETO'; payload: string }
   | { type: 'ADD_INSTALLMENT'; payload: Installment }
   | { type: 'UPDATE_INSTALLMENT'; payload: Installment }
   | { type: 'ADD_EMPLOYEE'; payload: Employee }
@@ -37,6 +41,7 @@ const initialState: AppState = {
   sales: [],
   debts: [],
   checks: [],
+  boletos: [],
   installments: [],
   employees: [],
   employeePayments: []
@@ -89,6 +94,20 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { 
         ...state, 
         checks: state.checks.filter(check => check.id !== action.payload)
+      };
+    case 'ADD_BOLETO':
+      return { ...state, boletos: [...state.boletos, action.payload] };
+    case 'UPDATE_BOLETO':
+      return { 
+        ...state, 
+        boletos: state.boletos.map(boleto => 
+          boleto.id === action.payload.id ? action.payload : boleto
+        ) 
+      };
+    case 'DELETE_BOLETO':
+      return { 
+        ...state, 
+        boletos: state.boletos.filter(boleto => boleto.id !== action.payload)
       };
     case 'ADD_INSTALLMENT':
       return { ...state, installments: [...state.installments, action.payload] };
@@ -163,12 +182,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         sales: state.sales,
         debts: state.debts,
         checks: state.checks,
+        boletos: state.boletos,
         installments: state.installments,
         employees: state.employees,
         employeePayments: state.employeePayments
       }));
     }
-  }, [state.sales, state.debts, state.checks, state.installments, state.employees, state.employeePayments, state.user]);
+  }, [state.sales, state.debts, state.checks, state.boletos, state.installments, state.employees, state.employeePayments, state.user]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>

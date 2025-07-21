@@ -6,6 +6,7 @@ import { Dashboard } from './components/Dashboard';
 import { Sales } from './components/Sales';
 import { Debts } from './components/Debts';
 import { Checks } from './components/Checks';
+import { Boletos } from './components/Boletos';
 import { Reports } from './components/Reports';
 import { Agenda } from './components/Agenda';
 import { Employees } from './components/Employees';
@@ -27,6 +28,8 @@ function AppContent() {
         return <Debts />;
       case 'checks':
         return <Checks />;
+      case 'boletos':
+        return <Boletos />;
       case 'employees':
         return <Employees />;
       case 'reports':

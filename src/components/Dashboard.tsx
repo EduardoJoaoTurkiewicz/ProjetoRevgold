@@ -256,72 +256,47 @@ export function Dashboard() {
 
   const metrics = [
     {
-      title: 'Vendas Hoje',
+      title: 'Vendas hoje',
       value: `R$ ${todayRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
       icon: DollarSign,
-      color: 'text-emerald-600',
-      bgColor: 'bg-emerald-100',
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-100',
       count: todaySales.length,
-      gradient: 'from-emerald-500 to-emerald-600',
+      gradient: 'from-yellow-500 to-yellow-600',
       trend: todayRevenue > 0 ? 'up' : 'neutral'
     },
     {
-      title: 'Recebido Hoje',
+      title: 'Valor recebido hoje',
       value: `R$ ${todayReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
       icon: TrendingUp,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
+      color: 'text-green-600',
+      bgColor: 'bg-green-100',
       percentage: todayRevenue > 0 ? ((todayReceived / todayRevenue) * 100).toFixed(1) : '0',
-      gradient: 'from-blue-500 to-blue-600',
+      gradient: 'from-green-500 to-green-600',
       trend: todayReceived > 0 ? 'up' : 'neutral'
     },
     {
-      title: 'Pendente Hoje',
-      value: `R$ ${todayPending.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-      icon: Clock,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-100',
-      count: todaySales.filter(s => s.status !== 'pago').length,
-      gradient: 'from-orange-500 to-orange-600',
-      trend: todayPending > 0 ? 'down' : 'up'
-    },
-    {
-      title: 'Lucro Líquido',
-      value: `R$ ${netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-      icon: Target,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100',
-      percentage: `${profitMargin.toFixed(1)}%`,
-      gradient: 'from-purple-500 to-purple-600',
-      trend: netProfit > 0 ? 'up' : 'down'
-    }
-  ];
-
-  // Add new metrics for today's expenses and due items
-  const additionalMetrics = [
-    {
-      title: 'Gastos Hoje',
-      value: `R$ ${todayExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-      icon: TrendingDownIcon,
+      title: 'Dívidas feitas hoje',
+      value: `${todayDebts.length}`,
+      icon: AlertTriangle,
       color: 'text-red-600',
       bgColor: 'bg-red-100',
-      count: todayDebts.length + todayEmployeePaymentsDue.length + todayEmployeePaymentsMade.length,
+      count: todayDebts.length,
       gradient: 'from-red-500 to-red-600',
-      trend: todayExpenses > 0 ? 'down' : 'up'
+      trend: todayDebts.length > 0 ? 'down' : 'up'
     },
     {
-      title: 'Dívidas Vencendo Hoje',
-      value: `${todayChecks.length + todayInstallments.length}`,
-      icon: AlertTriangle,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-100',
-      count: todayChecks.length + todayInstallments.length,
-      gradient: 'from-orange-500 to-orange-600',
-      trend: (todayChecks.length + todayInstallments.length) > 0 ? 'down' : 'up'
+      title: 'Valor pago hoje',
+      value: `R$ ${todayExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      icon: DollarSign,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-100',
+      count: todayDebts.length + todayEmployeePaymentsDue.length + todayEmployeePaymentsMade.length,
+      gradient: 'from-blue-500 to-blue-600',
+      trend: todayExpenses > 0 ? 'down' : 'up'
     }
   ];
 
-  const allMetrics = [...metrics, ...additionalMetrics];
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -361,9 +336,17 @@ export function Dashboard() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="bg-gradient-to-r from-emerald-600 via-emerald-700 to-red-500 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden"
+        className="bg-gradient-to-r from-yellow-600 via-green-600 to-green-700 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden"
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/20 to-red-500/20 backdrop-blur-sm"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-yellow-600/20 to-green-700/20 backdrop-blur-sm"></div>
+        {/* Background Logo */}
+        <div className="absolute right-8 top-1/2 transform -translate-y-1/2 opacity-20">
+          <img 
+            src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
+            alt="RevGold Logo" 
+            className="h-32 w-auto"
+          />
+        </div>
         <div className="relative z-10">
           <div className="flex items-center justify-between">
             <div>
@@ -379,7 +362,7 @@ export function Dashboard() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4, duration: 0.6 }}
-                className="text-emerald-100 text-lg mb-4"
+                className="text-yellow-100 text-lg mb-4"
               >
                 Gestão Financeira Completa com Analytics Avançados
               </motion.p>
@@ -387,7 +370,7 @@ export function Dashboard() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.6, duration: 0.6 }}
-                className="flex items-center text-emerald-100"
+                className="flex items-center text-yellow-100"
               >
                 <Calendar className="w-5 h-5 mr-2" />
                 <span>
@@ -404,25 +387,13 @@ export function Dashboard() {
                 </span>
               </motion.div>
             </div>
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.8, duration: 0.6 }}
-              className="hidden md:block"
-            >
-              <img 
-                src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
-                alt="RevGold Logo" 
-                className="h-32 w-auto opacity-95 drop-shadow-2xl"
-              />
-            </motion.div>
           </div>
         </div>
       </motion.div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-        {allMetrics.map((metric, index) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {metrics.map((metric, index) => {
           const Icon = metric.icon;
           return (
             <motion.div 
@@ -431,9 +402,16 @@ export function Dashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1, duration: 0.6 }}
               whileHover={{ scale: 1.05, y: -8 }}
-              className="card relative overflow-hidden hover-lift"
+              className="card relative overflow-hidden hover-lift bg-gradient-to-br from-white to-gray-50"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 to-white/50"></div>
+              {/* Background Logo */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-5">
+                <img 
+                  src="/f7d2460f-1324-48db-b983-026fdd18be94.jpg" 
+                  alt="RevGold Background" 
+                  className="w-24 h-24 object-contain"
+                />
+              </div>
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-4">
                   <motion.div 

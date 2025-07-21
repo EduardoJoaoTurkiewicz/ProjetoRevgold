@@ -31,7 +31,7 @@ export function UserSelection() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-800 via-emerald-700 to-emerald-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-yellow-800 via-green-700 to-green-900 flex items-center justify-center p-4">
       <div className="w-full max-w-4xl">
         {/* Logo and Header */}
         <div className="text-center mb-12 animation-fade-in">
@@ -45,7 +45,7 @@ export function UserSelection() {
           <h1 className="text-4xl font-bold text-white mb-2 drop-shadow-lg">
             {getGreeting()}!
           </h1>
-          <p className="text-emerald-100 text-lg">
+          <p className="text-yellow-100 text-lg">
             Selecione seu usuário para acessar o sistema
           </p>
         </div>
@@ -61,7 +61,7 @@ export function UserSelection() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-red-500 rounded-full flex items-center justify-center shadow-2xl group-hover:shadow-3xl transition-all duration-300 group-hover:scale-110">
+                  <div className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-green-500 rounded-full flex items-center justify-center shadow-2xl group-hover:shadow-3xl transition-all duration-300 group-hover:scale-110">
                     <User className="w-8 h-8 text-white" />
                   </div>
                   <div>
@@ -70,7 +70,7 @@ export function UserSelection() {
                     </h3>
                   </div>
                 </div>
-                <ChevronRight className="w-6 h-6 text-gray-400 group-hover:text-emerald-600 group-hover:translate-x-2 transition-all duration-300" />
+                <ChevronRight className="w-6 h-6 text-gray-400 group-hover:text-yellow-600 group-hover:translate-x-2 transition-all duration-300" />
               </div>
             </div>
           ))}
@@ -78,10 +78,10 @@ export function UserSelection() {
 
         {/* Footer */}
         <div className="text-center mt-12 animation-fade-in" style={{ animationDelay: '600ms' }}>
-          <p className="text-emerald-200 text-sm">
+          <p className="text-yellow-200 text-sm">
             Sistema de Gestão Financeira RevGold
           </p>
-          <p className="text-emerald-300 text-xs mt-1">
+          <p className="text-yellow-300 text-xs mt-1">
             Colorindo seu ambiente e levando vida para os seus dias
           </p>
         </div>

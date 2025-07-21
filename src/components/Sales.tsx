@@ -56,6 +56,22 @@ export function Sales() {
             };
             
             dispatch({ type: 'ADD_CHECK', payload: check });
+          } else if (method.type === 'boleto') {
+            // Create boletos for each installment if payment method is boleto
+            const boleto = {
+              id: `${newSale.id}-boleto-${i}`,
+              saleId: newSale.id,
+              client: sale.client,
+              value: method.installmentValue || 0,
+              dueDate: dueDate.toISOString().split('T')[0],
+              status: 'pendente' as const,
+              installmentNumber: i + 1,
+              totalInstallments: method.installments,
+              observations: `Boleto gerado automaticamente para parcela ${i + 1} de ${method.installments}`,
+              createdAt: new Date().toISOString()
+            };
+            
+            dispatch({ type: 'ADD_BOLETO', payload: boleto });
           }
         }
       } else if (method.type === 'cheque') {
@@ -76,6 +92,22 @@ export function Sales() {
         };
         
         dispatch({ type: 'ADD_CHECK', payload: check });
+      } else if (method.type === 'boleto') {
+        // Single boleto payment
+        const boleto = {
+          id: `${newSale.id}-boleto-single`,
+          saleId: newSale.id,
+          client: sale.client,
+          value: method.amount,
+          dueDate: method.firstInstallmentDate || sale.date,
+          status: 'pendente' as const,
+          installmentNumber: 1,
+          totalInstallments: 1,
+          observations: `Boleto gerado automaticamente para venda`,
+          createdAt: new Date().toISOString()
+        };
+        
+        dispatch({ type: 'ADD_BOLETO', payload: boleto });
       }
     });
     

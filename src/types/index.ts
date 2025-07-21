@@ -106,3 +106,17 @@ export interface EmployeePayment {
   observations?: string;
   createdAt: string;
 }
+
+export interface Boleto {
+  id: string;
+  saleId: string;
+  client: string;
+  value: number;
+  dueDate: string;
+  status: 'pendente' | 'pago' | 'vencido';
+  installmentNumber: number;
+  totalInstallments: number;
+  boletoFile?: string; // Base64 or file path
+  observations?: string;
+  createdAt: string;
+}
