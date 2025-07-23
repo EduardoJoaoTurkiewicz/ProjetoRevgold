@@ -4,31 +4,31 @@ import { TrendingUp, TrendingDown, DollarSign, Calendar, Users, Receipt } from '
 
 export const Reports: React.FC = () => {
   const { state } = useApp();
-  const { sales, debts, checks, employees } = state;
+  const { sales, debts, checks, employees, boletos } = state;
 
   const today = new Date().toDateString();
   
   // Recebimentos de hoje
   const todayReceipts = [
     ...sales.filter(sale => new Date(sale.date).toDateString() === today),
-    ...checks.filter(check => new Date(check.dueDate).toDateString() === today && check.status === 'received')
+    ...checks.filter(check => new Date(check.dueDate).toDateString() === today && check.status === 'compensado')
   ];
 
   // Gastos de hoje
   const todayExpenses = [
-    ...debts.filter(debt => new Date(debt.dueDate).toDateString() === today),
-    ...employees.filter(emp => emp.paymentDate && new Date(emp.paymentDate).toDateString() === today && !emp.isPaid)
+    ...debts.filter(debt => new Date(debt.date).toDateString() === today),
+    ...state.employeePayments.filter(payment => new Date(payment.paymentDate).toDateString() === today)
   ];
 
   const totalReceipts = todayReceipts.reduce((sum, item) => {
-    if ('amount' in item) return sum + item.amount;
+    if ('totalValue' in item) return sum + item.totalValue;
     if ('value' in item) return sum + item.value;
     return sum;
   }, 0);
 
   const totalExpenses = todayExpenses.reduce((sum, item) => {
+    if ('totalValue' in item) return sum + item.totalValue;
     if ('amount' in item) return sum + item.amount;
-    if ('salary' in item) return sum + (item.adjustedSalary || item.salary);
     return sum;
   }, 0);
 
@@ -69,14 +69,14 @@ export const Reports: React.FC = () => {
                 <div key={index} className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                   <div>
                     <p className="font-medium text-gray-800">
-                      {'customer' in item ? item.customer : item.payer}
+                      {'client' in item ? item.client : 'Cliente'}
                     </p>
                     <p className="text-sm text-gray-600">
-                      {'product' in item ? item.product : 'Cheque'}
+                      {'products' in item ? 'Venda' : 'Cheque'}
                     </p>
                   </div>
                   <span className="font-bold text-green-600">
-                    R$ {('amount' in item ? item.amount : item.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {('totalValue' in item ? item.totalValue : item.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               ))
@@ -106,14 +106,14 @@ export const Reports: React.FC = () => {
                 <div key={index} className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
                   <div>
                     <p className="font-medium text-gray-800">
-                      {'creditor' in item ? item.creditor : item.name}
+                      {'company' in item ? item.company : 'Pagamento'}
                     </p>
                     <p className="text-sm text-gray-600">
                       {'description' in item ? item.description : 'Salário'}
                     </p>
                   </div>
                   <span className="font-bold text-red-600">
-                    R$ {('amount' in item ? item.amount : (item.adjustedSalary || item.salary)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {('totalValue' in item ? item.totalValue : item.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               ))
@@ -137,12 +137,16 @@ export const Reports: React.FC = () => {
             {sales.slice(0, 5).map((sale, index) => (
               <div key={index} className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                 <div>
-                  <p className="font-medium text-gray-800">{sale.customer}</p>
-                  <p className="text-sm text-gray-600">{sale.product}</p>
+                  <p className="font-medium text-gray-800">{sale.client}</p>
+                  <p className="text-sm text-gray-600">
+                    {Array.isArray(sale.products) 
+                      ? sale.products.map(p => p.name).join(', ')
+                      : 'Produtos'}
+                  </p>
                   <p className="text-xs text-gray-500">{new Date(sale.date).toLocaleDateString('pt-BR')}</p>
                 </div>
                 <span className="font-bold text-blue-600">
-                  R$ {sale.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
               </div>
             ))}
@@ -159,15 +163,15 @@ export const Reports: React.FC = () => {
           </div>
           
           <div className="space-y-3">
-            {debts.filter(debt => debt.status === 'pending').slice(0, 5).map((debt, index) => (
+            {debts.filter(debt => !debt.isPaid).slice(0, 5).map((debt, index) => (
               <div key={index} className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
                 <div>
-                  <p className="font-medium text-gray-800">{debt.creditor}</p>
+                  <p className="font-medium text-gray-800">{debt.company}</p>
                   <p className="text-sm text-gray-600">{debt.description}</p>
-                  <p className="text-xs text-gray-500">Vence: {new Date(debt.dueDate).toLocaleDateString('pt-BR')}</p>
+                  <p className="text-xs text-gray-500">Data: {new Date(debt.date).toLocaleDateString('pt-BR')}</p>
                 </div>
                 <span className="font-bold text-orange-600">
-                  R$ {debt.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {debt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
               </div>
             ))}

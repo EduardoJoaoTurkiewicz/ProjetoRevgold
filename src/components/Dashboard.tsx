@@ -2,75 +2,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { BarChart3, DollarSign, TrendingUp, TrendingDown, Users, Calendar, Clock, AlertTriangle, CheckCircle, CreditCard, Receipt, Minus, Activity, Target, Zap } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, BarChart, Bar, RadialBarChart, RadialBar } from 'recharts';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Text, Box, Sphere, Cylinder } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSpring, animated } from 'react-spring';
-
-// 3D Components
-function AnimatedBox({ position, color, scale = 1 }: { position: [number, number, number], color: string, scale?: number }) {
-  const meshRef = React.useRef<any>();
-  
-  React.useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.x = Math.sin(state.clock.elapsedTime) * 0.1;
-      meshRef.current.rotation.y = Math.cos(state.clock.elapsedTime) * 0.1;
-    }
-  });
-
-  return (
-    <Box ref={meshRef} position={position} scale={[scale, scale, scale]}>
-      <meshStandardMaterial color={color} metalness={0.8} roughness={0.2} />
-    </Box>
-  );
-}
-
-function FloatingSphere({ position, color }: { position: [number, number, number], color: string }) {
-  const meshRef = React.useRef<any>();
-  
-  React.useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 2) * 0.2;
-      meshRef.current.rotation.x += 0.01;
-      meshRef.current.rotation.y += 0.01;
-    }
-  });
-
-  return (
-    <Sphere ref={meshRef} position={position} args={[0.3, 32, 32]}>
-      <meshStandardMaterial color={color} metalness={0.9} roughness={0.1} />
-    </Sphere>
-  );
-}
-
-function Scene3D({ data }: { data: any }) {
-  return (
-    <>
-      <ambientLight intensity={0.6} />
-      <pointLight position={[10, 10, 10]} intensity={1} />
-      <pointLight position={[-10, -10, -10]} intensity={0.5} color="#10b981" />
-      
-      <AnimatedBox position={[-2, 0, 0]} color="#10b981" scale={data.sales / 10000} />
-      <AnimatedBox position={[0, 0, 0]} color="#3b82f6" scale={data.received / 10000} />
-      <AnimatedBox position={[2, 0, 0]} color="#f59e0b" scale={data.pending / 10000} />
-      
-      <FloatingSphere position={[-3, 2, 0]} color="#ef4444" />
-      <FloatingSphere position={[3, 2, 0]} color="#8b5cf6" />
-      
-      <Text
-        position={[0, -2, 0]}
-        fontSize={0.5}
-        color="#064e3b"
-        anchorX="center"
-        anchorY="middle"
-      >
-        RevGold Analytics
-      </Text>
-      
-      <OrbitControls enableZoom={false} enablePan={false} />
-    </>
-  );
-}
 
 export function Dashboard() {
   const { state } = useApp();
@@ -181,13 +113,6 @@ export function Dashboard() {
     }
   };
 
-  const sceneData = {
-    sales: totalSales,
-    received: totalReceived,
-    pending: totalPending,
-    debts: totalDebts
-  };
-
   return (
     <div className="space-y-8 pb-8 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 min-h-screen">
       {/* Futuristic Header */}
@@ -259,26 +184,6 @@ export function Dashboard() {
               </div>
             </motion.div>
           </div>
-        </div>
-      </motion.div>
-
-      {/* 3D Interactive Scene */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 1, delay: 0.5 }}
-        className="card bg-gradient-to-br from-slate-900/90 to-emerald-900/90 border-emerald-400/30 h-96"
-      >
-        <div className="h-full w-full">
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-emerald-400"></div>
-            </div>
-          }>
-            <Canvas camera={{ position: [0, 0, 8] }}>
-              <Scene3D data={sceneData} />
-            </Canvas>
-          </Suspense>
         </div>
       </motion.div>
 
@@ -564,22 +469,22 @@ export function Dashboard() {
             animate="visible"
             whileHover="hover"
             transition={{ delay: index * 0.1 + 1 }}
-            className={`card bg-gradient-to-br from-${stat.color}-900/20 to-${stat.color}-800/20 border-${stat.color}-400/30`}
+            className="card bg-gradient-to-br from-slate-900/20 to-slate-800/20 border-slate-400/30"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className={`text-${stat.color}-300 text-sm font-bold uppercase tracking-wider mb-2`}>
+                <p className="text-slate-300 text-sm font-bold uppercase tracking-wider mb-2">
                   {stat.title}
                 </p>
                 <p className="text-3xl font-black text-white mb-1">{stat.count}</p>
-                <p className={`text-${stat.color}-400 text-sm font-medium`}>
+                <p className="text-slate-400 text-sm font-medium">
                   {stat.pending > 0 ? `${stat.pending} pendentes` : 'ativos'}
                 </p>
               </div>
               <motion.div 
                 whileHover={{ rotate: 360, scale: 1.2 }}
                 transition={{ duration: 0.6 }}
-                className={`p-4 rounded-2xl bg-gradient-to-br from-${stat.color}-600 to-${stat.color}-800 shadow-2xl`}
+                className="p-4 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-800 shadow-2xl"
               >
                 <stat.icon className="w-6 h-6 text-white" />
               </motion.div>
