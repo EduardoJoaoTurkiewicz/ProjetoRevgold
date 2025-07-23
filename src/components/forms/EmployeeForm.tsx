@@ -102,6 +102,12 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
                   className="input-field"
                   required
                 />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Dia do mês em que o funcionário deve receber o salário
+                  <p className="text-xs text-gray-500 mt-1">
+                    Desmarque se o funcionário não estiver mais trabalhando na empresa
+                  </p>
+                  </p>
               </div>
 
               <div className="form-group">

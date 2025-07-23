@@ -3,65 +3,94 @@ import { BarChart3, DollarSign, TrendingUp, TrendingDown, Users, Calendar, Clock
 import { useApp } from '../context/AppContext';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, BarChart, Bar, RadialBarChart, RadialBar } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Text, Box, Sphere } from '@react-three/drei';
 
-// Componente 3D para visualização de dados
-function DataVisualization3D({ data }: { data: any[] }) {
-  return (
-    <Canvas camera={{ position: [0, 0, 10], fov: 60 }}>
-      <ambientLight intensity={0.6} />
-      <pointLight position={[10, 10, 10]} intensity={1} />
-      <OrbitControls enableZoom={false} enablePan={false} />
+// Lazy load Three.js components to avoid initial loading issues
+const DataVisualization3D = React.lazy(() => 
+  import('@react-three/fiber').then(() => import('@react-three/drei').then(() => ({
+    default: ({ data }: { data: any[] }) => {
+      const { Canvas } = require('@react-three/fiber');
+      const { OrbitControls, Text, Box } = require('@react-three/drei');
       
-      {data.map((item, index) => (
-        <group key={index} position={[index * 2 - 4, 0, 0]}>
-          <Box
-            args={[1, Math.max(item.value / 1000, 0.5), 1]}
-            position={[0, Math.max(item.value / 2000, 0.25), 0]}
-          >
-            <meshStandardMaterial color={`hsl(${120 + index * 60}, 70%, 50%)`} />
-          </Box>
-          <Text
-            position={[0, -2, 0]}
-            fontSize={0.5}
-            color="#374151"
-            anchorX="center"
-            anchorY="middle"
-          >
-            {item.name}
-          </Text>
-        </group>
-      ))}
-    </Canvas>
-  );
-}
+      return (
+        <Canvas camera={{ position: [0, 0, 10], fov: 60 }}>
+          <ambientLight intensity={0.6} />
+          <pointLight position={[10, 10, 10]} intensity={1} />
+          <OrbitControls enableZoom={false} enablePan={false} />
+          
+          {data.map((item, index) => (
+            <group key={index} position={[index * 2 - 4, 0, 0]}>
+              <Box
+                args={[1, Math.max(item.value / 1000, 0.5), 1]}
+                position={[0, Math.max(item.value / 2000, 0.25), 0]}
+              >
+                <meshStandardMaterial color={`hsl(${120 + index * 60}, 70%, 50%)`} />
+              </Box>
+              <Text
+                position={[0, -2, 0]}
+                fontSize={0.5}
+                color="#374151"
+                anchorX="center"
+                anchorY="middle"
+              >
+                {item.name}
+              </Text>
+            </group>
+          ))}
+        </Canvas>
+      );
+    }
+  })).catch(() => ({
+    default: () => (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando visualização 3D...</p>
+        </div>
+      </div>
+    )
+  }))
+);
 
-// Componente 3D para gráfico circular
-function PieChart3D({ data }: { data: any[] }) {
-  const total = data.reduce((sum, item) => sum + item.value, 0);
-  
-  return (
-    <Canvas camera={{ position: [0, 0, 8], fov: 60 }}>
-      <ambientLight intensity={0.6} />
-      <pointLight position={[10, 10, 10]} intensity={1} />
-      <OrbitControls enableZoom={false} enablePan={false} />
+const PieChart3D = React.lazy(() => 
+  import('@react-three/fiber').then(() => import('@react-three/drei').then(() => ({
+    default: ({ data }: { data: any[] }) => {
+      const { Canvas } = require('@react-three/fiber');
+      const { OrbitControls, Sphere } = require('@react-three/drei');
       
-      {data.map((item, index) => {
-        const angle = (item.value / total) * Math.PI * 2;
-        const startAngle = data.slice(0, index).reduce((sum, prev) => sum + (prev.value / total) * Math.PI * 2, 0);
-        
-        return (
-          <group key={index} rotation={[0, 0, startAngle]}>
-            <Sphere args={[2, 32, 16, 0, angle]} position={[0, 0, 0]}>
-              <meshStandardMaterial color={item.fill} />
-            </Sphere>
-          </group>
-        );
-      })}
-    </Canvas>
-  );
-}
+      const total = data.reduce((sum, item) => sum + item.value, 0);
+      
+      return (
+        <Canvas camera={{ position: [0, 0, 8], fov: 60 }}>
+          <ambientLight intensity={0.6} />
+          <pointLight position={[10, 10, 10]} intensity={1} />
+          <OrbitControls enableZoom={false} enablePan={false} />
+          
+          {data.map((item, index) => {
+            const angle = (item.value / total) * Math.PI * 2;
+            const startAngle = data.slice(0, index).reduce((sum, prev) => sum + (prev.value / total) * Math.PI * 2, 0);
+            
+            return (
+              <group key={index} rotation={[0, 0, startAngle]}>
+                <Sphere args={[2, 32, 16, 0, angle]} position={[0, 0, 0]}>
+                  <meshStandardMaterial color={item.fill} />
+                </Sphere>
+              </group>
+            );
+          })}
+        </Canvas>
+      );
+    }
+  })).catch(() => ({
+    default: () => (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando gráfico 3D...</p>
+        </div>
+      </div>
+    )
+  }))
+);
 
 export function Dashboard() {
   const { state } = useApp();
@@ -368,7 +397,10 @@ export function Dashboard() {
           <div className="h-80 bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border border-blue-100">
             <Suspense fallback={
               <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Carregando visualização...</p>
+                </div>
               </div>
             }>
               <DataVisualization3D data={chart3DData} />
@@ -396,7 +428,10 @@ export function Dashboard() {
           <div className="h-80 bg-gradient-to-br from-slate-50 to-purple-50 rounded-xl border border-purple-100">
             <Suspense fallback={
               <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Carregando gráfico...</p>
+                </div>
               </div>
             }>
               <PieChart3D data={radialData} />
