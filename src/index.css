@@ -43,7 +43,7 @@
   }
 
   .btn-secondary:hover {
-    @apply scale-102 transform;
+    @apply scale-105 transform;
   }
 
   .btn-success {
@@ -51,7 +51,7 @@
   }
 
   .btn-success:hover {
-    @apply scale-102 transform;
+    @apply scale-105 transform;
   }
 
   .btn-danger {
@@ -59,7 +59,7 @@
   }
 
   .btn-danger:hover {
-    @apply scale-102 transform;
+    @apply scale-105 transform;
   }
 
   .input-field {
