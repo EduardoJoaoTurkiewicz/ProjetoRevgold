@@ -31,12 +31,11 @@ export function UserSelection() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-800 via-blue-800 to-purple-900 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-green-900 flex items-center justify-center p-4 relative overflow-hidden rustic-texture">
       {/* Background Animation */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-emerald-400/30 to-blue-400/30 rounded-full blur-3xl animate-pulse floating-animation"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/30 to-purple-400/30 rounded-full blur-3xl animate-pulse floating-animation" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-emerald-300/20 to-blue-300/20 rounded-full blur-3xl animate-pulse floating-animation" style={{ animationDelay: '4s' }}></div>
+      <div className="absolute inset-0 overflow-hidden opacity-20">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-green-400/20 to-green-600/20 rounded-full blur-3xl animate-subtle-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-green-600/20 to-green-800/20 rounded-full blur-3xl animate-subtle-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
       <div className="w-full max-w-4xl">
@@ -46,13 +45,13 @@ export function UserSelection() {
             <img 
               src="/image.png" 
               alt="RevGold Logo" 
-              className="h-40 w-auto drop-shadow-3xl floating-animation hover:scale-110 transition-transform duration-500"
+              className="h-32 w-auto professional-shadow-xl animate-gentle-float professional-hover"
             />
           </div>
-          <h1 className="text-6xl font-black text-white mb-4 drop-shadow-2xl bg-gradient-to-r from-white via-emerald-100 to-blue-100 bg-clip-text text-transparent">
+          <h1 className="text-5xl font-bold text-white mb-4 professional-shadow-xl">
             {getGreeting()}!
           </h1>
-          <p className="text-emerald-100 text-xl font-semibold drop-shadow-lg">
+          <p className="text-green-100 text-lg font-medium professional-shadow">
             Selecione seu usuário para acessar o sistema
           </p>
         </div>
@@ -63,24 +62,24 @@ export function UserSelection() {
             <div
               key={user.id}
               onClick={() => handleUserSelect(user)}
-              className="group glass-effect rounded-3xl p-10 shadow-3xl hover:shadow-3xl transform hover:scale-110 transition-all duration-700 cursor-pointer border border-white/40 hover:bg-white/95 animation-fade-in hover-lift glow-effect"
+              className="group professional-card rounded-lg p-8 professional-shadow-xl professional-hover transform transition-all duration-300 cursor-pointer border border-white/30 hover:bg-white animation-fade-in"
               style={{ animationDelay: `${index * 150}ms` }}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="w-20 h-20 bg-gradient-to-br from-emerald-600 to-blue-600 rounded-full flex items-center justify-center shadow-2xl group-hover:shadow-3xl transition-all duration-500 group-hover:scale-125 floating-animation">
-                    <User className="w-10 h-10 text-white" />
+                  <div className="w-16 h-16 bg-gradient-to-br from-green-700 to-green-800 rounded-full flex items-center justify-center professional-shadow-lg group-hover:professional-shadow-xl transition-all duration-300 group-hover:scale-110 animate-gentle-float">
+                    <User className="w-8 h-8 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-black text-gray-800 group-hover:text-gradient transition-all duration-500">
+                    <h3 className="text-xl font-bold text-gray-800 group-hover:text-green-800 transition-all duration-300">
                       {user.name}
                     </h3>
-                    <p className="text-sm text-gray-600 font-semibold uppercase tracking-wider">
+                    <p className="text-sm text-gray-600 font-medium uppercase tracking-wide">
                       Administrador
                     </p>
                   </div>
                 </div>
-                <ChevronRight className="w-8 h-8 text-gray-400 group-hover:text-emerald-700 group-hover:translate-x-4 transition-all duration-500" />
+                <ChevronRight className="w-6 h-6 text-gray-400 group-hover:text-green-700 group-hover:translate-x-2 transition-all duration-300" />
               </div>
             </div>
           ))}
@@ -88,10 +87,10 @@ export function UserSelection() {
 
         {/* Footer */}
         <div className="text-center mt-16 animation-fade-in" style={{ animationDelay: '600ms' }}>
-          <p className="text-yellow-200 text-lg font-bold drop-shadow-lg">
+          <p className="text-green-100 text-lg font-semibold professional-shadow">
             Sistema de Gestão Financeira RevGold
           </p>
-          <p className="text-emerald-200 text-sm mt-2 font-medium drop-shadow-md">
+          <p className="text-green-200 text-sm mt-2 font-medium professional-shadow">
             Colorindo seu ambiente e levando vida para os seus dias
           </p>
         </div>
