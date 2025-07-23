@@ -6,10 +6,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // Lazy load Three.js components to avoid initial loading issues
 const DataVisualization3D = React.lazy(() => 
-  import('@react-three/fiber').then(() => import('@react-three/drei').then(() => ({
+  Promise.all([
+    import('@react-three/fiber'),
+    import('@react-three/drei')
+  ]).then(([fiber, drei]) => ({
     default: ({ data }: { data: any[] }) => {
-      const { Canvas } = require('@react-three/fiber');
-      const { OrbitControls, Text, Box } = require('@react-three/drei');
+      const { Canvas } = fiber;
+      const { OrbitControls, Text, Box } = drei;
       
       return (
         <Canvas camera={{ position: [0, 0, 10], fov: 60 }}>
@@ -52,10 +55,13 @@ const DataVisualization3D = React.lazy(() =>
 );
 
 const PieChart3D = React.lazy(() => 
-  import('@react-three/fiber').then(() => import('@react-three/drei').then(() => ({
+  Promise.all([
+    import('@react-three/fiber'),
+    import('@react-three/drei')
+  ]).then(([fiber, drei]) => ({
     default: ({ data }: { data: any[] }) => {
-      const { Canvas } = require('@react-three/fiber');
-      const { OrbitControls, Sphere } = require('@react-three/drei');
+      const { Canvas } = fiber;
+      const { OrbitControls, Sphere } = drei;
       
       const total = data.reduce((sum, item) => sum + item.value, 0);
       
