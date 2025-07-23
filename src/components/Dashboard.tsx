@@ -284,7 +284,7 @@ export function Dashboard() {
       </motion.div>
 
       {/* KPIs Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         {[
           {
             title: 'Faturamento Total',
@@ -330,10 +330,10 @@ export function Dashboard() {
             animate="visible"
             whileHover="hover"
             transition={{ delay: index * 0.1 }}
-            className={`card bg-gradient-to-br from-white to-${metric.color}-50 border-${metric.color}-200`}
+            className={`card bg-gradient-to-br from-white via-${metric.color}-50/30 to-${metric.color}-100/50 border-${metric.color}-200/50 glow-effect hover:shadow-3xl`}
           >
             <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 rounded-xl bg-gradient-to-br from-${metric.color}-500 to-${metric.color}-600 shadow-lg`}>
+              <div className={`p-4 rounded-2xl bg-gradient-to-br from-${metric.color}-500 to-${metric.color}-600 shadow-2xl floating-animation`}>
                 <metric.icon className="w-6 h-6 text-white" />
               </div>
               <div className={`flex items-center gap-1 text-sm font-bold ${
@@ -345,13 +345,13 @@ export function Dashboard() {
             </div>
             
             <div>
-              <p className="text-slate-600 text-sm font-bold uppercase tracking-wider mb-2">
+              <p className="text-slate-600 text-xs font-bold uppercase tracking-widest mb-3 opacity-80">
                 {metric.title}
               </p>
-              <p className="text-3xl font-black text-slate-800 mb-2">
+              <p className="text-4xl font-black text-slate-800 mb-3 tracking-tight">
                 R$ {metric.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-slate-500 text-sm font-medium">
+              <p className="text-slate-500 text-sm font-semibold">
                 {metric.subtitle}
               </p>
             </div>
@@ -364,29 +364,29 @@ export function Dashboard() {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          className="grid grid-cols-1 md:grid-cols-2 gap-8"
         >
           {itemsDueToday.length > 0 && (
-            <div className="card bg-gradient-to-br from-blue-50 to-blue-100 border-blue-300">
+            <div className="card bg-gradient-to-br from-blue-50 via-blue-100/50 to-blue-200/30 border-blue-300/50 glow-effect">
               <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 rounded-xl bg-blue-600 shadow-lg">
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 shadow-2xl floating-animation">
                   <Calendar className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-blue-900">Vencimentos Hoje</h3>
-                  <p className="text-blue-700">{itemsDueToday.length} item(s) vencem hoje</p>
+                  <h3 className="text-2xl font-bold text-blue-900">Vencimentos Hoje</h3>
+                  <p className="text-blue-700 font-semibold">{itemsDueToday.length} item(s) vencem hoje</p>
                 </div>
               </div>
-              <div className="space-y-2 max-h-32 overflow-y-auto">
+              <div className="space-y-3 max-h-40 overflow-y-auto">
                 {itemsDueToday.slice(0, 3).map((item, index) => (
-                  <div key={index} className="text-sm text-blue-800 bg-blue-200/50 p-2 rounded">
+                  <div key={index} className="text-sm text-blue-800 bg-blue-200/50 p-3 rounded-xl font-medium hover:bg-blue-200/70 transition-all duration-300">
                     {'client' in item ? `${item.client} - R$ ${item.value.toFixed(2)}` :
                      'description' in item ? `${item.description} - R$ ${item.amount.toFixed(2)}` :
                      `Parcela - R$ ${item.amount.toFixed(2)}`}
                   </div>
                 ))}
                 {itemsDueToday.length > 3 && (
-                  <p className="text-blue-600 text-sm font-medium">
+                  <p className="text-blue-600 text-sm font-bold">
                     +{itemsDueToday.length - 3} outros itens
                   </p>
                 )}
@@ -395,26 +395,26 @@ export function Dashboard() {
           )}
 
           {overdueItems.length > 0 && (
-            <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-300">
+            <div className="card bg-gradient-to-br from-red-50 via-red-100/50 to-red-200/30 border-red-300/50 glow-effect">
               <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 rounded-xl bg-red-600 shadow-lg">
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 shadow-2xl floating-animation">
                   <AlertTriangle className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-red-900">Itens Vencidos</h3>
-                  <p className="text-red-700">{overdueItems.length} item(s) em atraso</p>
+                  <h3 className="text-2xl font-bold text-red-900">Itens Vencidos</h3>
+                  <p className="text-red-700 font-semibold">{overdueItems.length} item(s) em atraso</p>
                 </div>
               </div>
-              <div className="space-y-2 max-h-32 overflow-y-auto">
+              <div className="space-y-3 max-h-40 overflow-y-auto">
                 {overdueItems.slice(0, 3).map((item, index) => (
-                  <div key={index} className="text-sm text-red-800 bg-red-200/50 p-2 rounded">
+                  <div key={index} className="text-sm text-red-800 bg-red-200/50 p-3 rounded-xl font-medium hover:bg-red-200/70 transition-all duration-300">
                     {'client' in item ? `${item.client} - R$ ${item.value.toFixed(2)}` :
                      'description' in item ? `${item.description} - R$ ${item.amount.toFixed(2)}` :
                      `Parcela - R$ ${item.amount.toFixed(2)}`}
                   </div>
                 ))}
                 {overdueItems.length > 3 && (
-                  <p className="text-red-600 text-sm font-medium">
+                  <p className="text-red-600 text-sm font-bold">
                     +{overdueItems.length - 3} outros itens
                   </p>
                 )}
@@ -425,27 +425,27 @@ export function Dashboard() {
       )}
 
       {/* Gráficos Principais */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
         {/* Vendas por Período */}
         <motion.div
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
-          className="card"
+          className="card glow-effect"
         >
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-2xl floating-animation">
                 <BarChart3 className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-slate-800">Vendas por Período</h3>
-                <p className="text-slate-600">Evolução das vendas e recebimentos</p>
+                <h3 className="text-2xl font-bold text-slate-800">Vendas por Período</h3>
+                <p className="text-slate-600 font-medium">Evolução das vendas e recebimentos</p>
               </div>
             </div>
             <select
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="px-4 py-3 border border-slate-300/50 rounded-xl text-sm font-medium bg-white/95 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300"
             >
               <option value="7">Últimos 7 dias</option>
               <option value="15">Últimos 15 dias</option>
@@ -473,9 +473,10 @@ export function Dashboard() {
                   <Tooltip 
                     contentStyle={{ 
                       backgroundColor: 'white', 
-                      border: '1px solid #e2e8f0', 
-                      borderRadius: '12px',
-                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '16px',
+                      boxShadow: '0 25px 50px rgba(0,0,0,0.15)',
+                      backdropFilter: 'blur(10px)'
                     }}
                     formatter={(value: number) => [`R$ ${value.toFixed(2)}`, '']}
                   />
@@ -500,10 +501,10 @@ export function Dashboard() {
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full bg-slate-50 rounded-xl">
+              <div className="flex items-center justify-center h-full bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl">
                 <div className="text-center">
-                  <Package className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-                  <p className="text-slate-500">Nenhuma venda no período selecionado</p>
+                  <Package className="w-20 h-20 mx-auto mb-4 text-slate-300 floating-animation" />
+                  <p className="text-slate-500 font-medium">Nenhuma venda no período selecionado</p>
                 </div>
               </div>
             )}
@@ -514,15 +515,15 @@ export function Dashboard() {
         <motion.div
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
-          className="card"
+          className="card glow-effect"
         >
           <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-2xl floating-animation">
               <Banknote className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-800">Métodos de Pagamento</h3>
-              <p className="text-slate-600">Distribuição por forma de pagamento</p>
+              <h3 className="text-2xl font-bold text-slate-800">Métodos de Pagamento</h3>
+              <p className="text-slate-600 font-medium">Distribuição por forma de pagamento</p>
             </div>
           </div>
           
@@ -547,10 +548,10 @@ export function Dashboard() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full bg-slate-50 rounded-xl">
+              <div className="flex items-center justify-center h-full bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl">
                 <div className="text-center">
-                  <Banknote className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-                  <p className="text-slate-500">Nenhum método de pagamento registrado</p>
+                  <Banknote className="w-20 h-20 mx-auto mb-4 text-slate-300 floating-animation" />
+                  <p className="text-slate-500 font-medium">Nenhum método de pagamento registrado</p>
                 </div>
               </div>
             )}
@@ -559,20 +560,20 @@ export function Dashboard() {
       </div>
 
       {/* Fluxo de Caixa e Status dos Cheques */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
         {/* Fluxo de Caixa Mensal */}
         <motion.div
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
-          className="card"
+          className="card glow-effect"
         >
           <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-2xl floating-animation">
               <Activity className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-800">Fluxo de Caixa Mensal</h3>
-              <p className="text-slate-600">Entradas vs Saídas por mês</p>
+              <h3 className="text-2xl font-bold text-slate-800">Fluxo de Caixa Mensal</h3>
+              <p className="text-slate-600 font-medium">Entradas vs Saídas por mês</p>
             </div>
           </div>
           
@@ -585,14 +586,15 @@ export function Dashboard() {
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'white', 
-                    border: '1px solid #e2e8f0', 
-                    borderRadius: '12px',
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '16px',
+                    boxShadow: '0 25px 50px rgba(0,0,0,0.15)',
+                    backdropFilter: 'blur(10px)'
                   }}
                   formatter={(value: number) => [`R$ ${value.toFixed(2)}`, '']}
                 />
-                <Bar dataKey="entrada" fill="#10b981" radius={[4, 4, 0, 0]} name="Entradas" />
-                <Bar dataKey="saida" fill="#ef4444" radius={[4, 4, 0, 0]} name="Saídas" />
+                <Bar dataKey="entrada" fill="#10b981" radius={[8, 8, 0, 0]} name="Entradas" />
+                <Bar dataKey="saida" fill="#ef4444" radius={[8, 8, 0, 0]} name="Saídas" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -602,15 +604,15 @@ export function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
-          className="card"
+          className="card glow-effect"
         >
           <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-2xl floating-animation">
               <FileText className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-800">Status dos Cheques</h3>
-              <p className="text-slate-600">Situação atual dos cheques</p>
+              <h3 className="text-2xl font-bold text-slate-800">Status dos Cheques</h3>
+              <p className="text-slate-600 font-medium">Situação atual dos cheques</p>
             </div>
           </div>
           
@@ -636,10 +638,10 @@ export function Dashboard() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full bg-slate-50 rounded-xl">
+              <div className="flex items-center justify-center h-full bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl">
                 <div className="text-center">
-                  <FileText className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-                  <p className="text-slate-500">Nenhum cheque registrado</p>
+                  <FileText className="w-20 h-20 mx-auto mb-4 text-slate-300 floating-animation" />
+                  <p className="text-slate-500 font-medium">Nenhum cheque registrado</p>
                 </div>
               </div>
             )}
@@ -652,26 +654,26 @@ export function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
-          className="card"
+          className="card glow-effect"
         >
           <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 shadow-lg">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 shadow-2xl floating-animation">
               <Users className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-800">Top 5 Clientes</h3>
-              <p className="text-slate-600">Clientes com maior volume de compras</p>
+              <h3 className="text-2xl font-bold text-slate-800">Top 5 Clientes</h3>
+              <p className="text-slate-600 font-medium">Clientes com maior volume de compras</p>
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             {topClients().map((client, index) => (
-              <div key={client.name} className="text-center p-4 bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl border border-teal-200">
-                <div className="text-2xl font-bold text-teal-700 mb-1">#{index + 1}</div>
-                <div className="font-medium text-slate-800 mb-2 truncate" title={client.name}>
+              <div key={client.name} className="text-center p-6 bg-gradient-to-br from-teal-50 to-teal-100 rounded-2xl border border-teal-200/50 hover:shadow-xl transition-all duration-300 hover:scale-105 glow-effect">
+                <div className="text-3xl font-bold text-teal-700 mb-2">#{index + 1}</div>
+                <div className="font-bold text-slate-800 mb-3 truncate" title={client.name}>
                   {client.name}
                 </div>
-                <div className="text-lg font-bold text-teal-600">
+                <div className="text-xl font-bold text-teal-600">
                   R$ {client.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </div>
               </div>
@@ -681,7 +683,7 @@ export function Dashboard() {
       )}
 
       {/* Resumo Rápido */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         {[
           { title: 'Vendas', count: state.sales.length, icon: DollarSign, color: 'emerald' },
           { title: 'Cheques', count: state.checks.length, icon: FileText, color: 'blue' },
@@ -695,13 +697,13 @@ export function Dashboard() {
             animate="visible"
             whileHover="hover"
             transition={{ delay: index * 0.1 }}
-            className={`card bg-gradient-to-br from-white to-${item.color}-50 border-${item.color}-200 text-center`}
+            className={`card bg-gradient-to-br from-white via-${item.color}-50/30 to-${item.color}-100/50 border-${item.color}-200/50 text-center glow-effect`}
           >
-            <div className={`p-3 rounded-xl bg-gradient-to-br from-${item.color}-500 to-${item.color}-600 shadow-lg mx-auto mb-3 w-fit`}>
+            <div className={`p-4 rounded-2xl bg-gradient-to-br from-${item.color}-500 to-${item.color}-600 shadow-2xl mx-auto mb-4 w-fit floating-animation`}>
               <item.icon className="w-6 h-6 text-white" />
             </div>
-            <div className="text-2xl font-bold text-slate-800 mb-1">{item.count}</div>
-            <div className="text-slate-600 font-medium">{item.title}</div>
+            <div className="text-3xl font-bold text-slate-800 mb-2">{item.count}</div>
+            <div className="text-slate-600 font-bold uppercase tracking-wide text-sm">{item.title}</div>
           </motion.div>
         ))}
       </div>
