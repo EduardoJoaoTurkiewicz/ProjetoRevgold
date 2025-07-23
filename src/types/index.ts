@@ -18,6 +18,7 @@ export interface Sale {
   id: string;
   date: string;
   client: string;
+  sellerId?: string; // ID do funcionário vendedor
   products: Product[];
   observations?: string;
   totalValue: number;

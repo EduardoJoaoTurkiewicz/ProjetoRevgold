@@ -149,6 +149,56 @@ export function Dashboard() {
       .map(([name, value]) => ({ name, value }));
   };
 
+  // Top funcionários por pagamentos recebidos no mês
+  const topEmployeesByPayments = () => {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    
+    const employeePayments: { [key: string]: number } = {};
+    
+    state.employeePayments.forEach(payment => {
+      const paymentDate = new Date(payment.paymentDate);
+      if (paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear) {
+        const employee = state.employees.find(e => e.id === payment.employeeId);
+        if (employee) {
+          employeePayments[employee.name] = (employeePayments[employee.name] || 0) + payment.amount;
+        }
+      }
+    });
+
+    return Object.entries(employeePayments)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5)
+      .map(([name, value]) => ({ name, value }));
+  };
+
+  // Vendas por vendedor
+  const salesBySeller = () => {
+    const sellerSales: { [key: string]: { total: number; count: number } } = {};
+    
+    state.sales.forEach(sale => {
+      if (sale.sellerId) {
+        const employee = state.employees.find(e => e.id === sale.sellerId);
+        if (employee) {
+          if (!sellerSales[employee.name]) {
+            sellerSales[employee.name] = { total: 0, count: 0 };
+          }
+          sellerSales[employee.name].total += sale.totalValue;
+          sellerSales[employee.name].count += 1;
+        }
+      }
+    });
+
+    return Object.entries(sellerSales)
+      .sort(([,a], [,b]) => b.total - a.total)
+      .slice(0, 5)
+      .map(([name, data]) => ({ 
+        name, 
+        vendas: data.total,
+        quantidade: data.count 
+      }));
+  };
+
   // Itens vencendo hoje
   const today = new Date().toISOString().split('T')[0];
   const itemsDueToday = [
