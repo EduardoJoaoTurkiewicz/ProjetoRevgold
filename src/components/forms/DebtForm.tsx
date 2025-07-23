@@ -39,7 +39,6 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
 
   // Get available checks from sales that have check payment method
   const availableChecks = state.checks.filter(check => 
-    check.status === 'compensado' && // Apenas cheques quitados
     !check.usedInDebt && // Não usado em outras dívidas
     !formData.checksUsed.includes(check.id)
   );
@@ -403,8 +402,16 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
                                     `Parcela ${check.installmentNumber}/${check.totalInstallments}`
                                   )}
                                 </div>
-                                <div className="text-sm text-green-600 font-medium">
-                                  Status: Compensado ✓
+                                <div className={`text-sm font-medium ${
+                                  check.status === 'compensado' ? 'text-green-600' :
+                                  check.status === 'pendente' ? 'text-yellow-600' :
+                                  check.status === 'devolvido' ? 'text-red-600' :
+                                  'text-blue-600'
+                                }`}>
+                                  Status: {check.status === 'compensado' ? 'Compensado ✓' :
+                                          check.status === 'pendente' ? 'Pendente ⏳' :
+                                          check.status === 'devolvido' ? 'Devolvido ❌' :
+                                          'Reapresentado 🔄'}
                                 </div>
                                 <div className="text-sm text-gray-600">
                                   Usado em: {check.usedFor || 'Não especificado'}
@@ -421,14 +428,6 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
                   </div>
                 )}
                 
-                {!formData.useOwnCheck && availableChecks.length === 0 && (
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-yellow-800 text-sm">
-                      ⚠️ Nenhum cheque quitado disponível para pagamento. 
-                      Apenas cheques com status "Compensado" podem ser usados para pagar dívidas.
-                    </p>
-                  </div>
-                )}
               </div>
             )}
 

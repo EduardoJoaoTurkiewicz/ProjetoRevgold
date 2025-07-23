@@ -31,13 +31,13 @@ export function UserSelection() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-800 to-emerald-900 flex items-center justify-center p-4">
       <div className="w-full max-w-4xl">
         {/* Logo and Header */}
         <div className="text-center mb-12 animation-fade-in">
           <div className="inline-flex items-center justify-center mb-6">
             <img 
-              src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
+              src="/image.png" 
               alt="RevGold Logo" 
               className="h-32 w-auto drop-shadow-2xl"
             />
@@ -45,7 +45,7 @@ export function UserSelection() {
           <h1 className="text-4xl font-bold text-white mb-2 drop-shadow-lg">
             {getGreeting()}!
           </h1>
-          <p className="text-green-100 text-lg">
+          <p className="text-emerald-100 text-lg">
             Selecione seu usuário para acessar o sistema
           </p>
         </div>
@@ -61,7 +61,7 @@ export function UserSelection() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-300 group-hover:scale-110">
+                  <div className="w-16 h-16 bg-emerald-700 rounded-full flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-300 group-hover:scale-110">
                     <User className="w-8 h-8 text-white" />
                   </div>
                   <div>
@@ -70,7 +70,7 @@ export function UserSelection() {
                     </h3>
                   </div>
                 </div>
-                <ChevronRight className="w-6 h-6 text-gray-400 group-hover:text-green-600 group-hover:translate-x-2 transition-all duration-300" />
+                <ChevronRight className="w-6 h-6 text-gray-400 group-hover:text-emerald-700 group-hover:translate-x-2 transition-all duration-300" />
               </div>
             </div>
           ))}
@@ -81,7 +81,7 @@ export function UserSelection() {
           <p className="text-yellow-200 text-sm">
             Sistema de Gestão Financeira RevGold
           </p>
-          <p className="text-green-200 text-xs mt-1">
+          <p className="text-emerald-200 text-xs mt-1">
             Colorindo seu ambiente e levando vida para os seus dias
           </p>
         </div>

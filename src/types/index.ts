@@ -113,7 +113,7 @@ export interface Boleto {
   client: string;
   value: number;
   dueDate: string;
-  status: 'pendente' | 'pago' | 'vencido';
+  status: 'pendente' | 'compensado' | 'vencido' | 'cancelado' | 'nao_pago';
   installmentNumber: number;
   totalInstallments: number;
   boletoFile?: string; // Base64 or file path

@@ -47,7 +47,18 @@ export function Boletos() {
   const updateBoletoStatus = (boletoId: string, status: Boleto['status']) => {
     const boleto = state.boletos.find(b => b.id === boletoId);
     if (boleto) {
-      const updatedBoleto = { ...boleto, status };
+      let updatedBoleto = { ...boleto, status };
+      
+      // If status is "cancelado", prompt for cancellation reason
+      if (status === 'cancelado') {
+        const reason = prompt('Por favor, informe o motivo do cancelamento:');
+        if (reason) {
+          updatedBoleto.observations = `${boleto.observations || ''}\nCancelado: ${reason}`.trim();
+        } else {
+          return; // Don't update if no reason provided
+        }
+      }
+      
       dispatch({ type: 'UPDATE_BOLETO', payload: updatedBoleto });
     }
   };
@@ -67,16 +78,20 @@ export function Boletos() {
 
   const getStatusColor = (status: Boleto['status']) => {
     switch (status) {
-      case 'pago': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case 'compensado': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
       case 'vencido': return 'bg-red-100 text-red-800 border-red-200';
+      case 'cancelado': return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'nao_pago': return 'bg-orange-100 text-orange-800 border-orange-200';
       default: return 'bg-amber-100 text-amber-800 border-amber-200';
     }
   };
 
   const getStatusLabel = (status: Boleto['status']) => {
     switch (status) {
-      case 'pago': return 'Pago';
+      case 'compensado': return 'Compensado';
       case 'vencido': return 'Vencido';
+      case 'cancelado': return 'Cancelado';
+      case 'nao_pago': return 'Não Pago';
       default: return 'Pendente';
     }
   };
@@ -194,8 +209,9 @@ export function Boletos() {
                             className="text-xs border rounded-lg px-2 py-1 bg-white shadow-sm"
                           >
                             <option value="pendente">Pendente</option>
-                            <option value="pago">Pago</option>
-                            <option value="vencido">Vencido</option>
+                            <option value="compensado">Compensado</option>
+                            <option value="cancelado">Cancelado</option>
+                            <option value="nao_pago">Não Pago</option>
                           </select>
                         )}
                       </div>

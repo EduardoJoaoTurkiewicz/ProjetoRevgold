@@ -48,7 +48,7 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
                 {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
               <img 
-                src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
+                src="/image.png" 
                 alt="RevGold Logo" 
                 className="h-12 w-auto drop-shadow-lg"
               />
@@ -81,7 +81,7 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
             <div className="mb-8 lg:hidden">
               <div className="flex items-center space-x-3">
                 <img 
-                  src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
+                  src="/image.png" 
                   alt="RevGold Logo" 
                   className="h-10 w-auto"
                 />
@@ -102,7 +102,7 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
                       }}
                       className={`w-full flex items-center space-x-4 px-6 py-4 rounded-2xl transition-all duration-300 font-medium ${
                         currentPage === item.id
-                          ? 'bg-gradient-to-r from-slate-800 to-slate-700 text-white shadow-xl transform scale-105'
+                          ? 'bg-gradient-to-r from-emerald-800 to-emerald-700 text-white shadow-xl transform scale-105'
                           : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 hover:shadow-lg hover:scale-105'
                       }`}
                     >

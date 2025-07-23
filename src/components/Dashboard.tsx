@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, DollarSign, TrendingUp, TrendingDown, Users, Calendar, Clock, AlertTriangle, CheckCircle, CreditCard, Receipt } from 'lucide-react';
+import { BarChart3, DollarSign, TrendingUp, TrendingDown, Users, Calendar, Clock, AlertTriangle, CheckCircle, CreditCard, Receipt, Minus } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
@@ -20,6 +20,14 @@ export function Dashboard() {
   const totalDebts = state.debts.reduce((sum, debt) => sum + debt.totalValue, 0);
   const totalReceived = state.sales.reduce((sum, sale) => sum + sale.receivedAmount, 0);
   const totalPending = state.sales.reduce((sum, sale) => sum + sale.pendingAmount, 0);
+
+  // Calculate today's expenses
+  const todayExpenses = state.debts
+    .filter(debt => debt.date === today)
+    .reduce((sum, debt) => sum + debt.totalValue, 0) +
+    state.employeePayments
+    .filter(payment => payment.paymentDate === today)
+    .reduce((sum, payment) => sum + payment.amount, 0);
 
   // Get today's date
   const today = new Date().toISOString().split('T')[0];
@@ -77,11 +85,15 @@ export function Dashboard() {
   return (
     <div className="space-y-8 pb-8">
       {/* Header with greeting and time */}
-      <div className="card bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-2xl">
+      <div className="card bg-gradient-to-r from-emerald-800 to-emerald-900 text-white shadow-2xl">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
           <div className="flex items-center gap-4 mb-4 md:mb-0">
             <div className="p-4 rounded-2xl bg-white/20 backdrop-blur-xl shadow-xl">
-              <BarChart3 className="w-10 h-10 text-white" />
+              <img 
+                src="/image.png" 
+                alt="RevGold Logo" 
+                className="w-16 h-16 object-contain"
+              />
             </div>
             <div>
               <h1 className="text-4xl font-bold mb-2">
@@ -93,7 +105,7 @@ export function Dashboard() {
             </div>
           </div>
           <div className="text-right">
-            <div className="flex items-center text-emerald-100 mb-2">
+            <div className="flex items-center text-emerald-200 mb-2">
               <Calendar className="w-5 h-5 mr-2" />
               <span className="text-lg font-medium">
                 {currentTime.toLocaleDateString('pt-BR', {
@@ -104,7 +116,7 @@ export function Dashboard() {
                 })}
               </span>
             </div>
-            <div className="flex items-center text-emerald-100">
+            <div className="flex items-center text-emerald-200">
               <Clock className="w-5 h-5 mr-2" />
               <span className="text-lg font-medium">
                 {currentTime.toLocaleTimeString('pt-BR')}
@@ -115,7 +127,7 @@ export function Dashboard() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <div className="card bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover-lift">
           <div className="flex items-center justify-between">
             <div>
@@ -125,24 +137,24 @@ export function Dashboard() {
               </p>
               <p className="text-blue-700 text-sm mt-1">{state.sales.length} vendas registradas</p>
             </div>
-            <div className="p-4 rounded-2xl bg-blue-600 shadow-xl">
+            <div className="p-4 rounded-2xl bg-emerald-700 shadow-xl">
               <DollarSign className="w-8 h-8 text-white" />
             </div>
           </div>
         </div>
 
-        <div className="card bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover-lift">
+        <div className="card bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 hover-lift">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-green-600 text-sm font-bold uppercase tracking-wide">Recebido</p>
-              <p className="text-3xl font-bold text-green-900 mt-2">
+              <p className="text-emerald-700 text-sm font-bold uppercase tracking-wide">Recebido</p>
+              <p className="text-3xl font-bold text-emerald-900 mt-2">
                 R$ {totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-green-700 text-sm mt-1">
+              <p className="text-emerald-700 text-sm mt-1">
                 {((totalReceived / totalSales) * 100 || 0).toFixed(1)}% do total
               </p>
             </div>
-            <div className="p-4 rounded-2xl bg-green-600 shadow-xl">
+            <div className="p-4 rounded-2xl bg-emerald-700 shadow-xl">
               <TrendingUp className="w-8 h-8 text-white" />
             </div>
           </div>
@@ -159,8 +171,23 @@ export function Dashboard() {
                 {((totalPending / totalSales) * 100 || 0).toFixed(1)}% do total
               </p>
             </div>
-            <div className="p-4 rounded-2xl bg-orange-600 shadow-xl">
+            <div className="p-4 rounded-2xl bg-emerald-700 shadow-xl">
               <TrendingDown className="w-8 h-8 text-white" />
+            </div>
+          </div>
+        </div>
+
+        <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 hover-lift">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-red-600 text-sm font-bold uppercase tracking-wide">Gasto Hoje</p>
+              <p className="text-3xl font-bold text-red-900 mt-2">
+                R$ {todayExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-red-700 text-sm mt-1">Gastos de hoje</p>
+            </div>
+            <div className="p-4 rounded-2xl bg-red-600 shadow-xl">
+              <Minus className="w-8 h-8 text-white" />
             </div>
           </div>
         </div>
@@ -174,7 +201,7 @@ export function Dashboard() {
               </p>
               <p className="text-red-700 text-sm mt-1">{state.debts.length} dívidas registradas</p>
             </div>
-            <div className="p-4 rounded-2xl bg-red-600 shadow-xl">
+            <div className="p-4 rounded-2xl bg-emerald-700 shadow-xl">
               <CreditCard className="w-8 h-8 text-white" />
             </div>
           </div>
@@ -188,14 +215,14 @@ export function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Today's Items */}
           {(todayChecks.length > 0 || todayBoletos.length > 0 || todayInstallments.length > 0 || employeesPaymentDueToday.length > 0) && (
-            <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-2xl">
+            <div className="card bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-2xl">
               <div className="flex items-center gap-4 mb-6">
-                <div className="p-3 rounded-xl bg-blue-600 shadow-lg">
+                <div className="p-3 rounded-xl bg-emerald-700 shadow-lg">
                   <Calendar className="w-8 h-8 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-blue-900">Vencimentos de Hoje</h3>
-                  <p className="text-blue-700">
+                  <h3 className="text-xl font-bold text-emerald-900">Vencimentos de Hoje</h3>
+                  <p className="text-emerald-700">
                     {todayChecks.length + todayBoletos.length + todayInstallments.length + employeesPaymentDueToday.length} item(s) para hoje
                   </p>
                 </div>
@@ -203,60 +230,60 @@ export function Dashboard() {
               
               <div className="space-y-3">
                 {todayChecks.map(check => (
-                  <div key={`check-${check.id}`} className="flex justify-between items-center p-3 bg-white rounded-xl border border-blue-200 shadow-sm">
+                  <div key={`check-${check.id}`} className="flex justify-between items-center p-3 bg-white rounded-xl border border-emerald-200 shadow-sm">
                     <div className="flex items-center gap-3">
-                      <Receipt className="w-5 h-5 text-blue-600" />
+                      <Receipt className="w-5 h-5 text-emerald-700" />
                       <div>
-                        <p className="font-medium text-blue-900">Cheque - {check.client}</p>
-                        <p className="text-sm text-blue-700">{check.usedFor || 'Não especificado'}</p>
+                        <p className="font-medium text-emerald-900">Cheque - {check.client}</p>
+                        <p className="text-sm text-emerald-700">{check.usedFor || 'Não especificado'}</p>
                       </div>
                     </div>
-                    <span className="font-bold text-blue-900">
+                    <span className="font-bold text-emerald-900">
                       R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 ))}
                 
                 {todayBoletos.map(boleto => (
-                  <div key={`boleto-${boleto.id}`} className="flex justify-between items-center p-3 bg-white rounded-xl border border-blue-200 shadow-sm">
+                  <div key={`boleto-${boleto.id}`} className="flex justify-between items-center p-3 bg-white rounded-xl border border-emerald-200 shadow-sm">
                     <div className="flex items-center gap-3">
-                      <Receipt className="w-5 h-5 text-blue-600" />
+                      <Receipt className="w-5 h-5 text-emerald-700" />
                       <div>
-                        <p className="font-medium text-blue-900">Boleto - {boleto.client}</p>
-                        <p className="text-sm text-blue-700">Parcela {boleto.installmentNumber}/{boleto.totalInstallments}</p>
+                        <p className="font-medium text-emerald-900">Boleto - {boleto.client}</p>
+                        <p className="text-sm text-emerald-700">Parcela {boleto.installmentNumber}/{boleto.totalInstallments}</p>
                       </div>
                     </div>
-                    <span className="font-bold text-blue-900">
+                    <span className="font-bold text-emerald-900">
                       R$ {boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 ))}
                 
                 {todayInstallments.map(installment => (
-                  <div key={`installment-${installment.id}`} className="flex justify-between items-center p-3 bg-white rounded-xl border border-blue-200 shadow-sm">
+                  <div key={`installment-${installment.id}`} className="flex justify-between items-center p-3 bg-white rounded-xl border border-emerald-200 shadow-sm">
                     <div className="flex items-center gap-3">
-                      <DollarSign className="w-5 h-5 text-blue-600" />
+                      <DollarSign className="w-5 h-5 text-emerald-700" />
                       <div>
-                        <p className="font-medium text-blue-900">Parcela - {installment.description}</p>
-                        <p className="text-sm text-blue-700">Tipo: {installment.type === 'venda' ? 'Venda' : 'Dívida'}</p>
+                        <p className="font-medium text-emerald-900">Parcela - {installment.description}</p>
+                        <p className="text-sm text-emerald-700">Tipo: {installment.type === 'venda' ? 'Venda' : 'Dívida'}</p>
                       </div>
                     </div>
-                    <span className="font-bold text-blue-900">
+                    <span className="font-bold text-emerald-900">
                       R$ {installment.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 ))}
                 
                 {employeesPaymentDueToday.map(employee => (
-                  <div key={`employee-${employee.id}`} className="flex justify-between items-center p-3 bg-white rounded-xl border border-blue-200 shadow-sm">
+                  <div key={`employee-${employee.id}`} className="flex justify-between items-center p-3 bg-white rounded-xl border border-emerald-200 shadow-sm">
                     <div className="flex items-center gap-3">
-                      <Users className="w-5 h-5 text-blue-600" />
+                      <Users className="w-5 h-5 text-emerald-700" />
                       <div>
-                        <p className="font-medium text-blue-900">Pagamento - {employee.name}</p>
-                        <p className="text-sm text-blue-700">{employee.position}</p>
+                        <p className="font-medium text-emerald-900">Pagamento - {employee.name}</p>
+                        <p className="text-sm text-emerald-700">{employee.position}</p>
                       </div>
                     </div>
-                    <span className="font-bold text-blue-900">
+                    <span className="font-bold text-emerald-900">
                       R$ {employee.salary.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -336,7 +363,7 @@ export function Dashboard() {
         {/* Sales Chart */}
         <div className="card shadow-2xl">
           <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-emerald-600 shadow-lg">
+            <div className="p-3 rounded-xl bg-emerald-700 shadow-lg">
               <BarChart3 className="w-8 h-8 text-white" />
             </div>
             <div>
@@ -359,10 +386,10 @@ export function Dashboard() {
                 <Line 
                   type="monotone" 
                   dataKey="value" 
-                  stroke="#059669" 
+                  stroke="#047857" 
                   strokeWidth={3}
-                  dot={{ fill: '#059669', strokeWidth: 2, r: 6 }}
-                  activeDot={{ r: 8, stroke: '#059669', strokeWidth: 2 }}
+                  dot={{ fill: '#047857', strokeWidth: 2, r: 6 }}
+                  activeDot={{ r: 8, stroke: '#047857', strokeWidth: 2 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -380,7 +407,7 @@ export function Dashboard() {
         {/* Payment Methods Chart */}
         <div className="card shadow-2xl">
           <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-blue-600 shadow-lg">
+            <div className="p-3 rounded-xl bg-emerald-700 shadow-lg">
               <DollarSign className="w-8 h-8 text-white" />
             </div>
             <div>
@@ -465,7 +492,7 @@ export function Dashboard() {
               </p>
               <p className="text-teal-700 text-sm mt-1">ativos</p>
             </div>
-            <div className="p-3 rounded-xl bg-teal-600 shadow-lg">
+            <div className="p-3 rounded-xl bg-emerald-700 shadow-lg">
               <Users className="w-6 h-6 text-white" />
             </div>
           </div>
@@ -480,7 +507,7 @@ export function Dashboard() {
                 {state.installments.filter(i => !i.isPaid).length} pendentes
               </p>
             </div>
-            <div className="p-3 rounded-xl bg-amber-600 shadow-lg">
+            <div className="p-3 rounded-xl bg-emerald-700 shadow-lg">
               <Calendar className="w-6 h-6 text-white" />
             </div>
           </div>
@@ -491,14 +518,14 @@ export function Dashboard() {
       {(todayChecks.length === 0 && todayBoletos.length === 0 && todayInstallments.length === 0 && 
         overdueChecks.length === 0 && overdueBoletos.length === 0 && overdueInstallments.length === 0 &&
         employeesPaymentDueToday.length === 0) && (
-        <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-2xl">
+        <div className="card bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-2xl">
           <div className="flex items-center justify-center py-8">
             <div className="text-center">
-              <div className="p-4 rounded-full bg-green-600 shadow-xl mx-auto mb-4 w-fit">
+              <div className="p-4 rounded-full bg-emerald-700 shadow-xl mx-auto mb-4 w-fit">
                 <CheckCircle className="w-12 h-12 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-green-900 mb-2">Tudo em Dia!</h3>
-              <p className="text-green-700 text-lg">
+              <h3 className="text-2xl font-bold text-emerald-900 mb-2">Tudo em Dia!</h3>
+              <p className="text-emerald-700 text-lg">
                 Não há vencimentos para hoje nem itens em atraso. Parabéns pela organização!
               </p>
             </div>
