@@ -16,82 +16,73 @@
 
 @layer components {
   .card {
-    @apply bg-white/95 rounded-3xl shadow-2xl border border-slate-200 p-8 backdrop-blur-xl;
-    background: rgba(255, 255, 255, 0.98);
+    @apply bg-white rounded-2xl shadow-lg border border-slate-200 p-6;
     box-shadow: 
-      0 25px 50px -12px rgba(0, 0, 0, 0.25),
-      0 0 0 1px rgba(255, 255, 255, 0.05);
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      0 10px 25px -5px rgba(0, 0, 0, 0.1),
+      0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .card:hover {
-    transform: translateY(-4px) scale(1.01);
+    transform: translateY(-2px);
     box-shadow: 
-      0 32px 64px -12px rgba(0, 0, 0, 0.35),
-      0 0 0 1px rgba(255, 255, 255, 0.1);
+      0 20px 40px -10px rgba(0, 0, 0, 0.15),
+      0 10px 20px -5px rgba(0, 0, 0, 0.08);
   }
 
   .btn-primary {
-    @apply bg-gradient-to-r from-emerald-800 to-emerald-700 hover:from-emerald-700 hover:to-emerald-600 text-white px-8 py-4 rounded-2xl font-bold shadow-2xl transform transition-all duration-300 border border-emerald-600;
+    @apply bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white px-6 py-3 rounded-xl font-semibold shadow-lg transform transition-all duration-300;
   }
 
   .btn-primary:hover {
-    @apply scale-105;
-    box-shadow: 
-      0 25px 50px -12px rgba(0, 0, 0, 0.5),
-      0 0 0 1px rgba(255, 255, 255, 0.1);
+    @apply scale-105 shadow-xl;
   }
 
   .btn-secondary {
-    @apply bg-white hover:bg-slate-50 text-slate-700 px-8 py-4 rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-slate-200 hover:border-slate-300;
+    @apply bg-white hover:bg-slate-50 text-slate-700 px-6 py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-300 border border-slate-300 hover:border-slate-400;
   }
 
   .btn-secondary:hover {
-    @apply scale-105 transform;
+    @apply scale-102 transform;
   }
 
   .btn-success {
-    @apply bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white px-8 py-4 rounded-2xl font-bold shadow-2xl hover:shadow-3xl transition-all duration-300;
+    @apply bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300;
   }
 
   .btn-success:hover {
-    @apply scale-105 transform;
+    @apply scale-102 transform;
   }
 
   .btn-danger {
-    @apply bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white px-8 py-4 rounded-2xl font-bold shadow-2xl hover:shadow-3xl transition-all duration-300;
+    @apply bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300;
   }
 
   .btn-danger:hover {
-    @apply scale-105 transform;
+    @apply scale-102 transform;
   }
 
   .input-field {
-    @apply w-full px-6 py-4 border-2 border-slate-300 rounded-2xl focus:ring-4 focus:ring-slate-500/20 focus:border-slate-500 transition-all duration-300 shadow-lg bg-white font-medium;
+    @apply w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-300 shadow-sm bg-white;
   }
 
   .input-field:focus {
-    @apply shadow-2xl transform scale-105;
-    box-shadow: 
-      0 25px 50px -12px rgba(0, 0, 0, 0.25),
-      0 0 0 4px rgba(5, 150, 105, 0.1);
+    @apply shadow-md;
   }
 
   .form-group {
-    @apply mb-6;
+    @apply mb-4;
   }
 
   .form-label {
-    @apply block text-sm font-bold text-slate-700 mb-3;
+    @apply block text-sm font-semibold text-slate-700 mb-2;
   }
 
   .glass-effect {
-    background: rgba(255, 255, 255, 0.98);
-    backdrop-filter: blur(40px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 
-      0 25px 50px -12px rgba(0, 0, 0, 0.25),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
   }
 }
 
