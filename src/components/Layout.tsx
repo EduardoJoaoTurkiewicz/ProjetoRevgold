@@ -85,9 +85,6 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
                   alt="RevGold Logo" 
                   className="h-10 w-auto"
                 />
-                <h1 className="text-xl font-bold text-slate-800">
-                  RevGold System
-                </h1>
               </div>
             </div>
             <ul className="space-y-2">

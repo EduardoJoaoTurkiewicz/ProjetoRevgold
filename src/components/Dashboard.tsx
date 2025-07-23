@@ -258,7 +258,7 @@ export function Dashboard() {
                 {getGreeting()}, {state.user?.username}!
               </h1>
               <p className="text-emerald-100 text-lg">
-                Dashboard Executivo - Sistema RevGold
+                Dashboard Executivo
               </p>
             </div>
           </div>

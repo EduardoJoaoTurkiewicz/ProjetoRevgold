@@ -276,6 +276,19 @@ export function Sales() {
                   <label className="form-label">Cliente</label>
                   <p className="text-sm text-gray-900">{viewingSale.client}</p>
                 </div>
+                <div>
+                  <label className="form-label">Vendedor</label>
+                  <p className="text-sm text-gray-900">
+                    {viewingSale.sellerId ? (
+                      (() => {
+                        const seller = state.employees.find(e => e.id === viewingSale.sellerId);
+                        return seller ? `${seller.name} - ${seller.position}` : 'Vendedor não encontrado';
+                      })()
+                    ) : (
+                      <span className="text-gray-400">Não informado</span>
+                    )}
+                  </p>
+                </div>
                 <div className="md:col-span-2">
                   <label className="form-label">Produtos</label>
                   <div className="text-sm text-gray-900">

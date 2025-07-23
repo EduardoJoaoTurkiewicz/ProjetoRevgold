@@ -185,6 +185,27 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                   required
                 />
               </div>
+
+              <div className="form-group md:col-span-2">
+                <label className="form-label">Vendedor (Opcional)</label>
+                <select
+                  value={formData.sellerId}
+                  onChange={(e) => setFormData(prev => ({ ...prev, sellerId: e.target.value }))}
+                  className="input-field"
+                >
+                  <option value="">Selecionar vendedor...</option>
+                  {state.employees
+                    .filter(employee => employee.isActive)
+                    .map(employee => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.name} - {employee.position}
+                      </option>
+                    ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Selecione o funcionário que realizou esta venda (opcional)
+                </p>
+              </div>
             </div>
 
             {/* Products Section */}
