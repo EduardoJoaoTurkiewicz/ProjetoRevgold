@@ -1,122 +1,13 @@
-import React, { useState, useEffect, Suspense } from 'react';
-import { BarChart3, DollarSign, TrendingUp, TrendingDown, Users, Calendar, Clock, AlertTriangle, CheckCircle, CreditCard, Receipt, Activity, Target, Zap, ArrowUp, ArrowDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BarChart3, DollarSign, TrendingUp, TrendingDown, Users, Calendar, Clock, AlertTriangle, CheckCircle, CreditCard, Receipt, Activity, Target, Zap, ArrowUp, ArrowDown, Eye, Package, Banknote, FileText } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, BarChart, Bar, RadialBarChart, RadialBar } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Lazy load Three.js components to avoid initial loading issues
-const DataVisualization3D = React.lazy(() => 
-  Promise.all([
-    import('@react-three/fiber'),
-    import('@react-three/drei')
-  ]).then(([fiber, drei]) => ({
-    default: ({ data }: { data: any[] }) => {
-      const { Canvas } = fiber;
-      const { OrbitControls, Text, Box } = drei;
-      
-      return (
-        <Canvas camera={{ position: [0, 0, 10], fov: 60 }}>
-          <ambientLight intensity={0.6} />
-          <pointLight position={[10, 10, 10]} intensity={1} />
-          <OrbitControls enableZoom={false} enablePan={false} />
-          
-          {data.map((item, index) => (
-            <group key={index} position={[index * 2 - 4, 0, 0]}>
-              <Box
-                args={[1, Math.max(item.value / 1000, 0.5), 1]}
-                position={[0, Math.max(item.value / 2000, 0.25), 0]}
-              >
-                <meshStandardMaterial color={`hsl(${120 + index * 60}, 70%, 50%)`} />
-              </Box>
-              <Text
-                position={[0, -2, 0]}
-                fontSize={0.5}
-                color="#374151"
-                anchorX="center"
-                anchorY="middle"
-              >
-                {item.name}
-              </Text>
-            </group>
-          ))}
-        </Canvas>
-      );
-    }
-  })).catch(() => ({
-    default: () => (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando visualização 3D...</p>
-        </div>
-      </div>
-    )
-  }))
-);
-
-const PieChart3D = React.lazy(() => 
-  Promise.all([
-    import('@react-three/fiber'),
-    import('@react-three/drei')
-  ]).then(([fiber, drei]) => ({
-    default: ({ data }: { data: any[] }) => {
-      const { Canvas } = fiber;
-      const { OrbitControls, Sphere } = drei;
-      
-      // Prevent NaN values by ensuring total is not zero
-      const total = data.reduce((sum, item) => sum + item.value, 0);
-      
-      // If total is zero, don't render any spheres to avoid NaN errors
-      if (total === 0) {
-        return (
-          <Canvas camera={{ position: [0, 0, 8], fov: 60 }}>
-            <ambientLight intensity={0.6} />
-            <pointLight position={[10, 10, 10]} intensity={1} />
-            <OrbitControls enableZoom={false} enablePan={false} />
-          </Canvas>
-        );
-      }
-      
-      return (
-        <Canvas camera={{ position: [0, 0, 8], fov: 60 }}>
-          <ambientLight intensity={0.6} />
-          <pointLight position={[10, 10, 10]} intensity={1} />
-          <OrbitControls enableZoom={false} enablePan={false} />
-          
-          {data.map((item, index) => {
-            const angle = (item.value / total) * Math.PI * 2;
-            const startAngle = data.slice(0, index).reduce((sum, prev) => sum + ((prev.value || 0) / total) * Math.PI * 2, 0);
-            
-            // Skip rendering if angle is NaN or zero
-            if (isNaN(angle) || angle === 0) return null;
-            
-            return (
-              <group key={index} rotation={[0, 0, startAngle]}>
-                <Sphere args={[2, 32, 16, 0, Math.max(angle, 0.01)]} position={[0, 0, 0]}>
-                  <meshStandardMaterial color={item.fill} />
-                </Sphere>
-              </group>
-            );
-          })}
-        </Canvas>
-      );
-    }
-  })).catch(() => ({
-    default: () => (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando gráfico 3D...</p>
-        </div>
-      </div>
-    )
-  }))
-);
-
 export function Dashboard() {
   const { state } = useApp();
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [selectedMetric, setSelectedMetric] = useState('sales');
+  const [selectedPeriod, setSelectedPeriod] = useState('30'); // dias
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -126,82 +17,151 @@ export function Dashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  // Calculate metrics
+  // Calcular métricas principais
   const totalSales = state.sales.reduce((sum, sale) => sum + sale.totalValue, 0);
   const totalDebts = state.debts.reduce((sum, debt) => sum + debt.totalValue, 0);
   const totalReceived = state.sales.reduce((sum, sale) => sum + sale.receivedAmount, 0);
   const totalPending = state.sales.reduce((sum, sale) => sum + sale.pendingAmount, 0);
+  const netProfit = totalReceived - totalDebts;
 
-  // Calculate today's expenses
-  const today = new Date().toISOString().split('T')[0];
-  const todayExpenses = state.debts
-    .filter(debt => debt.date === today)
-    .reduce((sum, debt) => sum + debt.totalValue, 0) +
-    (state.employeePayments || [])
-    .filter(payment => payment.paymentDate === today)
-    .reduce((sum, payment) => sum + payment.amount, 0);
+  // Dados para gráfico de vendas por período
+  const salesByPeriod = () => {
+    const days = parseInt(selectedPeriod);
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - days);
 
-  // Today's items
-  const todayChecks = state.checks.filter(check => check.dueDate === today);
-  const todayBoletos = state.boletos.filter(boleto => boleto.dueDate === today);
-  const todayInstallments = state.installments.filter(installment => installment.dueDate === today);
+    const salesInPeriod = state.sales.filter(sale => {
+      const saleDate = new Date(sale.date);
+      return saleDate >= startDate && saleDate <= endDate;
+    });
 
-  // Overdue items
-  const overdueChecks = state.checks.filter(check => check.dueDate < today && check.status === 'pendente');
-  const overdueBoletos = state.boletos.filter(boleto => boleto.dueDate < today && boleto.status === 'pendente');
-  const overdueInstallments = state.installments.filter(installment => installment.dueDate < today && !installment.isPaid);
-
-  // Employee payments due today
-  const employeesPaymentDueToday = state.employees.filter(employee => {
-    if (!employee.isActive) return false;
-    const paymentDay = employee.paymentDay;
-    return currentTime.getDate() === paymentDay;
-  });
-
-  // Advanced chart data
-  const salesTrendData = state.sales
-    .slice(-30)
-    .reduce((acc, sale) => {
-      const date = sale.date;
+    // Agrupar vendas por dia
+    const salesByDay = salesInPeriod.reduce((acc, sale) => {
+      const date = new Date(sale.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
       const existing = acc.find(item => item.date === date);
       if (existing) {
-        existing.value += sale.totalValue;
-        existing.count += 1;
+        existing.vendas += sale.totalValue;
+        existing.recebido += sale.receivedAmount;
+        existing.pendente += sale.pendingAmount;
+        existing.quantidade += 1;
       } else {
         acc.push({
-          date: new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-          value: sale.totalValue,
-          count: 1,
-          received: sale.receivedAmount,
-          pending: sale.pendingAmount
+          date,
+          vendas: sale.totalValue,
+          recebido: sale.receivedAmount,
+          pendente: sale.pendingAmount,
+          quantidade: 1
         });
       }
       return acc;
     }, [] as any[]);
 
-  // 3D Chart data
-  const chart3DData = [
-    { name: 'Vendas', value: totalSales },
-    { name: 'Recebido', value: totalReceived },
-    { name: 'Pendente', value: totalPending },
-    { name: 'Dívidas', value: totalDebts }
+    return salesByDay.sort((a, b) => new Date(a.date.split('/').reverse().join('-')).getTime() - new Date(b.date.split('/').reverse().join('-')).getTime());
+  };
+
+  // Dados para gráfico de métodos de pagamento
+  const paymentMethodsData = () => {
+    const methods: { [key: string]: number } = {};
+    
+    state.sales.forEach(sale => {
+      sale.paymentMethods.forEach(method => {
+        const methodName = method.type === 'dinheiro' ? 'Dinheiro' :
+                          method.type === 'pix' ? 'PIX' :
+                          method.type === 'cartao_credito' ? 'Cartão Crédito' :
+                          method.type === 'cartao_debito' ? 'Cartão Débito' :
+                          method.type === 'cheque' ? 'Cheque' :
+                          method.type === 'boleto' ? 'Boleto' :
+                          method.type === 'transferencia' ? 'Transferência' : 'Outros';
+        
+        methods[methodName] = (methods[methodName] || 0) + method.amount;
+      });
+    });
+
+    const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16'];
+    
+    return Object.entries(methods).map(([name, value], index) => ({
+      name,
+      value,
+      fill: colors[index % colors.length]
+    }));
+  };
+
+  // Status dos cheques
+  const checksStatusData = () => {
+    const status = {
+      'Compensado': state.checks.filter(c => c.status === 'compensado').length,
+      'Pendente': state.checks.filter(c => c.status === 'pendente').length,
+      'Devolvido': state.checks.filter(c => c.status === 'devolvido').length,
+      'Reapresentado': state.checks.filter(c => c.status === 'reapresentado').length
+    };
+
+    const colors = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6'];
+    
+    return Object.entries(status)
+      .filter(([_, value]) => value > 0)
+      .map(([name, value], index) => ({
+        name,
+        value,
+        fill: colors[index]
+      }));
+  };
+
+  // Fluxo de caixa mensal
+  const cashFlowData = () => {
+    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const currentYear = new Date().getFullYear();
+    
+    return months.map((month, index) => {
+      const monthSales = state.sales.filter(sale => {
+        const saleDate = new Date(sale.date);
+        return saleDate.getFullYear() === currentYear && saleDate.getMonth() === index;
+      });
+      
+      const monthDebts = state.debts.filter(debt => {
+        const debtDate = new Date(debt.date);
+        return debtDate.getFullYear() === currentYear && debtDate.getMonth() === index;
+      });
+
+      const entrada = monthSales.reduce((sum, sale) => sum + sale.receivedAmount, 0);
+      const saida = monthDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
+      
+      return {
+        mes: month,
+        entrada,
+        saida,
+        saldo: entrada - saida
+      };
+    });
+  };
+
+  // Top clientes
+  const topClients = () => {
+    const clients: { [key: string]: number } = {};
+    
+    state.sales.forEach(sale => {
+      clients[sale.client] = (clients[sale.client] || 0) + sale.totalValue;
+    });
+
+    return Object.entries(clients)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5)
+      .map(([name, value]) => ({ name, value }));
+  };
+
+  // Itens vencendo hoje
+  const today = new Date().toISOString().split('T')[0];
+  const itemsDueToday = [
+    ...state.checks.filter(c => c.dueDate === today && c.status === 'pendente'),
+    ...state.boletos.filter(b => b.dueDate === today && b.status === 'pendente'),
+    ...state.installments.filter(i => i.dueDate === today && !i.isPaid)
   ];
 
-  // Radial chart data
-  const radialData = [
-    { name: 'Recebido', value: totalReceived, fill: '#10b981' },
-    { name: 'Pendente', value: totalPending, fill: '#f59e0b' },
-    { name: 'Dívidas', value: totalDebts, fill: '#ef4444' }
-  ];
-
-  // Performance metrics
-  const performanceData = [
-    { name: 'Jan', vendas: 4000, recebido: 2400, meta: 3000 },
-    { name: 'Fev', vendas: 3000, recebido: 1398, meta: 3000 },
-    { name: 'Mar', vendas: 2000, recebido: 9800, meta: 3000 },
-    { name: 'Abr', vendas: 2780, recebido: 3908, meta: 3000 },
-    { name: 'Mai', vendas: 1890, recebido: 4800, meta: 3000 },
-    { name: 'Jun', vendas: 2390, recebido: 3800, meta: 3000 },
+  // Itens vencidos
+  const overdueItems = [
+    ...state.checks.filter(c => c.dueDate < today && c.status === 'pendente'),
+    ...state.boletos.filter(b => b.dueDate < today && b.status === 'pendente'),
+    ...state.installments.filter(i => i.dueDate < today && !i.isPaid)
   ];
 
   const getGreeting = () => {
@@ -213,140 +173,104 @@ export function Dashboard() {
 
   // Animation variants
   const cardVariants = {
-    hidden: { opacity: 0, y: 50, scale: 0.9 },
+    hidden: { opacity: 0, y: 20 },
     visible: { 
       opacity: 1, 
-      y: 0, 
-      scale: 1,
-      transition: { 
-        duration: 0.6,
-        ease: "easeOut"
-      }
+      y: 0,
+      transition: { duration: 0.5 }
     },
     hover: {
       scale: 1.02,
-      y: -5,
-      transition: { duration: 0.3 }
+      y: -2,
+      transition: { duration: 0.2 }
     }
   };
 
   return (
     <div className="space-y-8 pb-8">
-      {/* Professional Header */}
+      {/* Header Profissional */}
       <motion.div 
-        initial={{ opacity: 0, y: -30 }}
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="card bg-gradient-to-r from-emerald-50 to-blue-50 border-emerald-200"
+        className="bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-2xl p-8 text-white shadow-2xl"
       >
         <div className="flex flex-col lg:flex-row justify-between items-center">
           <div className="flex items-center gap-6 mb-6 lg:mb-0">
-            <motion.div 
-              whileHover={{ rotate: 5, scale: 1.05 }}
-              transition={{ duration: 0.3 }}
-              className="relative"
-            >
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-700 shadow-xl">
-                <img 
-                  src="/image.png" 
-                  alt="RevGold Logo" 
-                  className="w-16 h-16 object-contain filter brightness-0 invert"
-                />
-              </div>
-            </motion.div>
+            <div className="p-4 rounded-2xl bg-white/20 backdrop-blur-sm">
+              <img 
+                src="/image.png" 
+                alt="RevGold Logo" 
+                className="w-16 h-16 object-contain filter brightness-0 invert"
+              />
+            </div>
             <div>
-              <motion.h1 
-                initial={{ opacity: 0, x: -30 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3, duration: 0.8 }}
-                className="text-4xl font-bold mb-2 bg-gradient-to-r from-emerald-700 to-blue-700 bg-clip-text text-transparent"
-              >
+              <h1 className="text-4xl font-bold mb-2">
                 {getGreeting()}, {state.user?.username}!
-              </motion.h1>
-              <motion.p 
-                initial={{ opacity: 0, x: -30 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5, duration: 0.8 }}
-                className="text-slate-600 text-lg font-medium"
-              >
-                Dashboard Executivo - RevGold System
-              </motion.p>
+              </h1>
+              <p className="text-emerald-100 text-lg">
+                Dashboard Executivo - Sistema RevGold
+              </p>
             </div>
           </div>
-          <motion.div 
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.7, duration: 0.8 }}
-            className="text-right bg-white/70 backdrop-blur-sm rounded-2xl p-4 shadow-lg"
-          >
-            <div className="flex items-center text-emerald-700 mb-2">
+          <div className="text-right bg-white/10 backdrop-blur-sm rounded-2xl p-4">
+            <div className="flex items-center text-white mb-2">
               <Calendar className="w-5 h-5 mr-2" />
               <span className="text-lg font-bold">
                 {currentTime.toLocaleDateString('pt-BR', {
                   weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
+                  day: 'numeric',
+                  month: 'long'
                 })}
               </span>
             </div>
-            <div className="flex items-center text-slate-600">
+            <div className="flex items-center text-emerald-100">
               <Clock className="w-5 h-5 mr-2" />
               <span className="text-lg font-bold">
                 {currentTime.toLocaleTimeString('pt-BR')}
               </span>
             </div>
-          </motion.div>
+          </div>
         </div>
       </motion.div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      {/* KPIs Principais */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
           {
-            title: 'Total em Vendas',
+            title: 'Faturamento Total',
             value: totalSales,
-            count: state.sales.length,
             icon: DollarSign,
             color: 'emerald',
             trend: '+12.5%',
-            trendUp: true
+            trendUp: true,
+            subtitle: `${state.sales.length} vendas`
           },
           {
-            title: 'Recebido',
+            title: 'Valor Recebido',
             value: totalReceived,
-            percentage: ((totalReceived / totalSales) * 100 || 0).toFixed(1),
             icon: TrendingUp,
             color: 'green',
             trend: '+8.2%',
-            trendUp: true
+            trendUp: true,
+            subtitle: `${((totalReceived / totalSales) * 100 || 0).toFixed(1)}% do total`
           },
           {
-            title: 'Pendente',
+            title: 'Valores Pendentes',
             value: totalPending,
-            percentage: ((totalPending / totalSales) * 100 || 0).toFixed(1),
             icon: Clock,
             color: 'amber',
             trend: '-3.1%',
-            trendUp: false
+            trendUp: false,
+            subtitle: `${((totalPending / totalSales) * 100 || 0).toFixed(1)}% do total`
           },
           {
-            title: 'Gastos Hoje',
-            value: todayExpenses,
-            count: 'hoje',
-            icon: TrendingDown,
-            color: 'red',
-            trend: '+5.7%',
-            trendUp: true
-          },
-          {
-            title: 'Total em Dívidas',
-            value: totalDebts,
-            count: state.debts.length,
-            icon: CreditCard,
-            color: 'purple',
-            trend: '-2.3%',
-            trendUp: false
+            title: 'Lucro Líquido',
+            value: netProfit,
+            icon: netProfit >= 0 ? TrendingUp : TrendingDown,
+            color: netProfit >= 0 ? 'green' : 'red',
+            trend: netProfit >= 0 ? '+15.3%' : '-5.2%',
+            trendUp: netProfit >= 0,
+            subtitle: 'Receitas - Gastos'
           }
         ].map((metric, index) => (
           <motion.div
@@ -356,7 +280,7 @@ export function Dashboard() {
             animate="visible"
             whileHover="hover"
             transition={{ delay: index * 0.1 }}
-            className={`card bg-gradient-to-br from-white to-${metric.color}-50 border-${metric.color}-200 hover:shadow-2xl`}
+            className={`card bg-gradient-to-br from-white to-${metric.color}-50 border-${metric.color}-200`}
           >
             <div className="flex items-center justify-between mb-4">
               <div className={`p-3 rounded-xl bg-gradient-to-br from-${metric.color}-500 to-${metric.color}-600 shadow-lg`}>
@@ -378,283 +302,359 @@ export function Dashboard() {
                 R$ {metric.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
               <p className="text-slate-500 text-sm font-medium">
-                {metric.percentage ? `${metric.percentage}% do total` : 
-                 typeof metric.count === 'number' ? `${metric.count} registros` : metric.count}
+                {metric.subtitle}
               </p>
-            </div>
-            
-            {/* Progress bar */}
-            <div className="mt-4 h-2 bg-slate-200 rounded-full overflow-hidden">
-              <motion.div 
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min((metric.value / Math.max(totalSales, totalDebts)) * 100, 100)}%` }}
-                transition={{ duration: 1.5, delay: index * 0.2 }}
-                className={`h-full bg-gradient-to-r from-${metric.color}-400 to-${metric.color}-600 rounded-full`}
-              />
             </div>
           </motion.div>
         ))}
       </div>
 
-      {/* 3D Charts Section */}
+      {/* Alertas Importantes */}
+      {(itemsDueToday.length > 0 || overdueItems.length > 0) && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="grid grid-cols-1 md:grid-cols-2 gap-6"
+        >
+          {itemsDueToday.length > 0 && (
+            <div className="card bg-gradient-to-br from-blue-50 to-blue-100 border-blue-300">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 rounded-xl bg-blue-600 shadow-lg">
+                  <Calendar className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-blue-900">Vencimentos Hoje</h3>
+                  <p className="text-blue-700">{itemsDueToday.length} item(s) vencem hoje</p>
+                </div>
+              </div>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {itemsDueToday.slice(0, 3).map((item, index) => (
+                  <div key={index} className="text-sm text-blue-800 bg-blue-200/50 p-2 rounded">
+                    {'client' in item ? `${item.client} - R$ ${item.value.toFixed(2)}` :
+                     'description' in item ? `${item.description} - R$ ${item.amount.toFixed(2)}` :
+                     `Parcela - R$ ${item.amount.toFixed(2)}`}
+                  </div>
+                ))}
+                {itemsDueToday.length > 3 && (
+                  <p className="text-blue-600 text-sm font-medium">
+                    +{itemsDueToday.length - 3} outros itens
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {overdueItems.length > 0 && (
+            <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-300">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 rounded-xl bg-red-600 shadow-lg">
+                  <AlertTriangle className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-red-900">Itens Vencidos</h3>
+                  <p className="text-red-700">{overdueItems.length} item(s) em atraso</p>
+                </div>
+              </div>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {overdueItems.slice(0, 3).map((item, index) => (
+                  <div key={index} className="text-sm text-red-800 bg-red-200/50 p-2 rounded">
+                    {'client' in item ? `${item.client} - R$ ${item.value.toFixed(2)}` :
+                     'description' in item ? `${item.description} - R$ ${item.amount.toFixed(2)}` :
+                     `Parcela - R$ ${item.amount.toFixed(2)}`}
+                  </div>
+                ))}
+                {overdueItems.length > 3 && (
+                  <p className="text-red-600 text-sm font-medium">
+                    +{overdueItems.length - 3} outros itens
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* Gráficos Principais */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-        {/* 3D Bar Chart */}
+        {/* Vendas por Período */}
         <motion.div
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, delay: 0.3 }}
-          className="card bg-gradient-to-br from-white to-blue-50 border-blue-200"
+          className="card"
         >
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
-              <BarChart3 className="w-6 h-6 text-white" />
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg">
+                <BarChart3 className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-800">Vendas por Período</h3>
+                <p className="text-slate-600">Evolução das vendas e recebimentos</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-800">Visualização 3D - Métricas</h3>
-              <p className="text-slate-600">Análise tridimensional dos dados financeiros</p>
-            </div>
+            <select
+              value={selectedPeriod}
+              onChange={(e) => setSelectedPeriod(e.target.value)}
+              className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              <option value="7">Últimos 7 dias</option>
+              <option value="15">Últimos 15 dias</option>
+              <option value="30">Últimos 30 dias</option>
+            </select>
           </div>
           
-          <div className="h-80 bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border border-blue-100">
-            <Suspense fallback={
-              <div className="flex items-center justify-center h-full">
+          <div className="h-80">
+            {salesByPeriod().length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={salesByPeriod()}>
+                  <defs>
+                    <linearGradient id="colorVendas" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                    </linearGradient>
+                    <linearGradient id="colorRecebido" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="date" stroke="#64748b" fontSize={12} />
+                  <YAxis stroke="#64748b" fontSize={12} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'white', 
+                      border: '1px solid #e2e8f0', 
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+                    }}
+                    formatter={(value: number) => [`R$ ${value.toFixed(2)}`, '']}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="vendas" 
+                    stroke="#10b981" 
+                    fillOpacity={1} 
+                    fill="url(#colorVendas)"
+                    strokeWidth={3}
+                    name="Vendas"
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="recebido" 
+                    stroke="#3b82f6" 
+                    fillOpacity={1} 
+                    fill="url(#colorRecebido)"
+                    strokeWidth={3}
+                    name="Recebido"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full bg-slate-50 rounded-xl">
                 <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Carregando visualização...</p>
+                  <Package className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+                  <p className="text-slate-500">Nenhuma venda no período selecionado</p>
                 </div>
               </div>
-            }>
-              <DataVisualization3D data={chart3DData} />
-            </Suspense>
+            )}
           </div>
         </motion.div>
 
-        {/* 3D Pie Chart */}
+        {/* Métodos de Pagamento */}
         <motion.div
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, delay: 0.5 }}
-          className="card bg-gradient-to-br from-white to-purple-50 border-purple-200"
+          className="card"
         >
           <div className="flex items-center gap-4 mb-6">
             <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg">
-              <Target className="w-6 h-6 text-white" />
+              <Banknote className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-800">Distribuição 3D</h3>
-              <p className="text-slate-600">Proporção visual dos valores</p>
+              <h3 className="text-xl font-bold text-slate-800">Métodos de Pagamento</h3>
+              <p className="text-slate-600">Distribuição por forma de pagamento</p>
             </div>
           </div>
           
-          <div className="h-80 bg-gradient-to-br from-slate-50 to-purple-50 rounded-xl border border-purple-100">
-            <Suspense fallback={
-              <div className="flex items-center justify-center h-full">
+          <div className="h-80">
+            {paymentMethodsData().length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={paymentMethodsData()}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {paymentMethodsData().map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'Valor']} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full bg-slate-50 rounded-xl">
                 <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Carregando gráfico...</p>
+                  <Banknote className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+                  <p className="text-slate-500">Nenhum método de pagamento registrado</p>
                 </div>
               </div>
-            }>
-              <PieChart3D data={radialData} />
-            </Suspense>
+            )}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Fluxo de Caixa e Status dos Cheques */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        {/* Fluxo de Caixa Mensal */}
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card"
+        >
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg">
+              <Activity className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-800">Fluxo de Caixa Mensal</h3>
+              <p className="text-slate-600">Entradas vs Saídas por mês</p>
+            </div>
           </div>
           
-          <div className="grid grid-cols-1 gap-3 mt-6">
-            {radialData.map((item, index) => (
-              <div key={item.name} className="flex items-center justify-between p-3 bg-white/70 rounded-lg border border-slate-200">
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="w-4 h-4 rounded-full shadow-sm" 
-                    style={{ backgroundColor: item.fill }}
-                  />
-                  <span className="text-slate-700 font-medium">{item.name}</span>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={cashFlowData()}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="mes" stroke="#64748b" fontSize={12} />
+                <YAxis stroke="#64748b" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'white', 
+                    border: '1px solid #e2e8f0', 
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+                  }}
+                  formatter={(value: number) => [`R$ ${value.toFixed(2)}`, '']}
+                />
+                <Bar dataKey="entrada" fill="#10b981" radius={[4, 4, 0, 0]} name="Entradas" />
+                <Bar dataKey="saida" fill="#ef4444" radius={[4, 4, 0, 0]} name="Saídas" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+
+        {/* Status dos Cheques */}
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card"
+        >
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg">
+              <FileText className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-800">Status dos Cheques</h3>
+              <p className="text-slate-600">Situação atual dos cheques</p>
+            </div>
+          </div>
+          
+          <div className="h-80">
+            {checksStatusData().length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={checksStatusData()}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, value }) => `${name}: ${value}`}
+                  >
+                    {checksStatusData().map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => [`${value} cheques`, 'Quantidade']} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full bg-slate-50 rounded-xl">
+                <div className="text-center">
+                  <FileText className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+                  <p className="text-slate-500">Nenhum cheque registrado</p>
                 </div>
-                <span className="text-slate-800 font-bold">
-                  R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </span>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Top Clientes */}
+      {topClients().length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card"
+        >
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 shadow-lg">
+              <Users className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-800">Top 5 Clientes</h3>
+              <p className="text-slate-600">Clientes com maior volume de compras</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {topClients().map((client, index) => (
+              <div key={client.name} className="text-center p-4 bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl border border-teal-200">
+                <div className="text-2xl font-bold text-teal-700 mb-1">#{index + 1}</div>
+                <div className="font-medium text-slate-800 mb-2 truncate" title={client.name}>
+                  {client.name}
+                </div>
+                <div className="text-lg font-bold text-teal-600">
+                  R$ {client.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </div>
               </div>
             ))}
           </div>
         </motion.div>
-      </div>
+      )}
 
-      {/* Advanced Analytics */}
-      <motion.div
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, delay: 0.7 }}
-        className="card bg-gradient-to-br from-white to-emerald-50 border-emerald-200"
-      >
-        <div className="flex items-center gap-4 mb-8">
-          <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg">
-            <Activity className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h3 className="text-2xl font-bold text-slate-800">Análise de Tendências</h3>
-            <p className="text-slate-600">Performance detalhada de vendas e recebimentos</p>
-          </div>
-        </div>
-        
-        {salesTrendData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={salesTrendData}>
-              <defs>
-                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
-                </linearGradient>
-                <linearGradient id="colorReceived" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="date" stroke="#64748b" fontSize={12} />
-              <YAxis stroke="#64748b" fontSize={12} />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'white', 
-                  border: '1px solid #e2e8f0', 
-                  borderRadius: '12px',
-                  boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                }}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="value" 
-                stroke="#10b981" 
-                fillOpacity={1} 
-                fill="url(#colorValue)"
-                strokeWidth={3}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="received" 
-                stroke="#3b82f6" 
-                fillOpacity={1} 
-                fill="url(#colorReceived)"
-                strokeWidth={3}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="flex items-center justify-center h-80 bg-gradient-to-br from-slate-50 to-emerald-50 rounded-xl border border-emerald-100">
-            <div className="text-center">
-              <Activity className="w-16 h-16 mx-auto mb-4 text-emerald-400" />
-              <p className="text-xl font-bold text-slate-600">Aguardando dados de vendas</p>
-              <p className="text-slate-500">Os gráficos aparecerão quando houver vendas registradas</p>
-            </div>
-          </div>
-        )}
-      </motion.div>
-
-      {/* Performance Metrics */}
-      <motion.div
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, delay: 0.9 }}
-        className="card bg-gradient-to-br from-white to-indigo-50 border-indigo-200"
-      >
-        <div className="flex items-center gap-4 mb-8">
-          <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg">
-            <BarChart3 className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h3 className="text-2xl font-bold text-slate-800">Performance vs Metas</h3>
-            <p className="text-slate-600">Comparativo mensal de resultados</p>
-          </div>
-        </div>
-        
-        <ResponsiveContainer width="100%" height={350}>
-          <BarChart data={performanceData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis dataKey="name" stroke="#64748b" fontSize={12} />
-            <YAxis stroke="#64748b" fontSize={12} />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'white', 
-                border: '1px solid #e2e8f0', 
-                borderRadius: '12px',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-              }}
-            />
-            <Bar dataKey="vendas" fill="#10b981" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="recebido" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="meta" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </motion.div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Resumo Rápido */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { title: 'Cheques', count: state.checks.length, pending: state.checks.filter(c => c.status === 'pendente').length, icon: Receipt, color: 'purple' },
-          { title: 'Boletos', count: state.boletos.length, pending: state.boletos.filter(b => b.status === 'pendente').length, icon: Receipt, color: 'indigo' },
-          { title: 'Funcionários', count: state.employees.filter(e => e.isActive).length, pending: 0, icon: Users, color: 'teal' },
-          { title: 'Parcelas', count: state.installments.length, pending: state.installments.filter(i => !i.isPaid).length, icon: Calendar, color: 'amber' }
-        ].map((stat, index) => (
+          { title: 'Vendas', count: state.sales.length, icon: DollarSign, color: 'emerald' },
+          { title: 'Cheques', count: state.checks.length, icon: FileText, color: 'blue' },
+          { title: 'Boletos', count: state.boletos.length, icon: Receipt, color: 'purple' },
+          { title: 'Funcionários', count: state.employees.filter(e => e.isActive).length, icon: Users, color: 'indigo' }
+        ].map((item, index) => (
           <motion.div
-            key={stat.title}
+            key={item.title}
             variants={cardVariants}
             initial="hidden"
             animate="visible"
             whileHover="hover"
-            transition={{ delay: index * 0.1 + 1 }}
-            className={`card bg-gradient-to-br from-white to-${stat.color}-50 border-${stat.color}-200`}
+            transition={{ delay: index * 0.1 }}
+            className={`card bg-gradient-to-br from-white to-${item.color}-50 border-${item.color}-200 text-center`}
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-600 text-sm font-bold uppercase tracking-wider mb-2">
-                  {stat.title}
-                </p>
-                <p className="text-2xl font-black text-slate-800 mb-1">{stat.count}</p>
-                <p className="text-slate-500 text-sm font-medium">
-                  {stat.pending > 0 ? `${stat.pending} pendentes` : 'ativos'}
-                </p>
-              </div>
-              <div className={`p-3 rounded-xl bg-gradient-to-br from-${stat.color}-500 to-${stat.color}-600 shadow-lg`}>
-                <stat.icon className="w-6 h-6 text-white" />
-              </div>
+            <div className={`p-3 rounded-xl bg-gradient-to-br from-${item.color}-500 to-${item.color}-600 shadow-lg mx-auto mb-3 w-fit`}>
+              <item.icon className="w-6 h-6 text-white" />
             </div>
+            <div className="text-2xl font-bold text-slate-800 mb-1">{item.count}</div>
+            <div className="text-slate-600 font-medium">{item.title}</div>
           </motion.div>
         ))}
       </div>
-
-      {/* Success Message */}
-      <AnimatePresence>
-        {(todayChecks.length === 0 && todayBoletos.length === 0 && todayInstallments.length === 0 && 
-          overdueChecks.length === 0 && overdueBoletos.length === 0 && overdueInstallments.length === 0 &&
-          employeesPaymentDueToday.length === 0) && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="card bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200"
-          >
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <motion.div 
-                  animate={{ 
-                    rotate: [0, 360],
-                    scale: [1, 1.1, 1]
-                  }}
-                  transition={{ 
-                    rotate: { duration: 3, repeat: Infinity, ease: "linear" },
-                    scale: { duration: 2, repeat: Infinity }
-                  }}
-                  className="p-6 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-xl mx-auto mb-6 w-fit"
-                >
-                  <CheckCircle className="w-12 h-12 text-white" />
-                </motion.div>
-                <h3 className="text-2xl font-bold text-slate-800 mb-4">Sistema em Perfeita Ordem!</h3>
-                <p className="text-slate-600 text-lg">
-                  Todos os processos financeiros estão atualizados. Excelente gestão!
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
