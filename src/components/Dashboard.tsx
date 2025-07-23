@@ -63,7 +63,19 @@ const PieChart3D = React.lazy(() =>
       const { Canvas } = fiber;
       const { OrbitControls, Sphere } = drei;
       
+      // Prevent NaN values by ensuring total is not zero
       const total = data.reduce((sum, item) => sum + item.value, 0);
+      
+      // If total is zero, don't render any spheres to avoid NaN errors
+      if (total === 0) {
+        return (
+          <Canvas camera={{ position: [0, 0, 8], fov: 60 }}>
+            <ambientLight intensity={0.6} />
+            <pointLight position={[10, 10, 10]} intensity={1} />
+            <OrbitControls enableZoom={false} enablePan={false} />
+          </Canvas>
+        );
+      }
       
       return (
         <Canvas camera={{ position: [0, 0, 8], fov: 60 }}>
@@ -73,11 +85,14 @@ const PieChart3D = React.lazy(() =>
           
           {data.map((item, index) => {
             const angle = (item.value / total) * Math.PI * 2;
-            const startAngle = data.slice(0, index).reduce((sum, prev) => sum + (prev.value / total) * Math.PI * 2, 0);
+            const startAngle = data.slice(0, index).reduce((sum, prev) => sum + ((prev.value || 0) / total) * Math.PI * 2, 0);
+            
+            // Skip rendering if angle is NaN or zero
+            if (isNaN(angle) || angle === 0) return null;
             
             return (
               <group key={index} rotation={[0, 0, startAngle]}>
-                <Sphere args={[2, 32, 16, 0, angle]} position={[0, 0, 0]}>
+                <Sphere args={[2, 32, 16, 0, Math.max(angle, 0.01)]} position={[0, 0, 0]}>
                   <meshStandardMaterial color={item.fill} />
                 </Sphere>
               </group>
