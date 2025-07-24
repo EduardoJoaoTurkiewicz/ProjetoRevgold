@@ -240,7 +240,6 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
                 Cancelar
               </button>
               <button type="submit" className="btn-primary">
-              <button type="submit" className="btn-primary group">
                 {check ? 'Atualizar' : 'Adicionar'} Cheque
               </button>
             </div>
