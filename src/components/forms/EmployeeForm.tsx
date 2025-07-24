@@ -104,9 +104,6 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
                 />
                   <p className="text-xs text-gray-500 mt-1">
                     Dia do mês em que o funcionário deve receber o salário
-                  <p className="text-xs text-gray-500 mt-1">
-                    Desmarque se o funcionário não estiver mais trabalhando na empresa
-                  </p>
                   </p>
               </div>
 
@@ -120,6 +117,9 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
                   />
                   <span className="form-label mb-0">Funcionário Ativo</span>
                 </label>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Desmarque se o funcionário não estiver mais trabalhando na empresa
+                  </p>
               </div>
 
               <div className="form-group md:col-span-2">
@@ -138,7 +138,6 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
               <button type="button" onClick={onCancel} className="btn-secondary">
                 Cancelar
               </button>
-              <button type="submit" className="btn-primary">
               <button type="submit" className="btn-primary group">
                 {employee ? 'Atualizar' : 'Cadastrar'} Funcionário
               </button>
