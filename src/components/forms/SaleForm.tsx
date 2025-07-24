@@ -487,7 +487,6 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
               <button type="button" onClick={onCancel} className="btn-secondary">
                 Cancelar
               </button>
-              <button type="submit" className="btn-primary">
               <button type="submit" className="btn-primary group">
                 {sale ? 'Atualizar' : 'Salvar'} Venda
               </button>
