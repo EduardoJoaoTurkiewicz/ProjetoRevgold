@@ -239,29 +239,29 @@ export function Dashboard() {
   return (
     <div className="space-y-8 pb-8">
       {/* Header Profissional */}
-      <div className="bg-gradient-to-r from-green-800 to-green-900 rounded-lg p-6 text-white professional-shadow-xl animation-fade-in">
+      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-2xl p-8 text-white modern-shadow-xl animate-fade-in glass-effect backdrop-blur-modern">
         <div className="flex flex-col lg:flex-row justify-between items-center">
           <div className="flex items-center gap-6 mb-6 lg:mb-0">
-            <div className="p-3 rounded-lg bg-white/20 backdrop-blur-sm animate-gentle-float">
+            <div className="p-4 rounded-2xl bg-white/20 backdrop-blur-modern floating-animation hover-lift">
               <img 
                 src="/image.png" 
                 alt="RevGold Logo" 
-                className="w-12 h-12 object-contain filter brightness-0 invert"
+                className="w-16 h-16 object-contain filter brightness-0 invert filter-modern"
               />
             </div>
             <div>
-              <h1 className="text-3xl font-bold mb-2">
+              <h1 className="text-4xl font-black mb-3 text-shadow-lg">
                 {getGreeting()}, {state.user?.username}!
               </h1>
-              <p className="text-green-100 text-base">
+              <p className="text-slate-100 text-lg font-semibold text-shadow-modern">
                 Dashboard Executivo
               </p>
             </div>
           </div>
-          <div className="text-right bg-white/10 backdrop-blur-sm rounded-lg p-4">
+          <div className="text-right glass-effect rounded-2xl p-6 modern-shadow hover-lift transition-modern">
             <div className="flex items-center text-white mb-2">
               <Calendar className="w-5 h-5 mr-2" />
-              <span className="text-base font-semibold">
+              <span className="text-base font-bold text-shadow-modern">
                 {currentTime.toLocaleDateString('pt-BR', {
                   weekday: 'long',
                   day: 'numeric',
@@ -269,9 +269,9 @@ export function Dashboard() {
                 })}
               </span>
             </div>
-            <div className="flex items-center text-green-100">
+            <div className="flex items-center text-slate-200">
               <Clock className="w-5 h-5 mr-2" />
-              <span className="text-base font-semibold">
+              <span className="text-base font-bold text-shadow-modern">
                 {currentTime.toLocaleTimeString('pt-BR')}
               </span>
             </div>
@@ -321,11 +321,11 @@ export function Dashboard() {
         ].map((metric, index) => (
           <div
             key={metric.title}
-            className="card professional-hover animation-fade-in"
+            className="card hover-lift stagger-animation glow-effect"
             style={{ animationDelay: `${index * 100}ms` }}
           >
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-lg bg-gradient-to-br from-green-700 to-green-800 professional-shadow animate-gentle-float">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 modern-shadow floating-animation neon-glow">
                 <metric.icon className="w-6 h-6 text-white" />
               </div>
               <div className={`flex items-center gap-1 text-sm font-semibold ${
@@ -337,13 +337,13 @@ export function Dashboard() {
             </div>
             
             <div>
-              <p className="text-gray-600 text-xs font-semibold uppercase tracking-wide mb-2">
+              <p className="text-slate-600 text-xs font-bold uppercase tracking-wider mb-3">
                 {metric.title}
               </p>
-              <p className="text-2xl font-bold text-gray-800 mb-2">
+              <p className="text-3xl font-black text-slate-800 mb-3 text-shadow-modern">
                 R$ {metric.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-gray-500 text-sm font-medium">
+              <p className="text-slate-500 text-sm font-semibold">
                 {metric.subtitle}
               </p>
             </div>
@@ -353,28 +353,28 @@ export function Dashboard() {
 
       {/* Alertas Importantes */}
       {(itemsDueToday.length > 0 || overdueItems.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animation-fade-in">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-in">
           {itemsDueToday.length > 0 && (
-            <div className="card bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 professional-hover">
+            <div className="card bg-gradient-to-br from-blue-50 to-indigo-100 border-blue-200/50 hover-lift glow-effect">
               <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 professional-shadow animate-gentle-float">
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 modern-shadow floating-animation neon-glow">
                   <Calendar className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-blue-900">Vencimentos Hoje</h3>
-                  <p className="text-blue-700 font-medium">{itemsDueToday.length} item(s) vencem hoje</p>
+                  <h3 className="text-2xl font-black text-blue-900 text-shadow-modern">Vencimentos Hoje</h3>
+                  <p className="text-blue-700 font-semibold">{itemsDueToday.length} item(s) vencem hoje</p>
                 </div>
               </div>
-              <div className="space-y-3 max-h-40 overflow-y-auto">
+              <div className="space-y-3 max-h-40 overflow-y-auto modern-scrollbar">
                 {itemsDueToday.slice(0, 3).map((item, index) => (
-                  <div key={index} className="text-sm text-blue-800 bg-blue-200/50 p-3 rounded-lg font-medium hover:bg-blue-200/70 transition-all duration-300 professional-hover">
+                  <div key={index} className="text-sm text-blue-800 bg-blue-200/50 p-4 rounded-xl font-semibold hover:bg-blue-200/70 transition-modern hover-lift">
                     {'client' in item ? `${item.client} - R$ ${item.value.toFixed(2)}` :
                      'description' in item ? `${item.description} - R$ ${item.amount.toFixed(2)}` :
                      `Parcela - R$ ${item.amount.toFixed(2)}`}
                   </div>
                 ))}
                 {itemsDueToday.length > 3 && (
-                  <p className="text-blue-600 text-sm font-semibold">
+                  <p className="text-blue-600 text-sm font-bold">
                     +{itemsDueToday.length - 3} outros itens
                   </p>
                 )}
@@ -383,26 +383,26 @@ export function Dashboard() {
           )}
 
           {overdueItems.length > 0 && (
-            <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 professional-hover">
+            <div className="card bg-gradient-to-br from-red-50 to-rose-100 border-red-200/50 hover-lift glow-effect">
               <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 rounded-lg bg-gradient-to-br from-red-600 to-red-700 professional-shadow animate-gentle-float">
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 modern-shadow floating-animation neon-glow">
                   <AlertTriangle className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-red-900">Itens Vencidos</h3>
-                  <p className="text-red-700 font-medium">{overdueItems.length} item(s) em atraso</p>
+                  <h3 className="text-2xl font-black text-red-900 text-shadow-modern">Itens Vencidos</h3>
+                  <p className="text-red-700 font-semibold">{overdueItems.length} item(s) em atraso</p>
                 </div>
               </div>
-              <div className="space-y-3 max-h-40 overflow-y-auto">
+              <div className="space-y-3 max-h-40 overflow-y-auto modern-scrollbar">
                 {overdueItems.slice(0, 3).map((item, index) => (
-                  <div key={index} className="text-sm text-red-800 bg-red-200/50 p-3 rounded-lg font-medium hover:bg-red-200/70 transition-all duration-300 professional-hover">
+                  <div key={index} className="text-sm text-red-800 bg-red-200/50 p-4 rounded-xl font-semibold hover:bg-red-200/70 transition-modern hover-lift">
                     {'client' in item ? `${item.client} - R$ ${item.value.toFixed(2)}` :
                      'description' in item ? `${item.description} - R$ ${item.amount.toFixed(2)}` :
                      `Parcela - R$ ${item.amount.toFixed(2)}`}
                   </div>
                 ))}
                 {overdueItems.length > 3 && (
-                  <p className="text-red-600 text-sm font-semibold">
+                  <p className="text-red-600 text-sm font-bold">
                     +{overdueItems.length - 3} outros itens
                   </p>
                 )}
@@ -415,21 +415,21 @@ export function Dashboard() {
       {/* Gráficos Principais */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Vendas por Período */}
-        <div className="card professional-hover animation-fade-in">
+        <div className="card hover-lift animate-fade-in glow-effect">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-gradient-to-br from-green-700 to-green-800 professional-shadow animate-gentle-float">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 modern-shadow floating-animation neon-glow">
                 <BarChart3 className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-800">Vendas por Período</h3>
-                <p className="text-gray-600 font-medium">Evolução das vendas e recebimentos</p>
+                <h3 className="text-2xl font-black text-slate-800 text-shadow-modern">Vendas por Período</h3>
+                <p className="text-slate-600 font-semibold">Evolução das vendas e recebimentos</p>
               </div>
             </div>
             <select
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="input-field text-sm w-auto"
+              className="input-field text-sm w-auto modern-border-hover"
             >
               <option value="7">Últimos 7 dias</option>
               <option value="15">Últimos 15 dias</option>
@@ -443,52 +443,53 @@ export function Dashboard() {
                 <AreaChart data={salesByPeriod()}>
                   <defs>
                     <linearGradient id="colorVendas" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.05}/>
                     </linearGradient>
                     <linearGradient id="colorRecebido" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                      <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0.05}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="date" stroke="#374151" fontSize={12} />
-                  <YAxis stroke="#374151" fontSize={12} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.3} />
+                  <XAxis dataKey="date" stroke="#64748b" fontSize={12} fontWeight={600} />
+                  <YAxis stroke="#64748b" fontSize={12} fontWeight={600} />
                   <Tooltip 
                     contentStyle={{ 
-                      backgroundColor: 'white', 
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                      backdropFilter: 'blur(10px)'
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                      border: '1px solid rgba(148, 163, 184, 0.2)',
+                      borderRadius: '16px',
+                      boxShadow: '0 25px 50px rgba(0,0,0,0.15)',
+                      backdropFilter: 'blur(20px)',
+                      fontWeight: 600
                     }}
                     formatter={(value: number) => [`R$ ${value.toFixed(2)}`, '']}
                   />
                   <Area 
                     type="monotone" 
                     dataKey="vendas" 
-                    stroke="#15803d" 
+                    stroke="#10b981" 
                     fillOpacity={1} 
                     fill="url(#colorVendas)"
-                    strokeWidth={2}
+                    strokeWidth={3}
                     name="Vendas"
                   />
                   <Area 
                     type="monotone" 
                     dataKey="recebido" 
-                    stroke="#166534" 
+                    stroke="#0ea5e9" 
                     fillOpacity={1} 
                     fill="url(#colorRecebido)"
-                    strokeWidth={2}
+                    strokeWidth={3}
                     name="Recebido"
                   />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg">
+              <div className="flex items-center justify-center h-full bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl">
                 <div className="text-center">
-                  <Package className="w-16 h-16 mx-auto mb-4 text-gray-300 animate-gentle-float" />
-                  <p className="text-gray-500 font-medium">Nenhuma venda no período selecionado</p>
+                  <Package className="w-20 h-20 mx-auto mb-4 text-slate-300 floating-animation" />
+                  <p className="text-slate-500 font-semibold">Nenhuma venda no período selecionado</p>
                 </div>
               </div>
             )}
@@ -496,14 +497,14 @@ export function Dashboard() {
         </div>
 
         {/* Métodos de Pagamento */}
-        <div className="card professional-hover animation-fade-in">
+        <div className="card hover-lift animate-fade-in glow-effect">
           <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-lg bg-gradient-to-br from-green-700 to-green-800 professional-shadow animate-gentle-float">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 modern-shadow floating-animation neon-glow">
               <Banknote className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-gray-800">Métodos de Pagamento</h3>
-              <p className="text-gray-600 font-medium">Distribuição por forma de pagamento</p>
+              <h3 className="text-2xl font-black text-slate-800 text-shadow-modern">Métodos de Pagamento</h3>
+              <p className="text-slate-600 font-semibold">Distribuição por forma de pagamento</p>
             </div>
           </div>
           
@@ -519,19 +520,30 @@ export function Dashboard() {
                     fill="#8884d8"
                     dataKey="value"
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    labelStyle={{ fontWeight: 600, fontSize: 12 }}
                   >
                     {paymentMethodsData().map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'Valor']} />
+                  <Tooltip 
+                    formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'Valor']}
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: '1px solid rgba(148, 163, 184, 0.2)',
+                      borderRadius: '16px',
+                      boxShadow: '0 25px 50px rgba(0,0,0,0.15)',
+                      backdropFilter: 'blur(20px)',
+                      fontWeight: 600
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg">
+              <div className="flex items-center justify-center h-full bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl">
                 <div className="text-center">
-                  <Banknote className="w-16 h-16 mx-auto mb-4 text-gray-300 animate-gentle-float" />
-                  <p className="text-gray-500 font-medium">Nenhum método de pagamento registrado</p>
+                  <Banknote className="w-20 h-20 mx-auto mb-4 text-slate-300 floating-animation" />
+                  <p className="text-slate-500 font-semibold">Nenhum método de pagamento registrado</p>
                 </div>
               </div>
             )}
