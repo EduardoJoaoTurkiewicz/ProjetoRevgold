@@ -121,7 +121,7 @@ export function Checks() {
         {canEdit && (
           <button
             onClick={() => setIsFormOpen(true)}
-            className="btn-primary flex items-center gap-2"
+            className="btn-primary group flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             Adicionar Cheque

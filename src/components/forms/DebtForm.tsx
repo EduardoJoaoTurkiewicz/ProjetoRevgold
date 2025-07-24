@@ -472,6 +472,7 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
                 Cancelar
               </button>
               <button type="submit" className="btn-primary">
+              <button type="submit" className="btn-primary group">
                 {debt ? 'Atualizar' : 'Salvar'} Dívida
               </button>
             </div>

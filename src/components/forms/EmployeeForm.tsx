@@ -139,6 +139,7 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
                 Cancelar
               </button>
               <button type="submit" className="btn-primary">
+              <button type="submit" className="btn-primary group">
                 {employee ? 'Atualizar' : 'Cadastrar'} Funcionário
               </button>
             </div>

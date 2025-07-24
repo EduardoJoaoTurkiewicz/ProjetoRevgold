@@ -176,6 +176,7 @@ export function BoletoForm({ boleto, onSubmit, onCancel }: BoletoFormProps) {
                 Cancelar
               </button>
               <button type="submit" className="btn-primary">
+              <button type="submit" className="btn-primary group">
                 {boleto ? 'Atualizar' : 'Criar'} Boleto
               </button>
             </div>

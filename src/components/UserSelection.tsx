@@ -56,7 +56,6 @@ export function UserSelection() {
             Selecione seu perfil para acessar o sistema
           </p>
           <div className="mt-4 w-24 h-1 bg-gradient-to-r from-emerald-400 to-teal-500 mx-auto rounded-full animate-scale-in" style={{ animationDelay: '0.6s' }}></div>
-          </p>
         </div>
 
         {/* User Cards */}

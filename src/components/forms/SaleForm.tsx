@@ -488,6 +488,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                 Cancelar
               </button>
               <button type="submit" className="btn-primary">
+              <button type="submit" className="btn-primary group">
                 {sale ? 'Atualizar' : 'Salvar'} Venda
               </button>
             </div>

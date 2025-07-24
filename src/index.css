@@ -72,7 +72,7 @@
   }
 
   .btn-primary {
-    @apply relative inline-flex items-center justify-center px-8 py-4 text-sm font-semibold text-white transition-all duration-300 rounded-xl overflow-hidden group;
+    @apply relative inline-flex items-center justify-center px-8 py-4 text-sm font-semibold text-white transition-all duration-300 rounded-xl overflow-hidden;
     background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
     box-shadow: 
       0 10px 25px -5px rgba(16, 185, 129, 0.4),

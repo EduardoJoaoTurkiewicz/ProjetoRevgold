@@ -113,7 +113,7 @@ export function Boletos() {
         {canEdit && (
           <button
             onClick={() => setIsFormOpen(true)}
-            className="btn-primary flex items-center gap-2 shadow-xl hover:shadow-2xl"
+            className="btn-primary group flex items-center gap-2 shadow-xl hover:shadow-2xl"
           >
             <Plus className="w-5 h-5" />
             Novo Boleto
