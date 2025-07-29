@@ -25,6 +25,7 @@ import {
   Bar,
   PieChart as RechartsPieChart,
   Cell,
+  Pie,
   XAxis,
   YAxis,
   CartesianGrid,
