@@ -24,7 +24,7 @@
 
 @layer components {
   .card {
-    @apply bg-white/98 backdrop-blur-xl rounded-3xl border border-slate-200/60 p-8 relative overflow-hidden;
+    @apply bg-white/95 backdrop-blur-xl rounded-3xl border border-slate-200/60 p-8 relative overflow-hidden;
     box-shadow: 
       0 20px 40px -12px rgba(148, 163, 184, 0.15),
       0 8px 16px -4px rgba(148, 163, 184, 0.1),
