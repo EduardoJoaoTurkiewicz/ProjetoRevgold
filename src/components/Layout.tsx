@@ -41,16 +41,16 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-modern relative overflow-hidden bg-particles">
+    <div className="min-h-screen bg-gradient-modern relative overflow-hidden">
       {/* Background Animation */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-emerald-400/20 to-teal-600/20 rounded-full blur-3xl animate-pulse-modern floating-animation"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-cyan-400/20 to-emerald-600/20 rounded-full blur-3xl animate-pulse-modern floating-animation" style={{ animationDelay: '3s' }}></div>
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-green-400/20 to-green-600/20 rounded-full blur-3xl animate-pulse-modern floating-animation"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-green-300/20 to-green-500/20 rounded-full blur-3xl animate-pulse-modern floating-animation" style={{ animationDelay: '3s' }}></div>
       </div>
 
       {/* Header */}
       <header className="glass-effect border-b border-white/20 modern-shadow-xl sticky top-0 z-50 relative backdrop-blur-modern">
-        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-teal-500/5"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-green-600/5"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 relative">
             <div className="flex items-center space-x-4">
@@ -72,22 +72,24 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="text-right glass-effect rounded-xl p-4 modern-shadow hover-lift transition-modern">
-                <div className="flex items-center gap-3 mb-1">
-                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center modern-shadow floating-animation">
+              <div className="hidden md:block text-right glass-effect rounded-xl p-3 modern-shadow hover-lift transition-modern">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center modern-shadow floating-animation">
                     <User className="w-4 h-4 text-white" />
                   </div>
-                  <p className="text-base font-semibold text-white text-shadow-modern">
-                    {getGreeting()}, {state.user?.username}!
-                  </p>
+                  <div>
+                    <p className="text-sm font-semibold text-white text-shadow-modern">
+                      {getGreeting()}, {state.user?.username}!
+                    </p>
+                    <p className="text-xs text-slate-200 font-medium">
+                      {new Date().toLocaleDateString('pt-BR', { 
+                        weekday: 'short', 
+                        day: 'numeric', 
+                        month: 'short' 
+                      })}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm text-slate-200 font-medium">
-                  {new Date().toLocaleDateString('pt-BR', { 
-                    weekday: 'long', 
-                    day: 'numeric', 
-                    month: 'long' 
-                  })}
-                </p>
               </div>
               <button
                 onClick={handleLogout}
@@ -112,8 +114,8 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
 
       <div className="flex relative">
         {/* Sidebar */}
-        <nav className={`${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-80 glass-effect modern-shadow-xl border-r border-white/20 min-h-screen transition-modern backdrop-blur-modern`}>
-          <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-teal-500/5"></div>
+        <nav className={`${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-72 glass-effect modern-shadow-xl border-r border-white/20 min-h-screen transition-modern backdrop-blur-modern`}>
+          <div className="absolute inset-0 bg-gradient-to-b from-green-500/5 to-green-600/5"></div>
           <div className="p-6 relative">
             <div className="mb-8 lg:hidden">
               <div className="flex items-center space-x-3 hover-lift transition-modern">
@@ -131,7 +133,7 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
             {/* User Info Card */}
             <div className="mb-8 p-6 glass-effect rounded-2xl border border-white/20 modern-shadow hover-lift transition-modern">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center modern-shadow floating-animation">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center modern-shadow floating-animation">
                   <User className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -153,20 +155,20 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
                       }}
                       className={`w-full flex items-center space-x-4 px-6 py-4 rounded-xl transition-modern font-semibold group relative overflow-hidden hover-lift ${
                         currentPage === item.id
-                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white modern-shadow-lg neon-glow'
-                          : 'text-white hover:bg-white/10 hover:text-emerald-300 glass-effect'
+                          ? 'bg-gradient-to-r from-green-500 to-green-600 text-white modern-shadow-lg neon-glow'
+                          : 'text-white hover:bg-white/10 hover:text-green-300 glass-effect'
                       }`}
                       style={{ animationDelay: `${index * 100}ms` }}
                     >
                       <div className={`p-3 rounded-xl transition-modern floating-animation ${
                         currentPage === item.id 
                           ? 'bg-white/20 modern-shadow' 
-                          : 'bg-emerald-500/20 group-hover:bg-white/20 group-hover:modern-shadow'
+                          : 'bg-green-500/20 group-hover:bg-white/20 group-hover:modern-shadow'
                       }`}>
                         <Icon className={`h-6 w-6 transition-modern ${
                           currentPage === item.id 
                             ? 'text-white' 
-                            : 'text-emerald-300 group-hover:text-white'
+                            : 'text-green-300 group-hover:text-white'
                         }`} />
                       </div>
                       <span className="relative z-10 text-shadow-modern">{item.label}</span>

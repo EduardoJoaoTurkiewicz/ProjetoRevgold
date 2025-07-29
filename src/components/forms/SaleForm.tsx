@@ -189,18 +189,11 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
               <div className="form-group md:col-span-2">
                 <label className="form-label">Vendedor (Opcional)</label>
                 <select
-                  value={formData.sellerId}
+                  value={formData.sellerId || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, sellerId: e.target.value }))}
                   className="input-field"
                 >
                   <option value="">Selecionar vendedor...</option>
-                  {state.employees
-                    .filter(employee => employee.isActive)
-                    .map(employee => (
-                      <option key={employee.id} value={employee.id}>
-                        {employee.name} - {employee.position}
-                      </option>
-                    ))}
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
                   Selecione o funcionário que realizou esta venda (opcional)
@@ -212,7 +205,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
             <div>
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium flex items-center gap-2">
-                  <Package className="w-5 h-5 text-emerald-600" />
+                  <Package className="w-5 h-5 text-green-600" />
                   Produtos Vendidos
                 </h3>
                 <button
@@ -279,12 +272,12 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                       </div>
 
                       <div className="md:col-span-4">
-                        <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-                          <span className="font-medium text-emerald-800">
+                        <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
+                          <span className="font-medium text-green-800">
                             {product.quantity}x {product.name || 'Produto'} 
                             {product.unitPrice ? ` @ R$ ${product.unitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''}
                           </span>
-                          <span className="font-bold text-emerald-900">
+                          <span className="font-bold text-green-900">
                             Total: R$ {(product.totalPrice || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </span>
                         </div>

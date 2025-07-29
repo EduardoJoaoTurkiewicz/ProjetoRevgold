@@ -239,7 +239,7 @@ export function Dashboard() {
   return (
     <div className="space-y-8 pb-8">
       {/* Header Profissional */}
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-2xl p-8 text-white modern-shadow-xl animate-fade-in glass-effect backdrop-blur-modern">
+      <div className="bg-gradient-to-r from-green-600 via-green-700 to-green-800 rounded-2xl p-8 text-white modern-shadow-xl animate-fade-in glass-effect backdrop-blur-modern">
         <div className="flex flex-col lg:flex-row justify-between items-center">
           <div className="flex items-center gap-6 mb-6 lg:mb-0">
             <div className="p-4 rounded-2xl bg-white/20 backdrop-blur-modern floating-animation hover-lift">
@@ -326,6 +326,7 @@ export function Dashboard() {
           >
             <div className="flex items-center justify-between mb-4">
               <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 modern-shadow floating-animation neon-glow">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 modern-shadow floating-animation neon-glow">
                 <metric.icon className="w-6 h-6 text-white" />
               </div>
               <div className={`flex items-center gap-1 text-sm font-semibold ${
@@ -355,26 +356,26 @@ export function Dashboard() {
       {(itemsDueToday.length > 0 || overdueItems.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-in">
           {itemsDueToday.length > 0 && (
-            <div className="card bg-gradient-to-br from-blue-50 to-indigo-100 border-blue-200/50 hover-lift glow-effect">
+            <div className="card bg-gradient-to-br from-green-50 to-green-100 border-green-200/50 hover-lift glow-effect">
               <div className="flex items-center gap-4 mb-4">
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 modern-shadow floating-animation neon-glow">
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 modern-shadow floating-animation neon-glow">
                   <Calendar className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-blue-900 text-shadow-modern">Vencimentos Hoje</h3>
-                  <p className="text-blue-700 font-semibold">{itemsDueToday.length} item(s) vencem hoje</p>
+                  <h3 className="text-2xl font-black text-green-900 text-shadow-modern">Vencimentos Hoje</h3>
+                  <p className="text-green-700 font-semibold">{itemsDueToday.length} item(s) vencem hoje</p>
                 </div>
               </div>
               <div className="space-y-3 max-h-40 overflow-y-auto modern-scrollbar">
                 {itemsDueToday.slice(0, 3).map((item, index) => (
-                  <div key={index} className="text-sm text-blue-800 bg-blue-200/50 p-4 rounded-xl font-semibold hover:bg-blue-200/70 transition-modern hover-lift">
+                  <div key={index} className="text-sm text-green-800 bg-green-200/50 p-4 rounded-xl font-semibold hover:bg-green-200/70 transition-modern hover-lift">
                     {'client' in item ? `${item.client} - R$ ${item.value.toFixed(2)}` :
                      'description' in item ? `${item.description} - R$ ${item.amount.toFixed(2)}` :
                      `Parcela - R$ ${item.amount.toFixed(2)}`}
                   </div>
                 ))}
                 {itemsDueToday.length > 3 && (
-                  <p className="text-blue-600 text-sm font-bold">
+                  <p className="text-green-600 text-sm font-bold">
                     +{itemsDueToday.length - 3} outros itens
                   </p>
                 )}
@@ -418,7 +419,7 @@ export function Dashboard() {
         <div className="card hover-lift animate-fade-in glow-effect">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 modern-shadow floating-animation neon-glow">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 modern-shadow floating-animation neon-glow">
                 <BarChart3 className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -443,8 +444,8 @@ export function Dashboard() {
                 <AreaChart data={salesByPeriod()}>
                   <defs>
                     <linearGradient id="colorVendas" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.05}/>
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0.05}/>
                     </linearGradient>
                     <linearGradient id="colorRecebido" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.4}/>
@@ -468,7 +469,7 @@ export function Dashboard() {
                   <Area 
                     type="monotone" 
                     dataKey="vendas" 
-                    stroke="#10b981" 
+                    stroke="#22c55e" 
                     fillOpacity={1} 
                     fill="url(#colorVendas)"
                     strokeWidth={3}
@@ -499,7 +500,7 @@ export function Dashboard() {
         {/* Métodos de Pagamento */}
         <div className="card hover-lift animate-fade-in glow-effect">
           <div className="flex items-center gap-4 mb-6">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 modern-shadow floating-animation neon-glow">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 modern-shadow floating-animation neon-glow">
               <Banknote className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -560,7 +561,7 @@ export function Dashboard() {
           className="card glow-effect"
         >
           <div className="flex items-center gap-4 mb-6">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-2xl floating-animation">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 shadow-2xl floating-animation">
               <Activity className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -585,7 +586,7 @@ export function Dashboard() {
                   }}
                   formatter={(value: number) => [`R$ ${value.toFixed(2)}`, '']}
                 />
-                <Bar dataKey="entrada" fill="#10b981" radius={[8, 8, 0, 0]} name="Entradas" />
+                <Bar dataKey="entrada" fill="#22c55e" radius={[8, 8, 0, 0]} name="Entradas" />
                 <Bar dataKey="saida" fill="#ef4444" radius={[8, 8, 0, 0]} name="Saídas" />
               </BarChart>
             </ResponsiveContainer>
@@ -599,7 +600,7 @@ export function Dashboard() {
           className="card glow-effect"
         >
           <div className="flex items-center gap-4 mb-6">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-2xl floating-animation">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 shadow-2xl floating-animation">
               <FileText className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -649,7 +650,7 @@ export function Dashboard() {
           className="card glow-effect"
         >
           <div className="flex items-center gap-4 mb-6">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 shadow-2xl floating-animation">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 shadow-2xl floating-animation">
               <Users className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -660,12 +661,12 @@ export function Dashboard() {
           
           <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             {topClients().map((client, index) => (
-              <div key={client.name} className="text-center p-6 bg-gradient-to-br from-teal-50 to-teal-100 rounded-2xl border border-teal-200/50 hover:shadow-xl transition-all duration-300 hover:scale-105 glow-effect">
-                <div className="text-3xl font-bold text-teal-700 mb-2">#{index + 1}</div>
+              <div key={client.name} className="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl border border-green-200/50 hover:shadow-xl transition-all duration-300 hover:scale-105 glow-effect">
+                <div className="text-3xl font-bold text-green-700 mb-2">#{index + 1}</div>
                 <div className="font-bold text-slate-800 mb-3 truncate" title={client.name}>
                   {client.name}
                 </div>
-                <div className="text-xl font-bold text-teal-600">
+                <div className="text-xl font-bold text-green-600">
                   R$ {client.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </div>
               </div>
@@ -677,7 +678,7 @@ export function Dashboard() {
       {/* Resumo Rápido */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         {[
-          { title: 'Vendas', count: state.sales.length, icon: DollarSign, color: 'emerald' },
+          { title: 'Vendas', count: state.sales.length, icon: DollarSign, color: 'green' },
           { title: 'Cheques', count: state.checks.length, icon: FileText, color: 'blue' },
           { title: 'Boletos', count: state.boletos.length, icon: Receipt, color: 'purple' },
           { title: 'Funcionários', count: state.employees.filter(e => e.isActive).length, icon: Users, color: 'indigo' }
@@ -689,9 +690,9 @@ export function Dashboard() {
             animate="visible"
             whileHover="hover"
             transition={{ delay: index * 0.1 }}
-            className={`card bg-gradient-to-br from-white via-${item.color}-50/30 to-${item.color}-100/50 border-${item.color}-200/50 text-center glow-effect`}
+            className="card bg-gradient-to-br from-white via-green-50/30 to-green-100/50 border-green-200/50 text-center glow-effect"
           >
-            <div className={`p-4 rounded-2xl bg-gradient-to-br from-${item.color}-500 to-${item.color}-600 shadow-2xl mx-auto mb-4 w-fit floating-animation`}>
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 shadow-2xl mx-auto mb-4 w-fit floating-animation">
               <item.icon className="w-6 h-6 text-white" />
             </div>
             <div className="text-3xl font-bold text-slate-800 mb-2">{item.count}</div>

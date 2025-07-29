@@ -31,12 +31,12 @@ export function UserSelection() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-modern flex items-center justify-center p-4 relative overflow-hidden bg-particles">
+    <div className="min-h-screen bg-gradient-modern flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background Animation */}
       <div className="absolute inset-0 overflow-hidden opacity-30">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-emerald-400/30 to-teal-600/30 rounded-full blur-3xl animate-pulse-modern floating-animation"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-cyan-400/30 to-emerald-600/30 rounded-full blur-3xl animate-pulse-modern floating-animation" style={{ animationDelay: '3s' }}></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-full blur-2xl animate-pulse-modern floating-animation" style={{ animationDelay: '1.5s' }}></div>
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-green-400/30 to-green-600/30 rounded-full blur-3xl animate-pulse-modern floating-animation"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-green-300/30 to-green-500/30 rounded-full blur-3xl animate-pulse-modern floating-animation" style={{ animationDelay: '3s' }}></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-full blur-2xl animate-pulse-modern floating-animation" style={{ animationDelay: '1.5s' }}></div>
       </div>
 
       <div className="w-full max-w-4xl">
@@ -55,7 +55,7 @@ export function UserSelection() {
           <p className="text-slate-200 text-xl font-semibold text-shadow-modern animate-slide-up" style={{ animationDelay: '0.3s' }}>
             Selecione seu perfil para acessar o sistema
           </p>
-          <div className="mt-4 w-24 h-1 bg-gradient-to-r from-emerald-400 to-teal-500 mx-auto rounded-full animate-scale-in" style={{ animationDelay: '0.6s' }}></div>
+          <div className="mt-4 w-24 h-1 bg-gradient-to-r from-green-400 to-green-600 mx-auto rounded-full animate-scale-in" style={{ animationDelay: '0.6s' }}></div>
         </div>
 
         {/* User Cards */}
@@ -64,22 +64,22 @@ export function UserSelection() {
             <div
               key={user.id}
               onClick={() => handleUserSelect(user)}
-              className="group glass-effect rounded-2xl p-10 modern-shadow-xl hover-lift cursor-pointer border border-white/20 hover:border-emerald-400/50 transition-modern stagger-animation glow-effect backdrop-blur-modern"
+              className="group glass-effect rounded-2xl p-10 modern-shadow-xl hover-lift cursor-pointer border border-white/20 hover:border-green-400/50 transition-modern stagger-animation glow-effect backdrop-blur-modern"
               style={{ animationDelay: `${index * 200}ms` }}
             >
               <div className="flex items-center justify-between relative">
                 <div className="flex items-center space-x-6">
                   <div className="relative">
-                    <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center modern-shadow-lg group-hover:modern-shadow-xl transition-modern group-hover:scale-110 floating-animation neon-glow">
+                    <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center modern-shadow-lg group-hover:modern-shadow-xl transition-modern group-hover:scale-110 floating-animation neon-glow">
                       <User className="w-10 h-10 text-white filter-modern" />
                     </div>
-                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full animate-pulse-modern"></div>
+                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-green-400 to-green-500 rounded-full animate-pulse-modern"></div>
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-white group-hover:text-emerald-300 transition-modern text-shadow-modern">
+                    <h3 className="text-2xl font-bold text-white group-hover:text-green-300 transition-modern text-shadow-modern">
                       {user.name}
                     </h3>
-                    <p className="text-sm text-slate-300 font-semibold uppercase tracking-wider mt-1 group-hover:text-emerald-200 transition-modern">
+                    <p className="text-sm text-slate-300 font-semibold uppercase tracking-wider mt-1 group-hover:text-green-200 transition-modern">
                       Administrador
                     </p>
                     <div className="mt-2 flex items-center space-x-2">
@@ -89,16 +89,16 @@ export function UserSelection() {
                   </div>
                 </div>
                 <div className="relative">
-                  <ChevronRight className="w-8 h-8 text-slate-400 group-hover:text-emerald-300 group-hover:translate-x-3 transition-modern animate-wiggle" />
-                  <div className="absolute inset-0 bg-emerald-400/20 rounded-full scale-0 group-hover:scale-150 transition-modern opacity-0 group-hover:opacity-100"></div>
+                  <ChevronRight className="w-8 h-8 text-slate-400 group-hover:text-green-300 group-hover:translate-x-3 transition-modern animate-wiggle" />
+                  <div className="absolute inset-0 bg-green-400/20 rounded-full scale-0 group-hover:scale-150 transition-modern opacity-0 group-hover:opacity-100"></div>
                 </div>
               </div>
               
               {/* Hover effect overlay */}
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-modern pointer-events-none"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-green-600/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-modern pointer-events-none"></div>
               
               {/* Bottom accent line */}
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-b-2xl transform scale-x-0 group-hover:scale-x-100 transition-modern origin-left"></div>
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-green-400 to-green-600 rounded-b-2xl transform scale-x-0 group-hover:scale-x-100 transition-modern origin-left"></div>
             </div>
           ))}
         </div>
@@ -106,9 +106,9 @@ export function UserSelection() {
         {/* Footer */}
         <div className="text-center mt-20 animate-slide-up" style={{ animationDelay: '800ms' }}>
           <div className="inline-flex items-center justify-center space-x-3 mb-4">
-            <div className="w-12 h-0.5 bg-gradient-to-r from-transparent to-emerald-400 rounded-full"></div>
-            <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse-modern"></div>
-            <div className="w-12 h-0.5 bg-gradient-to-l from-transparent to-emerald-400 rounded-full"></div>
+            <div className="w-12 h-0.5 bg-gradient-to-r from-transparent to-green-400 rounded-full"></div>
+            <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse-modern"></div>
+            <div className="w-12 h-0.5 bg-gradient-to-l from-transparent to-green-400 rounded-full"></div>
           </div>
           <p className="text-slate-100 text-xl font-bold text-shadow-modern mb-2">
             Sistema de Gestão Financeira RevGold
@@ -117,9 +117,9 @@ export function UserSelection() {
             Colorindo seu ambiente e levando vida para os seus dias
           </p>
           <div className="mt-6 flex items-center justify-center space-x-2">
-            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
-            <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-            <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+            <div className="w-2 h-2 bg-green-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
           </div>
         </div>
       </div>
