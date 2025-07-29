@@ -1,111 +1,232 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useApp } from '../context/AppContext';
-import { TrendingUp, TrendingDown, DollarSign, Calendar, Users, Receipt, Download, FileText } from 'lucide-react';
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  DollarSign, 
+  Calendar, 
+  Users, 
+  Receipt, 
+  Download, 
+  FileText,
+  Filter,
+  BarChart3,
+  PieChart,
+  Activity,
+  Target,
+  CreditCard,
+  CheckCircle,
+  AlertTriangle,
+  Clock
+} from 'lucide-react';
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart as RechartsPieChart,
+  Cell,
+  Pie,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  RadialBarChart,
+  RadialBar,
+  Legend,
+  ComposedChart
+} from 'recharts';
 
 export const Reports: React.FC = () => {
   const { state } = useApp();
   const { sales, debts, checks, employees, boletos } = state;
-
-  const today = new Date().toDateString();
   
-  // Recebimentos de hoje
-  const todayReceipts = [
-    ...sales.filter(sale => new Date(sale.date).toDateString() === today),
-    ...checks.filter(check => new Date(check.dueDate).toDateString() === today && check.status === 'compensado')
-  ];
+  const [dateFilter, setDateFilter] = useState('30'); // 7, 15, 30 days
+  const [selectedMetric, setSelectedMetric] = useState('revenue');
 
-  // Gastos de hoje
-  const todayExpenses = [
-    ...debts.filter(debt => new Date(debt.date).toDateString() === today),
-    ...state.employeePayments.filter(payment => new Date(payment.paymentDate).toDateString() === today)
-  ];
+  // Calculate date range based on filter
+  const getDateRange = () => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(dateFilter));
+    return { startDate, endDate };
+  };
 
-  const totalReceipts = todayReceipts.reduce((sum, item) => {
-    if ('totalValue' in item) return sum + item.totalValue;
-    if ('value' in item) return sum + item.value;
-    return sum;
-  }, 0);
+  const { startDate, endDate } = getDateRange();
 
-  const totalExpenses = todayExpenses.reduce((sum, item) => {
-    if ('totalValue' in item) return sum + item.totalValue;
-    if ('amount' in item) return sum + item.amount;
-    return sum;
-  }, 0);
+  // Filter data based on selected date range
+  const filteredSales = useMemo(() => 
+    sales.filter(sale => {
+      const saleDate = new Date(sale.date);
+      return saleDate >= startDate && saleDate <= endDate;
+    }), [sales, startDate, endDate]
+  );
+
+  const filteredDebts = useMemo(() => 
+    debts.filter(debt => {
+      const debtDate = new Date(debt.date);
+      return debtDate >= startDate && debtDate <= endDate;
+    }), [debts, startDate, endDate]
+  );
+
+  const filteredChecks = useMemo(() => 
+    checks.filter(check => {
+      const checkDate = new Date(check.dueDate);
+      return checkDate >= startDate && checkDate <= endDate;
+    }), [checks, startDate, endDate]
+  );
+
+  // Calculate metrics
+  const metrics = useMemo(() => {
+    const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.totalValue, 0);
+    const totalReceived = filteredSales.reduce((sum, sale) => sum + sale.receivedAmount, 0);
+    const totalPending = filteredSales.reduce((sum, sale) => sum + sale.pendingAmount, 0);
+    const totalExpenses = filteredDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
+    const totalPaid = filteredDebts.reduce((sum, debt) => sum + debt.paidAmount, 0);
+    const netProfit = totalReceived - totalPaid;
+    const profitMargin = totalReceived > 0 ? (netProfit / totalReceived) * 100 : 0;
+
+    return {
+      totalRevenue,
+      totalReceived,
+      totalPending,
+      totalExpenses,
+      totalPaid,
+      netProfit,
+      profitMargin,
+      salesCount: filteredSales.length,
+      debtsCount: filteredDebts.length,
+      checksCount: filteredChecks.length
+    };
+  }, [filteredSales, filteredDebts, filteredChecks]);
+
+  // Generate daily data for charts
+  const dailyData = useMemo(() => {
+    const days = [];
+    const currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      const daySales = filteredSales.filter(sale => sale.date === dateStr);
+      const dayDebts = filteredDebts.filter(debt => debt.date === dateStr);
+      const dayChecks = filteredChecks.filter(check => check.dueDate === dateStr);
+      
+      days.push({
+        date: dateStr,
+        day: currentDate.getDate(),
+        month: currentDate.toLocaleDateString('pt-BR', { month: 'short' }),
+        revenue: daySales.reduce((sum, sale) => sum + sale.totalValue, 0),
+        received: daySales.reduce((sum, sale) => sum + sale.receivedAmount, 0),
+        expenses: dayDebts.reduce((sum, debt) => sum + debt.totalValue, 0),
+        checksValue: dayChecks.reduce((sum, check) => sum + check.value, 0),
+        salesCount: daySales.length,
+        debtsCount: dayDebts.length,
+        checksCount: dayChecks.length
+      });
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return days;
+  }, [filteredSales, filteredDebts, filteredChecks, startDate, endDate]);
+
+  // Payment methods distribution
+  const paymentMethodsData = useMemo(() => {
+    const methods = {};
+    filteredSales.forEach(sale => {
+      sale.paymentMethods.forEach(method => {
+        const type = method.type.replace('_', ' ');
+        methods[type] = (methods[type] || 0) + method.amount;
+      });
+    });
+    
+    return Object.entries(methods).map(([name, value], index) => ({
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      value,
+      color: [
+        '#22c55e', '#3b82f6', '#8b5cf6', '#06b6d4', 
+        '#f59e0b', '#ef4444', '#84cc16', '#ec4899'
+      ][index % 8]
+    }));
+  }, [filteredSales]);
+
+  // Status distribution
+  const statusData = useMemo(() => [
+    { 
+      name: 'Pagas', 
+      value: filteredSales.filter(s => s.status === 'pago').length, 
+      color: '#22c55e',
+      amount: filteredSales.filter(s => s.status === 'pago').reduce((sum, s) => sum + s.totalValue, 0)
+    },
+    { 
+      name: 'Parciais', 
+      value: filteredSales.filter(s => s.status === 'parcial').length, 
+      color: '#f59e0b',
+      amount: filteredSales.filter(s => s.status === 'parcial').reduce((sum, s) => sum + s.totalValue, 0)
+    },
+    { 
+      name: 'Pendentes', 
+      value: filteredSales.filter(s => s.status === 'pendente').length, 
+      color: '#ef4444',
+      amount: filteredSales.filter(s => s.status === 'pendente').reduce((sum, s) => sum + s.totalValue, 0)
+    }
+  ], [filteredSales]);
+
+  // Top clients
+  const topClients = useMemo(() => {
+    const clientsMap = {};
+    filteredSales.forEach(sale => {
+      if (!clientsMap[sale.client]) {
+        clientsMap[sale.client] = { name: sale.client, total: 0, count: 0 };
+      }
+      clientsMap[sale.client].total += sale.totalValue;
+      clientsMap[sale.client].count += 1;
+    });
+    
+    return Object.values(clientsMap)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+  }, [filteredSales]);
 
   const exportToPDF = async () => {
     try {
       const element = document.getElementById('reports-content');
       if (!element) return;
 
-      // Create a temporary container with better styling for PDF
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '0';
-      tempContainer.style.width = '210mm'; // A4 width
-      tempContainer.style.backgroundColor = 'white';
-      tempContainer.style.padding = '20px';
-      tempContainer.style.fontFamily = 'Arial, sans-serif';
-      
-      // Clone the content
-      const clonedElement = element.cloneNode(true) as HTMLElement;
-      
-      // Remove interactive elements and adjust styles for PDF
-      const buttons = clonedElement.querySelectorAll('button');
-      buttons.forEach(btn => btn.remove());
-      
-      // Adjust card styles for PDF
-      const cards = clonedElement.querySelectorAll('.card');
-      cards.forEach(card => {
-        (card as HTMLElement).style.backgroundColor = 'white';
-        (card as HTMLElement).style.border = '1px solid #d1d5db';
-        (card as HTMLElement).style.borderRadius = '8px';
-        (card as HTMLElement).style.padding = '16px';
-        (card as HTMLElement).style.marginBottom = '16px';
-        (card as HTMLElement).style.boxShadow = 'none';
-      });
-      
-      tempContainer.appendChild(clonedElement);
-      document.body.appendChild(tempContainer);
-
-      // Generate canvas from the temporary container
-      const canvas = await html2canvas(tempContainer, {
+      const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: 'white'
       });
 
-      // Remove temporary container
-      document.body.removeChild(tempContainer);
-
-      // Create PDF
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 295; // A4 height in mm
+      const imgWidth = 210;
+      const pageHeight = 295;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       let heightLeft = imgHeight;
       let position = 0;
 
-      // Add header
       pdf.setFontSize(20);
-      pdf.setTextColor(21, 128, 61); // Green color
-      pdf.text('RevGold - Relatório Financeiro', 20, 20);
+      pdf.setTextColor(21, 128, 61);
+      pdf.text('RevGold - Relatório Financeiro Detalhado', 20, 20);
       
       pdf.setFontSize(12);
       pdf.setTextColor(0, 0, 0);
-      pdf.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 20, 30);
-      pdf.text(`Usuário: ${state.user?.username}`, 20, 40);
+      pdf.text(`Período: ${startDate.toLocaleDateString('pt-BR')} a ${endDate.toLocaleDateString('pt-BR')}`, 20, 30);
+      pdf.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 20, 40);
+      pdf.text(`Usuário: ${state.user?.username}`, 20, 50);
       
-      // Add content
-      pdf.addImage(imgData, 'PNG', 0, 50, imgWidth, imgHeight);
+      pdf.addImage(imgData, 'PNG', 0, 60, imgWidth, imgHeight);
       heightLeft -= pageHeight;
 
-      // Add new pages if needed
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
@@ -113,8 +234,7 @@ export const Reports: React.FC = () => {
         heightLeft -= pageHeight;
       }
 
-      // Save the PDF
-      const fileName = `RevGold_Relatorio_${new Date().toISOString().split('T')[0]}.pdf`;
+      const fileName = `RevGold_Relatorio_${dateFilter}dias_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
       
       alert('Relatório exportado com sucesso!');
@@ -125,23 +245,44 @@ export const Reports: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-green-800 to-green-900 rounded-lg p-6 text-white professional-shadow-xl">
-        <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      {/* Header with Filters */}
+      <div className="card bg-gradient-to-r from-green-600 to-emerald-700 text-white">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-lg bg-white/20 backdrop-blur-sm animate-gentle-float">
-              <Receipt className="w-8 h-8" />
+            <div className="p-4 rounded-2xl bg-white/20 backdrop-blur-sm floating-animation">
+              <BarChart3 className="w-8 h-8" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold">Relatórios</h1>
-              <p className="text-green-100 text-lg">Análise financeira detalhada</p>
+              <h1 className="text-3xl font-bold mb-2">Relatórios Avançados</h1>
+              <p className="text-green-100 text-lg">
+                Análise detalhada dos últimos {dateFilter} dias
+              </p>
             </div>
           </div>
-          <div>
+          
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="filter-card bg-white/20 border-white/30">
+              <div className="flex items-center gap-2 mb-2">
+                <Filter className="w-4 h-4 text-white" />
+                <span className="text-sm font-semibold text-white">Período</span>
+              </div>
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-white/90 text-slate-800 font-medium text-sm border-0 focus:ring-2 focus:ring-white/50"
+              >
+                <option value="7">Últimos 7 dias</option>
+                <option value="15">Últimos 15 dias</option>
+                <option value="30">Últimos 30 dias</option>
+                <option value="60">Últimos 60 dias</option>
+                <option value="90">Últimos 90 dias</option>
+              </select>
+            </div>
+            
             <button
               onClick={exportToPDF}
-              className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-medium professional-shadow transition-all duration-300 professional-hover"
+              className="flex items-center gap-2 px-6 py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-semibold transition-all duration-300 backdrop-blur-sm border border-white/30"
             >
               <Download className="w-5 h-5" />
               Exportar PDF
@@ -151,176 +292,445 @@ export const Reports: React.FC = () => {
       </div>
 
       <div id="reports-content">
-      {/* Cards de Resumo */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Recebimentos de Hoje */}
-          <div className="card professional-hover">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-                <div className="p-3 bg-green-100 rounded-lg animate-gentle-float">
-                <TrendingUp className="w-6 h-6 text-green-600" />
+        {/* Key Metrics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="metric-card group">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 rounded-xl bg-green-100 group-hover:bg-green-200 transition-colors">
+                <DollarSign className="w-6 h-6 text-green-600" />
               </div>
-                <h3 className="text-lg font-bold text-gray-800">Recebimentos de Hoje</h3>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-slate-800">
+                  R$ {metrics.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-sm text-slate-600">Receita Total</p>
+              </div>
             </div>
-              <span className="text-xl font-bold text-green-600">
-              R$ {totalReceipts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </span>
-          </div>
-          
-          <div className="space-y-3">
-            {todayReceipts.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">Nenhum recebimento hoje</p>
-            ) : (
-              todayReceipts.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center p-3 bg-green-50 rounded-lg professional-hover">
-                  <div>
-                    <p className="font-medium text-gray-800">
-                      {'client' in item ? item.client : 'Cliente'}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {'products' in item ? 'Venda' : 'Cheque'}
-                    </p>
-                  </div>
-                  <span className="font-bold text-green-600">
-                    R$ {('totalValue' in item ? item.totalValue : item.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-slate-200 rounded-full h-2">
+                <div 
+                  className="bg-green-500 h-2 rounded-full transition-all duration-500"
+                  style={{ width: '100%' }}
+                ></div>
+              </div>
+              <span className="text-xs font-medium text-green-600">
+                {metrics.salesCount} vendas
+              </span>
+            </div>
           </div>
 
-        {/* Gastos de Hoje */}
-          <div className="card professional-hover">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-                <div className="p-3 bg-red-100 rounded-lg animate-gentle-float">
+          <div className="metric-card group">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 rounded-xl bg-blue-100 group-hover:bg-blue-200 transition-colors">
+                <CheckCircle className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-slate-800">
+                  R$ {metrics.totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-sm text-slate-600">Recebido</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-slate-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${metrics.totalRevenue > 0 ? (metrics.totalReceived / metrics.totalRevenue) * 100 : 0}%` }}
+                ></div>
+              </div>
+              <span className="text-xs font-medium text-blue-600">
+                {metrics.totalRevenue > 0 ? ((metrics.totalReceived / metrics.totalRevenue) * 100).toFixed(1) : 0}%
+              </span>
+            </div>
+          </div>
+
+          <div className="metric-card group">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 rounded-xl bg-red-100 group-hover:bg-red-200 transition-colors">
                 <TrendingDown className="w-6 h-6 text-red-600" />
               </div>
-                <h3 className="text-lg font-bold text-gray-800">Gastos de Hoje</h3>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-slate-800">
+                  R$ {metrics.totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-sm text-slate-600">Gastos</p>
+              </div>
             </div>
-              <span className="text-xl font-bold text-red-600">
-              R$ {totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </span>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-slate-200 rounded-full h-2">
+                <div 
+                  className="bg-red-500 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${metrics.totalExpenses > 0 ? (metrics.totalPaid / metrics.totalExpenses) * 100 : 0}%` }}
+                ></div>
+              </div>
+              <span className="text-xs font-medium text-red-600">
+                {metrics.debtsCount} dívidas
+              </span>
+            </div>
           </div>
-          
-          <div className="space-y-3">
-            {todayExpenses.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">Nenhum gasto hoje</p>
-            ) : (
-              todayExpenses.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center p-3 bg-red-50 rounded-lg professional-hover">
-                  <div>
-                    <p className="font-medium text-gray-800">
-                      {'company' in item ? item.company : 'Pagamento'}
+
+          <div className="metric-card group">
+            <div className="flex items-center justify-between mb-4">
+              <div className={`p-3 rounded-xl transition-colors ${
+                metrics.netProfit >= 0 ? 'bg-emerald-100 group-hover:bg-emerald-200' : 'bg-red-100 group-hover:bg-red-200'
+              }`}>
+                <Target className={`w-6 h-6 ${metrics.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
+              </div>
+              <div className="text-right">
+                <p className={`text-2xl font-bold ${metrics.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  R$ {Math.abs(metrics.netProfit).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-sm text-slate-600">
+                  {metrics.netProfit >= 0 ? 'Lucro' : 'Prejuízo'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-slate-200 rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full transition-all duration-500 ${
+                    metrics.netProfit >= 0 ? 'bg-emerald-500' : 'bg-red-500'
+                  }`}
+                  style={{ width: `${Math.min(Math.abs(metrics.profitMargin), 100)}%` }}
+                ></div>
+              </div>
+              <span className={`text-xs font-medium ${
+                metrics.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'
+              }`}>
+                {metrics.profitMargin.toFixed(1)}%
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Revenue Trend Chart */}
+          <div className="chart-container">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 rounded-xl bg-blue-100">
+                <Activity className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-800">Evolução Financeira</h3>
+                <p className="text-slate-600">Receitas vs Gastos por dia</p>
+              </div>
+            </div>
+            
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={dailyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis 
+                    dataKey="day" 
+                    stroke="#64748b"
+                    fontSize={12}
+                    fontWeight={500}
+                  />
+                  <YAxis 
+                    stroke="#64748b"
+                    fontSize={12}
+                    fontWeight={500}
+                    tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+                      fontWeight: 500
+                    }}
+                    formatter={(value, name) => [
+                      `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+                      name === 'revenue' ? 'Receita' : 
+                      name === 'received' ? 'Recebido' : 'Gastos'
+                    ]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    fill="rgba(34, 197, 94, 0.1)"
+                    stroke="#22c55e"
+                    strokeWidth={3}
+                  />
+                  <Bar dataKey="expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  <Line
+                    type="monotone"
+                    dataKey="received"
+                    stroke="#3b82f6"
+                    strokeWidth={3}
+                    dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Payment Methods Distribution */}
+          <div className="chart-container">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 rounded-xl bg-purple-100">
+                <CreditCard className="w-6 h-6 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-800">Métodos de Pagamento</h3>
+                <p className="text-slate-600">Distribuição por tipo</p>
+              </div>
+            </div>
+            
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <Pie
+                    data={paymentMethodsData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={120}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {paymentMethodsData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+                      fontWeight: 500
+                    }}
+                    formatter={(value) => [
+                      `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+                      'Valor'
+                    ]}
+                  />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36}
+                    wrapperStyle={{ fontSize: '14px', fontWeight: 500 }}
+                  />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Status and Top Clients */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Sales Status */}
+          <div className="chart-container">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 rounded-xl bg-orange-100">
+                <PieChart className="w-6 h-6 text-orange-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-800">Status das Vendas</h3>
+                <p className="text-slate-600">Distribuição por situação</p>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              {statusData.map((status, index) => (
+                <div key={index} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-4 h-4 rounded-full"
+                      style={{ backgroundColor: status.color }}
+                    ></div>
+                    <div>
+                      <p className="font-semibold text-slate-800">{status.name}</p>
+                      <p className="text-sm text-slate-600">{status.value} vendas</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-slate-800">
+                      R$ {status.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
-                    <p className="text-sm text-gray-600">
-                      {'description' in item ? item.description : 'Salário'}
+                    <p className="text-sm text-slate-600">
+                      {((status.value / filteredSales.length) * 100).toFixed(1)}%
                     </p>
                   </div>
-                  <span className="font-bold text-red-600">
-                    R$ {('totalValue' in item ? item.totalValue : item.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
                 </div>
-              ))
-            )}
-          </div>
-          </div>
-      </div>
-
-      {/* Relatórios Detalhados */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Vendas do Mês */}
-          <div className="card">
-          <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-blue-100 rounded-lg animate-gentle-float">
-              <DollarSign className="w-6 h-6 text-blue-600" />
+              ))}
             </div>
-              <h3 className="text-lg font-bold text-gray-800">Vendas do Mês</h3>
-          </div>
-          
-          <div className="space-y-3">
-            {sales.slice(0, 5).map((sale, index) => (
-                <div key={index} className="flex justify-between items-center p-3 bg-blue-50 rounded-lg professional-hover">
-                <div>
-                  <p className="font-medium text-gray-800">{sale.client}</p>
-                  <p className="text-sm text-gray-600">
-                    {Array.isArray(sale.products) 
-                      ? sale.products.map(p => p.name).join(', ')
-                      : 'Produtos'}
-                  </p>
-                  <p className="text-xs text-gray-500">{new Date(sale.date).toLocaleDateString('pt-BR')}</p>
-                </div>
-                <span className="font-bold text-blue-600">
-                  R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-            ))}
-          </div>
           </div>
 
-        {/* Dívidas Pendentes */}
-          <div className="card">
-          <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-orange-100 rounded-lg animate-gentle-float">
-              <Calendar className="w-6 h-6 text-orange-600" />
+          {/* Top Clients */}
+          <div className="chart-container">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 rounded-xl bg-green-100">
+                <Users className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-800">Top 5 Clientes</h3>
+                <p className="text-slate-600">Maiores compradores</p>
+              </div>
             </div>
-              <h3 className="text-lg font-bold text-gray-800">Dívidas Pendentes</h3>
-          </div>
-          
-          <div className="space-y-3">
-            {debts.filter(debt => !debt.isPaid).slice(0, 5).map((debt, index) => (
-                <div key={index} className="flex justify-between items-center p-3 bg-orange-50 rounded-lg professional-hover">
-                <div>
-                  <p className="font-medium text-gray-800">{debt.company}</p>
-                  <p className="text-sm text-gray-600">{debt.description}</p>
-                  <p className="text-xs text-gray-500">Data: {new Date(debt.date).toLocaleDateString('pt-BR')}</p>
+            
+            <div className="space-y-4">
+              {topClients.map((client, index) => (
+                <div key={index} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center text-white font-bold">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-800">{client.name}</p>
+                      <p className="text-sm text-slate-600">{client.count} compras</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-green-600">
+                      R$ {client.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-sm text-slate-600">
+                      Média: R$ {(client.total / client.count).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
                 </div>
-                <span className="font-bold text-orange-600">
-                  R$ {debt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-            ))}
-          </div>
-          </div>
-      </div>
-
-      {/* Resumo Mensal */}
-        <div className="card bg-gradient-to-r from-green-50 to-green-100 border-green-200">
-        <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 bg-green-200 rounded-lg animate-gentle-float">
-              <Users className="w-6 h-6 text-green-700" />
-          </div>
-            <h3 className="text-lg font-bold text-green-900">Resumo Mensal</h3>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">
-              {sales.length}
-            </p>
-              <p className="text-green-700 font-medium">Vendas</p>
-          </div>
-          <div className="text-center">
-              <p className="text-2xl font-bold text-red-600">
-              {debts.length}
-            </p>
-              <p className="text-green-700 font-medium">Dívidas</p>
-          </div>
-          <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">
-              {checks.length}
-            </p>
-              <p className="text-green-700 font-medium">Cheques</p>
-          </div>
-          <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">
-              {employees.length}
-            </p>
-              <p className="text-green-700 font-medium">Funcionários</p>
+              ))}
+              
+              {topClients.length === 0 && (
+                <div className="text-center py-8 text-slate-500">
+                  <Users className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                  <p>Nenhum cliente encontrado no período selecionado</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* Detailed Tables */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Recent Sales */}
+          <div className="chart-container">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 rounded-xl bg-blue-100">
+                <Receipt className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-800">Vendas Recentes</h3>
+                <p className="text-slate-600">Últimas transações</p>
+              </div>
+            </div>
+            
+            <div className="space-y-3 max-h-80 overflow-y-auto modern-scrollbar">
+              {filteredSales.slice(0, 10).map((sale, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                  <div>
+                    <p className="font-semibold text-slate-800">{sale.client}</p>
+                    <p className="text-sm text-slate-600">
+                      {new Date(sale.date).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-blue-600">
+                      R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      sale.status === 'pago' ? 'bg-green-100 text-green-700' :
+                      sale.status === 'parcial' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {sale.status === 'pago' ? 'Pago' :
+                       sale.status === 'parcial' ? 'Parcial' : 'Pendente'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              
+              {filteredSales.length === 0 && (
+                <div className="text-center py-8 text-slate-500">
+                  <Receipt className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                  <p>Nenhuma venda encontrada no período</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Recent Expenses */}
+          <div className="chart-container">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 rounded-xl bg-red-100">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-800">Gastos Recentes</h3>
+                <p className="text-slate-600">Últimas despesas</p>
+              </div>
+            </div>
+            
+            <div className="space-y-3 max-h-80 overflow-y-auto modern-scrollbar">
+              {filteredDebts.slice(0, 10).map((debt, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                  <div>
+                    <p className="font-semibold text-slate-800">{debt.company}</p>
+                    <p className="text-sm text-slate-600">
+                      {debt.description} • {new Date(debt.date).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-red-600">
+                      R$ {debt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      debt.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {debt.isPaid ? 'Pago' : 'Pendente'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              
+              {filteredDebts.length === 0 && (
+                <div className="text-center py-8 text-slate-500">
+                  <AlertTriangle className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                  <p>Nenhuma despesa encontrada no período</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Summary Footer */}
+        <div className="card bg-gradient-to-r from-slate-50 to-slate-100 border-slate-200">
+          <div className="text-center">
+            <h3 className="text-2xl font-bold text-slate-800 mb-4">
+              Resumo do Período ({dateFilter} dias)
+            </h3>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="text-center">
+                <p className="text-3xl font-bold text-green-600 mb-1">
+                  {metrics.salesCount}
+                </p>
+                <p className="text-slate-600 font-medium">Vendas Realizadas</p>
+              </div>
+              <div className="text-center">
+                <p className="text-3xl font-bold text-blue-600 mb-1">
+                  {metrics.checksCount}
+                </p>
+                <p className="text-slate-600 font-medium">Cheques Emitidos</p>
+              </div>
+              <div className="text-center">
+                <p className="text-3xl font-bold text-red-600 mb-1">
+                  {metrics.debtsCount}
+                </p>
+                <p className="text-slate-600 font-medium">Despesas Registradas</p>
+              </div>
+              <div className="text-center">
+                <p className="text-3xl font-bold text-purple-600 mb-1">
+                  {employees.filter(e => e.isActive).length}
+                </p>
+                <p className="text-slate-600 font-medium">Funcionários Ativos</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
