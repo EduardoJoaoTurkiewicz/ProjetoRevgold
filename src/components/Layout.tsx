@@ -43,20 +43,20 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
   return (
     <div className="min-h-screen bg-gradient-modern relative overflow-hidden">
       {/* Background Animation */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-green-400/20 to-green-600/20 rounded-full blur-3xl animate-pulse-modern floating-animation"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-green-300/20 to-green-500/20 rounded-full blur-3xl animate-pulse-modern floating-animation" style={{ animationDelay: '3s' }}></div>
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-10">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-blue-400/30 to-indigo-500/30 rounded-full blur-3xl floating-animation"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-slate-400/30 to-slate-500/30 rounded-full blur-3xl floating-animation" style={{ animationDelay: '3s' }}></div>
       </div>
 
       {/* Header */}
-      <header className="glass-effect border-b border-white/20 modern-shadow-xl sticky top-0 z-50 relative backdrop-blur-modern">
-        <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-green-600/5"></div>
+      <header className="glass-effect border-b border-white/30 modern-shadow-xl sticky top-0 z-50 relative backdrop-blur-modern">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/8 to-indigo-600/8"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 relative">
             <div className="flex items-center space-x-4">
               <button
                 onClick={toggleMobileMenu}
-                className="lg:hidden p-2 rounded-xl hover:bg-white/10 transition-modern hover-lift text-white"
+                className="lg:hidden p-2 rounded-xl hover:bg-white/20 transition-modern hover-lift text-slate-700"
               >
                 {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -64,9 +64,9 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
                 <img 
                   src="/image.png" 
                   alt="RevGold Logo" 
-                  className="h-12 w-auto modern-shadow-lg transition-modern floating-animation filter-modern"
+                  className="h-12 w-auto modern-shadow-lg transition-modern floating-animation"
                 />
-                <h1 className="text-xl font-bold text-white hidden sm:block text-shadow-modern">
+                <h1 className="text-xl font-bold text-slate-800 hidden sm:block text-shadow-modern">
                   RevGold System
                 </h1>
               </div>
@@ -74,14 +74,14 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
             <div className="flex items-center space-x-4">
               <div className="hidden md:block text-right glass-effect rounded-xl p-3 modern-shadow hover-lift transition-modern">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center modern-shadow floating-animation">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center modern-shadow floating-animation">
                     <User className="w-4 h-4 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-white text-shadow-modern">
+                    <p className="text-sm font-semibold text-slate-800 text-shadow-modern">
                       {getGreeting()}, {state.user?.username}!
                     </p>
-                    <p className="text-xs text-slate-200 font-medium">
+                    <p className="text-xs text-slate-600 font-medium">
                       {new Date().toLocaleDateString('pt-BR', { 
                         weekday: 'short', 
                         day: 'numeric', 
@@ -93,7 +93,7 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
               </div>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 glass-effect hover:bg-white/20 text-white rounded-xl font-medium modern-shadow hover-lift transition-modern"
+                className="flex items-center gap-2 px-4 py-2 glass-effect hover:bg-white/30 text-slate-700 rounded-xl font-medium modern-shadow hover-lift transition-modern"
                 title="Voltar para seleção de usuário"
               >
                 <Home className="w-4 h-4" />
@@ -114,8 +114,8 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
 
       <div className="flex relative">
         {/* Sidebar */}
-        <nav className={`${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-72 glass-effect modern-shadow-xl border-r border-white/20 min-h-screen transition-modern backdrop-blur-modern`}>
-          <div className="absolute inset-0 bg-gradient-to-b from-green-500/5 to-green-600/5"></div>
+        <nav className={`${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-72 glass-effect modern-shadow-xl border-r border-white/30 min-h-screen transition-modern backdrop-blur-modern`}>
+          <div className="absolute inset-0 bg-gradient-to-b from-blue-500/8 to-indigo-600/8"></div>
           <div className="p-6 relative">
             <div className="mb-8 lg:hidden">
               <div className="flex items-center space-x-3 hover-lift transition-modern">
@@ -124,21 +124,21 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
                   alt="RevGold Logo" 
                   className="h-10 w-auto modern-shadow floating-animation"
                 />
-                <h1 className="text-lg font-bold text-white text-shadow-modern">
+                <h1 className="text-lg font-bold text-slate-800 text-shadow-modern">
                   RevGold System
                 </h1>
               </div>
             </div>
             
             {/* User Info Card */}
-            <div className="mb-8 p-6 glass-effect rounded-2xl border border-white/20 modern-shadow hover-lift transition-modern">
+            <div className="mb-8 p-6 glass-effect rounded-2xl border border-white/30 modern-shadow hover-lift transition-modern">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center modern-shadow floating-animation">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center modern-shadow floating-animation">
                   <User className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold text-white text-shadow-modern">{state.user?.username}</p>
-                  <p className="text-sm text-slate-200 capitalize">{state.user?.role}</p>
+                  <p className="font-semibold text-slate-800 text-shadow-modern">{state.user?.username}</p>
+                  <p className="text-sm text-slate-600 capitalize">{state.user?.role}</p>
                 </div>
               </div>
             </div>
@@ -155,20 +155,20 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
                       }}
                       className={`w-full flex items-center space-x-4 px-6 py-4 rounded-xl transition-modern font-semibold group relative overflow-hidden hover-lift ${
                         currentPage === item.id
-                          ? 'bg-gradient-to-r from-green-500 to-green-600 text-white modern-shadow-lg neon-glow'
-                          : 'text-white hover:bg-white/10 hover:text-green-300 glass-effect'
+                          ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white modern-shadow-lg'
+                          : 'text-slate-700 hover:bg-white/20 hover:text-blue-600 glass-effect'
                       }`}
                       style={{ animationDelay: `${index * 100}ms` }}
                     >
                       <div className={`p-3 rounded-xl transition-modern floating-animation ${
                         currentPage === item.id 
                           ? 'bg-white/20 modern-shadow' 
-                          : 'bg-green-500/20 group-hover:bg-white/20 group-hover:modern-shadow'
+                          : 'bg-blue-500/20 group-hover:bg-white/30 group-hover:modern-shadow'
                       }`}>
                         <Icon className={`h-6 w-6 transition-modern ${
                           currentPage === item.id 
                             ? 'text-white' 
-                            : 'text-green-300 group-hover:text-white'
+                            : 'text-blue-500 group-hover:text-blue-600'
                         }`} />
                       </div>
                       <span className="relative z-10 text-shadow-modern">{item.label}</span>
@@ -177,7 +177,7 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
                       <div className={`absolute right-6 transition-modern ${
                         currentPage === item.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                       }`}>
-                        <div className="w-3 h-3 bg-current rounded-full animate-pulse-modern"></div>
+                        <div className="w-3 h-3 bg-current rounded-full"></div>
                       </div>
                       
                       {/* Active indicator */}
@@ -191,10 +191,10 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
             </ul>
             
             {/* Logout Button in Sidebar */}
-            <div className="mt-8 pt-6 border-t border-white/20">
+            <div className="mt-8 pt-6 border-t border-white/30">
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center space-x-4 px-6 py-4 rounded-xl transition-modern font-semibold text-red-400 hover:bg-red-500/10 hover:text-red-300 hover-lift group glass-effect"
+                className="w-full flex items-center space-x-4 px-6 py-4 rounded-xl transition-modern font-semibold text-red-500 hover:bg-red-500/10 hover:text-red-600 hover-lift group glass-effect"
               >
                 <div className="p-3 rounded-xl bg-red-500/20 group-hover:bg-red-500/30 transition-modern floating-animation">
                   <LogOut className="h-6 w-6" />
@@ -208,7 +208,7 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
         {/* Mobile menu overlay */}
         {isMobileMenuOpen && (
           <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-heavy z-30 lg:hidden transition-modern"
+            className="fixed inset-0 bg-black/30 backdrop-blur-modern z-30 lg:hidden transition-modern"
             onClick={() => setIsMobileMenuOpen(false)}
           />
         )}

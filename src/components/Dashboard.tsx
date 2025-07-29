@@ -62,6 +62,9 @@ export default function Dashboard() {
   const today = new Date().toISOString().split('T')[0];
   const todaySales = state.sales.filter(sale => sale.date === today);
   const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.totalValue, 0);
+  const todayReceivedAmount = todaySales.reduce((sum, sale) => sum + sale.receivedAmount, 0);
+  const todayDebts = state.debts.filter(debt => debt.date === today);
+  const todayDebtsPaid = todayDebts.reduce((sum, debt) => sum + debt.paidAmount, 0);
   const overdueChecks = state.checks.filter(check => check.dueDate < today && check.status === 'pendente');
   const dueToday = state.checks.filter(check => check.dueDate === today);
 
@@ -103,23 +106,23 @@ export default function Dashboard() {
     name: name.charAt(0).toUpperCase() + name.slice(1),
     value,
     color: [
-      '#22c55e', '#3b82f6', '#f59e0b', '#ef4444', 
-      '#8b5cf6', '#06b6d4', '#f97316', '#84cc16'
+      '#3b82f6', '#6366f1', '#8b5cf6', '#06b6d4', 
+      '#10b981', '#f59e0b', '#ef4444', '#84cc16'
     ][index % 8]
   }));
 
   // Status distribution
   const statusData = [
-    { name: 'Pagas', value: state.sales.filter(s => s.status === 'pago').length, color: '#22c55e' },
+    { name: 'Pagas', value: state.sales.filter(s => s.status === 'pago').length, color: '#10b981' },
     { name: 'Parciais', value: state.sales.filter(s => s.status === 'parcial').length, color: '#f59e0b' },
     { name: 'Pendentes', value: state.sales.filter(s => s.status === 'pendente').length, color: '#ef4444' }
   ];
 
   // Performance metrics
   const performanceData = [
-    { name: 'Vendas', value: (state.sales.length / 100) * 100, color: '#22c55e' },
+    { name: 'Vendas', value: (state.sales.length / 100) * 100, color: '#3b82f6' },
     { name: 'Recebimentos', value: (totalReceived / totalSales) * 100, color: '#3b82f6' },
-    { name: 'Funcionários', value: (activeEmployees / 20) * 100, color: '#f59e0b' },
+    { name: 'Funcionários', value: (activeEmployees / 20) * 100, color: '#6366f1' },
     { name: 'Eficiência', value: 85, color: '#8b5cf6' }
   ];
 
@@ -148,15 +151,15 @@ export default function Dashboard() {
       className="card hover-lift transition-modern glow-effect group relative overflow-hidden"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent opacity-0 group-hover:opacity-100 transition-modern"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-modern"></div>
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-4">
           <div className={`p-4 rounded-2xl bg-gradient-to-br ${color} modern-shadow-lg floating-animation group-hover:scale-110 transition-modern`}>
-            <Icon className="w-8 h-8 text-white filter-modern" />
+            <Icon className="w-8 h-8 text-white" />
           </div>
           {change && (
             <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold ${
-              trend === 'up' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+              trend === 'up' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
             }`}>
               {trend === 'up' ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
               {change}
@@ -170,7 +173,7 @@ export default function Dashboard() {
           </p>
         </div>
       </div>
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-green-400 to-green-600 transform scale-x-0 group-hover:scale-x-100 transition-modern origin-left"></div>
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 to-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-modern origin-left"></div>
     </div>
   );
 
@@ -189,10 +192,10 @@ export default function Dashboard() {
       className="card hover-lift transition-modern group relative overflow-hidden"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-modern"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-modern"></div>
       <div className="relative z-10">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-green-500 to-green-600 modern-shadow-lg floating-animation">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 modern-shadow-lg floating-animation">
             <Icon className="w-6 h-6 text-white" />
           </div>
           <h3 className="text-xl font-bold text-slate-900">{title}</h3>
@@ -207,24 +210,24 @@ export default function Dashboard() {
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="card bg-gradient-to-r from-green-600 to-green-700 text-white modern-shadow-xl relative overflow-hidden">
-        <div className="absolute inset-0 bg-mesh-gradient opacity-20"></div>
+      <div className="card bg-gradient-to-r from-blue-600 to-indigo-700 text-white modern-shadow-xl relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-indigo-600/20"></div>
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl transform translate-x-32 -translate-y-32"></div>
         <div className="relative z-10">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-4xl font-black mb-2 text-shadow-lg">Dashboard Financeiro</h1>
-              <p className="text-green-100 text-lg font-medium">
+              <p className="text-blue-100 text-lg font-medium">
                 Visão completa do desempenho da RevGold
               </p>
               <div className="flex items-center gap-4 mt-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-300 rounded-full animate-pulse-modern"></div>
-                  <span className="text-green-100 text-sm font-medium">Sistema Online</span>
+                  <div className="w-3 h-3 bg-blue-300 rounded-full"></div>
+                  <span className="text-blue-100 text-sm font-medium">Sistema Online</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-green-200" />
-                  <span className="text-green-100 text-sm font-medium">
+                  <Calendar className="w-4 h-4 text-blue-200" />
+                  <span className="text-blue-100 text-sm font-medium">
                     {new Date().toLocaleDateString('pt-BR', { 
                       weekday: 'long', 
                       year: 'numeric', 
@@ -240,7 +243,7 @@ export default function Dashboard() {
                 {new Date().getHours().toString().padStart(2, '0')}:
                 {new Date().getMinutes().toString().padStart(2, '0')}
               </div>
-              <div className="text-green-100 font-medium">
+              <div className="text-blue-100 font-medium">
                 Usuário: {state.user?.username}
               </div>
             </div>
@@ -251,40 +254,41 @@ export default function Dashboard() {
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
-          title="Vendas Totais"
-          value={state.sales.length}
+          title="Vendas Hoje"
+          value={todaySales.length}
           change="+12%"
           icon={DollarSign}
-          color="from-green-500 to-green-600"
+          color="from-blue-500 to-blue-600"
           trend="up"
           delay={0}
         />
         <MetricCard
-          title="Receita Total"
-          value={totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          title="Valor Recebido Hoje"
+          value={todayReceivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           change="+8.5%"
           icon={TrendingUp}
-          color="from-blue-500 to-blue-600"
+          color="from-emerald-500 to-emerald-600"
           prefix="R$ "
           trend="up"
           delay={100}
         />
         <MetricCard
-          title="Funcionários Ativos"
-          value={activeEmployees}
-          change="+2"
-          icon={Users}
-          color="from-purple-500 to-purple-600"
+          title="Dívidas Feitas Hoje"
+          value={todayDebts.length}
+          change="+3"
+          icon={CreditCard}
+          color="from-orange-500 to-orange-600"
           trend="up"
           delay={200}
         />
         <MetricCard
-          title="Cheques Pendentes"
-          value={state.checks.filter(c => c.status === 'pendente').length}
+          title="Valor Pago Hoje"
+          value={todayDebtsPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           change="-5%"
-          icon={FileText}
-          color="from-orange-500 to-orange-600"
-          trend="down"
+          icon={CheckCircle}
+          color="from-purple-500 to-purple-600"
+          prefix="R$ "
+          trend="up"
           delay={300}
         />
       </div>
@@ -297,12 +301,12 @@ export default function Dashboard() {
               <AreaChart data={salesByMonth} key={animationKey}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
-                  </linearGradient>
-                  <linearGradient id="colorReceived" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                  </linearGradient>
+                  <linearGradient id="colorReceived" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -334,7 +338,7 @@ export default function Dashboard() {
                 <Area
                   type="monotone"
                   dataKey="revenue"
-                  stroke="#22c55e"
+                  stroke="#3b82f6"
                   strokeWidth={3}
                   fillOpacity={1}
                   fill="url(#colorRevenue)"
@@ -343,7 +347,7 @@ export default function Dashboard() {
                 <Area
                   type="monotone"
                   dataKey="received"
-                  stroke="#3b82f6"
+                  stroke="#10b981"
                   strokeWidth={3}
                   fillOpacity={1}
                   fill="url(#colorReceived)"
@@ -484,17 +488,19 @@ export default function Dashboard() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="card bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover-lift transition-modern group">
+        <div className="card bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 hover-lift transition-modern group">
           <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-green-600 modern-shadow-lg floating-animation group-hover:scale-110 transition-modern">
+            <div className="p-4 rounded-2xl bg-emerald-600 modern-shadow-lg floating-animation group-hover:scale-110 transition-modern">
               <CheckCircle className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-green-900 text-lg">Recebido Hoje</h3>
-              <p className="text-green-700 font-black text-2xl">
-                R$ {todayRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              <h3 className="font-bold text-emerald-900 text-lg">Total de Vendas</h3>
+              <p className="text-emerald-700 font-black text-2xl">
+                {state.sales.length}
               </p>
-              <p className="text-green-600 text-sm font-medium">{todaySales.length} vendas</p>
+              <p className="text-emerald-600 text-sm font-medium">
+                R$ {totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
             </div>
           </div>
         </div>
@@ -532,14 +538,16 @@ export default function Dashboard() {
         <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover-lift transition-modern group">
           <div className="flex items-center gap-4">
             <div className="p-4 rounded-2xl bg-purple-600 modern-shadow-lg floating-animation group-hover:scale-110 transition-modern">
-              <Activity className="w-8 h-8 text-white" />
+              <Users className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-purple-900 text-lg">Folha de Pagamento</h3>
+              <h3 className="font-bold text-purple-900 text-lg">Funcionários</h3>
               <p className="text-purple-700 font-black text-2xl">
-                R$ {totalPayroll.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {activeEmployees}
               </p>
-              <p className="text-purple-600 text-sm font-medium">{activeEmployees} funcionários</p>
+              <p className="text-purple-600 text-sm font-medium">
+                R$ {totalPayroll.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} folha
+              </p>
             </div>
           </div>
         </div>
@@ -548,7 +556,7 @@ export default function Dashboard() {
       {/* Recent Activity */}
       <div className="card hover-lift transition-modern">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-green-500 to-green-600 modern-shadow-lg floating-animation">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 modern-shadow-lg floating-animation">
             <Zap className="w-6 h-6 text-white" />
           </div>
           <h3 className="text-xl font-bold text-slate-900">Atividade Recente</h3>
@@ -558,11 +566,11 @@ export default function Dashboard() {
           {state.sales.slice(0, 5).map((sale, index) => (
             <div 
               key={sale.id} 
-              className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-transparent rounded-xl border border-green-100 hover-lift transition-modern group"
+              className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-transparent rounded-xl border border-blue-100 hover-lift transition-modern group"
               style={{ animationDelay: `${index * 100}ms` }}
             >
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-green-600 modern-shadow group-hover:scale-110 transition-modern">
+                <div className="p-3 rounded-xl bg-blue-600 modern-shadow group-hover:scale-110 transition-modern">
                   <DollarSign className="w-5 h-5 text-white" />
                 </div>
                 <div>
@@ -576,11 +584,11 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-black text-green-600 text-lg">
+                <p className="font-black text-blue-600 text-lg">
                   R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                  sale.status === 'pago' ? 'bg-green-100 text-green-700' :
+                  sale.status === 'pago' ? 'bg-emerald-100 text-emerald-700' :
                   sale.status === 'parcial' ? 'bg-yellow-100 text-yellow-700' :
                   'bg-red-100 text-red-700'
                 }`}>

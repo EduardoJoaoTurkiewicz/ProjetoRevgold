@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Eye, Upload, Calendar, Trash2 } from 'lucide-react';
+import { Plus, Edit, Eye, Upload, Calendar, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Check } from '../types';
 import { CheckForm } from './forms/CheckForm';
@@ -9,6 +9,29 @@ export function Checks() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCheck, setEditingCheck] = useState<Check | null>(null);
   const [viewingCheck, setViewingCheck] = useState<Check | null>(null);
+  const [expandedSales, setExpandedSales] = useState<Set<string>>(new Set());
+  const [expandedDebts, setExpandedDebts] = useState<Set<string>>(new Set());
+
+  const today = new Date().toISOString().split('T')[0];
+  const dueToday = state.checks.filter(check => check.dueDate === today);
+  const overdue = state.checks.filter(check => check.dueDate < today && check.status === 'pendente');
+
+  // Group checks by sales and debts
+  const salesWithChecks = state.sales.filter(sale => 
+    state.checks.some(check => check.saleId === sale.id)
+  ).map(sale => ({
+    ...sale,
+    checks: state.checks.filter(check => check.saleId === sale.id)
+  }));
+
+  const debtsWithChecks = state.debts.filter(debt => 
+    debt.checksUsed && debt.checksUsed.length > 0
+  ).map(debt => ({
+    ...debt,
+    checks: state.checks.filter(check => 
+      debt.checksUsed?.includes(check.id)
+    )
+  }));
 
   const handleAddCheck = (check: Omit<Check, 'id' | 'createdAt'>) => {
     const newCheck: Check = {
@@ -19,7 +42,6 @@ export function Checks() {
     
     dispatch({ type: 'ADD_CHECK', payload: newCheck });
     
-    // Update observations for selected available checks
     if (check.selectedAvailableChecks && check.selectedAvailableChecks.length > 0) {
       check.selectedAvailableChecks.forEach(checkId => {
         const checkToUpdate = state.checks.find(c => c.id === checkId);
@@ -46,7 +68,6 @@ export function Checks() {
       };
       dispatch({ type: 'UPDATE_CHECK', payload: updatedCheck });
       
-      // Update observations for selected available checks
       if (check.selectedAvailableChecks && check.selectedAvailableChecks.length > 0) {
         check.selectedAvailableChecks.forEach(checkId => {
           const checkToUpdate = state.checks.find(c => c.id === checkId);
@@ -77,22 +98,39 @@ export function Checks() {
       const updatedCheck = { ...check, status };
       dispatch({ type: 'UPDATE_CHECK', payload: updatedCheck });
       
-      // Update related sale/debt status
       if (check.saleId) {
         const sale = state.sales.find(s => s.id === check.saleId);
         if (sale) {
-          // Recalculate sale status based on check status
           const updatedSale = { ...sale };
-          // This would need more complex logic for proper status calculation
           dispatch({ type: 'UPDATE_SALE', payload: updatedSale });
         }
       }
     }
   };
 
+  const toggleSaleExpansion = (saleId: string) => {
+    const newExpanded = new Set(expandedSales);
+    if (newExpanded.has(saleId)) {
+      newExpanded.delete(saleId);
+    } else {
+      newExpanded.add(saleId);
+    }
+    setExpandedSales(newExpanded);
+  };
+
+  const toggleDebtExpansion = (debtId: string) => {
+    const newExpanded = new Set(expandedDebts);
+    if (newExpanded.has(debtId)) {
+      newExpanded.delete(debtId);
+    } else {
+      newExpanded.add(debtId);
+    }
+    setExpandedDebts(newExpanded);
+  };
+
   const getStatusColor = (status: Check['status']) => {
     switch (status) {
-      case 'compensado': return 'bg-green-100 text-green-700';
+      case 'compensado': return 'bg-emerald-100 text-emerald-700';
       case 'devolvido': return 'bg-red-100 text-red-700';
       case 'reapresentado': return 'bg-yellow-100 text-yellow-700';
       default: return 'bg-gray-100 text-gray-700';
@@ -108,16 +146,20 @@ export function Checks() {
     }
   };
 
-  const today = new Date().toISOString().split('T')[0];
-  const dueToday = state.checks.filter(check => check.dueDate === today);
-  const overdue = state.checks.filter(check => check.dueDate < today && check.status === 'pendente');
-
   const canEdit = state.user?.role === 'admin' || state.user?.role === 'financeiro';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Cheques</h1>
+        <div className="flex items-center gap-4">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 modern-shadow-xl">
+            <Calendar className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Gestão de Cheques</h1>
+            <p className="text-slate-600 text-lg">Controle completo de cheques por venda e dívida</p>
+          </div>
+        </div>
         {canEdit && (
           <button
             onClick={() => setIsFormOpen(true)}
@@ -164,109 +206,163 @@ export function Checks() {
         </div>
       )}
 
-      {/* Checks List */}
-      <div className="card">
-        {state.checks.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full table-auto">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Cliente</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Valor</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Vencimento</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Status</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Tipo</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Usado em</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.checks.map(check => (
-                  <tr key={check.id} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4 text-sm">{check.client}</td>
-                    <td className="py-3 px-4 text-sm">
-                      R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      {check.installmentNumber && check.totalInstallments && (
-                        <div className="text-xs text-gray-500">
-                          Parcela {check.installmentNumber}/{check.totalInstallments}
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-sm">
-                      <span className={
-                        check.dueDate === today ? 'text-blue-600 font-medium' :
-                        check.dueDate < today ? 'text-red-600 font-medium' :
-                        'text-gray-900'
-                      }>
-                        {new Date(check.dueDate).toLocaleDateString('pt-BR')}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(check.status)}`}>
-                          {getStatusLabel(check.status)}
-                        </span>
-                        {canEdit && check.status === 'pendente' && (
-                          <select
-                            value={check.status}
-                            onChange={(e) => updateCheckStatus(check.id, e.target.value as Check['status'])}
-                            className="text-xs border rounded px-1 py-0.5"
-                          >
-                            <option value="pendente">Pendente</option>
-                            <option value="compensado">Compensado</option>
-                            <option value="devolvido">Devolvido</option>
-                            <option value="reapresentado">Reapresentado</option>
-                          </select>
-                        )}
+      {/* Sales with Checks */}
+      <div className="card modern-shadow-xl">
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Vendas com Cheques</h2>
+          <p className="text-slate-600">Vendas que possuem cheques gerados</p>
+        </div>
+        
+        {salesWithChecks.length > 0 ? (
+          <div className="space-y-4">
+            {salesWithChecks.map(sale => (
+              <div key={sale.id} className="border border-slate-200 rounded-2xl overflow-hidden">
+                <div 
+                  className="p-6 bg-gradient-to-r from-blue-50 to-transparent hover:from-blue-100 cursor-pointer transition-modern"
+                  onClick={() => toggleSaleExpansion(sale.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <button className="p-2 rounded-lg bg-blue-600 text-white modern-shadow">
+                        {expandedSales.has(sale.id) ? 
+                          <ChevronDown className="w-5 h-5" /> : 
+                          <ChevronRight className="w-5 h-5" />
+                        }
+                      </button>
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900">{sale.client}</h3>
+                        <p className="text-sm text-slate-600">
+                          Data: {new Date(sale.date).toLocaleDateString('pt-BR')} • 
+                          {sale.checks.length} cheque(s)
+                        </p>
                       </div>
-                    </td>
-                    <td className="py-3 px-4 text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        check.isOwnCheck ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-bold text-blue-600">
+                        R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                        sale.status === 'pago' ? 'bg-emerald-100 text-emerald-700' :
+                        sale.status === 'parcial' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
                       }`}>
-                        {check.isOwnCheck ? 'Próprio' : 'Terceiros'}
+                        {sale.status === 'pago' ? 'Pago' :
+                         sale.status === 'parcial' ? 'Parcial' : 'Pendente'}
                       </span>
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-600">
-                      {check.usedFor || '-'}
-                    </td>
-                    <td className="py-3 px-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setViewingCheck(check)}
-                          className="text-blue-600 hover:text-blue-800"
-                          title="Visualizar"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        {canEdit && (
-                          <>
-                            <button
-                              onClick={() => setEditingCheck(check)}
-                              className="text-green-600 hover:text-green-800"
-                              title="Editar"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteCheck(check.id)}
-                              className="text-red-600 hover:text-red-800"
-                              title="Excluir"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
+                    </div>
+                  </div>
+                </div>
+
+                {expandedSales.has(sale.id) && (
+                  <div className="border-t border-slate-200 bg-white">
+                    <div className="p-6">
+                      <h4 className="font-semibold text-slate-900 mb-4">Cheques desta Venda</h4>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full">
+                          <thead>
+                            <tr className="border-b border-slate-200">
+                              <th className="text-left py-3 px-4 font-semibold text-slate-700">Cliente</th>
+                              <th className="text-left py-3 px-4 font-semibold text-slate-700">Valor</th>
+                              <th className="text-left py-3 px-4 font-semibold text-slate-700">Vencimento</th>
+                              <th className="text-left py-3 px-4 font-semibold text-slate-700">Status</th>
+                              <th className="text-left py-3 px-4 font-semibold text-slate-700">Tipo</th>
+                              <th className="text-left py-3 px-4 font-semibold text-slate-700">Usado em</th>
+                              <th className="text-left py-3 px-4 font-semibold text-slate-700">Ações</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sale.checks.map(check => (
+                              <tr key={check.id} className="border-b border-slate-100 hover:bg-slate-50">
+                                <td className="py-3 px-4 text-sm">{check.client}</td>
+                                <td className="py-3 px-4 text-sm">
+                                  R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  {check.installmentNumber && check.totalInstallments && (
+                                    <div className="text-xs text-gray-500">
+                                      Parcela {check.installmentNumber}/{check.totalInstallments}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4 text-sm">
+                                  <span className={
+                                    check.dueDate === today ? 'text-blue-600 font-medium' :
+                                    check.dueDate < today ? 'text-red-600 font-medium' :
+                                    'text-gray-900'
+                                  }>
+                                    {new Date(check.dueDate).toLocaleDateString('pt-BR')}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(check.status)}`}>
+                                      {getStatusLabel(check.status)}
+                                    </span>
+                                    {canEdit && check.status === 'pendente' && (
+                                      <select
+                                        value={check.status}
+                                        onChange={(e) => updateCheckStatus(check.id, e.target.value as Check['status'])}
+                                        className="text-xs border rounded px-1 py-0.5"
+                                      >
+                                        <option value="pendente">Pendente</option>
+                                        <option value="compensado">Compensado</option>
+                                        <option value="devolvido">Devolvido</option>
+                                        <option value="reapresentado">Reapresentado</option>
+                                      </select>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4 text-sm">
+                                  <span className={`px-2 py-1 rounded-full text-xs ${
+                                    check.isOwnCheck ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'
+                                  }`}>
+                                    {check.isOwnCheck ? 'Próprio' : 'Terceiros'}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-sm text-gray-600">
+                                  {check.usedFor || '-'}
+                                </td>
+                                <td className="py-3 px-4 text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => setViewingCheck(check)}
+                                      className="text-blue-600 hover:text-blue-800"
+                                      title="Visualizar"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </button>
+                                    {canEdit && (
+                                      <>
+                                        <button
+                                          onClick={() => setEditingCheck(check)}
+                                          className="text-green-600 hover:text-green-800"
+                                          title="Editar"
+                                        >
+                                          <Edit className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteCheck(check.id)}
+                                          className="text-red-600 hover:text-red-800"
+                                          title="Excluir"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">Nenhum cheque registrado ainda.</p>
+            <p className="text-gray-500 mb-4">Nenhuma venda com cheques registrada ainda.</p>
             {canEdit && (
               <button
                 onClick={() => setIsFormOpen(true)}
@@ -278,6 +374,94 @@ export function Checks() {
           </div>
         )}
       </div>
+
+      {/* Debts with Checks */}
+      {debtsWithChecks.length > 0 && (
+        <div className="card modern-shadow-xl">
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-slate-900 mb-2">Dívidas com Cheques</h2>
+            <p className="text-slate-600">Dívidas que utilizaram cheques para pagamento</p>
+          </div>
+          
+          <div className="space-y-4">
+            {debtsWithChecks.map(debt => (
+              <div key={debt.id} className="border border-slate-200 rounded-2xl overflow-hidden">
+                <div 
+                  className="p-6 bg-gradient-to-r from-orange-50 to-transparent hover:from-orange-100 cursor-pointer transition-modern"
+                  onClick={() => toggleDebtExpansion(debt.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <button className="p-2 rounded-lg bg-orange-600 text-white modern-shadow">
+                        {expandedDebts.has(debt.id) ? 
+                          <ChevronDown className="w-5 h-5" /> : 
+                          <ChevronRight className="w-5 h-5" />
+                        }
+                      </button>
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900">{debt.company}</h3>
+                        <p className="text-sm text-slate-600">
+                          Data: {new Date(debt.date).toLocaleDateString('pt-BR')} • 
+                          {debt.checks.length} cheque(s) utilizados
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-bold text-orange-600">
+                        R$ {debt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                        debt.isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {debt.isPaid ? 'Pago' : 'Pendente'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {expandedDebts.has(debt.id) && (
+                  <div className="border-t border-slate-200 bg-white">
+                    <div className="p-6">
+                      <h4 className="font-semibold text-slate-900 mb-4">Cheques Utilizados nesta Dívida</h4>
+                      <div className="space-y-3">
+                        {debt.checks.map(check => (
+                          <div key={check.id} className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <span className="font-medium text-slate-900">{check.client}</span>
+                                <div className="text-sm text-slate-600 mt-1">
+                                  Status: {getStatusLabel(check.status)}
+                                  {check.status === 'compensado' && ' ✓'}
+                                </div>
+                                {check.installmentNumber && check.totalInstallments && (
+                                  <div className="text-sm text-slate-600">
+                                    Parcela {check.installmentNumber}/{check.totalInstallments}
+                                  </div>
+                                )}
+                                <div className="text-sm text-slate-600">
+                                  Usado para: {check.usedFor || 'Pagamento de dívida'}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <span className="font-medium text-blue-600">
+                                  R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </span>
+                                <div className="text-sm text-slate-600">
+                                  Vencimento: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Check Form Modal */}
       {(isFormOpen || editingCheck) && (
@@ -367,6 +551,7 @@ export function Checks() {
                   </div>
                 </div>
               )}
+
               {(viewingCheck.frontImage || viewingCheck.backImage) && (
                 <div className="mb-6">
                   <h3 className="font-medium text-gray-900 mb-3">Imagens do Cheque</h3>
