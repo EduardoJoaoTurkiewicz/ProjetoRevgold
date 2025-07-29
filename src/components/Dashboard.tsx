@@ -113,17 +113,17 @@ export default function Dashboard() {
 
   // Status distribution
   const statusData = [
-    { name: 'Pagas', value: state.sales.filter(s => s.status === 'pago').length, color: '#10b981' },
-    { name: 'Parciais', value: state.sales.filter(s => s.status === 'parcial').length, color: '#f59e0b' },
+    { name: 'Pagas', value: state.sales.filter(s => s.status === 'pago').length, color: '#22c55e' },
+    { name: 'Parciais', value: state.sales.filter(s => s.status === 'parcial').length, color: '#eab308' },
     { name: 'Pendentes', value: state.sales.filter(s => s.status === 'pendente').length, color: '#ef4444' }
   ];
 
   // Performance metrics
   const performanceData = [
-    { name: 'Vendas', value: (state.sales.length / 100) * 100, color: '#3b82f6' },
-    { name: 'Recebimentos', value: (totalReceived / totalSales) * 100, color: '#3b82f6' },
-    { name: 'Funcionários', value: (activeEmployees / 20) * 100, color: '#6366f1' },
-    { name: 'Eficiência', value: 85, color: '#8b5cf6' }
+    { name: 'Vendas', value: (state.sales.length / 100) * 100, color: '#22c55e' },
+    { name: 'Recebimentos', value: (totalReceived / totalSales) * 100, color: '#16a34a' },
+    { name: 'Funcionários', value: (activeEmployees / 20) * 100, color: '#15803d' },
+    { name: 'Eficiência', value: 85, color: '#166534' }
   ];
 
   const MetricCard = ({ 
@@ -148,18 +148,18 @@ export default function Dashboard() {
     delay?: number;
   }) => (
     <div 
-      className="card hover-lift transition-modern glow-effect group relative overflow-hidden"
+      className="card hover-lift transition-modern glow-effect group relative overflow-hidden transform-3d"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-modern"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-modern"></div>
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-4">
-          <div className={`p-4 rounded-2xl bg-gradient-to-br ${color} modern-shadow-lg floating-animation group-hover:scale-110 transition-modern`}>
+          <div className={`p-5 rounded-3xl bg-gradient-to-br ${color} modern-shadow-xl floating-animation group-hover:scale-125 transition-modern neon-glow`}>
             <Icon className="w-8 h-8 text-white" />
           </div>
           {change && (
-            <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold ${
-              trend === 'up' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+            <div className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold ${
+              trend === 'up' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'
             }`}>
               {trend === 'up' ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
               {change}
@@ -167,13 +167,13 @@ export default function Dashboard() {
           )}
         </div>
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wider">{title}</h3>
-          <p className="text-3xl font-black text-slate-900 text-shadow-modern">
+          <h3 className="text-sm font-bold text-slate-600 uppercase tracking-wider">{title}</h3>
+          <p className="text-4xl font-black text-slate-900 text-shadow-modern">
             {prefix}{typeof value === 'number' ? value.toLocaleString('pt-BR') : value}{suffix}
           </p>
         </div>
       </div>
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 to-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-modern origin-left"></div>
+      <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-r from-green-400 to-green-600 transform scale-x-0 group-hover:scale-x-100 transition-modern origin-left neon-glow"></div>
     </div>
   );
 
@@ -189,18 +189,18 @@ export default function Dashboard() {
     delay?: number;
   }) => (
     <div 
-      className="card hover-lift transition-modern group relative overflow-hidden"
+      className="card hover-lift transition-modern group relative overflow-hidden transform-3d"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-modern"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-green-500/8 to-green-600/8 opacity-0 group-hover:opacity-100 transition-modern"></div>
       <div className="relative z-10">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 modern-shadow-lg floating-animation">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 modern-shadow-xl floating-animation neon-glow">
             <Icon className="w-6 h-6 text-white" />
           </div>
-          <h3 className="text-xl font-bold text-slate-900">{title}</h3>
+          <h3 className="text-2xl font-black text-slate-900">{title}</h3>
         </div>
-        <div className="h-80">
+        <div className="h-96">
           {children}
         </div>
       </div>
@@ -210,24 +210,25 @@ export default function Dashboard() {
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="card bg-gradient-to-r from-blue-600 to-indigo-700 text-white modern-shadow-xl relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-indigo-600/20"></div>
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl transform translate-x-32 -translate-y-32"></div>
+      <div className="card bg-gradient-to-r from-green-600 via-green-700 to-green-800 text-white modern-shadow-xl relative overflow-hidden neon-glow">
+        <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-green-800/20"></div>
+        <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl transform translate-x-40 -translate-y-40 floating-animation"></div>
+        <div className="absolute bottom-0 left-0 w-60 h-60 bg-green-400/20 rounded-full blur-2xl transform -translate-x-20 translate-y-20 floating-animation" style={{ animationDelay: '2s' }}></div>
         <div className="relative z-10">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-black mb-2 text-shadow-lg">Dashboard Financeiro</h1>
-              <p className="text-blue-100 text-lg font-medium">
+              <h1 className="text-5xl font-black mb-3 text-shadow-xl">Dashboard Financeiro</h1>
+              <p className="text-green-100 text-xl font-bold">
                 Visão completa do desempenho da RevGold
               </p>
-              <div className="flex items-center gap-4 mt-4">
+              <div className="flex items-center gap-6 mt-6">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-blue-300 rounded-full"></div>
-                  <span className="text-blue-100 text-sm font-medium">Sistema Online</span>
+                  <div className="w-4 h-4 bg-green-300 rounded-full animate-pulse-modern neon-glow"></div>
+                  <span className="text-green-100 text-base font-bold">Sistema Online</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-blue-200" />
-                  <span className="text-blue-100 text-sm font-medium">
+                  <Calendar className="w-5 h-5 text-green-200" />
+                  <span className="text-green-100 text-base font-bold">
                     {new Date().toLocaleDateString('pt-BR', { 
                       weekday: 'long', 
                       year: 'numeric', 
@@ -239,11 +240,11 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-6xl font-black text-white/20 mb-2">
+              <div className="text-7xl font-black text-white/30 mb-3 floating-animation">
                 {new Date().getHours().toString().padStart(2, '0')}:
                 {new Date().getMinutes().toString().padStart(2, '0')}
               </div>
-              <div className="text-blue-100 font-medium">
+              <div className="text-green-100 font-bold text-lg">
                 Usuário: {state.user?.username}
               </div>
             </div>
@@ -258,7 +259,7 @@ export default function Dashboard() {
           value={todaySales.length}
           change="+12%"
           icon={DollarSign}
-          color="from-blue-500 to-blue-600"
+          color="from-green-500 to-green-600"
           trend="up"
           delay={0}
         />
@@ -267,7 +268,7 @@ export default function Dashboard() {
           value={todayReceivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           change="+8.5%"
           icon={TrendingUp}
-          color="from-emerald-500 to-emerald-600"
+          color="from-green-600 to-green-700"
           prefix="R$ "
           trend="up"
           delay={100}
@@ -277,7 +278,7 @@ export default function Dashboard() {
           value={todayDebts.length}
           change="+3"
           icon={CreditCard}
-          color="from-orange-500 to-orange-600"
+          color="from-green-700 to-green-800"
           trend="up"
           delay={200}
         />
@@ -286,7 +287,7 @@ export default function Dashboard() {
           value={todayDebtsPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           change="-5%"
           icon={CheckCircle}
-          color="from-purple-500 to-purple-600"
+          color="from-green-800 to-green-900"
           prefix="R$ "
           trend="up"
           delay={300}
@@ -301,12 +302,12 @@ export default function Dashboard() {
               <AreaChart data={salesByMonth} key={animationKey}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
                   </linearGradient>
                   <linearGradient id="colorReceived" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                    <stop offset="5%" stopColor="#16a34a" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#16a34a" stopOpacity={0.1}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -338,7 +339,7 @@ export default function Dashboard() {
                 <Area
                   type="monotone"
                   dataKey="revenue"
-                  stroke="#3b82f6"
+                  stroke="#22c55e"
                   strokeWidth={3}
                   fillOpacity={1}
                   fill="url(#colorRevenue)"
@@ -347,7 +348,7 @@ export default function Dashboard() {
                 <Area
                   type="monotone"
                   dataKey="received"
-                  stroke="#10b981"
+                  stroke="#16a34a"
                   strokeWidth={3}
                   fillOpacity={1}
                   fill="url(#colorReceived)"
@@ -488,64 +489,64 @@ export default function Dashboard() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="card bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 hover-lift transition-modern group">
+        <div className="card bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover-lift transition-modern group glow-effect">
           <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-emerald-600 modern-shadow-lg floating-animation group-hover:scale-110 transition-modern">
+            <div className="p-5 rounded-3xl bg-green-600 modern-shadow-xl floating-animation group-hover:scale-125 transition-modern neon-glow">
               <CheckCircle className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-emerald-900 text-lg">Total de Vendas</h3>
-              <p className="text-emerald-700 font-black text-2xl">
+              <h3 className="font-black text-green-900 text-xl">Total de Vendas</h3>
+              <p className="text-green-700 font-black text-3xl">
                 {state.sales.length}
               </p>
-              <p className="text-emerald-600 text-sm font-medium">
+              <p className="text-green-600 text-base font-bold">
                 R$ {totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="card bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover-lift transition-modern group">
+        <div className="card bg-gradient-to-br from-green-100 to-green-200 border-green-300 hover-lift transition-modern group glow-effect">
           <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-blue-600 modern-shadow-lg floating-animation group-hover:scale-110 transition-modern">
+            <div className="p-5 rounded-3xl bg-green-700 modern-shadow-xl floating-animation group-hover:scale-125 transition-modern neon-glow">
               <Clock className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-blue-900 text-lg">Vencimentos Hoje</h3>
-              <p className="text-blue-700 font-black text-2xl">{dueToday.length}</p>
-              <p className="text-blue-600 text-sm font-medium">
+              <h3 className="font-black text-green-900 text-xl">Vencimentos Hoje</h3>
+              <p className="text-green-700 font-black text-3xl">{dueToday.length}</p>
+              <p className="text-green-600 text-base font-bold">
                 R$ {dueToday.reduce((sum, check) => sum + check.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 hover-lift transition-modern group">
+        <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 hover-lift transition-modern group glow-effect">
           <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-red-600 modern-shadow-lg floating-animation group-hover:scale-110 transition-modern">
+            <div className="p-5 rounded-3xl bg-red-600 modern-shadow-xl floating-animation group-hover:scale-125 transition-modern neon-glow">
               <AlertTriangle className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-red-900 text-lg">Cheques Vencidos</h3>
-              <p className="text-red-700 font-black text-2xl">{overdueChecks.length}</p>
-              <p className="text-red-600 text-sm font-medium">
+              <h3 className="font-black text-red-900 text-xl">Cheques Vencidos</h3>
+              <p className="text-red-700 font-black text-3xl">{overdueChecks.length}</p>
+              <p className="text-red-600 text-base font-bold">
                 R$ {overdueChecks.reduce((sum, check) => sum + check.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover-lift transition-modern group">
+        <div className="card bg-gradient-to-br from-green-200 to-green-300 border-green-400 hover-lift transition-modern group glow-effect">
           <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-purple-600 modern-shadow-lg floating-animation group-hover:scale-110 transition-modern">
+            <div className="p-5 rounded-3xl bg-green-800 modern-shadow-xl floating-animation group-hover:scale-125 transition-modern neon-glow">
               <Users className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-purple-900 text-lg">Funcionários</h3>
-              <p className="text-purple-700 font-black text-2xl">
+              <h3 className="font-black text-green-900 text-xl">Funcionários</h3>
+              <p className="text-green-700 font-black text-3xl">
                 {activeEmployees}
               </p>
-              <p className="text-purple-600 text-sm font-medium">
+              <p className="text-green-600 text-base font-bold">
                 R$ {totalPayroll.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} folha
               </p>
             </div>
@@ -554,28 +555,28 @@ export default function Dashboard() {
       </div>
 
       {/* Recent Activity */}
-      <div className="card hover-lift transition-modern">
+      <div className="card hover-lift transition-modern glow-effect">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 modern-shadow-lg floating-animation">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 modern-shadow-xl floating-animation neon-glow">
             <Zap className="w-6 h-6 text-white" />
           </div>
-          <h3 className="text-xl font-bold text-slate-900">Atividade Recente</h3>
+          <h3 className="text-2xl font-black text-slate-900">Atividade Recente</h3>
         </div>
         
         <div className="space-y-4">
           {state.sales.slice(0, 5).map((sale, index) => (
             <div 
               key={sale.id} 
-              className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-transparent rounded-xl border border-blue-100 hover-lift transition-modern group"
+              className="flex items-center justify-between p-6 bg-gradient-to-r from-green-50 to-transparent rounded-2xl border-2 border-green-100 hover-lift transition-modern group glow-effect"
               style={{ animationDelay: `${index * 100}ms` }}
             >
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-blue-600 modern-shadow group-hover:scale-110 transition-modern">
+                <div className="p-4 rounded-2xl bg-green-600 modern-shadow-xl group-hover:scale-125 transition-modern neon-glow">
                   <DollarSign className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="font-bold text-slate-900">{sale.client}</p>
-                  <p className="text-sm text-slate-600">
+                  <p className="font-black text-slate-900 text-lg">{sale.client}</p>
+                  <p className="text-base text-slate-600 font-medium">
                     {new Date(sale.date).toLocaleDateString('pt-BR')} • 
                     {Array.isArray(sale.products) 
                       ? sale.products.map(p => p.name).join(', ')
@@ -584,11 +585,11 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-black text-blue-600 text-lg">
+                <p className="font-black text-green-600 text-xl">
                   R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
-                <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                  sale.status === 'pago' ? 'bg-emerald-100 text-emerald-700' :
+                <span className={`px-4 py-2 rounded-full text-sm font-bold ${
+                  sale.status === 'pago' ? 'bg-green-100 text-green-700 border border-green-200' :
                   sale.status === 'parcial' ? 'bg-yellow-100 text-yellow-700' :
                   'bg-red-100 text-red-700'
                 }`}>
@@ -600,10 +601,10 @@ export default function Dashboard() {
           ))}
           
           {state.sales.length === 0 && (
-            <div className="text-center py-12">
-              <Star className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-              <p className="text-slate-500 text-lg font-medium">Nenhuma venda registrada ainda</p>
-              <p className="text-slate-400">Comece registrando sua primeira venda!</p>
+            <div className="text-center py-16">
+              <Star className="w-20 h-20 mx-auto text-green-300 mb-6 floating-animation" />
+              <p className="text-slate-500 text-xl font-bold">Nenhuma venda registrada ainda</p>
+              <p className="text-slate-400 text-lg">Comece registrando sua primeira venda!</p>
             </div>
           )}
         </div>
