@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AppProvider } from './context/AppContext';
 import { UserSelection } from './components/UserSelection';
-import { Layout } from './components/Layout';
+import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import { Sales } from './components/Sales';
 import { Debts } from './components/Debts';
