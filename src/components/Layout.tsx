@@ -50,13 +50,13 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
       </div>
 
       {/* Header */}
-      <header className="bg-white/95 backdrop-blur-xl border-b border-slate-200 modern-shadow sticky top-0 z-50 relative">
+      <header className="header-glass sticky top-0 z-50 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 relative">
             <div className="flex items-center space-x-4">
               <button
                 onClick={toggleMobileMenu}
-                className="lg:hidden p-2 rounded-xl hover:bg-slate-100 transition-modern hover-lift text-slate-700"
+                className="lg:hidden p-2 rounded-xl hover:bg-slate-700/50 transition-modern hover-lift text-slate-300 hover:text-white"
               >
                 {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -64,23 +64,24 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
                 <img 
                   src="/image.png" 
                   alt="RevGold Logo" 
-                  className="h-12 w-auto modern-shadow transition-modern floating-animation"
+                  className="h-12 w-auto modern-shadow transition-modern floating-animation neon-glow"
                 />
                 <h1 className="text-xl font-bold text-slate-800 hidden sm:block">
+                <h1 className="text-xl font-bold text-slate-100 hidden sm:block text-shadow-modern">
                   RevGold System
                 </h1>
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="hidden md:flex items-center gap-3 bg-white/80 backdrop-blur-sm rounded-xl p-3 modern-shadow hover-lift transition-modern border border-slate-200">
-                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center modern-shadow">
+              <div className="hidden md:flex items-center gap-3 bg-slate-800/80 backdrop-blur-sm rounded-xl p-3 modern-shadow hover-lift transition-modern border border-slate-700/50 glow-effect">
+                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center modern-shadow neon-glow">
                     <User className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-slate-800">
+                    <p className="text-sm font-semibold text-slate-100">
                       {getGreeting()}, {state.user?.username}!
                     </p>
-                    <p className="text-xs text-slate-600 font-medium">
+                    <p className="text-xs text-slate-400 font-medium">
                       {new Date().toLocaleDateString('pt-BR', { 
                         weekday: 'short', 
                         day: 'numeric', 
@@ -91,7 +92,7 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
               </div>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium modern-shadow hover-lift transition-modern"
+                className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-600/70 text-slate-300 hover:text-white rounded-xl font-medium modern-shadow hover-lift transition-modern backdrop-blur-sm border border-slate-600/30"
                 title="Voltar para seleção de usuário"
               >
                 <Home className="w-4 h-4" />
@@ -104,30 +105,30 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
 
       <div className="flex relative">
         {/* Sidebar */}
-        <nav className={`${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-72 bg-white/95 backdrop-blur-xl modern-shadow-lg border-r border-slate-200 min-h-screen transition-modern`}>
+        <nav className={`${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-72 sidebar-glass min-h-screen transition-modern`}>
           <div className="p-6 relative">
             <div className="mb-8 lg:hidden">
               <div className="flex items-center space-x-3 hover-lift transition-modern">
                 <img 
                   src="/image.png" 
                   alt="RevGold Logo" 
-                  className="h-10 w-auto modern-shadow floating-animation"
+                  className="h-10 w-auto modern-shadow floating-animation neon-glow"
                 />
-                <h1 className="text-lg font-bold text-slate-800">
+                <h1 className="text-lg font-bold text-slate-100 text-shadow-modern">
                   RevGold System
                 </h1>
               </div>
             </div>
             
             {/* User Info Card */}
-            <div className="mb-8 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200 modern-shadow hover-lift transition-modern">
+            <div className="mb-8 p-4 bg-gradient-to-r from-slate-800/80 to-slate-700/90 rounded-2xl border border-green-500/30 modern-shadow hover-lift transition-modern glow-effect backdrop-blur-sm">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center modern-shadow">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center modern-shadow neon-glow floating-animation">
                   <User className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold text-slate-800">{state.user?.username}</p>
-                  <p className="text-sm text-green-700 capitalize font-medium">{state.user?.role}</p>
+                  <p className="font-semibold text-slate-100 text-shadow-sm">{state.user?.username}</p>
+                  <p className="text-sm text-green-400 capitalize font-medium">{state.user?.role}</p>
                 </div>
               </div>
             </div>
@@ -144,20 +145,20 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
                       }}
                       className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-modern font-medium group relative overflow-hidden hover-lift ${
                         currentPage === item.id
-                          ? 'bg-gradient-to-r from-green-500 to-green-600 text-white modern-shadow'
-                          : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                          ? 'bg-gradient-to-r from-green-500 to-green-600 text-white modern-shadow neon-glow'
+                          : 'text-slate-300 hover:bg-slate-700/50 hover:text-white backdrop-blur-sm'
                       }`}
                       style={{ animationDelay: `${index * 100}ms` }}
                     >
                       <div className={`p-2 rounded-lg transition-modern ${
                         currentPage === item.id 
                           ? 'bg-white/20' 
-                          : 'bg-green-100 group-hover:bg-green-200'
+                          : 'bg-green-500/20 group-hover:bg-green-500/30'
                       }`}>
                         <Icon className={`h-5 w-5 transition-modern ${
                           currentPage === item.id 
                             ? 'text-white' 
-                            : 'text-green-600 group-hover:text-green-700'
+                            : 'text-green-400 group-hover:text-green-300'
                         }`} />
                       </div>
                       <span className="relative z-10">{item.label}</span>
@@ -173,12 +174,12 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
             </ul>
             
             {/* Logout Button in Sidebar */}
-            <div className="mt-8 pt-6 border-t border-slate-200">
+            <div className="mt-8 pt-6 border-t border-slate-700/50">
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-modern font-medium text-red-600 hover:bg-red-50 hover:text-red-700 hover-lift group"
+                className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-modern font-medium text-red-400 hover:bg-red-500/20 hover:text-red-300 hover-lift group backdrop-blur-sm"
               >
-                <div className="p-2 rounded-lg bg-red-100 group-hover:bg-red-200 transition-modern">
+                <div className="p-2 rounded-lg bg-red-500/20 group-hover:bg-red-500/30 transition-modern">
                   <LogOut className="h-5 w-5" />
                 </div>
                 <span>Sair do Sistema</span>
@@ -190,13 +191,13 @@ export const Layout: React.FC<LayoutProps> = ({ currentPage, onPageChange, child
         {/* Mobile menu overlay */}
         {isMobileMenuOpen && (
           <div 
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-30 lg:hidden transition-modern"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 lg:hidden transition-modern"
             onClick={() => setIsMobileMenuOpen(false)}
           />
         )}
 
         {/* Main Content */}
-        <main className="flex-1 p-6 sm:p-8 lg:p-10 relative modern-scrollbar bg-slate-50/50">
+        <main className="flex-1 p-6 sm:p-8 lg:p-10 relative modern-scrollbar">
           <div className="max-w-7xl mx-auto">
             <div className="animate-fade-in">
               {children}
