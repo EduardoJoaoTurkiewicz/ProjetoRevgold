@@ -182,8 +182,8 @@ export default function Dashboard() {
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute inset-0" style={{
-            backgroundImage: `radial-gradient(circle at 25% 25%, #D4AF37 2px, transparent 2px),
-                             radial-gradient(circle at 75% 75%, #D4AF37 1px, transparent 1px)`,
+            backgroundImage: `radial-gradient(circle at 25% 25%, #059669 2px, transparent 2px),
+                             radial-gradient(circle at 75% 75%, #059669 1px, transparent 1px)`,
             backgroundSize: '60px 60px'
           }}></div>
         </div>
@@ -193,7 +193,7 @@ export default function Dashboard() {
           <div>
             <h1 className="text-5xl font-black mb-4 text-gradient">Dashboard Executivo</h1>
             <p className="text-yellow-100 text-xl font-bold opacity-90">
-              Visão completa do desempenho da RevGold
+              Visão completa do desempenho empresarial
             </p>
             <div className="flex items-center space-x-8 mt-6">
               <div className="flex items-center space-x-2">
@@ -201,8 +201,8 @@ export default function Dashboard() {
                 <span className="text-green-200 text-sm font-bold uppercase tracking-wide">Sistema Online</span>
               </div>
               <div className="flex items-center space-x-2">
-                <Calendar className="w-5 h-5 text-yellow-300" />
-                <span className="text-yellow-100 text-sm font-bold">
+                <Calendar className="w-5 h-5 text-emerald-300" />
+                <span className="text-emerald-100 text-sm font-bold">
                   {new Date().toLocaleDateString('pt-BR', { 
                     weekday: 'long', 
                     year: 'numeric', 
@@ -215,11 +215,11 @@ export default function Dashboard() {
           </div>
           
           <div className="text-right">
-            <div className="text-4xl font-black text-yellow-300 mb-3 floating-animation">
+            <div className="text-4xl font-black text-emerald-300 mb-3 floating-animation">
               {new Date().getHours().toString().padStart(2, '0')}:
               {new Date().getMinutes().toString().padStart(2, '0')}
             </div>
-            <div className="text-yellow-100 font-bold text-lg">
+            <div className="text-emerald-100 font-bold text-lg">
               Usuário: {state.user?.username}
             </div>
           </div>

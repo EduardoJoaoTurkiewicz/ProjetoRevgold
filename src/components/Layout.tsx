@@ -13,8 +13,7 @@ import {
   Search,
   Menu,
   X,
-  Crown,
-  Sparkles
+  Building2
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -75,15 +74,12 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
                     className="w-10 h-10 object-contain"
                   />
                 </div>
-                <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-lg">
-                  <Crown className="w-3 h-3 text-yellow-800" />
-                </div>
               </div>
               <div className="relative">
                 <h1 className="text-2xl font-black text-white mb-1">RevGold</h1>
                 <div className="flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-yellow-300" />
-                  <p className="text-xs text-yellow-100 font-bold uppercase tracking-wider">Sistema Premium</p>
+                  <Building2 className="w-3 h-3 text-emerald-300" />
+                  <p className="text-xs text-emerald-100 font-bold uppercase tracking-wider">Sistema Empresarial</p>
                 </div>
               </div>
             </div>
@@ -135,7 +131,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
                 U
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white truncate">Usuário Premium</p>
+                <p className="text-sm font-bold text-white truncate">Usuário Empresarial</p>
                 <p className="text-xs text-yellow-200 font-semibold">Administrador</p>
               </div>
               <Settings className="w-5 h-5 text-white/60 hover:text-white transition-colors" />
@@ -185,7 +181,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
               
               {/* Notifications */}
               <button className="relative p-3 rounded-2xl hover:bg-yellow-50 transition-all duration-300 hover:shadow-md group">
-                <Bell className="w-6 h-6 text-slate-600 group-hover:text-yellow-600 transition-colors" />
+                <Bell className="w-6 h-6 text-slate-600 group-hover:text-emerald-600 transition-colors" />
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-red-500 to-red-600 rounded-full shadow-lg animate-pulse">
                   <span className="absolute inset-0 bg-red-400 rounded-full animate-ping"></span>
                 </span>

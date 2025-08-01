@@ -7,37 +7,37 @@ const USERS = [
     id: '1', 
     name: 'Eduardo João', 
     role: 'admin' as const, 
-    avatar: '🏆', 
+    avatar: '👨‍💼', 
     title: 'CEO & Fundador',
     description: 'Acesso completo ao sistema',
-    gradient: 'from-yellow-400 to-yellow-600'
+    gradient: 'from-emerald-500 to-emerald-600'
   },
   { 
     id: '2', 
     name: 'Eduardo Junior', 
     role: 'admin' as const, 
-    avatar: '💎', 
+    avatar: '👨‍💻', 
     title: 'Diretor Executivo',
     description: 'Gestão operacional e estratégica',
-    gradient: 'from-blue-400 to-blue-600'
+    gradient: 'from-green-500 to-green-600'
   },
   { 
     id: '3', 
     name: 'Samuel', 
     role: 'admin' as const, 
-    avatar: '⭐', 
+    avatar: '👨‍🔧', 
     title: 'Gerente Geral',
     description: 'Supervisão de todas as operações',
-    gradient: 'from-purple-400 to-purple-600'
+    gradient: 'from-teal-500 to-teal-600'
   },
   { 
     id: '4', 
     name: 'Lídia', 
     role: 'admin' as const, 
-    avatar: '🌟', 
+    avatar: '👩‍💼', 
     title: 'Diretora Financeira',
     description: 'Controle financeiro e contábil',
-    gradient: 'from-emerald-400 to-emerald-600'
+    gradient: 'from-green-600 to-emerald-700'
   }
 ];
 
@@ -63,12 +63,12 @@ export function UserSelection() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-yellow-900 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-yellow-400/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-yellow-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
+        <div className="absolute top-20 left-20 w-72 h-72 bg-emerald-400/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-green-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
       </div>
       
       {/* Floating Particles */}
@@ -76,7 +76,7 @@ export function UserSelection() {
         {Array.from({ length: 20 }).map((_, i) => (
           <div
             key={i}
-            className="absolute w-2 h-2 bg-yellow-400/30 rounded-full animate-pulse"
+            className="absolute w-2 h-2 bg-emerald-400/30 rounded-full animate-pulse"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -91,19 +91,13 @@ export function UserSelection() {
         {/* Header Section */}
         <div className="text-center mb-16 animate-fade-in">
           <div className="inline-flex items-center justify-center mb-12 relative">
-            <div className="w-40 h-40 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-2xl hover-lift floating-animation relative overflow-hidden">
+            <div className="w-40 h-40 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl hover-lift floating-animation relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full"></div>
               <img 
                 src="/image.png" 
                 alt="RevGold Logo" 
                 className="w-24 h-24 object-contain relative z-10"
               />
-            </div>
-            <div className="absolute -top-3 -right-3 w-12 h-12 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center shadow-xl animate-bounce">
-              <Crown className="w-6 h-6 text-yellow-900" />
-            </div>
-            <div className="absolute -bottom-2 -left-2 w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
-              <Sparkles className="w-4 h-4 text-white" />
             </div>
           </div>
           
@@ -116,13 +110,13 @@ export function UserSelection() {
           </p>
           
           <p className="text-lg text-slate-300 font-medium animate-slide-up mb-12" style={{ animationDelay: '0.3s' }}>
-            Gestão Financeira Premium & Profissional
+            Sistema de Gestão Empresarial
           </p>
           
           <div className="flex items-center justify-center space-x-4 animate-scale-in" style={{ animationDelay: '0.4s' }}>
-            <div className="w-32 h-1 bg-gradient-to-r from-transparent to-yellow-400 rounded-full"></div>
-            <div className="w-4 h-4 bg-yellow-400 rounded-full shadow-lg animate-pulse"></div>
-            <div className="w-32 h-1 bg-gradient-to-l from-transparent to-yellow-400 rounded-full"></div>
+            <div className="w-32 h-1 bg-gradient-to-r from-transparent to-emerald-400 rounded-full"></div>
+            <div className="w-4 h-4 bg-emerald-400 rounded-full shadow-lg animate-pulse"></div>
+            <div className="w-32 h-1 bg-gradient-to-l from-transparent to-emerald-400 rounded-full"></div>
           </div>
         </div>
 
@@ -145,34 +139,28 @@ export function UserSelection() {
                       <div className={`w-20 h-20 bg-gradient-to-br ${user.gradient} rounded-3xl flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-500 group-hover:scale-110`}>
                         <span className="text-3xl filter drop-shadow-lg">{user.avatar}</span>
                       </div>
-                      <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg animate-pulse">
-                        <Award className="w-4 h-4 text-yellow-900" />
-                      </div>
                     </div>
                     
                     <div className="flex-1">
                       <h3 className="text-2xl font-black text-white group-hover:text-yellow-300 transition-colors duration-300 mb-2">
                         {user.name}
                       </h3>
-                      <p className="text-sm font-bold text-yellow-400 mb-2 uppercase tracking-wider">
+                      <p className="text-sm font-bold text-emerald-400 mb-2 uppercase tracking-wider">
                         {user.title}
                       </p>
                       <p className="text-sm text-slate-300 font-medium">
                         {user.description}
                       </p>
                       <div className="flex items-center mt-3 space-x-1">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star key={i} className="w-4 h-4 text-yellow-400 fill-current drop-shadow-sm" />
-                        ))}
-                        <span className="text-xs text-slate-400 ml-3 font-semibold uppercase tracking-wide">Premium</span>
+                        <span className="text-xs text-emerald-400 font-semibold uppercase tracking-wide">Profissional</span>
                       </div>
                     </div>
                   </div>
                   
                   <div className="flex items-center space-x-4">
                     <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg"></div>
-                    <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center shadow-xl group-hover:shadow-2xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500">
-                      <ChevronRight className="w-8 h-8 text-yellow-900 group-hover:translate-x-2 transition-transform duration-300" />
+                    <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-xl group-hover:shadow-2xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500">
+                      <ChevronRight className="w-8 h-8 text-emerald-900 group-hover:translate-x-2 transition-transform duration-300" />
                     </div>
                   </div>
                 </div>
@@ -186,15 +174,15 @@ export function UserSelection() {
           <div className="inline-block">
             <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 max-w-lg mx-auto shadow-2xl">
               <div className="flex items-center justify-center space-x-6 mb-6">
-                <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-3xl flex items-center justify-center shadow-xl floating-animation">
-                  <Zap className="w-8 h-8 text-yellow-900" />
+                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-3xl flex items-center justify-center shadow-xl floating-animation">
+                  <Zap className="w-8 h-8 text-emerald-900" />
                 </div>
                 <div className="text-left">
                   <p className="text-2xl font-black text-white mb-2">
                     Sistema RevGold
                   </p>
-                  <p className="text-sm text-yellow-200 font-bold uppercase tracking-wider">
-                    Gestão Financeira Profissional
+                  <p className="text-sm text-emerald-200 font-bold uppercase tracking-wider">
+                    Gestão Empresarial
                   </p>
                 </div>
               </div>
@@ -206,7 +194,6 @@ export function UserSelection() {
               <div className="flex items-center justify-center space-x-3">
                 <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg"></div>
                 <span className="text-sm text-green-300 font-bold uppercase tracking-wide">Sistema Online</span>
-                <Sparkles className="w-4 h-4 text-yellow-400 animate-pulse" />
               </div>
             </div>
           </div>
