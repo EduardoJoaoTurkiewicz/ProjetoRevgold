@@ -371,7 +371,7 @@
 
   /* Professional Metric Cards */
   .metric-card {
-    @apply rounded-3xl p-8 transition-all duration-600;
+    @apply rounded-3xl p-8 transition-all duration-500;
     background: linear-gradient(135deg, var(--surface-white) 0%, rgba(244, 228, 188, 0.05) 100%);
     border: 1px solid var(--border-light);
     box-shadow: var(--shadow-lg);
