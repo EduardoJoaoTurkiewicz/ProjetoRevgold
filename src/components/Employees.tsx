@@ -164,7 +164,8 @@ export function Employees() {
                   const nextPayment = getNextPaymentDate(employee);
                   const lastPayment = getLastPayment(employee.id);
                   const today = new Date();
-                  const diffDays = Math.ceil((nextPayment.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                  const paymentDate = new Date(employee.paymentDate || nextPayment);
+                  const diffDays = Math.ceil((paymentDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
                   
                   return (
                     <tr key={employee.id} className="border-b hover:bg-gray-50">
@@ -180,7 +181,7 @@ export function Employees() {
                           diffDays <= 7 ? 'text-orange-600 font-medium' :
                           'text-gray-900'
                         }>
-                          {nextPayment.toLocaleDateString('pt-BR')}
+                          {paymentDate.toLocaleDateString('pt-BR')}
                           {diffDays <= 7 && (
                             <span className="text-xs block">
                               {diffDays === 0 ? 'Hoje!' : 
@@ -296,6 +297,15 @@ export function Employees() {
                   <label className="form-label">Data de Contratação</label>
                   <p className="text-sm text-gray-900">
                     {new Date(viewingEmployee.hireDate).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+                <div>
+                  <label className="form-label">Próximo Pagamento</label>
+                  <p className="text-sm text-gray-900">
+                    {viewingEmployee.paymentDate ? 
+                      new Date(viewingEmployee.paymentDate).toLocaleDateString('pt-BR') :
+                      'Não definido'
+                    }
                   </p>
                 </div>
                 <div>

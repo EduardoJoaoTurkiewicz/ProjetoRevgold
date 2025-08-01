@@ -14,6 +14,7 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
     position: employee?.position || '',
     salary: employee?.salary || 0,
     paymentDay: employee?.paymentDay || 5,
+    paymentDate: employee?.paymentDate || new Date().toISOString().split('T')[0],
     isActive: employee?.isActive ?? true,
     hireDate: employee?.hireDate || new Date().toISOString().split('T')[0],
     observations: employee?.observations || ''
@@ -102,9 +103,20 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
                   className="input-field"
                   required
                 />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Dia do mês em que o funcionário deve receber o salário
-                  </p>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Data do Próximo Pagamento *</label>
+                <input
+                  type="date"
+                  value={formData.paymentDate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, paymentDate: e.target.value }))}
+                  className="input-field"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Data específica em que o próximo pagamento deve ser realizado
+                </p>
               </div>
 
               <div className="form-group">
@@ -117,9 +129,9 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
                   />
                   <span className="form-label mb-0">Funcionário Ativo</span>
                 </label>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Desmarque se o funcionário não estiver mais trabalhando na empresa
-                  </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Desmarque se o funcionário não estiver mais trabalhando na empresa
+                </p>
               </div>
 
               <div className="form-group md:col-span-2">

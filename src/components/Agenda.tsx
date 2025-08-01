@@ -257,21 +257,17 @@ export function Agenda() {
               <div
                 key={index}
                 className={`min-h-[140px] p-2 border rounded-xl transition-all duration-300 cursor-pointer hover-lift ${
-                  !dayData.isCurrentMonth ? 'bg-gray-100 text-gray-400' :
+            <div className="tab-selector">
                   dayData.isToday ? 'bg-gradient-to-br from-emerald-500 to-red-500 text-white border-emerald-300 shadow-2xl' :
                   (dayData.checks.length + dayData.installments.length + dayData.debts.length + dayData.employeePayments.length) > 0 
-                    ? 'bg-gradient-to-br from-blue-50 to-emerald-50 border-emerald-200 hover:shadow-lg' 
-                    : 'bg-white hover:bg-gray-50 hover:shadow-md'
-                }`}
+                className={`tab-option ${viewMode === 'day' ? 'active' : ''}`}
                 onClick={() => dayData && setSelectedDate(new Date(dayData.dateStr))}
               >
                 <div className={`text-sm font-bold mb-2 ${
                   dayData.isToday ? 'text-white' : 
                   !dayData.isCurrentMonth ? 'text-gray-400' : 'text-gray-900'
                 }`}>
-                  {dayData.day}
-                </div>
-                
+                className={`tab-option ${viewMode === 'month' ? 'active' : ''}`}
                 <div className="space-y-1">
                   {/* Debts */}
                   {dayData.debts.slice(0, 1).map(debt => (

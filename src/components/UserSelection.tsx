@@ -8,7 +8,6 @@ const USERS = [
     name: 'Eduardo João', 
     role: 'admin' as const, 
     avatar: '👨‍💼', 
-    title: 'CEO & Fundador',
     description: 'Acesso completo ao sistema',
     gradient: 'from-emerald-500 to-emerald-600'
   },
@@ -17,8 +16,7 @@ const USERS = [
     name: 'Eduardo Junior', 
     role: 'admin' as const, 
     avatar: '👨‍💻', 
-    title: 'Diretor Executivo',
-    description: 'Gestão operacional e estratégica',
+    description: 'Acesso completo + Google Calendar',
     gradient: 'from-green-500 to-green-600'
   },
   { 
@@ -26,8 +24,7 @@ const USERS = [
     name: 'Samuel', 
     role: 'admin' as const, 
     avatar: '👨‍🔧', 
-    title: 'Gerente Geral',
-    description: 'Supervisão de todas as operações',
+    description: 'Acesso completo ao sistema',
     gradient: 'from-teal-500 to-teal-600'
   },
   { 
@@ -35,8 +32,7 @@ const USERS = [
     name: 'Lídia', 
     role: 'admin' as const, 
     avatar: '👩‍💼', 
-    title: 'Diretora Financeira',
-    description: 'Controle financeiro e contábil',
+    description: 'Acesso completo ao sistema',
     gradient: 'from-green-600 to-emerald-700'
   }
 ];
@@ -145,14 +141,11 @@ export function UserSelection() {
                       <h3 className="text-2xl font-black text-white group-hover:text-yellow-300 transition-colors duration-300 mb-2">
                         {user.name}
                       </h3>
-                      <p className="text-sm font-bold text-emerald-400 mb-2 uppercase tracking-wider">
-                        {user.title}
-                      </p>
                       <p className="text-sm text-slate-300 font-medium">
                         {user.description}
                       </p>
                       <div className="flex items-center mt-3 space-x-1">
-                        <span className="text-xs text-emerald-400 font-semibold uppercase tracking-wide">Profissional</span>
+                        <span className="text-xs text-emerald-400 font-semibold uppercase tracking-wide">Sistema RevGold</span>
                       </div>
                     </div>
                   </div>
