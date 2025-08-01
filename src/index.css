@@ -223,7 +223,7 @@
   }
 
   .btn-secondary {
-    @apply relative inline-flex items-center justify-center px-8 py-4 text-sm font-semibold transition-all duration-400 rounded-2xl;
+    @apply relative inline-flex items-center justify-center px-8 py-4 text-sm font-semibold transition-all duration-300 rounded-2xl;
     background: var(--glass-bg);
     color: var(--primary-gold-dark);
     border: 2px solid var(--border-light);
