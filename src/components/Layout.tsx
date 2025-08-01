@@ -94,24 +94,6 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
               <X className="w-6 h-6" />
             </button>
           </div>
-                <img 
-                  src="/image.png" 
-                  alt="RevGold" 
-                  className="w-8 h-8 object-contain"
-                />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">RevGold</h1>
-                <p className="text-xs text-gray-500 font-medium">Sistema de Gestão</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
-          </div>
 
           {/* Navigation */}
           <nav className="flex-1 px-6 py-8 space-y-3">
