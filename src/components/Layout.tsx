@@ -12,7 +12,9 @@ import {
   Bell,
   Search,
   Menu,
-  X
+  X,
+  Crown,
+  Sparkles
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -36,26 +38,62 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
   ];
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-white to-yellow-50/30 relative overflow-hidden">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-[0.02]">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `radial-gradient(circle at 25% 25%, #D4AF37 2px, transparent 2px),
+                           radial-gradient(circle at 75% 75%, #D4AF37 1px, transparent 1px)`,
+          backgroundSize: '60px 60px'
+        }}></div>
+      </div>
+      
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <div className={`
-        fixed lg:static inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out
+        fixed lg:static inset-y-0 left-0 z-50 w-80 transform transition-all duration-500 ease-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         sidebar-glass
       `}>
         <div className="flex flex-col h-full">
           {/* Logo Section */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between p-8 border-b border-white/20 relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 to-transparent"></div>
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center shadow-modern">
+              <div className="relative">
+                <div className="w-14 h-14 bg-gradient-primary rounded-2xl flex items-center justify-center shadow-modern-xl floating-animation">
+                  <img 
+                    src="/image.png" 
+                    alt="RevGold" 
+                    className="w-10 h-10 object-contain"
+                  />
+                </div>
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-lg">
+                  <Crown className="w-3 h-3 text-yellow-800" />
+                </div>
+              </div>
+              <div className="relative">
+                <h1 className="text-2xl font-black text-white mb-1">RevGold</h1>
+                <div className="flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-yellow-300" />
+                  <p className="text-xs text-yellow-100 font-bold uppercase tracking-wider">Sistema Premium</p>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-3 rounded-xl hover:bg-white/10 transition-all duration-300 text-white/80 hover:text-white"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
                 <img 
                   src="/image.png" 
                   alt="RevGold" 
@@ -76,7 +114,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-2">
+          <nav className="flex-1 px-6 py-8 space-y-3">
             {menuItems.map((item, index) => {
               const Icon = item.icon;
               const isActive = currentPage === item.id;
@@ -89,33 +127,36 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
                     setSidebarOpen(false);
                   }}
                   className={`
-                    w-full flex items-center px-4 py-3 text-left rounded-xl font-medium transition-all duration-300
+                    w-full flex items-center px-6 py-4 text-left rounded-2xl font-bold transition-all duration-500
                     menu-item stagger-animation
                     ${isActive 
-                      ? 'active text-white' 
-                      : 'text-gray-700 hover:text-gray-900'
+                      ? 'active text-white shadow-xl' 
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
                     }
                   `}
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-white' : 'text-gray-500'}`} />
-                  <span className="font-semibold">{item.label}</span>
+                  <Icon className={`w-6 h-6 mr-4 ${isActive ? 'text-white' : 'text-white/70'}`} />
+                  <span className="font-bold text-sm uppercase tracking-wide">{item.label}</span>
+                  {isActive && (
+                    <div className="ml-auto w-2 h-2 bg-yellow-300 rounded-full animate-pulse"></div>
+                  )}
                 </button>
               );
             })}
           </nav>
 
           {/* User Section */}
-          <div className="p-4 border-t border-gray-200">
-            <div className="flex items-center space-x-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
-              <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center text-white font-bold">
+          <div className="p-6 border-t border-white/20">
+            <div className="flex items-center space-x-4 p-4 rounded-2xl bg-white/10 hover:bg-white/20 transition-all duration-300 cursor-pointer backdrop-blur-sm">
+              <div className="w-12 h-12 bg-gradient-primary rounded-2xl flex items-center justify-center text-white font-bold shadow-lg">
                 U
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate">Usuário</p>
-                <p className="text-xs text-gray-500">Administrador</p>
+                <p className="text-sm font-bold text-white truncate">Usuário Premium</p>
+                <p className="text-xs text-yellow-200 font-semibold">Administrador</p>
               </div>
-              <Settings className="w-4 h-4 text-gray-400" />
+              <Settings className="w-5 h-5 text-white/60 hover:text-white transition-colors" />
             </div>
           </div>
         </div>
@@ -124,21 +165,21 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="header-glass">
-          <div className="flex items-center justify-between px-6 py-4">
+        <header className="header-glass relative">
+          <div className="flex items-center justify-between px-8 py-6">
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                className="lg:hidden p-3 rounded-xl hover:bg-yellow-50 transition-all duration-300 hover:shadow-md"
               >
-                <Menu className="w-5 h-5 text-gray-600" />
+                <Menu className="w-6 h-6 text-slate-700" />
               </button>
               
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 capitalize">
+                <h2 className="text-3xl font-black text-slate-900 capitalize mb-1">
                   {menuItems.find(item => item.id === currentPage)?.label || currentPage}
                 </h2>
-                <p className="text-sm text-gray-500 font-medium">
+                <p className="text-sm text-slate-600 font-semibold">
                   {new Date().toLocaleDateString('pt-BR', { 
                     weekday: 'long', 
                     year: 'numeric', 
@@ -149,38 +190,40 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-6">
               {/* Search */}
-              <div className="hidden md:flex items-center space-x-2 bg-gray-100 rounded-xl px-4 py-2">
-                <Search className="w-4 h-4 text-gray-400" />
+              <div className="hidden md:flex items-center space-x-3 bg-white/80 backdrop-blur-sm rounded-2xl px-6 py-3 shadow-sm border border-white/50">
+                <Search className="w-5 h-5 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Buscar..."
-                  className="bg-transparent border-none outline-none text-sm text-gray-700 placeholder-gray-400"
+                  className="bg-transparent border-none outline-none text-sm text-slate-700 placeholder-slate-400 font-medium w-48"
                 />
               </div>
               
               {/* Notifications */}
-              <button className="relative p-2 rounded-xl hover:bg-gray-100 transition-colors">
-                <Bell className="w-5 h-5 text-gray-600" />
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
+              <button className="relative p-3 rounded-2xl hover:bg-yellow-50 transition-all duration-300 hover:shadow-md group">
+                <Bell className="w-6 h-6 text-slate-600 group-hover:text-yellow-600 transition-colors" />
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-red-500 to-red-600 rounded-full shadow-lg animate-pulse">
+                  <span className="absolute inset-0 bg-red-400 rounded-full animate-ping"></span>
+                </span>
               </button>
               
               {/* Time */}
               <div className="hidden md:block text-right">
-                <p className="text-lg font-bold text-gray-900">
+                <p className="text-xl font-black text-slate-900">
                   {new Date().getHours().toString().padStart(2, '0')}:
                   {new Date().getMinutes().toString().padStart(2, '0')}
                 </p>
-                <p className="text-xs text-gray-500">Horário atual</p>
+                <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide">Horário Atual</p>
               </div>
             </div>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto bg-gray-50">
-          <div className="p-6">
+        <main className="flex-1 overflow-auto relative">
+          <div className="p-8">
             <div className="max-w-7xl mx-auto">
               {children}
             </div>
