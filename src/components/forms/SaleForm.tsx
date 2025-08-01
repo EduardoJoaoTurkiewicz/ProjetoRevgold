@@ -193,10 +193,10 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                   onChange={(e) => setFormData(prev => ({ ...prev, sellerId: e.target.value }))}
                   className="input-field"
                 >
-                  <option value="">Selecionar vendedor...</option>
+                  <option value="">Selecionar funcionário...</option>
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  Selecione o funcionário que realizou esta venda (opcional)
+                  Selecione o funcionário responsável por esta venda (opcional)
                 </p>
               </div>
             </div>

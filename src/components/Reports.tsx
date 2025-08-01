@@ -270,7 +270,7 @@ export const Reports: React.FC = () => {
               <select
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-white/90 text-slate-800 font-medium text-sm border-0 focus:ring-2 focus:ring-white/50"
+                className="w-full px-3 py-2 rounded-lg bg-white/90 text-slate-800 font-medium text-sm border-0 focus:ring-2 focus:ring-green-500/50"
               >
                 <option value="7">Últimos 7 dias</option>
                 <option value="15">Últimos 15 dias</option>

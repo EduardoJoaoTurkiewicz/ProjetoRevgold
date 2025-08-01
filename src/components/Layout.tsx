@@ -128,11 +128,11 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
           <div className="p-6 border-t border-white/20">
             <div className="flex items-center space-x-4 p-4 rounded-2xl bg-white/10 hover:bg-white/20 transition-all duration-300 cursor-pointer backdrop-blur-sm">
               <div className="w-12 h-12 bg-gradient-primary rounded-2xl flex items-center justify-center text-white font-bold shadow-lg">
-                U
+                {state.user?.username.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white truncate">Usuário Empresarial</p>
-                <p className="text-xs text-yellow-200 font-semibold">Administrador</p>
+                <p className="text-sm font-bold text-white truncate">{state.user?.username}</p>
+                <p className="text-xs text-yellow-200 font-semibold">Sistema RevGold</p>
               </div>
               <Settings className="w-5 h-5 text-white/60 hover:text-white transition-colors" />
             </div>

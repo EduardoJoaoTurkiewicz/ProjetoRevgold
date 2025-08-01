@@ -282,7 +282,7 @@ export function Sales() {
                     {viewingSale.sellerId ? (
                       (() => {
                         const seller = state.employees.find(e => e.id === viewingSale.sellerId);
-                        return seller ? `${seller.name} - ${seller.position}` : 'Vendedor não encontrado';
+                        return seller ? seller.name : 'Funcionário não encontrado';
                       })()
                     ) : (
                       <span className="text-gray-400">Não informado</span>
