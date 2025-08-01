@@ -1,4 +1,5 @@
 import React from 'react';
+import { useApp } from '../context/AppContext';
 import { 
   Home, 
   Calendar, 
@@ -24,6 +25,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) => {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const { state } = useApp();
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
