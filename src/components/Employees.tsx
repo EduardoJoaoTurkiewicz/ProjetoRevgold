@@ -311,7 +311,6 @@ export function Employees() {
                       ✓ Data específica definida
                     </p>
                   )}
-                  </p>
                 </div>
                 <div>
                   <label className="form-label">Status</label>
@@ -335,46 +334,34 @@ export function Employees() {
               {/* Payment History */}
               <div className="mb-6">
                 <h3 className="font-medium text-gray-900 mb-3">Histórico de Pagamentos</h3>
-                        <button
-                          onClick={() => setEditingEmployee(employee)}
-                          className="text-green-600 hover:text-green-800"
-                          title="Editar"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setPaymentEmployee(employee)}
-                          className="text-purple-600 hover:text-purple-800"
-                          title="Registrar Pagamento"
-                        >
-                          <DollarSign className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteEmployee(employee.id)}
-                          className="text-red-600 hover:text-red-800"
-                          title="Excluir"
-                        >
-                            "Observações sobre o pagamento (incluir informações sobre data de contratação e próximo pagamento)..." + 
-                        </button>
-                        <div className="mt-2 p-3 bg-blue-50 rounded-lg">
-                          <p className="text-sm text-blue-700">
-                            <strong>Data de Contratação:</strong> {new Date(paymentEmployee.hireDate).toLocaleDateString('pt-BR')}
-                          </p>
-                          <p className="text-sm text-blue-700">
-                            <strong>Próximo Pagamento:</strong> {getNextPaymentDate(paymentEmployee).toLocaleDateString('pt-BR')}
-                          </p>
+                {getEmployeePayments(viewingEmployee.id).length > 0 ? (
+                  <div className="space-y-2">
+                    {getEmployeePayments(viewingEmployee.id)
+                      .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime())
+                      .map(payment => (
+                        <div key={payment.id} className="p-3 bg-gray-50 rounded-lg">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium">
+                                R$ {payment.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {new Date(payment.paymentDate).toLocaleDateString('pt-BR')}
+                              </p>
+                              {payment.observations && (
+                                <p className="text-sm text-gray-700 mt-1">{payment.observations}</p>
+                              )}
+                            </div>
+                            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
+                              Pago
+                            </span>
+                          </div>
                         </div>
-                        <p className="text-xs text-blue-600 mt-1">
-                          💡 Inclua informações sobre data de contratação e próximo pagamento para melhor controle nos relatórios
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {getEmployeePayments(viewingEmployee.id).length === 0 && (
+                      ))}
+                  </div>
+                ) : (
                     <p className="text-gray-500 text-center py-4">Nenhum pagamento registrado.</p>
-                  )}
-                </div>
+                )}
               </div>
 
               <div className="flex justify-end">
@@ -435,16 +422,20 @@ export function Employees() {
                       className="input-field"
                       rows={3}
                       placeholder={
-                        "Observações sobre o pagamento..." + 
-                        (formData.amount !== paymentEmployee.salary ? " (obrigatório explicar alteração no valor)" : "")
+                        "Observações sobre o pagamento (incluir informações sobre data de contratação e próximo pagamento)..."
                       }
-                      required={formData.amount !== paymentEmployee.salary}
                     />
-                    {formData.amount !== paymentEmployee.salary && (
-                      <p className="text-xs text-orange-600 mt-1">
-                        ⚠️ Como o valor foi alterado, é obrigatório explicar o motivo (comissão, horas extras, desconto, etc.)
+                    <div className="mt-2 p-3 bg-blue-50 rounded-lg">
+                      <p className="text-sm text-blue-700">
+                        <strong>Data de Contratação:</strong> {new Date(paymentEmployee.hireDate).toLocaleDateString('pt-BR')}
                       </p>
-                    )}
+                      <p className="text-sm text-blue-700">
+                        <strong>Próximo Pagamento:</strong> {getNextPaymentDate(paymentEmployee).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1">
+                      💡 Inclua informações sobre data de contratação e próximo pagamento para melhor controle nos relatórios
+                    </p>
                   </div>
                   
                   <div>
