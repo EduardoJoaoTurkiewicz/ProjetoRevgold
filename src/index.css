@@ -6,10 +6,10 @@
 
 :root {
   /* RevGold Brand Colors */
-  --primary-green: #16a34a;
-  --primary-green-light: #22c55e;
-  --primary-green-dark: #15803d;
-  --accent-green: #dcfce7;
+  --primary-green: #059669;
+  --primary-green-light: #10b981;
+  --primary-green-dark: #047857;
+  --accent-green: #d1fae5;
   --deep-navy: #1a2332;
   --navy-light: #2a3441;
   --navy-medium: #3a4551;
@@ -24,8 +24,8 @@
   --border-light: #e2e8f0;
   --border-medium: #cbd5e1;
   --border-dark: #475569;
-  --tab-bg-light: #f0fdf4;
-  --tab-bg-active: #16a34a;
+  --tab-bg-light: #ecfdf5;
+  --tab-bg-active: #059669;
   
   /* Modern Shadows */
   --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -37,9 +37,9 @@
   --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
   
   /* Glass Effects */
-  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-bg: rgba(255, 255, 255, 0.90);
   --glass-border: rgba(255, 255, 255, 0.2);
-  --glass-shadow: 0 8px 32px 0 rgba(22, 163, 74, 0.15);
+  --glass-shadow: 0 8px 32px 0 rgba(5, 150, 105, 0.18);
   
   /* Animation Curves */
   --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
@@ -92,12 +92,12 @@
 
   /* Selection */
   ::selection {
-    background: rgba(22, 163, 74, 0.25);
+    background: rgba(5, 150, 105, 0.28);
     color: var(--text-primary);
   }
 
   ::-moz-selection {
-    background: rgba(22, 163, 74, 0.25);
+    background: rgba(5, 150, 105, 0.28);
     color: var(--text-primary);
   }
 }
@@ -137,7 +137,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, rgba(22, 163, 74, 0.03) 0%, rgba(22, 163, 74, 0.08) 100%);
+    background: linear-gradient(135deg, rgba(5, 150, 105, 0.04) 0%, rgba(5, 150, 105, 0.10) 100%);
     opacity: 0;
     transition: opacity 0.4s var(--ease-out-cubic);
     pointer-events: none;
@@ -161,7 +161,7 @@
   .card-elevated {
     box-shadow: var(--shadow-lg);
     border: 1px solid var(--border-medium);
-    background: linear-gradient(135deg, var(--surface-white) 0%, rgba(220, 252, 231, 0.15) 100%);
+    background: linear-gradient(135deg, var(--surface-white) 0%, rgba(209, 250, 229, 0.18) 100%);
   }
 
   .card-elevated:hover {
@@ -239,7 +239,7 @@
     transform: translateY(-4px) scale(1.05);
     box-shadow: var(--shadow-xl);
     border-color: var(--primary-green);
-    background: rgba(22, 163, 74, 0.12);
+    background: rgba(5, 150, 105, 0.15);
     color: var(--primary-green-dark);
   }
 
@@ -351,7 +351,7 @@
 
   .menu-item:hover {
     transform: translateX(12px) scale(1.02);
-    background: rgba(22, 163, 74, 0.12);
+    background: rgba(5, 150, 105, 0.15);
     box-shadow: var(--shadow-md);
   }
 
@@ -374,7 +374,7 @@
   /* Professional Metric Cards */
   .metric-card {
     @apply rounded-3xl p-8 transition-all duration-500;
-    background: linear-gradient(135deg, var(--surface-white) 0%, rgba(220, 252, 231, 0.08) 100%);
+    background: linear-gradient(135deg, var(--surface-white) 0%, rgba(209, 250, 229, 0.10) 100%);
     border: 1px solid var(--border-light);
     box-shadow: var(--shadow-lg);
     position: relative;
@@ -404,7 +404,7 @@
     left: -50%;
     width: 200%;
     height: 200%;
-    background: radial-gradient(circle, rgba(22, 163, 74, 0.12) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(5, 150, 105, 0.15) 0%, transparent 70%);
     opacity: 0;
     transition: opacity 0.6s ease;
     pointer-events: none;
@@ -427,7 +427,7 @@
   /* Enhanced Chart Container */
   .chart-container {
     @apply rounded-3xl p-10;
-    background: linear-gradient(135deg, var(--surface-white) 0%, rgba(220, 252, 231, 0.05) 100%);
+    background: linear-gradient(135deg, var(--surface-white) 0%, rgba(209, 250, 229, 0.08) 100%);
     border: 1px solid var(--border-light);
     box-shadow: var(--shadow-xl);
     transition: all 0.5s var(--ease-out-cubic);
@@ -468,10 +468,10 @@
   }
 
   .status-badge.success {
-    background: linear-gradient(135deg, rgba(22, 163, 74, 0.12), rgba(22, 163, 74, 0.25));
+    background: linear-gradient(135deg, rgba(5, 150, 105, 0.15), rgba(5, 150, 105, 0.28));
     color: #14532d;
-    border: 1px solid rgba(22, 163, 74, 0.35);
-    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);
+    border: 1px solid rgba(5, 150, 105, 0.40);
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.28);
   }
 
   .status-badge.warning {
@@ -626,7 +626,7 @@
 
   .table-modern th {
     @apply px-8 py-6 text-left text-xs font-bold uppercase tracking-wider;
-    background: linear-gradient(135deg, var(--surface-light), rgba(209, 250, 229, 0.1));
+    background: linear-gradient(135deg, var(--surface-light), rgba(209, 250, 229, 0.15));
     color: var(--text-secondary);
     border-bottom: 2px solid var(--primary-green);
   }
@@ -638,7 +638,7 @@
   }
 
   .table-modern tr:hover td {
-    background: rgba(5, 150, 105, 0.05);
+    background: rgba(5, 150, 105, 0.08);
     transform: scale(1.01);
   }
 
@@ -694,7 +694,7 @@
   }
 
   .bg-gradient-light {
-    background: linear-gradient(135deg, var(--surface-white) 0%, rgba(220, 252, 231, 0.15) 100%);
+    background: linear-gradient(135deg, var(--surface-white) 0%, rgba(209, 250, 229, 0.18) 100%);
   }
 
   .bg-gradient-dark {
@@ -731,8 +731,8 @@
 
   /* Tab Selection Styles */
   .tab-selector {
-    background: var(--tab-bg-light);
-    border: 2px solid rgba(22, 163, 74, 0.2);
+    background: #f0fdf4;
+    border: 2px solid rgba(5, 150, 105, 0.25);
     border-radius: 12px;
     padding: 4px;
   }
@@ -751,7 +751,7 @@
   }
 
   .tab-option:hover:not(.active) {
-    background: rgba(22, 163, 74, 0.1);
+    background: rgba(5, 150, 105, 0.12);
     transform: scale(1.01);
   }
 

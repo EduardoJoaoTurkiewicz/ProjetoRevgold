@@ -60,7 +60,7 @@ export function Boletos() {
   };
 
   const handleDeleteBoleto = (id: string) => {
-    if (confirm('Tem certeza que deseja excluir este boleto?')) {
+    if (window.confirm('Tem certeza que deseja excluir este boleto?')) {
       dispatch({ type: 'DELETE_BOLETO', payload: id });
     }
   };
@@ -136,7 +136,7 @@ export function Boletos() {
     }
   };
 
-  const canEdit = state.user?.role === 'admin' || state.user?.role === 'financeiro';
+  const canEdit = true; // Todos os usuários têm os mesmos poderes
 
   return (
     <div className="space-y-8">
@@ -150,15 +150,13 @@ export function Boletos() {
             <p className="text-slate-600 text-lg">Controle completo de boletos por venda e dívida</p>
           </div>
         </div>
-        {canEdit && (
-          <button
-            onClick={() => setIsFormOpen(true)}
-            className="btn-primary group flex items-center gap-2 modern-shadow-xl hover:modern-shadow-lg"
-          >
-            <Plus className="w-5 h-5" />
-            Novo Boleto
-          </button>
-        )}
+        <button
+          onClick={() => setIsFormOpen(true)}
+          className="btn-primary group flex items-center gap-2 modern-shadow-xl hover:modern-shadow-lg"
+        >
+          <Plus className="w-5 h-5" />
+          Novo Boleto
+        </button>
       </div>
 
       {/* Summary Cards */}
@@ -288,7 +286,7 @@ export function Boletos() {
                                     <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(boleto.status)}`}>
                                       {getStatusLabel(boleto.status)}
                                     </span>
-                                    {canEdit && boleto.status === 'pendente' && (
+                                    {boleto.status === 'pendente' && (
                                       <select
                                         value={boleto.status}
                                         onChange={(e) => updateBoletoStatus(boleto.id, e.target.value as Boleto['status'])}
@@ -325,24 +323,20 @@ export function Boletos() {
                                     >
                                       <Eye className="w-4 h-4" />
                                     </button>
-                                    {canEdit && (
-                                      <>
-                                        <button
-                                          onClick={() => setEditingBoleto(boleto)}
-                                          className="text-emerald-600 hover:text-emerald-800 p-2 rounded-lg hover:bg-emerald-50 transition-modern"
-                                          title="Editar"
-                                        >
-                                          <Edit className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                          onClick={() => handleDeleteBoleto(boleto.id)}
-                                          className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-modern"
-                                          title="Excluir"
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                        </button>
-                                      </>
-                                    )}
+                                    <button
+                                      onClick={() => setEditingBoleto(boleto)}
+                                      className="text-emerald-600 hover:text-emerald-800 p-2 rounded-lg hover:bg-emerald-50 transition-modern"
+                                      title="Editar"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteBoleto(boleto.id)}
+                                      className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-modern"
+                                      title="Excluir"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
                                   </div>
                                 </td>
                               </tr>

@@ -35,7 +35,7 @@ export function Employees() {
   };
 
   const handleDeleteEmployee = (id: string) => {
-    if (confirm('Tem certeza que deseja excluir este funcionário?')) {
+    if (window.confirm('Tem certeza que deseja excluir este funcionário?')) {
       dispatch({ type: 'DELETE_EMPLOYEE', payload: id });
     }
   };
@@ -69,11 +69,17 @@ export function Employees() {
 
   const getNextPaymentDate = (employee: Employee) => {
     const today = new Date();
+    
+    // Se há uma data específica definida, use ela
+    if (employee.paymentDate) {
+      return new Date(employee.paymentDate);
+    }
+    
+    // Caso contrário, calcule baseado no dia do pagamento
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
-    
     let nextPaymentDate = new Date(currentYear, currentMonth, employee.paymentDay);
-    
+
     if (nextPaymentDate <= today) {
       nextPaymentDate = new Date(currentYear, currentMonth + 1, employee.paymentDay);
     }
@@ -81,21 +87,19 @@ export function Employees() {
     return nextPaymentDate;
   };
 
-  const canEdit = state.user?.role === 'admin' || state.user?.role === 'financeiro';
+  const canEdit = true; // Todos os usuários têm os mesmos poderes
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Funcionários</h1>
-        {canEdit && (
-          <button
-            onClick={() => setIsFormOpen(true)}
-            className="btn-primary group flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Novo Funcionário
-          </button>
-        )}
+        <button
+          onClick={() => setIsFormOpen(true)}
+          className="btn-primary group flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Novo Funcionário
+        </button>
       </div>
 
       {/* Summary Cards */}
@@ -164,7 +168,7 @@ export function Employees() {
                   const nextPayment = getNextPaymentDate(employee);
                   const lastPayment = getLastPayment(employee.id);
                   const today = new Date();
-                  const paymentDate = new Date(employee.paymentDate || nextPayment);
+                  const paymentDate = nextPayment;
                   const diffDays = Math.ceil((paymentDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
                   
                   return (
@@ -243,14 +247,12 @@ export function Employees() {
         ) : (
           <div className="text-center py-12">
             <p className="text-gray-500 mb-4">Nenhum funcionário cadastrado ainda.</p>
-            {canEdit && (
-              <button
-                onClick={() => setIsFormOpen(true)}
-                className="btn-primary"
-              >
-                Cadastrar primeiro funcionário
-              </button>
-            )}
+            <button
+              onClick={() => setIsFormOpen(true)}
+              className="btn-primary"
+            >
+              Cadastrar primeiro funcionário
+            </button>
           </div>
         )}
       </div>
@@ -300,12 +302,15 @@ export function Employees() {
                   </p>
                 </div>
                 <div>
-                  <label className="form-label">Próximo Pagamento</label>
+                  <label className="form-label">Data do Próximo Pagamento</label>
                   <p className="text-sm text-gray-900">
-                    {viewingEmployee.paymentDate ? 
-                      new Date(viewingEmployee.paymentDate).toLocaleDateString('pt-BR') :
-                      'Não definido'
-                    }
+                    {getNextPaymentDate(viewingEmployee).toLocaleDateString('pt-BR')}
+                  </p>
+                  {viewingEmployee.paymentDate && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      ✓ Data específica definida
+                    </p>
+                  )}
                   </p>
                 </div>
                 <div>
@@ -330,31 +335,38 @@ export function Employees() {
               {/* Payment History */}
               <div className="mb-6">
                 <h3 className="font-medium text-gray-900 mb-3">Histórico de Pagamentos</h3>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {getEmployeePayments(viewingEmployee.id).map(payment => (
-                    <div key={payment.id} className="p-3 bg-gray-50 rounded-lg">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium">
-                            R$ {payment.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        <button
+                          onClick={() => setEditingEmployee(employee)}
+                          className="text-green-600 hover:text-green-800"
+                          title="Editar"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setPaymentEmployee(employee)}
+                          className="text-purple-600 hover:text-purple-800"
+                          title="Registrar Pagamento"
+                        >
+                          <DollarSign className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEmployee(employee.id)}
+                          className="text-red-600 hover:text-red-800"
+                          title="Excluir"
+                        >
+                            "Observações sobre o pagamento (incluir informações sobre data de contratação e próximo pagamento)..." + 
+                        </button>
+                        <div className="mt-2 p-3 bg-blue-50 rounded-lg">
+                          <p className="text-sm text-blue-700">
+                            <strong>Data de Contratação:</strong> {new Date(paymentEmployee.hireDate).toLocaleDateString('pt-BR')}
                           </p>
-                          <p className="text-sm text-gray-600">
-                            {new Date(payment.paymentDate).toLocaleDateString('pt-BR')}
+                          <p className="text-sm text-blue-700">
+                            <strong>Próximo Pagamento:</strong> {getNextPaymentDate(paymentEmployee).toLocaleDateString('pt-BR')}
                           </p>
-                          {payment.observations && (
-                            <p className="text-sm text-gray-600">{payment.observations}</p>
-                          )}
                         </div>
-                        <div className="text-right">
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            payment.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                          }`}>
-                            {payment.isPaid ? 'Pago' : 'Pendente'}
-                          </span>
-                          {payment.receipt && (
-                            <p className="text-xs text-blue-600 mt-1">✓ Recibo anexado</p>
-                          )}
-                        </div>
+                        <p className="text-xs text-blue-600 mt-1">
+                          💡 Inclua informações sobre data de contratação e próximo pagamento para melhor controle nos relatórios
+                        </p>
                       </div>
                     </div>
                   ))}

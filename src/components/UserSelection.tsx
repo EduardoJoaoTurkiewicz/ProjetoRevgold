@@ -6,33 +6,29 @@ const USERS = [
   { 
     id: '1', 
     name: 'Eduardo João', 
-    role: 'admin' as const, 
     avatar: '👨‍💼', 
-    description: 'Acesso completo ao sistema',
+    description: 'Sistema de Gestão RevGold',
     gradient: 'from-emerald-500 to-emerald-600'
   },
   { 
     id: '2', 
     name: 'Eduardo Junior', 
-    role: 'admin' as const, 
     avatar: '👨‍💻', 
-    description: 'Acesso completo + Google Calendar',
+    description: 'Sistema de Gestão + Google Calendar',
     gradient: 'from-green-500 to-green-600'
   },
   { 
     id: '3', 
     name: 'Samuel', 
-    role: 'admin' as const, 
     avatar: '👨‍🔧', 
-    description: 'Acesso completo ao sistema',
+    description: 'Sistema de Gestão RevGold',
     gradient: 'from-teal-500 to-teal-600'
   },
   { 
     id: '4', 
     name: 'Lídia', 
-    role: 'admin' as const, 
     avatar: '👩‍💼', 
-    description: 'Acesso completo ao sistema',
+    description: 'Sistema de Gestão RevGold',
     gradient: 'from-green-600 to-emerald-700'
   }
 ];
@@ -53,7 +49,7 @@ export function UserSelection() {
       payload: { 
         id: user.id, 
         username: user.name, 
-        role: user.role 
+        role: 'admin' // Todos têm os mesmos poderes
       } 
     });
   };

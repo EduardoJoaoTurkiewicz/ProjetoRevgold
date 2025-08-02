@@ -14,7 +14,7 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
     position: employee?.position || '',
     salary: employee?.salary || 0,
     paymentDay: employee?.paymentDay || 5,
-    paymentDate: employee?.paymentDate || new Date().toISOString().split('T')[0],
+    paymentDate: employee?.paymentDate || '',
     isActive: employee?.isActive ?? true,
     hireDate: employee?.hireDate || new Date().toISOString().split('T')[0],
     observations: employee?.observations || ''
@@ -103,19 +103,21 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
                   className="input-field"
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Data em que o funcionário foi contratado pela empresa
+                </p>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Data do Próximo Pagamento *</label>
+                <label className="form-label">Data Específica do Próximo Pagamento</label>
                 <input
                   type="date"
                   value={formData.paymentDate}
                   onChange={(e) => setFormData(prev => ({ ...prev, paymentDate: e.target.value }))}
                   className="input-field"
-                  required
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Data específica em que o próximo pagamento deve ser realizado
+                  Data específica para o próximo pagamento (opcional - se não informado, usará o dia do pagamento)
                 </p>
               </div>
 

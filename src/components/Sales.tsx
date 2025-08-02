@@ -127,26 +127,24 @@ export function Sales() {
   };
 
   const handleDeleteSale = (id: string) => {
-    if (confirm('Tem certeza que deseja excluir esta venda?')) {
+    if (window.confirm('Tem certeza que deseja excluir esta venda?')) {
       dispatch({ type: 'DELETE_SALE', payload: id });
     }
   };
 
-  const canEdit = state.user?.role === 'admin' || state.user?.role === 'financeiro';
+  const canEdit = true; // Todos os usuários têm os mesmos poderes
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Vendas</h1>
-        {canEdit && (
-          <button
-            onClick={() => setIsFormOpen(true)}
-            className="btn-primary group flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Nova Venda
-          </button>
-        )}
+        <button
+          onClick={() => setIsFormOpen(true)}
+          className="btn-primary group flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Nova Venda
+        </button>
       </div>
 
       {/* Sales List */}
@@ -206,24 +204,20 @@ export function Sales() {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {canEdit && (
-                          <>
-                            <button
-                              onClick={() => setEditingSale(sale)}
-                              className="text-green-600 hover:text-green-800"
-                              title="Editar"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteSale(sale.id)}
-                              className="text-red-600 hover:text-red-800"
-                              title="Excluir"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
+                        <button
+                          onClick={() => setEditingSale(sale)}
+                          className="text-green-600 hover:text-green-800"
+                          title="Editar"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSale(sale.id)}
+                          className="text-red-600 hover:text-red-800"
+                          title="Excluir"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -234,14 +228,12 @@ export function Sales() {
         ) : (
           <div className="text-center py-12">
             <p className="text-gray-500 mb-4">Nenhuma venda registrada ainda.</p>
-            {canEdit && (
-              <button
-                onClick={() => setIsFormOpen(true)}
-                className="btn-primary"
-              >
-                Registrar primeira venda
-              </button>
-            )}
+            <button
+              onClick={() => setIsFormOpen(true)}
+              className="btn-primary"
+            >
+              Registrar primeira venda
+            </button>
           </div>
         )}
       </div>

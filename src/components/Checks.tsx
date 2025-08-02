@@ -87,7 +87,7 @@ export function Checks() {
   };
 
   const handleDeleteCheck = (id: string) => {
-    if (confirm('Tem certeza que deseja excluir este cheque?')) {
+    if (window.confirm('Tem certeza que deseja excluir este cheque?')) {
       dispatch({ type: 'DELETE_CHECK', payload: id });
     }
   };
@@ -146,7 +146,7 @@ export function Checks() {
     }
   };
 
-  const canEdit = state.user?.role === 'admin' || state.user?.role === 'financeiro';
+  const canEdit = true; // Todos os usuários têm os mesmos poderes
 
   return (
     <div className="space-y-8">
@@ -160,15 +160,13 @@ export function Checks() {
             <p className="text-slate-600 text-lg">Controle completo de cheques por venda e dívida</p>
           </div>
         </div>
-        {canEdit && (
-          <button
-            onClick={() => setIsFormOpen(true)}
-            className="btn-primary group flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Adicionar Cheque
-          </button>
-        )}
+        <button
+          onClick={() => setIsFormOpen(true)}
+          className="btn-primary group flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Adicionar Cheque
+        </button>
       </div>
 
       {/* Summary Cards */}
@@ -296,7 +294,7 @@ export function Checks() {
                                     <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(check.status)}`}>
                                       {getStatusLabel(check.status)}
                                     </span>
-                                    {canEdit && check.status === 'pendente' && (
+                                    {check.status === 'pendente' && (
                                       <select
                                         value={check.status}
                                         onChange={(e) => updateCheckStatus(check.id, e.target.value as Check['status'])}
@@ -329,24 +327,20 @@ export function Checks() {
                                     >
                                       <Eye className="w-4 h-4" />
                                     </button>
-                                    {canEdit && (
-                                      <>
-                                        <button
-                                          onClick={() => setEditingCheck(check)}
-                                          className="text-green-600 hover:text-green-800"
-                                          title="Editar"
-                                        >
-                                          <Edit className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                          onClick={() => handleDeleteCheck(check.id)}
-                                          className="text-red-600 hover:text-red-800"
-                                          title="Excluir"
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                        </button>
-                                      </>
-                                    )}
+                                    <button
+                                      onClick={() => setEditingCheck(check)}
+                                      className="text-emerald-600 hover:text-emerald-800 p-2 rounded-lg hover:bg-emerald-50 transition-modern"
+                                      title="Editar"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteCheck(check.id)}
+                                      className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-modern"
+                                      title="Excluir"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
                                   </div>
                                 </td>
                               </tr>
@@ -363,14 +357,12 @@ export function Checks() {
         ) : (
           <div className="text-center py-12">
             <p className="text-gray-500 mb-4">Nenhuma venda com cheques registrada ainda.</p>
-            {canEdit && (
-              <button
-                onClick={() => setIsFormOpen(true)}
-                className="btn-primary"
-              >
-                Adicionar primeiro cheque
-              </button>
-            )}
+            <button
+              onClick={() => setIsFormOpen(true)}
+              className="btn-primary"
+            >
+              Adicionar primeiro cheque
+            </button>
           </div>
         )}
       </div>

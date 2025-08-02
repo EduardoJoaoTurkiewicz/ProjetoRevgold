@@ -91,7 +91,7 @@ export interface Employee {
   position: string;
   salary: number;
   paymentDay: number; // Day of month (1-31)
-  paymentDate: string; // Specific date for next payment
+  paymentDate?: string; // Optional specific date for next payment
   isActive: boolean;
   hireDate: string;
   observations?: string;
