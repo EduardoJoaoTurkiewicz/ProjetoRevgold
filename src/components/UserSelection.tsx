@@ -7,29 +7,29 @@ const USERS = [
     id: '1', 
     name: 'Eduardo João', 
     avatar: '👨‍💼', 
-    description: 'Sistema de Gestão RevGold',
-    gradient: 'from-emerald-500 to-emerald-600'
+    description: 'Acesso ao Sistema RevGold',
+    gradient: 'from-green-500 to-green-600'
   },
   { 
     id: '2', 
     name: 'Eduardo Junior', 
     avatar: '👨‍💻', 
-    description: 'Sistema de Gestão + Google Calendar',
+    description: 'Acesso ao Sistema RevGold + Google Calendar',
     gradient: 'from-green-500 to-green-600'
   },
   { 
     id: '3', 
     name: 'Samuel', 
     avatar: '👨‍🔧', 
-    description: 'Sistema de Gestão RevGold',
-    gradient: 'from-teal-500 to-teal-600'
+    description: 'Acesso ao Sistema RevGold',
+    gradient: 'from-green-600 to-green-700'
   },
   { 
     id: '4', 
     name: 'Lídia', 
     avatar: '👩‍💼', 
-    description: 'Sistema de Gestão RevGold',
-    gradient: 'from-green-600 to-emerald-700'
+    description: 'Acesso ao Sistema RevGold',
+    gradient: 'from-green-500 to-green-600'
   }
 ];
 
@@ -49,7 +49,7 @@ export function UserSelection() {
       payload: { 
         id: user.id, 
         username: user.name, 
-        role: 'admin' // Todos têm os mesmos poderes
+        role: 'user'
       } 
     });
   };
@@ -58,9 +58,9 @@ export function UserSelection() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-emerald-400/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-20 left-20 w-72 h-72 bg-green-400/10 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute bottom-20 right-20 w-96 h-96 bg-green-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-green-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
       </div>
       
       {/* Floating Particles */}
@@ -68,7 +68,7 @@ export function UserSelection() {
         {Array.from({ length: 20 }).map((_, i) => (
           <div
             key={i}
-            className="absolute w-2 h-2 bg-emerald-400/30 rounded-full animate-pulse"
+            className="absolute w-2 h-2 bg-green-400/30 rounded-full animate-pulse"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -83,7 +83,7 @@ export function UserSelection() {
         {/* Header Section */}
         <div className="text-center mb-16 animate-fade-in">
           <div className="inline-flex items-center justify-center mb-12 relative">
-            <div className="w-40 h-40 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl hover-lift floating-animation relative overflow-hidden">
+            <div className="w-40 h-40 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-2xl hover-lift floating-animation relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full"></div>
               <img 
                 src="/image.png" 
@@ -106,9 +106,9 @@ export function UserSelection() {
           </p>
           
           <div className="flex items-center justify-center space-x-4 animate-scale-in" style={{ animationDelay: '0.4s' }}>
-            <div className="w-32 h-1 bg-gradient-to-r from-transparent to-emerald-400 rounded-full"></div>
-            <div className="w-4 h-4 bg-emerald-400 rounded-full shadow-lg animate-pulse"></div>
-            <div className="w-32 h-1 bg-gradient-to-l from-transparent to-emerald-400 rounded-full"></div>
+            <div className="w-32 h-1 bg-gradient-to-r from-transparent to-green-400 rounded-full"></div>
+            <div className="w-4 h-4 bg-green-400 rounded-full shadow-lg animate-pulse"></div>
+            <div className="w-32 h-1 bg-gradient-to-l from-transparent to-green-400 rounded-full"></div>
           </div>
         </div>
 
@@ -141,15 +141,15 @@ export function UserSelection() {
                         {user.description}
                       </p>
                       <div className="flex items-center mt-3 space-x-1">
-                        <span className="text-xs text-emerald-400 font-semibold uppercase tracking-wide">Sistema RevGold</span>
+                        <span className="text-xs text-green-400 font-semibold uppercase tracking-wide">Sistema RevGold</span>
                       </div>
                     </div>
                   </div>
                   
                   <div className="flex items-center space-x-4">
                     <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg"></div>
-                    <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-xl group-hover:shadow-2xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500">
-                      <ChevronRight className="w-8 h-8 text-emerald-900 group-hover:translate-x-2 transition-transform duration-300" />
+                    <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-xl group-hover:shadow-2xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500">
+                      <ChevronRight className="w-8 h-8 text-green-900 group-hover:translate-x-2 transition-transform duration-300" />
                     </div>
                   </div>
                 </div>
@@ -163,14 +163,14 @@ export function UserSelection() {
           <div className="inline-block">
             <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 max-w-lg mx-auto shadow-2xl">
               <div className="flex items-center justify-center space-x-6 mb-6">
-                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-3xl flex items-center justify-center shadow-xl floating-animation">
-                  <Zap className="w-8 h-8 text-emerald-900" />
+                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-3xl flex items-center justify-center shadow-xl floating-animation">
+                  <Zap className="w-8 h-8 text-green-900" />
                 </div>
                 <div className="text-left">
                   <p className="text-2xl font-black text-white mb-2">
                     Sistema RevGold
                   </p>
-                  <p className="text-sm text-emerald-200 font-bold uppercase tracking-wider">
+                  <p className="text-sm text-green-200 font-bold uppercase tracking-wider">
                     Gestão Empresarial
                   </p>
                 </div>

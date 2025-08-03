@@ -136,7 +136,7 @@ export function Boletos() {
     }
   };
 
-  const canEdit = true; // Todos os usuários têm os mesmos poderes
+  const canEdit = true;
 
   return (
     <div className="space-y-8">

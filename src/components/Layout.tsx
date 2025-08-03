@@ -136,7 +136,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
                 <p className="text-sm font-bold text-white truncate">{state.user?.username}</p>
                 <p className="text-xs text-yellow-200 font-semibold">Sistema RevGold</p>
               </div>
-              <Settings className="w-5 h-5 text-white/60 hover:text-white transition-colors" />
+            <p className="text-xs text-green-200 font-semibold">Sistema RevGold</p>
             </div>
           </div>
         </div>

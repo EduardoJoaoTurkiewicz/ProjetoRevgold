@@ -1,7 +1,7 @@
 export interface User {
   id: string;
   username: string;
-  role: 'admin' | 'financeiro' | 'visualizador';
+  role: 'user';
 }
 
 export interface PaymentMethod {
@@ -91,7 +91,7 @@ export interface Employee {
   position: string;
   salary: number;
   paymentDay: number; // Day of month (1-31)
-  paymentDate?: string; // Optional specific date for next payment
+  nextPaymentDate?: string; // Optional specific date for next payment
   isActive: boolean;
   hireDate: string;
   observations?: string;

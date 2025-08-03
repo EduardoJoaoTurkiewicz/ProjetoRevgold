@@ -70,9 +70,9 @@ export function Employees() {
   const getNextPaymentDate = (employee: Employee) => {
     const today = new Date();
     
-    // Se há uma data específica definida, use ela
-    if (employee.paymentDate) {
-      return new Date(employee.paymentDate);
+    // Se há uma data específica definida para o próximo pagamento, use ela
+    if (employee.nextPaymentDate) {
+      return new Date(employee.nextPaymentDate);
     }
     
     // Caso contrário, calcule baseado no dia do pagamento
@@ -87,7 +87,7 @@ export function Employees() {
     return nextPaymentDate;
   };
 
-  const canEdit = true; // Todos os usuários têm os mesmos poderes
+  const canEdit = true;
 
   return (
     <div className="space-y-6">
@@ -306,9 +306,9 @@ export function Employees() {
                   <p className="text-sm text-gray-900">
                     {getNextPaymentDate(viewingEmployee).toLocaleDateString('pt-BR')}
                   </p>
-                  {viewingEmployee.paymentDate && (
+                  {viewingEmployee.nextPaymentDate && (
                     <p className="text-xs text-blue-600 mt-1">
-                      ✓ Data específica definida
+                      ✓ Data específica definida para próximo pagamento
                     </p>
                   )}
                 </div>
@@ -433,9 +433,6 @@ export function Employees() {
                         <strong>Próximo Pagamento:</strong> {getNextPaymentDate(paymentEmployee).toLocaleDateString('pt-BR')}
                       </p>
                     </div>
-                    <p className="text-xs text-blue-600 mt-1">
-                      💡 Inclua informações sobre data de contratação e próximo pagamento para melhor controle nos relatórios
-                    </p>
                   </div>
                   
                   <div>
