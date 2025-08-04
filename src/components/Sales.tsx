@@ -135,88 +135,96 @@ export function Sales() {
   const canEdit = true;
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Vendas</h1>
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 shadow-xl revgold-animate-floating">
+            <DollarSign className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-4xl font-black text-green-800">Gestão de Vendas</h1>
+            <p className="text-green-600 text-lg font-semibold">Controle completo das suas vendas</p>
+          </div>
+        </div>
         <button
           onClick={() => setIsFormOpen(true)}
-          className="btn-primary group flex items-center gap-2"
+          className="revgold-btn-primary group flex items-center gap-2 shadow-xl hover:shadow-2xl"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-5 h-5" />
           Nova Venda
         </button>
       </div>
 
       {/* Sales List */}
-      <div className="card">
+      <div className="revgold-card-premium">
         {state.sales.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full table-auto">
+          <div className="overflow-x-auto revgold-scrollbar">
+            <table className="revgold-table">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Data</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Cliente</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Produtos</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Valor Total</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Recebido</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Pendente</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Status</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Ações</th>
+                  <th className="revgold-table-header">Data</th>
+                  <th className="revgold-table-header">Cliente</th>
+                  <th className="revgold-table-header">Produtos</th>
+                  <th className="revgold-table-header">Valor Total</th>
+                  <th className="revgold-table-header">Recebido</th>
+                  <th className="revgold-table-header">Pendente</th>
+                  <th className="revgold-table-header">Status</th>
+                  <th className="revgold-table-header">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {state.sales.map(sale => (
-                  <tr key={sale.id} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4 text-sm">
+                  <tr key={sale.id} className="revgold-table-row">
+                    <td className="revgold-table-cell">
                       {new Date(sale.date).toLocaleDateString('pt-BR')}
                     </td>
-                    <td className="py-3 px-4 text-sm">{sale.client}</td>
-                    <td className="py-3 px-4 text-sm">
+                    <td className="revgold-table-cell font-bold text-green-700">{sale.client}</td>
+                    <td className="revgold-table-cell">
                       {Array.isArray(sale.products) 
                         ? sale.products.map(p => `${p.quantity}x ${p.name}`).join(', ')
                         : sale.products}
                     </td>
-                    <td className="py-3 px-4 text-sm">
+                    <td className="revgold-table-cell font-bold text-green-600">
                       R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="py-3 px-4 text-sm text-green-600">
+                    <td className="revgold-table-cell font-bold text-emerald-600">
                       R$ {sale.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="py-3 px-4 text-sm text-orange-600">
+                    <td className="revgold-table-cell font-bold text-orange-600">
                       R$ {sale.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="py-3 px-4 text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        sale.status === 'pago' ? 'bg-green-100 text-green-700' :
-                        sale.status === 'parcial' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-red-100 text-red-700'
+                    <td className="revgold-table-cell">
+                      <span className={`revgold-badge ${
+                        sale.status === 'pago' ? 'revgold-badge-success' :
+                        sale.status === 'parcial' ? 'revgold-badge-warning' :
+                        'revgold-badge-error'
                       }`}>
                         {sale.status === 'pago' ? 'Pago' :
                          sale.status === 'parcial' ? 'Parcial' : 'Pendente'}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-sm">
+                    <td className="revgold-table-cell">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => setViewingSale(sale)}
-                          className="text-blue-600 hover:text-blue-800"
+                          className="p-2 rounded-lg text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition-all duration-300"
                           title="Visualizar"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => setEditingSale(sale)}
-                          className="text-green-600 hover:text-green-800"
+                          className="p-2 rounded-lg text-green-600 hover:text-green-800 hover:bg-green-50 transition-all duration-300"
                           title="Editar"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => handleDeleteSale(sale.id)}
-                          className="text-red-600 hover:text-red-800"
+                          className="p-2 rounded-lg text-red-600 hover:text-red-800 hover:bg-red-50 transition-all duration-300"
                           title="Excluir"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-5 h-5" />
                         </button>
                       </div>
                     </td>
@@ -226,11 +234,15 @@ export function Sales() {
             </table>
           </div>
         ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">Nenhuma venda registrada ainda.</p>
+          <div className="text-center py-20">
+            <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 revgold-animate-floating">
+              <DollarSign className="w-12 h-12 text-green-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-green-800 mb-4">Nenhuma venda registrada</h3>
+            <p className="text-green-600 mb-8 text-lg">Comece registrando sua primeira venda para acompanhar o desempenho.</p>
             <button
               onClick={() => setIsFormOpen(true)}
-              className="btn-primary"
+              className="revgold-btn-primary"
             >
               Registrar primeira venda
             </button>
@@ -252,45 +264,54 @@ export function Sales() {
 
       {/* View Sale Modal */}
       {viewingSale && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="revgold-modal">
+          <div className="revgold-modal-content max-w-4xl">
             <div className="p-6">
-              <h2 className="text-xl font-bold mb-4">Detalhes da Venda</h2>
+              <div className="revgold-modal-header">
+                <h2 className="revgold-modal-title">Detalhes da Venda</h2>
+                <button
+                  onClick={() => setViewingSale(null)}
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="revgold-modal-body">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>
-                  <label className="form-label">Data</label>
-                  <p className="text-sm text-gray-900">
+                  <label className="revgold-form-label">Data</label>
+                  <p className="text-base text-green-700 font-semibold">
                     {new Date(viewingSale.date).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
                 <div>
-                  <label className="form-label">Cliente</label>
-                  <p className="text-sm text-gray-900">{viewingSale.client}</p>
+                  <label className="revgold-form-label">Cliente</label>
+                  <p className="text-base text-green-700 font-bold">{viewingSale.client}</p>
                 </div>
                 <div>
-                  <label className="form-label">Vendedor</label>
-                  <p className="text-sm text-gray-900">
+                  <label className="revgold-form-label">Vendedor</label>
+                  <p className="text-base text-green-700 font-semibold">
                     {viewingSale.sellerId ? (
                       (() => {
                         const seller = state.employees.find(e => e.id === viewingSale.sellerId);
                         return seller ? seller.name : 'Funcionário não encontrado';
                       })()
                     ) : (
-                      <span className="text-gray-400">Não informado</span>
+                      <span className="text-gray-500">Não informado</span>
                     )}
                   </p>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="form-label">Produtos</label>
-                  <div className="text-sm text-gray-900">
+                  <label className="revgold-form-label">Produtos</label>
+                  <div className="text-base text-green-700">
                     {Array.isArray(viewingSale.products) ? (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {viewingSale.products.map((product, index) => (
-                          <div key={index} className="p-2 bg-gray-50 rounded">
-                            <span className="font-medium">{product.quantity}x {product.name}</span>
+                          <div key={index} className="p-4 bg-green-50 rounded-xl border border-green-100">
+                            <span className="font-bold text-green-800">{product.quantity}x {product.name}</span>
                             {product.unitPrice && (
-                              <span className="text-gray-600 ml-2">
+                              <span className="text-green-600 ml-2 font-semibold">
                                 @ R$ {product.unitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} = 
                                 R$ {(product.totalPrice || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                               </span>
@@ -299,48 +320,51 @@ export function Sales() {
                         ))}
                       </div>
                     ) : (
-                      <p>{viewingSale.products}</p>
+                      <p className="font-semibold">{viewingSale.products}</p>
                     )}
                   </div>
                 </div>
                 {viewingSale.observations && (
                   <div className="md:col-span-2">
-                    <label className="form-label">Observações</label>
-                    <p className="text-sm text-gray-900">{viewingSale.observations}</p>
+                    <label className="revgold-form-label">Observações</label>
+                    <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                      <p className="text-base text-blue-700 font-medium">{viewingSale.observations}</p>
+                    </div>
                   </div>
                 )}
                 <div>
-                  <label className="form-label">Valor Total</label>
-                  <p className="text-sm text-gray-900">
+                  <label className="revgold-form-label">Valor Total</label>
+                  <p className="text-xl font-black text-green-600">
                     R$ {viewingSale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div>
-                  <label className="form-label">Status</label>
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    viewingSale.status === 'pago' ? 'bg-green-100 text-green-700' :
-                    viewingSale.status === 'parcial' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-red-100 text-red-700'
+                  <label className="revgold-form-label">Status</label>
+                  <span className={`revgold-badge ${
+                    viewingSale.status === 'pago' ? 'revgold-badge-success' :
+                    viewingSale.status === 'parcial' ? 'revgold-badge-warning' :
+                    'revgold-badge-error'
                   }`}>
                     {viewingSale.status === 'pago' ? 'Pago' :
                      viewingSale.status === 'parcial' ? 'Parcial' : 'Pendente'}
                   </span>
                 </div>
+                </div>
               </div>
 
-              <div className="mb-6">
-                <h3 className="font-medium text-gray-900 mb-3">Métodos de Pagamento</h3>
-                <div className="space-y-2">
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold text-green-800 mb-4">Métodos de Pagamento</h3>
+                  <div className="space-y-3">
                   {viewingSale.paymentMethods.map((method, index) => (
-                    <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                    <div key={index} className="p-4 bg-green-50 rounded-xl border border-green-100">
                       <div className="flex justify-between items-center">
-                        <span className="font-medium capitalize">
+                        <span className="font-bold text-green-800 capitalize">
                           {method.type.replace('_', ' ')}
                         </span>
-                        <span>R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        <span className="font-bold text-green-600">R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                       </div>
                       {method.installments && method.installments > 1 && (
-                        <div className="text-sm text-gray-600 mt-1">
+                        <div className="text-sm text-green-600 mt-2 font-semibold">
                           {method.installments}x de R$ {method.installmentValue?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           {method.installmentInterval && ` a cada ${method.installmentInterval} dias`}
                         </div>
@@ -348,12 +372,14 @@ export function Sales() {
                     </div>
                   ))}
                 </div>
+                </div>
+              </div>
               </div>
 
-              <div className="flex justify-end">
+              <div className="revgold-modal-footer">
                 <button
                   onClick={() => setViewingSale(null)}
-                  className="btn-secondary"
+                  className="revgold-btn-secondary"
                 >
                   Fechar
                 </button>

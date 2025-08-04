@@ -118,18 +118,18 @@ export default function Dashboard() {
     suffix?: string;
   }) => (
     <div 
-      className="metric-card group animate-fade-in"
+      className="revgold-metric-card revgold-animate-fade-in"
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="flex items-center justify-between mb-8">
-        <div className="p-5 bg-gradient-primary rounded-3xl shadow-modern-xl group-hover:shadow-2xl transition-all duration-500 group-hover:scale-110 floating-animation">
+        <div className="revgold-metric-icon revgold-animate-floating">
           <Icon className="w-6 h-6 text-white" />
         </div>
         {change && (
-          <div className={`flex items-center space-x-2 px-4 py-2 rounded-2xl text-sm font-bold backdrop-blur-sm ${
+          <div className={`flex items-center space-x-2 px-4 py-2 rounded-2xl text-sm font-bold backdrop-blur-sm border ${
             trend === 'up' 
-              ? 'bg-green-500/20 text-green-600 border border-green-500/30' 
-              : 'bg-red-500/20 text-red-600 border border-red-500/30'
+              ? 'bg-green-100 text-green-700 border-green-200' 
+              : 'bg-red-100 text-red-700 border-red-200'
           }`}>
             {trend === 'up' ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
             <span>{change}</span>
@@ -138,10 +138,10 @@ export default function Dashboard() {
       </div>
       
       <div>
-        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">
+        <h3 className="revgold-metric-label mb-3">
           {title}
         </h3>
-        <p className="text-4xl font-black text-slate-900 mb-2">
+        <p className="revgold-metric-value">
           {prefix}{typeof value === 'number' ? value.toLocaleString('pt-BR') : value}{suffix}
         </p>
       </div>
@@ -160,14 +160,16 @@ export default function Dashboard() {
     delay?: number;
   }) => (
     <div 
-      className="chart-container animate-fade-in"
+      className="revgold-chart-container revgold-animate-fade-in"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="flex items-center space-x-4 mb-8">
-        <div className="p-4 bg-gradient-primary rounded-2xl shadow-modern-lg floating-animation">
+      <div className="revgold-chart-header">
+        <div className="revgold-chart-icon revgold-animate-floating">
           <Icon className="w-5 h-5 text-white" />
         </div>
-        <h3 className="text-2xl font-black text-slate-900">{title}</h3>
+        <div>
+          <h3 className="revgold-chart-title">{title}</h3>
+        </div>
       </div>
       <div className="h-96">
         {children}
@@ -178,7 +180,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-yellow-900 text-white animate-fade-in shadow-2xl">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-green-900 via-emerald-800 to-green-700 text-white revgold-animate-fade-in shadow-2xl">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute inset-0" style={{
@@ -191,18 +193,18 @@ export default function Dashboard() {
         <div className="relative p-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-5xl font-black mb-4 text-gradient">Dashboard Executivo</h1>
-            <p className="text-yellow-100 text-xl font-bold opacity-90">
+            <h1 className="text-6xl font-black mb-4 text-white">Dashboard Executivo</h1>
+            <p className="text-green-200 text-2xl font-bold opacity-90">
               Visão completa do desempenho empresarial
             </p>
             <div className="flex items-center space-x-8 mt-6">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg"></div>
-                <span className="text-green-200 text-sm font-bold uppercase tracking-wide">Sistema Online</span>
+                <div className="w-4 h-4 bg-green-400 rounded-full revgold-animate-pulse-glow shadow-lg"></div>
+                <span className="text-green-200 text-base font-bold uppercase tracking-wide">Sistema Online</span>
               </div>
               <div className="flex items-center space-x-2">
-                <Calendar className="w-5 h-5 text-emerald-300" />
-                <span className="text-emerald-100 text-sm font-bold">
+                <Calendar className="w-6 h-6 text-green-300" />
+                <span className="text-green-100 text-base font-bold">
                   {new Date().toLocaleDateString('pt-BR', { 
                     weekday: 'long', 
                     year: 'numeric', 
@@ -215,11 +217,11 @@ export default function Dashboard() {
           </div>
           
           <div className="text-right">
-            <div className="text-4xl font-black text-emerald-300 mb-3 floating-animation">
+            <div className="text-5xl font-black text-green-300 mb-3 revgold-animate-floating">
               {new Date().getHours().toString().padStart(2, '0')}:
               {new Date().getMinutes().toString().padStart(2, '0')}
             </div>
-            <div className="text-emerald-100 font-bold text-lg">
+            <div className="text-green-100 font-bold text-xl">
               Usuário: {state.user?.username}
             </div>
           </div>
@@ -365,9 +367,9 @@ export default function Dashboard() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 hover-lift animate-fade-in shadow-lg" style={{ animationDelay: '600ms' }}>
+        <div className="revgold-card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 revgold-hover-lift revgold-animate-fade-in revgold-stagger-6 shadow-lg">
           <div className="flex items-center space-x-4">
-            <div className="p-5 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl shadow-modern-lg floating-animation">
+            <div className="p-5 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl shadow-lg revgold-animate-floating">
               <CheckCircle className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -382,9 +384,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="card bg-gradient-to-br from-blue-50 to-sky-50 border-blue-200 hover-lift animate-fade-in shadow-lg" style={{ animationDelay: '700ms' }}>
+        <div className="revgold-card bg-gradient-to-br from-blue-50 to-sky-50 border-blue-200 revgold-hover-lift revgold-animate-fade-in shadow-lg" style={{ animationDelay: '700ms' }}>
           <div className="flex items-center space-x-4">
-            <div className="p-5 bg-gradient-to-br from-blue-500 to-sky-600 rounded-3xl shadow-modern-lg floating-animation">
+            <div className="p-5 bg-gradient-to-br from-blue-500 to-sky-600 rounded-3xl shadow-lg revgold-animate-floating">
               <Clock className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -397,9 +399,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="card bg-gradient-to-br from-red-50 to-rose-50 border-red-200 hover-lift animate-fade-in shadow-lg" style={{ animationDelay: '800ms' }}>
+        <div className="revgold-card bg-gradient-to-br from-red-50 to-rose-50 border-red-200 revgold-hover-lift revgold-animate-fade-in shadow-lg" style={{ animationDelay: '800ms' }}>
           <div className="flex items-center space-x-4">
-            <div className="p-5 bg-gradient-to-br from-red-500 to-rose-600 rounded-3xl shadow-modern-lg floating-animation">
+            <div className="p-5 bg-gradient-to-br from-red-500 to-rose-600 rounded-3xl shadow-lg revgold-animate-floating">
               <AlertTriangle className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -412,9 +414,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="card bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200 hover-lift animate-fade-in shadow-lg" style={{ animationDelay: '900ms' }}>
+        <div className="revgold-card bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200 revgold-hover-lift revgold-animate-fade-in shadow-lg" style={{ animationDelay: '900ms' }}>
           <div className="flex items-center space-x-4">
-            <div className="p-5 bg-gradient-to-br from-purple-500 to-violet-600 rounded-3xl shadow-modern-lg floating-animation">
+            <div className="p-5 bg-gradient-to-br from-purple-500 to-violet-600 rounded-3xl shadow-lg revgold-animate-floating">
               <Users className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -431,23 +433,23 @@ export default function Dashboard() {
       </div>
 
       {/* Recent Activity */}
-      <div className="card animate-fade-in" style={{ animationDelay: '1000ms' }}>
-        <div className="flex items-center space-x-4 mb-8">
-          <div className="p-4 bg-gradient-primary rounded-2xl shadow-modern-lg floating-animation">
+      <div className="revgold-card revgold-animate-fade-in" style={{ animationDelay: '1000ms' }}>
+        <div className="revgold-chart-header">
+          <div className="revgold-chart-icon revgold-animate-floating">
             <Activity className="w-5 h-5 text-white" />
           </div>
-          <h3 className="text-2xl font-black text-slate-900">Atividade Recente</h3>
+          <h3 className="revgold-chart-title">Atividade Recente</h3>
         </div>
         
         <div className="space-y-6">
           {state.sales.slice(0, 5).map((sale, index) => (
             <div 
               key={sale.id} 
-              className="flex items-center justify-between p-6 bg-gradient-to-r from-slate-50 to-yellow-50/30 rounded-2xl hover:from-slate-100 hover:to-yellow-50/50 transition-all duration-300 stagger-animation hover-lift shadow-sm"
+              className="flex items-center justify-between p-6 bg-gradient-to-r from-green-50/30 to-emerald-50/20 rounded-2xl hover:from-green-50/50 hover:to-emerald-50/30 transition-all duration-300 revgold-animate-fade-in revgold-hover-lift shadow-sm"
               style={{ animationDelay: `${1100 + index * 100}ms` }}
             >
               <div className="flex items-center space-x-6">
-                <div className="p-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-modern floating-animation">
+                <div className="p-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg revgold-animate-floating">
                   <DollarSign className="w-4 h-4 text-white" />
                 </div>
                 <div>
@@ -464,7 +466,7 @@ export default function Dashboard() {
                 <p className="font-black text-green-600 text-xl mb-1">
                   R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
-                <span className={`status-badge text-xs ${
+                <span className={`revgold-badge text-xs ${
                   sale.status === 'pago' ? 'success' :
                   sale.status === 'parcial' ? 'warning' : 'error'
                 }`}>
@@ -477,7 +479,7 @@ export default function Dashboard() {
           
           {state.sales.length === 0 && (
             <div className="text-center py-16">
-              <Target className="w-20 h-20 mx-auto text-slate-300 mb-6 floating-animation" />
+              <Target className="w-20 h-20 mx-auto text-slate-300 mb-6 revgold-animate-floating" />
               <p className="text-slate-500 text-xl font-bold mb-2">Nenhuma venda registrada ainda</p>
               <p className="text-slate-400 font-medium">Comece registrando sua primeira venda!</p>
             </div>

@@ -1,35 +1,35 @@
 import React from 'react';
-import { User, ChevronRight, Shield, Crown, Star, Zap, Sparkles, Award } from 'lucide-react';
+import { User, ChevronRight, Zap, Sparkles, Building2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 const USERS = [
   { 
     id: '1', 
     name: 'Eduardo João', 
-    avatar: '👨‍💼', 
-    description: 'Acesso ao Sistema RevGold',
-    gradient: 'from-green-500 to-green-600'
+    avatar: '👨‍💼',
+    role: 'Administrador',
+    description: 'Acesso completo ao sistema'
   },
   { 
     id: '2', 
     name: 'Eduardo Junior', 
-    avatar: '👨‍💻', 
-    description: 'Acesso ao Sistema RevGold + Google Calendar',
-    gradient: 'from-green-500 to-green-600'
+    avatar: '👨‍💻',
+    role: 'Gerente',
+    description: 'Acesso ao sistema + Google Calendar'
   },
   { 
     id: '3', 
     name: 'Samuel', 
-    avatar: '👨‍🔧', 
-    description: 'Acesso ao Sistema RevGold',
-    gradient: 'from-green-600 to-green-700'
+    avatar: '👨‍🔧',
+    role: 'Operador',
+    description: 'Acesso às operações do sistema'
   },
   { 
     id: '4', 
     name: 'Lídia', 
-    avatar: '👩‍💼', 
-    description: 'Acesso ao Sistema RevGold',
-    gradient: 'from-green-500 to-green-600'
+    avatar: '👩‍💼',
+    role: 'Financeiro',
+    description: 'Acesso ao módulo financeiro'
   }
 ];
 
@@ -55,25 +55,25 @@ export function UserSelection() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-emerald-900 flex items-center justify-center p-6 relative overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-green-400/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-green-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-green-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
+        <div className="absolute top-20 left-20 w-96 h-96 bg-green-400/20 rounded-full blur-3xl revgold-animate-pulse-glow"></div>
+        <div className="absolute bottom-20 right-20 w-[500px] h-[500px] bg-emerald-400/15 rounded-full blur-3xl revgold-animate-pulse-glow" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-green-500/10 rounded-full blur-3xl revgold-animate-pulse-glow" style={{ animationDelay: '4s' }}></div>
       </div>
       
       {/* Floating Particles */}
       <div className="absolute inset-0 overflow-hidden">
-        {Array.from({ length: 20 }).map((_, i) => (
+        {Array.from({ length: 30 }).map((_, i) => (
           <div
             key={i}
-            className="absolute w-2 h-2 bg-green-400/30 rounded-full animate-pulse"
+            className="absolute w-3 h-3 bg-green-400/40 rounded-full revgold-animate-floating"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${3 + Math.random() * 4}s`
+              animationDelay: `${Math.random() * 6}s`,
+              animationDuration: `${4 + Math.random() * 3}s`
             }}
           ></div>
         ))}
@@ -81,75 +81,76 @@ export function UserSelection() {
       
       <div className="w-full max-w-6xl">
         {/* Header Section */}
-        <div className="text-center mb-16 animate-fade-in">
+        <div className="text-center mb-20 revgold-animate-fade-in">
           <div className="inline-flex items-center justify-center mb-12 relative">
-            <div className="w-40 h-40 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-2xl hover-lift floating-animation relative overflow-hidden">
+            <div className="w-48 h-48 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl revgold-hover-lift revgold-animate-floating relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full"></div>
-              <img 
-                src="/image.png" 
-                alt="RevGold Logo" 
-                className="w-24 h-24 object-contain relative z-10"
-              />
+              <div className="relative z-10 text-6xl font-black text-white">RG</div>
             </div>
           </div>
           
-          <h1 className="text-7xl md:text-8xl font-black text-white mb-8 animate-slide-up text-gradient">
+          <h1 className="text-8xl md:text-9xl font-black text-white mb-8 revgold-animate-slide-up">
             {getGreeting()}!
           </h1>
           
-          <p className="text-2xl text-yellow-100 font-bold animate-slide-up mb-4" style={{ animationDelay: '0.2s' }}>
+          <p className="text-3xl text-green-200 font-bold revgold-animate-slide-up revgold-stagger-2 mb-6">
             Bem-vindo ao Sistema RevGold
           </p>
           
-          <p className="text-lg text-slate-300 font-medium animate-slide-up mb-12" style={{ animationDelay: '0.3s' }}>
-            Sistema de Gestão Empresarial
+          <p className="text-xl text-emerald-200 font-medium revgold-animate-slide-up revgold-stagger-3 mb-12">
+            Sistema Profissional de Gestão Empresarial
           </p>
           
-          <div className="flex items-center justify-center space-x-4 animate-scale-in" style={{ animationDelay: '0.4s' }}>
-            <div className="w-32 h-1 bg-gradient-to-r from-transparent to-green-400 rounded-full"></div>
-            <div className="w-4 h-4 bg-green-400 rounded-full shadow-lg animate-pulse"></div>
-            <div className="w-32 h-1 bg-gradient-to-l from-transparent to-green-400 rounded-full"></div>
+          <div className="flex items-center justify-center space-x-6 revgold-animate-scale-in revgold-stagger-4">
+            <div className="w-40 h-1 bg-gradient-to-r from-transparent to-green-400 rounded-full"></div>
+            <div className="w-6 h-6 bg-green-400 rounded-full shadow-lg revgold-animate-pulse-glow"></div>
+            <div className="w-40 h-1 bg-gradient-to-l from-transparent to-green-400 rounded-full"></div>
           </div>
         </div>
 
         {/* User Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-5xl mx-auto mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto mb-20">
           {USERS.map((user, index) => (
             <div
               key={user.id}
               onClick={() => handleUserSelect(user)}
-              className="group cursor-pointer stagger-animation hover-glow"
-              style={{ animationDelay: `${index * 150}ms` }}
+              className={`group cursor-pointer revgold-animate-scale-in revgold-stagger-${index + 1} revgold-hover-glow`}
             >
-              <div className="relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-xl border border-white/20 p-8 transition-all duration-700 hover:bg-white/20 hover:border-yellow-400/50 hover:shadow-2xl hover:scale-105">
+              <div className="relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-xl border border-green-300/30 p-10 transition-all duration-500 hover:bg-white/20 hover:border-green-400/60 hover:shadow-2xl hover:scale-105">
                 {/* Card Background Gradient */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${user.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-500`}></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-6">
+                <div className="flex items-center justify-between relative z-10">
+                  <div className="flex items-center space-x-8">
                     <div className="relative">
-                      <div className={`w-20 h-20 bg-gradient-to-br ${user.gradient} rounded-3xl flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-500 group-hover:scale-110`}>
-                        <span className="text-3xl filter drop-shadow-lg">{user.avatar}</span>
+                      <div className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-500 group-hover:scale-110 revgold-animate-floating">
+                        <span className="text-4xl filter drop-shadow-lg">{user.avatar}</span>
                       </div>
                     </div>
                     
                     <div className="flex-1">
-                      <h3 className="text-2xl font-black text-white group-hover:text-yellow-300 transition-colors duration-300 mb-2">
+                      <h3 className="text-3xl font-black text-white group-hover:text-green-200 transition-colors duration-300 mb-2">
                         {user.name}
                       </h3>
-                      <p className="text-sm text-slate-300 font-medium">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="px-3 py-1 bg-green-500/30 text-green-200 rounded-full text-sm font-bold">
+                          {user.role}
+                        </span>
+                      </div>
+                      <p className="text-base text-slate-300 font-medium">
                         {user.description}
                       </p>
-                      <div className="flex items-center mt-3 space-x-1">
-                        <span className="text-xs text-green-400 font-semibold uppercase tracking-wide">Sistema RevGold</span>
+                      <div className="flex items-center mt-4 space-x-2">
+                        <Building2 className="w-4 h-4 text-green-400" />
+                        <span className="text-sm text-green-400 font-bold uppercase tracking-wide">Sistema RevGold</span>
                       </div>
                     </div>
                   </div>
                   
                   <div className="flex items-center space-x-4">
-                    <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg"></div>
-                    <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-xl group-hover:shadow-2xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500">
-                      <ChevronRight className="w-8 h-8 text-green-900 group-hover:translate-x-2 transition-transform duration-300" />
+                    <div className="w-4 h-4 bg-green-400 rounded-full revgold-animate-pulse-glow shadow-lg"></div>
+                    <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl flex items-center justify-center shadow-xl group-hover:shadow-2xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500">
+                      <ChevronRight className="w-10 h-10 text-white group-hover:translate-x-2 transition-transform duration-300" />
                     </div>
                   </div>
                 </div>
@@ -159,30 +160,31 @@ export function UserSelection() {
         </div>
 
         {/* Footer */}
-        <div className="text-center animate-slide-up" style={{ animationDelay: '600ms' }}>
+        <div className="text-center revgold-animate-slide-up revgold-stagger-6">
           <div className="inline-block">
-            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 max-w-lg mx-auto shadow-2xl">
-              <div className="flex items-center justify-center space-x-6 mb-6">
-                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-3xl flex items-center justify-center shadow-xl floating-animation">
-                  <Zap className="w-8 h-8 text-green-900" />
+            <div className="bg-white/10 backdrop-blur-xl border border-green-300/30 rounded-3xl p-10 max-w-2xl mx-auto shadow-2xl">
+              <div className="flex items-center justify-center space-x-8 mb-8">
+                <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl flex items-center justify-center shadow-xl revgold-animate-floating">
+                  <Zap className="w-10 h-10 text-white" />
                 </div>
                 <div className="text-left">
-                  <p className="text-2xl font-black text-white mb-2">
+                  <p className="text-3xl font-black text-white mb-3">
                     Sistema RevGold
                   </p>
-                  <p className="text-sm text-green-200 font-bold uppercase tracking-wider">
-                    Gestão Empresarial
+                  <p className="text-base text-green-200 font-bold uppercase tracking-wider">
+                    Gestão Empresarial Profissional
                   </p>
                 </div>
               </div>
               
-              <p className="text-base text-slate-300 italic mb-6 font-medium">
+              <p className="text-lg text-slate-300 italic mb-8 font-medium">
                 "Colorindo seu ambiente e levando vida para os seus dias"
               </p>
               
-              <div className="flex items-center justify-center space-x-3">
-                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg"></div>
-                <span className="text-sm text-green-300 font-bold uppercase tracking-wide">Sistema Online</span>
+              <div className="flex items-center justify-center space-x-4">
+                <div className="w-4 h-4 bg-green-400 rounded-full revgold-animate-pulse-glow shadow-lg"></div>
+                <span className="text-base text-green-300 font-bold uppercase tracking-wide">Sistema Online</span>
+                <Sparkles className="w-5 h-5 text-green-400 revgold-animate-floating" />
               </div>
             </div>
           </div>
