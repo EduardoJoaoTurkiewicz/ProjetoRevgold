@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, DollarSign, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Sale, PaymentMethod } from '../types';
 import { SaleForm } from './forms/SaleForm';
