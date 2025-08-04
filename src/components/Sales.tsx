@@ -267,6 +267,7 @@ export function Sales() {
         <div className="revgold-modal">
           <div className="revgold-modal-content max-w-4xl">
             <div className="p-6">
+              <>
               <div className="revgold-modal-header">
                 <h2 className="revgold-modal-title">Detalhes da Venda</h2>
                 <button
@@ -373,17 +374,16 @@ export function Sales() {
                   ))}
                 </div>
                 </div>
-              </div>
-              </div>
-
-              <div className="revgold-modal-footer">
-                <button
-                  onClick={() => setViewingSale(null)}
-                  className="revgold-btn-secondary"
-                >
-                  Fechar
-                </button>
-              </div>
+                
+                <div className="revgold-modal-footer">
+                  <button
+                    onClick={() => setViewingSale(null)}
+                    className="revgold-btn-secondary"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </>
             </div>
           </div>
         </div>

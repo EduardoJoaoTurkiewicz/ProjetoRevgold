@@ -118,7 +118,7 @@ export default function Dashboard() {
     suffix?: string;
   }) => (
     <div 
-      className="revgold-metric-card revgold-animate-fade-in"
+      className="revgold-metric-card revgold-animate-fade-in group"
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="flex items-center justify-between mb-8">

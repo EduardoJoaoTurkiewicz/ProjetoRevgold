@@ -116,7 +116,7 @@ body {
 
 /* Metric Cards */
 .revgold-metric-card {
-  @apply revgold-card-premium p-8 group cursor-pointer;
+  @apply revgold-card-premium p-8 cursor-pointer;
 }
 
 .revgold-metric-card:hover {
