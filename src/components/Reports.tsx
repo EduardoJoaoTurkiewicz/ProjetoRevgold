@@ -19,7 +19,9 @@ import {
   CreditCard,
   CheckCircle,
   AlertTriangle,
-  Clock
+  Clock,
+  ShoppingCart,
+  TrendingDown as ExpenseIcon
 } from 'lucide-react';
 import {
   AreaChart,
@@ -58,6 +60,16 @@ export const Reports: React.FC = () => {
   };
 
   const { startDate, endDate } = getDateRange();
+
+  // Today's detailed data
+  const today = new Date().toISOString().split('T')[0];
+  const todaySales = sales.filter(sale => sale.date === today);
+  const todayDebts = debts.filter(debt => debt.date === today);
+  
+  const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.receivedAmount, 0);
+  const todaySalesCount = todaySales.length;
+  const todayExpenses = todayDebts.reduce((sum, debt) => sum + debt.paidAmount, 0);
+  const todayExpensesCount = todayDebts.length;
 
   // Filter data based on selected date range
   const filteredSales = useMemo(() => 
@@ -289,6 +301,171 @@ export const Reports: React.FC = () => {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Today's Detailed Metrics */}
+      <div className="card modern-shadow-xl">
+        <div className="mb-6">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 rounded-xl bg-blue-100">
+              <Calendar className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 mb-2">Relatório Detalhado de Hoje</h2>
+              <p className="text-slate-600">
+                {new Date().toLocaleDateString('pt-BR', { 
+                  weekday: 'long', 
+                  day: 'numeric', 
+                  month: 'long', 
+                  year: 'numeric' 
+                })}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="metric-card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 rounded-xl bg-green-100">
+                <DollarSign className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-slate-800">
+                  R$ {todayRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-sm text-slate-600">Valor Recebido Hoje</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="metric-card bg-gradient-to-br from-blue-50 to-sky-50 border-blue-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 rounded-xl bg-blue-100">
+                <ShoppingCart className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-slate-800">{todaySalesCount}</p>
+                <p className="text-sm text-slate-600">Vendas Feitas Hoje</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="metric-card bg-gradient-to-br from-red-50 to-rose-50 border-red-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 rounded-xl bg-red-100">
+                <ExpenseIcon className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-slate-800">
+                  R$ {todayExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-sm text-slate-600">Valor Gasto Hoje</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="metric-card bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 rounded-xl bg-orange-100">
+                <Receipt className="w-6 h-6 text-orange-600" />
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-slate-800">{todayExpensesCount}</p>
+                <p className="text-sm text-slate-600">Gastos Feitos Hoje</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Today's Sales Details */}
+        {todaySales.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">Vendas Realizadas Hoje</h3>
+            <div className="space-y-3">
+              {todaySales.map((sale, index) => (
+                <div key={sale.id} className="p-4 bg-green-50 rounded-xl border border-green-200">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-bold text-green-900">{sale.client}</p>
+                      <p className="text-sm text-green-700">
+                        {Array.isArray(sale.products) 
+                          ? sale.products.map(p => `${p.quantity}x ${p.name}`).join(', ')
+                          : sale.products}
+                      </p>
+                      <div className="flex items-center gap-4 mt-2">
+                        <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full font-bold">
+                          {sale.paymentMethods.map(m => m.type.replace('_', ' ')).join(', ')}
+                        </span>
+                        <span className={`text-xs px-2 py-1 rounded-full font-bold ${
+                          sale.status === 'pago' ? 'bg-emerald-200 text-emerald-800' :
+                          sale.status === 'parcial' ? 'bg-yellow-200 text-yellow-800' :
+                          'bg-red-200 text-red-800'
+                        }`}>
+                          {sale.status === 'pago' ? 'Pago' :
+                           sale.status === 'parcial' ? 'Parcial' : 'Pendente'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-green-600 text-lg">
+                        R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-sm text-green-700">
+                        Recebido: R$ {sale.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Today's Expenses Details */}
+        {todayDebts.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">Gastos Realizados Hoje</h3>
+            <div className="space-y-3">
+              {todayDebts.map((debt, index) => (
+                <div key={debt.id} className="p-4 bg-red-50 rounded-xl border border-red-200">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-bold text-red-900">{debt.company}</p>
+                      <p className="text-sm text-red-700">{debt.description}</p>
+                      <div className="flex items-center gap-4 mt-2">
+                        <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded-full font-bold">
+                          {debt.paymentMethods.map(m => m.type.replace('_', ' ')).join(', ')}
+                        </span>
+                        <span className={`text-xs px-2 py-1 rounded-full font-bold ${
+                          debt.isPaid ? 'bg-emerald-200 text-emerald-800' : 'bg-red-200 text-red-800'
+                        }`}>
+                          {debt.isPaid ? 'Pago' : 'Pendente'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-red-600 text-lg">
+                        R$ {debt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-sm text-red-700">
+                        Pago: R$ {debt.paidAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {todaySales.length === 0 && todayDebts.length === 0 && (
+          <div className="text-center py-12">
+            <Calendar className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+            <p className="text-slate-500 text-lg font-medium">Nenhuma atividade registrada hoje</p>
+            <p className="text-slate-400">As transações do dia aparecerão aqui</p>
+          </div>
+        )}
       </div>
 
       <div id="reports-content">
