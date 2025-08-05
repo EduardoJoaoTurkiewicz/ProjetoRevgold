@@ -82,13 +82,160 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) => {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [notifications, setNotifications] = useState([
-    { id: 1, message: 'Nova venda registrada', time: '2 min atrás', type: 'success' },
-    { id: 2, message: 'Cheque vencendo hoje', time: '5 min atrás', type: 'warning' },
-    { id: 3, message: 'Pagamento de funcionário pendente', time: '10 min atrás', type: 'info' }
-  ]);
+  const [notifications, setNotifications] = useState<Array<{
+    id: number;
+    message: string;
+    time: string;
+    type: 'success' | 'warning' | 'info' | 'error';
+    timestamp: number;
+  }>>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const { state } = useApp();
+
+  // Função para adicionar notificação
+  const addNotification = (message: string, type: 'success' | 'warning' | 'info' | 'error' = 'info') => {
+    const newNotification = {
+      id: Date.now(),
+      message,
+      time: 'Agora',
+      type,
+      timestamp: Date.now()
+    };
+    setNotifications(prev => [newNotification, ...prev.slice(0, 9)]); // Manter apenas 10 notificações
+  };
+
+  // Função de busca
+  const handleSearch = (query: string) => {
+    if (!query.trim()) return;
+    
+    const searchResults = [];
+    
+    // Buscar em vendas
+    const salesResults = state.sales.filter(sale => 
+      sale.client.toLowerCase().includes(query.toLowerCase()) ||
+      (Array.isArray(sale.products) 
+        ? sale.products.some(p => p.name.toLowerCase().includes(query.toLowerCase()))
+        : sale.products.toLowerCase().includes(query.toLowerCase())
+      )
+    );
+    
+    // Buscar em dívidas
+    const debtsResults = state.debts.filter(debt =>
+      debt.company.toLowerCase().includes(query.toLowerCase()) ||
+      debt.description.toLowerCase().includes(query.toLowerCase())
+    );
+    
+    // Buscar em funcionários
+    const employeesResults = state.employees.filter(employee =>
+      employee.name.toLowerCase().includes(query.toLowerCase()) ||
+      employee.position.toLowerCase().includes(query.toLowerCase())
+    );
+    
+    if (salesResults.length > 0) {
+      searchResults.push(`${salesResults.length} venda(s) encontrada(s)`);
+    }
+    if (debtsResults.length > 0) {
+      searchResults.push(`${debtsResults.length} dívida(s) encontrada(s)`);
+    }
+    if (employeesResults.length > 0) {
+      searchResults.push(`${employeesResults.length} funcionário(s) encontrado(s)`);
+    }
+    
+    if (searchResults.length > 0) {
+      addNotification(`Busca por "${query}": ${searchResults.join(', ')}`, 'info');
+    } else {
+      addNotification(`Nenhum resultado encontrado para "${query}"`, 'warning');
+    }
+  };
+
+  // Monitorar mudanças no estado para gerar notificações
+  React.useEffect(() => {
+    const lastSalesCount = localStorage.getItem('lastSalesCount');
+    const lastDebtsCount = localStorage.getItem('lastDebtsCount');
+    const lastEmployeesCount = localStorage.getItem('lastEmployeesCount');
+    const lastChecksCount = localStorage.getItem('lastChecksCount');
+    const lastBoletosCount = localStorage.getItem('lastBoletosCount');
+    
+    const currentSalesCount = state.sales.length;
+    const currentDebtsCount = state.debts.length;
+    const currentEmployeesCount = state.employees.length;
+    const currentChecksCount = state.checks.length;
+    const currentBoletosCount = state.boletos.length;
+    
+    // Verificar novas vendas
+    if (lastSalesCount && parseInt(lastSalesCount) < currentSalesCount) {
+      const newSales = currentSalesCount - parseInt(lastSalesCount);
+      addNotification(`${newSales} nova(s) venda(s) registrada(s)`, 'success');
+    }
+    
+    // Verificar novas dívidas
+    if (lastDebtsCount && parseInt(lastDebtsCount) < currentDebtsCount) {
+      const newDebts = currentDebtsCount - parseInt(lastDebtsCount);
+      addNotification(`${newDebts} nova(s) dívida(s) registrada(s)`, 'warning');
+    }
+    
+    // Verificar novos funcionários
+    if (lastEmployeesCount && parseInt(lastEmployeesCount) < currentEmployeesCount) {
+      const newEmployees = currentEmployeesCount - parseInt(lastEmployeesCount);
+      addNotification(`${newEmployees} novo(s) funcionário(s) cadastrado(s)`, 'info');
+    }
+    
+    // Verificar novos cheques
+    if (lastChecksCount && parseInt(lastChecksCount) < currentChecksCount) {
+      const newChecks = currentChecksCount - parseInt(lastChecksCount);
+      addNotification(`${newChecks} novo(s) cheque(s) registrado(s)`, 'info');
+    }
+    
+    // Verificar novos boletos
+    if (lastBoletosCount && parseInt(lastBoletosCount) < currentBoletosCount) {
+      const newBoletos = currentBoletosCount - parseInt(lastBoletosCount);
+      addNotification(`${newBoletos} novo(s) boleto(s) gerado(s)`, 'info');
+    }
+    
+    // Atualizar contadores no localStorage
+    localStorage.setItem('lastSalesCount', currentSalesCount.toString());
+    localStorage.setItem('lastDebtsCount', currentDebtsCount.toString());
+    localStorage.setItem('lastEmployeesCount', currentEmployeesCount.toString());
+    localStorage.setItem('lastChecksCount', currentChecksCount.toString());
+    localStorage.setItem('lastBoletosCount', currentBoletosCount.toString());
+  }, [state.sales.length, state.debts.length, state.employees.length, state.checks.length, state.boletos.length]);
+
+  // Verificar cheques vencendo
+  React.useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    
+    const checksDueToday = state.checks.filter(check => 
+      check.dueDate === today && check.status === 'pendente'
+    );
+    
+    const checksDueTomorrow = state.checks.filter(check => 
+      check.dueDate === tomorrowStr && check.status === 'pendente'
+    );
+    
+    if (checksDueToday.length > 0) {
+      addNotification(`${checksDueToday.length} cheque(s) vencendo hoje`, 'warning');
+    }
+    
+    if (checksDueTomorrow.length > 0) {
+      addNotification(`${checksDueTomorrow.length} cheque(s) vencendo amanhã`, 'info');
+    }
+  }, [state.checks]);
+
+  // Função para logout
+  const handleLogout = () => {
+    if (window.confirm('Tem certeza que deseja sair do sistema?')) {
+      localStorage.removeItem('revgold-data');
+      localStorage.removeItem('lastSalesCount');
+      localStorage.removeItem('lastDebtsCount');
+      localStorage.removeItem('lastEmployeesCount');
+      localStorage.removeItem('lastChecksCount');
+      localStorage.removeItem('lastBoletosCount');
+      window.location.reload();
+    }
+  };
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -190,10 +337,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
           {/* User Section */}
           <div className="p-6 border-t border-green-700/30">
             <button
-              onClick={() => {
-                localStorage.removeItem('revgold-data');
-                window.location.reload();
-              }}
+              onClick={handleLogout}
               className="w-full mb-4 p-3 rounded-xl bg-green-700/30 hover:bg-green-600/40 text-green-200 hover:text-white transition-all duration-300 text-sm font-semibold"
             >
               ← Trocar Usuário
@@ -249,8 +393,8 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && searchQuery.trim()) {
-                      // Implementar busca
-                      alert(`Buscando por: ${searchQuery}`);
+                      handleSearch(searchQuery);
+                      setSearchQuery('');
                     }
                   }}
                   placeholder="Buscar..."
@@ -264,7 +408,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
                   onClick={() => setShowNotifications(!showNotifications)}
                   className="relative p-3 rounded-2xl hover:bg-green-50 transition-all duration-300 hover:shadow-md group"
                 >
-                <Bell className="w-6 h-6 text-green-600 group-hover:text-green-700 transition-colors" />
+                  <Bell className="w-6 h-6 text-green-600 group-hover:text-green-700 transition-colors" />
                   {notifications.length > 0 && (
                     <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-red-500 to-red-600 rounded-full shadow-lg revgold-animate-pulse-glow flex items-center justify-center">
                       <span className="text-white text-xs font-bold">{notifications.length}</span>
@@ -281,7 +425,12 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
                     <div className="max-h-64 overflow-y-auto">
                       {notifications.length > 0 ? (
                         notifications.map(notification => (
-                          <div key={notification.id} className="p-4 border-b border-green-50 hover:bg-green-50 transition-colors">
+                          <div key={notification.id} className={`p-4 border-b border-green-50 hover:bg-green-50 transition-colors ${
+                            notification.type === 'success' ? 'border-l-4 border-l-green-500' :
+                            notification.type === 'warning' ? 'border-l-4 border-l-yellow-500' :
+                            notification.type === 'error' ? 'border-l-4 border-l-red-500' :
+                            'border-l-4 border-l-blue-500'
+                          }`}>
                             <p className="text-sm font-medium text-slate-800">{notification.message}</p>
                             <p className="text-xs text-slate-500 mt-1">{notification.time}</p>
                           </div>

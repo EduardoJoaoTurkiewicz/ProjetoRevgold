@@ -187,6 +187,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         employees: state.employees,
         employeePayments: state.employeePayments
       }));
+      
+      // Trigger notification system update
+      window.dispatchEvent(new CustomEvent('revgold-data-updated', {
+        detail: {
+          type: 'data-change',
+          timestamp: Date.now()
+        }
+      }));
     }
   }, [state.sales, state.debts, state.checks, state.boletos, state.installments, state.employees, state.employeePayments, state.user]);
 
