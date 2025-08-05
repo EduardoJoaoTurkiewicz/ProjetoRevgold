@@ -187,6 +187,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         message: `Novo funcionário cadastrado: ${action.payload.name}`,
         type: 'success',
         timestamp: new Date().toISOString(),
+      }
     case 'UPDATE_EMPLOYEE':
       return { 
         ...state, 
