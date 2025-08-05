@@ -344,7 +344,7 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <MetricCard
-            title="Valor Recebido Hoje"
+            title="Valor Pago Hoje"
             value={todayRevenue}
             icon={DollarSign}
             prefix="R$ "
@@ -379,7 +379,7 @@ export default function Dashboard() {
             valueColor="text-red-700"
           />
           <MetricCard
-            title="Gastos Feitos Hoje"
+            title="Dívidas Feitas Hoje"
             value={todayExpensesCount}
             icon={Receipt}
             delay={300}
@@ -712,22 +712,8 @@ export default function Dashboard() {
           {state.sales.slice(0, 5).map((sale, index) => (
             <div 
               key={sale.id} 
-              className="flex items-center justify-between p-6 bg-gradient-to-r from-green-50/30 to-emerald-50/20 rounded-2xl hover:from-green-50/50 hover:to-emerald-50/30 transition-all duration-300 revgold-animate-fade-in revgold-hover-lift shadow-sm"
-              style={{ animationDelay: `${1600 + index * 100}ms` }}
-            >
-              <div className="flex items-center space-x-6">
-                <div className="p-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg revgold-animate-floating">
-                  <DollarSign className="w-4 h-4 text-white" />
-                </div>
                 <div>
-                  <p className="font-black text-slate-900 text-lg">{sale.client}</p>
-                  <p className="text-sm text-slate-600 font-semibold">
-                    {new Date(sale.date).toLocaleDateString('pt-BR')} • 
-                    {Array.isArray(sale.products) 
-                      ? sale.products.map(p => p.name).join(', ')
-                      : 'Produtos'}
-                  </p>
-                </div>
+                  <h1 className="text-6xl font-black text-white mb-4">Dashboard</h1>
               </div>
               <div className="text-right">
                 <p className="font-black text-green-600 text-xl mb-1">

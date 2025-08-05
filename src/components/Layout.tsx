@@ -1,4 +1,5 @@
 import React from 'react';
+import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   Home, 
@@ -80,6 +81,13 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) => {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [notifications, setNotifications] = useState([
+    { id: 1, message: 'Nova venda registrada', time: '2 min atrás', type: 'success' },
+    { id: 2, message: 'Cheque vencendo hoje', time: '5 min atrás', type: 'warning' },
+    { id: 3, message: 'Pagamento de funcionário pendente', time: '10 min atrás', type: 'info' }
+  ]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const { state } = useApp();
 
   const menuItems = [
@@ -182,7 +190,10 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
           {/* User Section */}
           <div className="p-6 border-t border-green-700/30">
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                localStorage.removeItem('revgold-data');
+                window.location.reload();
+              }}
               className="w-full mb-4 p-3 rounded-xl bg-green-700/30 hover:bg-green-600/40 text-green-200 hover:text-white transition-all duration-300 text-sm font-semibold"
             >
               ← Trocar Usuário
@@ -234,18 +245,68 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
                 <Search className="w-5 h-5 text-green-400" />
                 <input
                   type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && searchQuery.trim()) {
+                      // Implementar busca
+                      alert(`Buscando por: ${searchQuery}`);
+                    }
+                  }}
                   placeholder="Buscar..."
                   className="bg-transparent border-none outline-none text-sm text-green-700 placeholder-green-400 font-medium w-48"
                 />
               </div>
               
               {/* Notifications */}
-              <button className="relative p-3 rounded-2xl hover:bg-green-50 transition-all duration-300 hover:shadow-md group">
+              <div className="relative">
+                <button 
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative p-3 rounded-2xl hover:bg-green-50 transition-all duration-300 hover:shadow-md group"
+                >
                 <Bell className="w-6 h-6 text-green-600 group-hover:text-green-700 transition-colors" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-red-500 to-red-600 rounded-full shadow-lg revgold-animate-pulse-glow">
-                  <span className="absolute inset-0 bg-red-400 rounded-full animate-ping"></span>
-                </span>
-              </button>
+                  {notifications.length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-red-500 to-red-600 rounded-full shadow-lg revgold-animate-pulse-glow flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">{notifications.length}</span>
+                    </span>
+                  )}
+                </button>
+                
+                {/* Notifications Dropdown */}
+                {showNotifications && (
+                  <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-green-100 z-50">
+                    <div className="p-4 border-b border-green-100">
+                      <h3 className="font-bold text-green-800">Notificações</h3>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {notifications.length > 0 ? (
+                        notifications.map(notification => (
+                          <div key={notification.id} className="p-4 border-b border-green-50 hover:bg-green-50 transition-colors">
+                            <p className="text-sm font-medium text-slate-800">{notification.message}</p>
+                            <p className="text-xs text-slate-500 mt-1">{notification.time}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-slate-500">
+                          <Bell className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                          <p className="text-sm">Nenhuma notificação</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4 border-t border-green-100">
+                      <button 
+                        onClick={() => {
+                          setNotifications([]);
+                          setShowNotifications(false);
+                        }}
+                        className="w-full text-sm text-green-600 hover:text-green-700 font-medium"
+                      >
+                        Marcar todas como lidas
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
               
               {/* Time */}
               <div className="hidden md:block text-right">
