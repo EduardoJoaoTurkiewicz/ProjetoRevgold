@@ -191,41 +191,50 @@ export default function Dashboard() {
         </div>
         
         <div className="relative p-10">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-6xl font-black mb-4 text-white">Dashboard Executivo</h1>
-            <p className="text-green-200 text-2xl font-bold opacity-90">
-              Visão completa do desempenho empresarial
-            </p>
-            <div className="flex items-center space-x-8 mt-6">
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-green-400 rounded-full revgold-animate-pulse-glow shadow-lg"></div>
-                <span className="text-green-200 text-base font-bold uppercase tracking-wide">Sistema Online</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-8">
+              <div className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl flex items-center justify-center shadow-xl revgold-animate-floating">
+                <img 
+                  src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
+                  alt="RevGold Logo" 
+                  className="w-16 h-16 object-contain"
+                />
               </div>
-              <div className="flex items-center space-x-2">
-                <Calendar className="w-6 h-6 text-green-300" />
-                <span className="text-green-100 text-base font-bold">
-                  {new Date().toLocaleDateString('pt-BR', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
-                </span>
+              <div>
+                <h1 className="text-6xl font-black mb-4 text-white">Dashboard Executivo</h1>
+                <p className="text-green-200 text-2xl font-bold opacity-90">
+                  Visão completa do desempenho empresarial
+                </p>
+                <div className="flex items-center space-x-8 mt-6">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 bg-green-400 rounded-full revgold-animate-pulse-glow shadow-lg"></div>
+                    <span className="text-green-200 text-base font-bold uppercase tracking-wide">Sistema Online</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="w-6 h-6 text-green-300" />
+                    <span className="text-green-100 text-base font-bold">
+                      {new Date().toLocaleDateString('pt-BR', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-right">
+              <div className="text-5xl font-black text-green-300 mb-3 revgold-animate-floating">
+                {new Date().getHours().toString().padStart(2, '0')}:
+                {new Date().getMinutes().toString().padStart(2, '0')}
+              </div>
+              <div className="text-green-100 font-bold text-xl">
+                Usuário: {state.user?.username}
               </div>
             </div>
           </div>
-          
-          <div className="text-right">
-            <div className="text-5xl font-black text-green-300 mb-3 revgold-animate-floating">
-              {new Date().getHours().toString().padStart(2, '0')}:
-              {new Date().getMinutes().toString().padStart(2, '0')}
-            </div>
-            <div className="text-green-100 font-bold text-xl">
-              Usuário: {state.user?.username}
-            </div>
-          </div>
-        </div>
         </div>
       </div>
 

@@ -6,30 +6,22 @@ const USERS = [
   { 
     id: '1', 
     name: 'Eduardo João', 
-    avatar: '👨‍💼',
-    role: 'Administrador',
-    description: 'Acesso completo ao sistema'
+    avatar: '👨‍💼'
   },
   { 
     id: '2', 
     name: 'Eduardo Junior', 
-    avatar: '👨‍💻',
-    role: 'Gerente',
-    description: 'Acesso ao sistema + Google Calendar'
+    avatar: '👨‍💻'
   },
   { 
     id: '3', 
     name: 'Samuel', 
-    avatar: '👨‍🔧',
-    role: 'Operador',
-    description: 'Acesso às operações do sistema'
+    avatar: '👨‍🔧'
   },
   { 
     id: '4', 
     name: 'Lídia', 
-    avatar: '👩‍💼',
-    role: 'Financeiro',
-    description: 'Acesso ao módulo financeiro'
+    avatar: '👩‍💼'
   }
 ];
 
@@ -85,7 +77,11 @@ export function UserSelection() {
           <div className="inline-flex items-center justify-center mb-12 relative">
             <div className="w-48 h-48 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl revgold-hover-lift revgold-animate-floating relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full"></div>
-              <div className="relative z-10 text-6xl font-black text-white">RG</div>
+              <img 
+                src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
+                alt="RevGold Logo" 
+                className="w-32 h-32 object-contain relative z-10"
+              />
             </div>
           </div>
           
@@ -132,14 +128,6 @@ export function UserSelection() {
                       <h3 className="text-3xl font-black text-white group-hover:text-green-200 transition-colors duration-300 mb-2">
                         {user.name}
                       </h3>
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="px-3 py-1 bg-green-500/30 text-green-200 rounded-full text-sm font-bold">
-                          {user.role}
-                        </span>
-                      </div>
-                      <p className="text-base text-slate-300 font-medium">
-                        {user.description}
-                      </p>
                       <div className="flex items-center mt-4 space-x-2">
                         <Building2 className="w-4 h-4 text-green-400" />
                         <span className="text-sm text-green-400 font-bold uppercase tracking-wide">Sistema RevGold</span>

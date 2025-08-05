@@ -70,7 +70,11 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
             <div className="flex items-center space-x-3">
               <div className="relative">
                 <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl flex items-center justify-center shadow-xl revgold-animate-floating">
-                  <span className="text-2xl font-black text-white">RG</span>
+                  <img 
+                    src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
+                    alt="RevGold Logo" 
+                    className="w-10 h-10 object-contain"
+                  />
                 </div>
               </div>
               <div className="relative">
@@ -122,6 +126,12 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
 
           {/* User Section */}
           <div className="p-6 border-t border-green-700/30">
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full mb-4 p-3 rounded-xl bg-green-700/30 hover:bg-green-600/40 text-green-200 hover:text-white transition-all duration-300 text-sm font-semibold"
+            >
+              ← Trocar Usuário
+            </button>
             <div className="flex items-center space-x-4 p-4 rounded-2xl bg-green-800/20 hover:bg-green-700/30 transition-all duration-300 cursor-pointer backdrop-blur-sm">
               <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center text-white font-bold shadow-lg">
                 {state.user?.username.charAt(0).toUpperCase()}
