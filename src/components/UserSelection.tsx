@@ -6,24 +6,80 @@ const USERS = [
   { 
     id: '1', 
     name: 'Eduardo João', 
-    avatar: '👨‍💼'
+    avatar: 'svg'
   },
   { 
     id: '2', 
     name: 'Eduardo Junior', 
-    avatar: '👨‍💻'
+    avatar: 'svg'
   },
   { 
     id: '3', 
     name: 'Samuel', 
-    avatar: '👨‍🔧'
+    avatar: 'svg'
   },
   { 
     id: '4', 
     name: 'Lídia', 
-    avatar: '👩‍💼'
+    avatar: 'svg'
   }
 ];
+
+// Avatar SVG Component
+const UserAvatar = () => (
+  <svg viewBox="0 0 100 100" className="w-full h-full">
+    <defs>
+      <linearGradient id="skinGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#fbbf24" />
+        <stop offset="100%" stopColor="#f59e0b" />
+      </linearGradient>
+      <linearGradient id="shirtGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#059669" />
+        <stop offset="100%" stopColor="#047857" />
+      </linearGradient>
+      <linearGradient id="hairGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#92400e" />
+        <stop offset="100%" stopColor="#78350f" />
+      </linearGradient>
+    </defs>
+    
+    {/* Head */}
+    <circle cx="50" cy="35" r="18" fill="url(#skinGradient)" stroke="#f59e0b" strokeWidth="1"/>
+    
+    {/* Hair */}
+    <path d="M32 25 Q50 15 68 25 Q68 20 50 18 Q32 20 32 25" fill="url(#hairGradient)"/>
+    
+    {/* Eyes */}
+    <circle cx="44" cy="32" r="2" fill="#1f2937"/>
+    <circle cx="56" cy="32" r="2" fill="#1f2937"/>
+    <circle cx="44.5" cy="31.5" r="0.5" fill="white"/>
+    <circle cx="56.5" cy="31.5" r="0.5" fill="white"/>
+    
+    {/* Nose */}
+    <ellipse cx="50" cy="36" rx="1" ry="1.5" fill="#f59e0b" opacity="0.6"/>
+    
+    {/* Mouth */}
+    <path d="M47 40 Q50 42 53 40" stroke="#1f2937" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+    
+    {/* Body */}
+    <ellipse cx="50" cy="70" rx="20" ry="25" fill="url(#shirtGradient)" stroke="#047857" strokeWidth="1"/>
+    
+    {/* Arms */}
+    <ellipse cx="28" cy="65" rx="6" ry="15" fill="url(#shirtGradient)" stroke="#047857" strokeWidth="1"/>
+    <ellipse cx="72" cy="65" rx="6" ry="15" fill="url(#shirtGradient)" stroke="#047857" strokeWidth="1"/>
+    
+    {/* Hands */}
+    <circle cx="28" cy="78" r="4" fill="url(#skinGradient)" stroke="#f59e0b" strokeWidth="0.5"/>
+    <circle cx="72" cy="78" r="4" fill="url(#skinGradient)" stroke="#f59e0b" strokeWidth="0.5"/>
+    
+    {/* Collar */}
+    <path d="M40 55 L50 60 L60 55" stroke="#10b981" strokeWidth="2" fill="none"/>
+    
+    {/* RevGold Logo on shirt */}
+    <circle cx="50" cy="70" r="6" fill="#10b981" opacity="0.8"/>
+    <text x="50" y="73" textAnchor="middle" fontSize="6" fill="white" fontWeight="bold">RG</text>
+  </svg>
+);
 
 export function UserSelection() {
   const { dispatch } = useApp();
@@ -120,7 +176,13 @@ export function UserSelection() {
                   <div className="flex items-center space-x-8">
                     <div className="relative">
                       <div className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-500 group-hover:scale-110 revgold-animate-floating">
-                        <span className="text-4xl filter drop-shadow-lg">{user.avatar}</span>
+                        {user.avatar === 'svg' ? (
+                          <div className="w-16 h-16">
+                            <UserAvatar />
+                          </div>
+                        ) : (
+                          <span className="text-4xl filter drop-shadow-lg">{user.avatar}</span>
+                        )}
                       </div>
                     </div>
                     

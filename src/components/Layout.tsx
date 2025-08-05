@@ -17,6 +17,61 @@ import {
   Building2
 } from 'lucide-react';
 
+// Avatar SVG Component
+const UserAvatar = () => (
+  <svg viewBox="0 0 100 100" className="w-full h-full">
+    <defs>
+      <linearGradient id="skinGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#fbbf24" />
+        <stop offset="100%" stopColor="#f59e0b" />
+      </linearGradient>
+      <linearGradient id="shirtGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#059669" />
+        <stop offset="100%" stopColor="#047857" />
+      </linearGradient>
+      <linearGradient id="hairGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#92400e" />
+        <stop offset="100%" stopColor="#78350f" />
+      </linearGradient>
+    </defs>
+    
+    {/* Head */}
+    <circle cx="50" cy="35" r="18" fill="url(#skinGradient)" stroke="#f59e0b" strokeWidth="1"/>
+    
+    {/* Hair */}
+    <path d="M32 25 Q50 15 68 25 Q68 20 50 18 Q32 20 32 25" fill="url(#hairGradient)"/>
+    
+    {/* Eyes */}
+    <circle cx="44" cy="32" r="2" fill="#1f2937"/>
+    <circle cx="56" cy="32" r="2" fill="#1f2937"/>
+    <circle cx="44.5" cy="31.5" r="0.5" fill="white"/>
+    <circle cx="56.5" cy="31.5" r="0.5" fill="white"/>
+    
+    {/* Nose */}
+    <ellipse cx="50" cy="36" rx="1" ry="1.5" fill="#f59e0b" opacity="0.6"/>
+    
+    {/* Mouth */}
+    <path d="M47 40 Q50 42 53 40" stroke="#1f2937" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+    
+    {/* Body */}
+    <ellipse cx="50" cy="70" rx="20" ry="25" fill="url(#shirtGradient)" stroke="#047857" strokeWidth="1"/>
+    
+    {/* Arms */}
+    <ellipse cx="28" cy="65" rx="6" ry="15" fill="url(#shirtGradient)" stroke="#047857" strokeWidth="1"/>
+    <ellipse cx="72" cy="65" rx="6" ry="15" fill="url(#shirtGradient)" stroke="#047857" strokeWidth="1"/>
+    
+    {/* Hands */}
+    <circle cx="28" cy="78" r="4" fill="url(#skinGradient)" stroke="#f59e0b" strokeWidth="0.5"/>
+    <circle cx="72" cy="78" r="4" fill="url(#skinGradient)" stroke="#f59e0b" strokeWidth="0.5"/>
+    
+    {/* Collar */}
+    <path d="M40 55 L50 60 L60 55" stroke="#10b981" strokeWidth="2" fill="none"/>
+    
+    {/* RevGold Logo on shirt */}
+    <circle cx="50" cy="70" r="6" fill="#10b981" opacity="0.8"/>
+    <text x="50" y="73" textAnchor="middle" fontSize="6" fill="white" fontWeight="bold">RG</text>
+  </svg>
+);
 interface LayoutProps {
   children: React.ReactNode;
   currentPage: string;
@@ -134,7 +189,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
             </button>
             <div className="flex items-center space-x-4 p-4 rounded-2xl bg-green-800/20 hover:bg-green-700/30 transition-all duration-300 cursor-pointer backdrop-blur-sm">
               <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center text-white font-bold shadow-lg">
-                {state.user?.username.charAt(0).toUpperCase()}
+                <UserAvatar />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-base font-bold text-white truncate">{state.user?.username}</p>
