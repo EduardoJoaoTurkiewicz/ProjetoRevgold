@@ -444,6 +444,18 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
               />
             </div>
 
+            <div className="form-group">
+              <label className="form-label">Como a empresa pagará esta dívida? *</label>
+              <textarea
+                value={formData.debtPaymentDescription}
+                onChange={(e) => setFormData(prev => ({ ...prev, debtPaymentDescription: e.target.value }))}
+                className="input-field"
+                rows={3}
+                placeholder="Explique exatamente como a empresa pagará esta dívida (obrigatório)"
+                required
+              />
+            </div>
+
             {/* Summary */}
             <div className="p-4 bg-gray-50 rounded-lg">
               <h3 className="font-medium mb-2">Resumo</h3>

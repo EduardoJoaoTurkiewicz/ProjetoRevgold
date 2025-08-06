@@ -177,8 +177,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Save data to localStorage whenever state changes
   useEffect(() => {
-    if (state.user) {
+    // Always save data, even without user (for persistence)
+    if (state.sales.length > 0 || state.debts.length > 0 || state.checks.length > 0 || state.boletos.length > 0 || state.employees.length > 0) {
       localStorage.setItem('revgold-data', JSON.stringify({
+        user: state.user,
         sales: state.sales,
         debts: state.debts,
         checks: state.checks,
@@ -196,7 +198,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }));
     }
-  }, [state.sales, state.debts, state.checks, state.boletos, state.installments, state.employees, state.employeePayments, state.user]);
+  }, [state]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>

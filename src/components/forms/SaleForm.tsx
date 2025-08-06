@@ -453,6 +453,18 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
               />
             </div>
 
+            <div className="form-group">
+              <label className="form-label">Como será feito o pagamento? *</label>
+              <textarea
+                value={formData.paymentDescription || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, paymentDescription: e.target.value }))}
+                className="input-field"
+                rows={3}
+                placeholder="Explique exatamente como será feito o pagamento desta venda (obrigatório)"
+                required
+              />
+            </div>
+
             {/* Summary */}
             <div className="p-4 bg-gray-50 rounded-lg">
               <h3 className="font-medium mb-2">Resumo</h3>

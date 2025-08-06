@@ -4,9 +4,9 @@
 
 /* RevGold Professional Theme */
 :root {
-  --revgold-primary: #059669;
-  --revgold-primary-light: #10b981;
-  --revgold-primary-dark: #047857;
+  --revgold-primary: #16a34a;
+  --revgold-primary-light: #22c55e;
+  --revgold-primary-dark: #15803d;
   --revgold-secondary: #d4af37;
   --revgold-secondary-light: #e6c547;
   --revgold-accent: #34d399;
@@ -17,10 +17,10 @@
   --revgold-light: #f8fafc;
   
   /* Modern Shadows */
-  --shadow-soft: 0 2px 8px rgba(5, 150, 105, 0.08);
-  --shadow-medium: 0 4px 16px rgba(5, 150, 105, 0.12);
-  --shadow-large: 0 8px 32px rgba(5, 150, 105, 0.16);
-  --shadow-xl: 0 16px 64px rgba(5, 150, 105, 0.2);
+  --shadow-soft: 0 2px 8px rgba(22, 163, 74, 0.08);
+  --shadow-medium: 0 4px 16px rgba(22, 163, 74, 0.12);
+  --shadow-large: 0 8px 32px rgba(22, 163, 74, 0.16);
+  --shadow-xl: 0 16px 64px rgba(22, 163, 74, 0.2);
   --shadow-glow: 0 0 32px rgba(52, 211, 153, 0.3);
 }
 
@@ -57,12 +57,12 @@ body {
 
 /* Button System */
 .revgold-btn-primary {
-  @apply bg-gradient-to-r from-green-600 via-emerald-600 to-green-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 relative overflow-hidden;
+  @apply bg-gradient-to-r from-green-600 via-green-700 to-emerald-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 relative overflow-hidden;
 }
 
 .revgold-btn-primary::before {
   content: '';
-  @apply absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 opacity-0 transition-opacity duration-300;
+  @apply absolute inset-0 bg-gradient-to-r from-green-500 to-green-600 opacity-0 transition-opacity duration-300;
 }
 
 .revgold-btn-primary:hover::before {
@@ -70,7 +70,7 @@ body {
 }
 
 .revgold-btn-secondary {
-  @apply bg-white/90 backdrop-blur-sm text-green-700 font-bold py-4 px-8 rounded-2xl border-2 border-green-200 hover:border-green-300 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105;
+  @apply bg-white/90 backdrop-blur-sm text-green-800 font-bold py-4 px-8 rounded-2xl border-2 border-green-300 hover:border-green-400 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105;
 }
 
 .revgold-btn-ghost {
@@ -159,15 +159,15 @@ body {
 
 /* Sidebar Styles */
 .revgold-sidebar {
-  @apply bg-gradient-to-b from-slate-900 via-slate-800 to-green-900 backdrop-blur-xl border-r border-green-800/30;
+  @apply bg-gradient-to-b from-slate-800 via-green-900 to-green-800 backdrop-blur-xl border-r border-green-700/30;
 }
 
 .revgold-menu-item {
-  @apply flex items-center px-6 py-4 text-green-100 hover:text-white hover:bg-green-800/30 rounded-2xl mx-4 my-2 transition-all duration-300 font-semibold;
+  @apply flex items-center px-6 py-4 text-green-100 hover:text-white hover:bg-green-700/40 rounded-2xl mx-4 my-2 transition-all duration-300 font-semibold;
 }
 
 .revgold-menu-item.active {
-  @apply bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg;
+  @apply bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg;
   box-shadow: var(--shadow-glow);
 }
 
