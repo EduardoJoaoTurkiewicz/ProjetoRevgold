@@ -131,7 +131,7 @@ export function UserSelection() {
         {/* Header Section */}
         <div className="text-center mb-20 revgold-animate-fade-in">
           <div className="inline-flex items-center justify-center mb-12 relative">
-            <div className="w-48 h-48 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl revgold-hover-lift revgold-animate-floating relative overflow-hidden">
+            <div className="w-48 h-48 bg-gradient-to-br from-green-600 to-emerald-700 rounded-full flex items-center justify-center shadow-2xl revgold-hover-lift revgold-animate-floating relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full"></div>
               <img 
                 src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
@@ -175,7 +175,7 @@ export function UserSelection() {
                 <div className="flex items-center justify-between relative z-10">
                   <div className="flex items-center space-x-8">
                     <div className="relative">
-                      <div className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-500 group-hover:scale-110 revgold-animate-floating">
+                      <div className="w-24 h-24 bg-gradient-to-br from-green-600 to-emerald-700 rounded-3xl flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-500 group-hover:scale-110 revgold-animate-floating">
                         {user.avatar === 'svg' ? (
                           <div className="w-16 h-16">
                             <UserAvatar />
@@ -199,7 +199,7 @@ export function UserSelection() {
                   
                   <div className="flex items-center space-x-4">
                     <div className="w-4 h-4 bg-green-400 rounded-full revgold-animate-pulse-glow shadow-lg"></div>
-                    <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl flex items-center justify-center shadow-xl group-hover:shadow-2xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500">
+                    <div className="w-20 h-20 bg-gradient-to-br from-green-600 to-emerald-700 rounded-3xl flex items-center justify-center shadow-xl group-hover:shadow-2xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500">
                       <ChevronRight className="w-10 h-10 text-white group-hover:translate-x-2 transition-transform duration-300" />
                     </div>
                   </div>
@@ -214,7 +214,7 @@ export function UserSelection() {
           <div className="inline-block">
             <div className="bg-white/10 backdrop-blur-xl border border-green-300/30 rounded-3xl p-10 max-w-2xl mx-auto shadow-2xl">
               <div className="flex items-center justify-center space-x-8 mb-8">
-                <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl flex items-center justify-center shadow-xl revgold-animate-floating">
+                <div className="w-20 h-20 bg-gradient-to-br from-green-600 to-emerald-700 rounded-3xl flex items-center justify-center shadow-xl revgold-animate-floating">
                   <Zap className="w-10 h-10 text-white" />
                 </div>
                 <div className="text-left">

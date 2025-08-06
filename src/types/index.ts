@@ -27,6 +27,7 @@ export interface Sale {
   pendingAmount: number;
   status: 'pago' | 'pendente' | 'parcial';
   paymentDescription?: string;
+  paymentDescription?: string;
   createdAt: string;
 }
 
@@ -48,6 +49,8 @@ export interface Debt {
   paidAmount: number;
   pendingAmount: number;
   checksUsed?: string[];
+  paymentDescription?: string;
+  debtPaymentDescription?: string;
   paymentDescription?: string;
   debtPaymentDescription?: string;
   createdAt: string;

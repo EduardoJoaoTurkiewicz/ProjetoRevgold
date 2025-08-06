@@ -358,9 +358,9 @@ export const Reports: React.FC = () => {
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-slate-800">
-                  R$ {todayExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {(todayExpenses + state.employeePayments.filter(p => p.paymentDate === today).reduce((sum, p) => sum + p.amount, 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
-                <p className="text-sm text-slate-600">Valor Gasto Hoje</p>
+                <p className="text-sm text-slate-600">Gastos de Hoje</p>
               </div>
             </div>
           </div>
@@ -372,7 +372,7 @@ export const Reports: React.FC = () => {
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-slate-800">{todayExpensesCount}</p>
-                <p className="text-sm text-slate-600">Gastos Feitos Hoje</p>
+                <p className="text-sm text-slate-600">Dívidas Feitas Hoje</p>
               </div>
             </div>
           </div>
