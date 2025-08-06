@@ -1,274 +1,161 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { User, Sale, Debt, Check, Installment, Product, Employee, EmployeePayment, Boleto } from '../types';
+import React from 'react';
+import { useApp } from '../context/AppContext';
+import { TrendingUp, TrendingDown, DollarSign, Users, Calendar, AlertCircle } from 'lucide-react';
 
-interface Notification {
-  id: string;
-  message: string;
-  type: 'success' | 'warning' | 'error' | 'info';
-  timestamp: string;
-  read: boolean;
-}
+export default function Dashboard() {
+  const { state } = useApp();
 
-interface AppState {
-  user: User | null;
-  sales: Sale[];
-  debts: Debt[];
-  checks: Check[];
-  boletos: Boleto[];
-  installments: Installment[];
-  employees: Employee[];
-  employeePayments: EmployeePayment[];
-  notifications: Notification[];
-}
+  // Calculate summary statistics
+  const totalSales = state.sales.reduce((sum, sale) => sum + sale.total, 0);
+  const totalDebts = state.debts.reduce((sum, debt) => sum + debt.amount, 0);
+  const totalChecks = state.checks.reduce((sum, check) => sum + check.amount, 0);
+  const totalBoletos = state.boletos.reduce((sum, boleto) => sum + boleto.amount, 0);
 
-type AppAction =
-  | { type: 'SET_USER'; payload: User | null }
-  | { type: 'ADD_SALE'; payload: Sale }
-  | { type: 'UPDATE_SALE'; payload: Sale }
-  | { type: 'DELETE_SALE'; payload: string }
-  | { type: 'ADD_DEBT'; payload: Debt }
-  | { type: 'UPDATE_DEBT'; payload: Debt }
-  | { type: 'DELETE_DEBT'; payload: string }
-  | { type: 'ADD_CHECK'; payload: Check }
-  | { type: 'UPDATE_CHECK'; payload: Check }
-  | { type: 'DELETE_CHECK'; payload: string }
-  | { type: 'ADD_BOLETO'; payload: Boleto }
-  | { type: 'UPDATE_BOLETO'; payload: Boleto }
-  | { type: 'DELETE_BOLETO'; payload: string }
-  | { type: 'ADD_INSTALLMENT'; payload: Installment }
-  | { type: 'UPDATE_INSTALLMENT'; payload: Installment }
-  | { type: 'ADD_EMPLOYEE'; payload: Employee }
-  | { type: 'UPDATE_EMPLOYEE'; payload: Employee }
-  | { type: 'DELETE_EMPLOYEE'; payload: string }
-  | { type: 'ADD_EMPLOYEE_PAYMENT'; payload: EmployeePayment }
-  | { type: 'UPDATE_EMPLOYEE_PAYMENT'; payload: EmployeePayment }
-  | { type: 'DELETE_EMPLOYEE_PAYMENT'; payload: string }
-  | { type: 'ADD_NOTIFICATION'; payload: Notification }
-  | { type: 'MARK_NOTIFICATION_READ'; payload: string }
-  | { type: 'CLEAR_NOTIFICATIONS' }
-  | { type: 'LOAD_DATA'; payload: Partial<AppState> };
+  const pendingInstallments = state.installments.filter(inst => !inst.paid).length;
+  const overdueChecks = state.checks.filter(check => 
+    new Date(check.dueDate) < new Date() && check.status === 'pending'
+  ).length;
 
-const initialState: AppState = {
-  user: null,
-  sales: [],
-  debts: [],
-  checks: [],
-  boletos: [],
-  installments: [],
-  employees: [],
-  employeePayments: [],
-  notifications: []
-};
-
-function appReducer(state: AppState, action: AppAction): AppState {
-  switch (action.type) {
-    case 'SET_USER':
-      return { ...state, user: action.payload };
-    case 'ADD_SALE':
-      const newSaleState = { ...state, sales: [...state.sales, action.payload] };
-      // Add notification for new sale
-      const saleNotification: Notification = {
-        id: Date.now().toString(),
-        message: `Nova venda registrada para ${action.payload.client}`,
-        type: 'success',
-        timestamp: new Date().toISOString(),
-        read: false
-      };
-      return { 
-        ...newSaleState, 
-        notifications: [...newSaleState.notifications, saleNotification] 
-      };
-    case 'UPDATE_SALE':
-      return { 
-        ...state, 
-        sales: state.sales.map(sale => 
-          sale.id === action.payload.id ? action.payload : sale
-        ) 
-      };
-    case 'DELETE_SALE':
-      return { 
-        ...state, 
-        sales: state.sales.filter(sale => sale.id !== action.payload),
-        installments: state.installments.filter(installment => installment.saleId !== action.payload)
-      };
-    case 'ADD_DEBT':
-      const newDebtState = { ...state, debts: [...state.debts, action.payload] };
-      // Add notification for new debt
-      const debtNotification: Notification = {
-        id: Date.now().toString(),
-        message: `Nova dívida registrada: ${action.payload.company}`,
-        type: 'warning',
-        timestamp: new Date().toISOString(),
-        read: false
-      };
-      return { 
-        ...newDebtState, 
-        notifications: [...newDebtState.notifications, debtNotification] 
-      };
-    case 'UPDATE_DEBT':
-      return { 
-        ...state, 
-        debts: state.debts.map(debt => 
-          debt.id === action.payload.id ? action.payload : debt
-        ) 
-      };
-    case 'DELETE_DEBT':
-      return { 
-        ...state, 
-        debts: state.debts.filter(debt => debt.id !== action.payload),
-        installments: state.installments.filter(installment => installment.debtId !== action.payload)
-      };
-    case 'ADD_CHECK':
-      const newCheckState = { ...state, checks: [...state.checks, action.payload] };
-      // Add notification for new check
-      const checkNotification: Notification = {
-        id: Date.now().toString(),
-        message: `Novo cheque adicionado: ${action.payload.client}`,
-        type: 'info',
-        timestamp: new Date().toISOString(),
-        read: false
-      };
-      return { 
-        ...newCheckState, 
-        notifications: [...newCheckState.notifications, checkNotification] 
-      };
-    case 'UPDATE_CHECK':
-      return { 
-        ...state, 
-        checks: state.checks.map(check => 
-          check.id === action.payload.id ? action.payload : check
-        ) 
-      };
-    case 'DELETE_CHECK':
-      return { 
-        ...state, 
-        checks: state.checks.filter(check => check.id !== action.payload)
-      };
-    case 'ADD_BOLETO':
-      const newBoletoState = { ...state, boletos: [...state.boletos, action.payload] };
-      // Add notification for new boleto
-      const boletoNotification: Notification = {
-        id: Date.now().toString(),
-        message: `Novo boleto gerado: ${action.payload.client}`,
-        type: 'info',
-        timestamp: new Date().toISOString(),
-        read: false
-      };
-      return { 
-        ...newBoletoState, 
-        notifications: [...newBoletoState.notifications, boletoNotification] 
-      };
-    case 'UPDATE_BOLETO':
-      return { 
-        ...state, 
-        boletos: state.boletos.map(boleto => 
-          boleto.id === action.payload.id ? action.payload : boleto
-        ) 
-      };
-    case 'DELETE_BOLETO':
-      return { 
-        ...state, 
-        boletos: state.boletos.filter(boleto => boleto.id !== action.payload)
-      };
-    case 'ADD_INSTALLMENT':
-      return { ...state, installments: [...state.installments, action.payload] };
-    case 'UPDATE_INSTALLMENT':
-      return { 
-        ...state, 
-        installments: state.installments.map(installment => 
-          installment.id === action.payload.id ? action.payload : installment
-        ) 
-      };
-    case 'ADD_EMPLOYEE':
-      const newEmployeeState = { ...state, employees: [...state.employees, action.payload] };
-      // Add notification for new employee
-      const employeeNotification: Notification = {
-        id: Date.now().toString(),
-        message: `Novo funcionário cadastrado: ${action.payload.name}`,
-        type: 'success',
-        timestamp: new Date().toISOString(),
-      }
-    case 'UPDATE_EMPLOYEE':
-      return { 
-        ...state, 
-        employees: state.employees.map(employee => 
-          employee.id === action.payload.id ? action.payload : employee
-        ) 
-      };
-    case 'DELETE_EMPLOYEE':
-      return { 
-        ...state, 
-        employees: state.employees.filter(employee => employee.id !== action.payload),
-        employeePayments: state.employeePayments.filter(payment => payment.employeeId !== action.payload)
-      };
-    case 'ADD_EMPLOYEE_PAYMENT':
-      return { ...state, employeePayments: [...state.employeePayments, action.payload] };
-    case 'UPDATE_EMPLOYEE_PAYMENT':
-      return { 
-        ...state, 
-        employeePayments: state.employeePayments.map(payment => 
-          payment.id === action.payload.id ? action.payload : payment
-        ) 
-      };
-    case 'DELETE_EMPLOYEE_PAYMENT':
-      return { 
-        ...state, 
-        employeePayments: state.employeePayments.filter(payment => payment.id !== action.payload)
-      };
-    case 'LOAD_DATA':
-      return { ...state, ...action.payload };
-    default:
-      return state;
-  }
-}
-
-const AppContext = createContext<{
-  state: AppState;
-  dispatch: React.Dispatch<AppAction>;
-} | null>(null);
-
-export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(appReducer, initialState);
-
-  // Load data from localStorage on mount
-  useEffect(() => {
-    const savedData = localStorage.getItem('revgold-data');
-    if (savedData) {
-      try {
-        const data = JSON.parse(savedData);
-        dispatch({ type: 'LOAD_DATA', payload: data });
-      } catch (error) {
-        console.error('Error loading saved data:', error);
-      }
+  const stats = [
+    {
+      title: 'Total em Vendas',
+      value: `R$ ${totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      icon: DollarSign,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50'
+    },
+    {
+      title: 'Total em Dívidas',
+      value: `R$ ${totalDebts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      icon: TrendingDown,
+      color: 'text-red-600',
+      bgColor: 'bg-red-50'
+    },
+    {
+      title: 'Total em Cheques',
+      value: `R$ ${totalChecks.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      icon: TrendingUp,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50'
+    },
+    {
+      title: 'Total em Boletos',
+      value: `R$ ${totalBoletos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      icon: Calendar,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50'
     }
-  }, []);
+  ];
 
-  // Save data to localStorage whenever state changes
-  useEffect(() => {
-    if (state.user) {
-      localStorage.setItem('revgold-data', JSON.stringify({
-        sales: state.sales,
-        debts: state.debts,
-        checks: state.checks,
-        boletos: state.boletos,
-        installments: state.installments,
-        employees: state.employees,
-        employeePayments: state.employeePayments
-      }));
-    }
-  }, [state.sales, state.debts, state.checks, state.boletos, state.installments, state.employees, state.employeePayments, state.user]);
+  const alerts = [
+    ...(overdueChecks > 0 ? [{
+      message: `${overdueChecks} cheque(s) em atraso`,
+      type: 'error' as const
+    }] : []),
+    ...(pendingInstallments > 0 ? [{
+      message: `${pendingInstallments} parcela(s) pendente(s)`,
+      type: 'warning' as const
+    }] : [])
+  ];
 
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
-      {children}
-    </AppContext.Provider>
-  );
-}
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-600">Visão geral do seu negócio</p>
+      </div>
 
-export function useApp() {
-  const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
-  return context;
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+                </div>
+                <div className={`${stat.bgColor} p-3 rounded-lg`}>
+                  <Icon className={`w-6 h-6 ${stat.color}`} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Alerts */}
+      {alerts.length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <AlertCircle className="w-5 h-5 mr-2 text-amber-500" />
+            Alertas
+          </h2>
+          <div className="space-y-3">
+            {alerts.map((alert, index) => (
+              <div
+                key={index}
+                className={`p-3 rounded-lg border-l-4 ${
+                  alert.type === 'error'
+                    ? 'bg-red-50 border-red-400 text-red-700'
+                    : 'bg-amber-50 border-amber-400 text-amber-700'
+                }`}
+              >
+                {alert.message}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Vendas Recentes</h2>
+          {state.sales.length > 0 ? (
+            <div className="space-y-3">
+              {state.sales.slice(-5).reverse().map((sale) => (
+                <div key={sale.id} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                  <div>
+                    <p className="font-medium text-gray-900">{sale.client}</p>
+                    <p className="text-sm text-gray-500">{new Date(sale.date).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                  <p className="font-semibold text-green-600">
+                    R$ {sale.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-4">Nenhuma venda registrada</p>
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Funcionários</h2>
+          {state.employees.length > 0 ? (
+            <div className="space-y-3">
+              {state.employees.map((employee) => (
+                <div key={employee.id} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                  <div>
+                    <p className="font-medium text-gray-900">{employee.name}</p>
+                    <p className="text-sm text-gray-500">{employee.role}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900">
+                      R$ {employee.salary.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-sm text-gray-500">Salário</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-4">Nenhum funcionário cadastrado</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
