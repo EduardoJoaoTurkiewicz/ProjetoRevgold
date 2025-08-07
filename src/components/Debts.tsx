@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, CreditCard } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Debt } from '../types';
 import { DebtForm } from './forms/DebtForm';
