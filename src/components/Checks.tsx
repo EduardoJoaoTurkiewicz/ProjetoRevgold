@@ -150,9 +150,9 @@ export function Checks() {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 modern-shadow-xl">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 shadow-xl floating-animation">
             <Calendar className="w-8 h-8 text-white" />
           </div>
           <div>
@@ -162,7 +162,7 @@ export function Checks() {
         </div>
         <button
           onClick={() => setIsFormOpen(true)}
-          className="btn-primary group flex items-center gap-2"
+          className="btn-primary flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           Adicionar Cheque

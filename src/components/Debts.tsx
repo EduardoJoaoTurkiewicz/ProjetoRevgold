@@ -66,11 +66,19 @@ export function Debts() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Dívidas e Gastos</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 shadow-xl floating-animation">
+            <CreditCard className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Dívidas e Gastos</h1>
+            <p className="text-slate-600 text-lg">Controle de despesas e pagamentos</p>
+          </div>
+        </div>
         <button
           onClick={() => setIsFormOpen(true)}
-          className="btn-primary group flex items-center gap-2"
+          className="btn-primary flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           Nova Dívida
@@ -78,7 +86,7 @@ export function Debts() {
       </div>
 
       {/* Debts List */}
-      <div className="card">
+      <div className="card modern-shadow-xl">
         {state.debts.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full table-auto">

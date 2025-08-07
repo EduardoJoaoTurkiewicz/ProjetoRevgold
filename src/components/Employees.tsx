@@ -91,11 +91,19 @@ export function Employees() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Funcionários</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-600 to-violet-700 shadow-xl floating-animation">
+            <Users className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Funcionários</h1>
+            <p className="text-slate-600 text-lg">Gestão de equipe e folha de pagamento</p>
+          </div>
+        </div>
         <button
           onClick={() => setIsFormOpen(true)}
-          className="btn-primary group flex items-center gap-2"
+          className="btn-primary flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           Novo Funcionário
