@@ -148,14 +148,27 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     }
   }, [formData.products]);
 
-  // Auto-calculate total value when products change
+  // Auto-calculate total value and update payment methods when products change
   useEffect(() => {
     const calculatedTotal = formData.products.reduce((sum, product) => {
       return sum + ((product.quantity || 0) * (product.unitPrice || 0));
     }, 0);
     
     if (calculatedTotal > 0) {
-      setFormData(prev => ({ ...prev, totalValue: calculatedTotal }));
+      setFormData(prev => {
+        // Update total value
+        const newFormData = { ...prev, totalValue: calculatedTotal };
+        
+        // If there's only one payment method and it has no amount set, auto-fill it
+        if (prev.paymentMethods.length === 1 && prev.paymentMethods[0].amount === 0) {
+          newFormData.paymentMethods = [{
+            ...prev.paymentMethods[0],
+            amount: calculatedTotal
+          }];
+        }
+        
+        return newFormData;
+      });
     }
   }, [formData.products]);
 
@@ -298,23 +311,31 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                 ))}
                 
                 {/* Total Geral dos Produtos */}
-                <div className="p-6 bg-gradient-to-r from-green-100 to-emerald-100 rounded-2xl border-2 border-green-300">
+                <div className="relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-green-400/20 to-emerald-500/20 blur-2xl"></div>
+                  <div className="relative p-8 bg-gradient-to-r from-green-50 via-emerald-50 to-green-100 rounded-3xl border-2 border-green-300 shadow-2xl"
+                       style={{ 
+                         boxShadow: '0 25px 50px -12px rgba(34, 197, 94, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.5)' 
+                       }}>
                   <div className="flex justify-between items-center">
                     <div>
-                      <h3 className="text-xl font-bold text-green-800">Total Geral dos Produtos</h3>
-                      <p className="text-green-600 font-medium">
+                      <h3 className="text-2xl font-black text-green-800 mb-2 bg-gradient-to-r from-green-700 to-emerald-600 bg-clip-text text-transparent">
+                        Total Geral dos Produtos
+                      </h3>
+                      <p className="text-green-600 font-bold">
                         {formData.products.length} produto(s) • 
                         {formData.products.reduce((sum, p) => sum + (p.quantity || 0), 0)} unidade(s)
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-3xl font-black text-green-700">
+                      <p className="text-4xl font-black text-green-700 mb-1">
                         R$ {formData.products.reduce((sum, product) => {
                           return sum + ((product.quantity || 0) * (product.unitPrice || 0));
                         }, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
-                      <p className="text-sm text-green-600 font-semibold">Calculado automaticamente</p>
+                      <p className="text-sm text-green-600 font-bold">✓ Calculado automaticamente</p>
                     </div>
+                  </div>
                   </div>
                 </div>
               </div>
@@ -339,11 +360,12 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                   step="0.01"
                   value={formData.totalValue}
                   onChange={(e) => setFormData(prev => ({ ...prev, totalValue: parseFloat(e.target.value) || 0 }))}
-                  className="input-field"
+                  className="input-field bg-green-50 border-green-200 font-bold text-green-700"
                   placeholder="0,00"
                   required
+                  readOnly
                 />
-                <p className="text-xs text-green-600 mt-1 font-medium">
+                <p className="text-sm text-green-600 mt-2 font-bold bg-green-50 p-3 rounded-xl border border-green-200">
                   ✓ Valor calculado automaticamente: R$ {formData.products.reduce((sum, product) => {
                     return sum + ((product.quantity || 0) * (product.unitPrice || 0));
                   }, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -503,24 +525,34 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
             </div>
 
             {/* Summary */}
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="font-medium mb-2">Resumo</h3>
-              <div className="grid grid-cols-3 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-600">Total:</span>
-                  <p className="font-medium">R$ {formData.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600">Recebido:</span>
-                  <p className="font-medium text-green-600">
-                    R$ {calculateAmounts().receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-gray-600">Pendente:</span>
-                  <p className="font-medium text-orange-600">
-                    R$ {calculateAmounts().pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
+            <div className="relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-400/20 to-gray-500/20 blur-2xl"></div>
+              <div className="relative p-6 bg-gradient-to-r from-slate-50 to-gray-100 rounded-2xl border-2 border-slate-300 shadow-xl"
+                   style={{ 
+                     boxShadow: '0 20px 40px -12px rgba(71, 85, 105, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.5)' 
+                   }}>
+                <h3 className="text-xl font-black text-slate-800 mb-4 bg-gradient-to-r from-slate-700 to-gray-600 bg-clip-text text-transparent">
+                  Resumo da Venda
+                </h3>
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="text-center">
+                    <span className="text-slate-600 font-semibold block mb-1">Total:</span>
+                    <p className="text-2xl font-black text-slate-800">
+                      R$ {formData.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-slate-600 font-semibold block mb-1">Recebido:</span>
+                    <p className="text-2xl font-black text-green-600">
+                      R$ {calculateAmounts().receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-slate-600 font-semibold block mb-1">Pendente:</span>
+                    <p className="text-2xl font-black text-orange-600">
+                      R$ {calculateAmounts().pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
