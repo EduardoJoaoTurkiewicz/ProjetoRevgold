@@ -151,7 +151,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   // Auto-calculate total value and update payment methods when products change
   useEffect(() => {
     const calculatedTotal = formData.products.reduce((sum, product) => {
-      return sum + ((product.quantity || 0) * (product.unitPrice || 0));
+      return sum + (product.totalPrice || 0);
     }, 0);
     
     if (calculatedTotal > 0) {
