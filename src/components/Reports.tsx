@@ -65,11 +65,15 @@ export const Reports: React.FC = () => {
   const today = new Date().toISOString().split('T')[0];
   const todaySales = sales.filter(sale => sale.date === today);
   const todayDebts = debts.filter(debt => debt.date === today);
+  const todayEmployeePayments = state.employeePayments.filter(payment => payment.paymentDate === today);
   
   const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.receivedAmount, 0);
   const todaySalesCount = todaySales.length;
-  const todayExpenses = todayDebts.reduce((sum, debt) => sum + debt.paidAmount, 0);
-  const todayExpensesCount = todayDebts.length;
+  const todayDebtsPaidValue = todayDebts.reduce((sum, debt) => sum + debt.paidAmount, 0);
+  const todayDebtsCreated = todayDebts.length;
+  const todayDebtsCreatedValue = todayDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
+  const todayEmployeePaymentsValue = todayEmployeePayments.reduce((sum, payment) => sum + payment.amount, 0);
+  const todayTotalPaid = todayDebtsPaidValue + todayEmployeePaymentsValue;
 
   // Filter data based on selected date range
   const filteredSales = useMemo(() => 
@@ -334,7 +338,7 @@ export const Reports: React.FC = () => {
                 <p className="text-2xl font-bold text-slate-800">
                   R$ {todayRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
-                <p className="text-sm text-slate-600">Valor Recebido Hoje</p>
+                <p className="text-sm text-slate-600">Vendas de Hoje</p>
               </div>
             </div>
           </div>
@@ -346,7 +350,7 @@ export const Reports: React.FC = () => {
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-slate-800">{todaySalesCount}</p>
-                <p className="text-sm text-slate-600">Vendas Feitas Hoje</p>
+                <p className="text-sm text-slate-600">Valor Recebido Hoje</p>
               </div>
             </div>
           </div>
@@ -358,9 +362,9 @@ export const Reports: React.FC = () => {
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-slate-800">
-                  R$ {(todayExpenses + state.employeePayments.filter(p => p.paymentDate === today).reduce((sum, p) => sum + p.amount, 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {todayDebtsCreatedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
-                <p className="text-sm text-slate-600">Gastos de Hoje</p>
+                <p className="text-sm text-slate-600">Dívidas Feitas Hoje</p>
               </div>
             </div>
           </div>
@@ -371,8 +375,10 @@ export const Reports: React.FC = () => {
                 <Receipt className="w-6 h-6 text-orange-600" />
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-slate-800">{todayExpensesCount}</p>
-                <p className="text-sm text-slate-600">Dívidas Feitas Hoje</p>
+                <p className="text-2xl font-bold text-slate-800">
+                  R$ {todayTotalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-sm text-slate-600">Valor Pago Hoje</p>
               </div>
             </div>
           </div>
@@ -423,7 +429,7 @@ export const Reports: React.FC = () => {
         )}
 
         {/* Today's Expenses Details */}
-        {todayDebts.length > 0 && (
+        {(todayDebts.length > 0 || todayEmployeePayments.length > 0) && (
           <div className="mb-8">
             <h3 className="text-lg font-bold text-slate-900 mb-4">Gastos Realizados Hoje</h3>
             <div className="space-y-3">
@@ -455,11 +461,34 @@ export const Reports: React.FC = () => {
                   </div>
                 </div>
               ))}
+              
+              {todayEmployeePayments.map((payment, index) => {
+                const employee = state.employees.find(e => e.id === payment.employeeId);
+                return (
+                  <div key={payment.id} className="p-4 bg-purple-50 rounded-xl border border-purple-200">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-bold text-purple-900">{employee?.name || 'Funcionário'}</p>
+                        <p className="text-sm text-purple-700">Pagamento de salário</p>
+                        <span className="text-xs bg-emerald-200 text-emerald-800 px-2 py-1 rounded-full font-bold mt-2 inline-block">
+                          Pago
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-purple-600 text-lg">
+                          R$ {payment.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-sm text-purple-700">Funcionário</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {todaySales.length === 0 && todayDebts.length === 0 && (
+        {todaySales.length === 0 && todayDebts.length === 0 && todayEmployeePayments.length === 0 && (
           <div className="text-center py-12">
             <Calendar className="w-16 h-16 mx-auto text-slate-300 mb-4" />
             <p className="text-slate-500 text-lg font-medium">Nenhuma atividade registrada hoje</p>
@@ -480,7 +509,7 @@ export const Reports: React.FC = () => {
                 <p className="text-2xl font-bold text-slate-800">
                   R$ {metrics.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
-                <p className="text-sm text-slate-600">Receita Total</p>
+                <p className="text-sm text-slate-600">Vendas Totais</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -505,7 +534,7 @@ export const Reports: React.FC = () => {
                 <p className="text-2xl font-bold text-slate-800">
                   R$ {metrics.totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
-                <p className="text-sm text-slate-600">Recebido</p>
+                <p className="text-sm text-slate-600">Valor Recebido</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -530,7 +559,7 @@ export const Reports: React.FC = () => {
                 <p className="text-2xl font-bold text-slate-800">
                   R$ {metrics.totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
-                <p className="text-sm text-slate-600">Gastos</p>
+                <p className="text-sm text-slate-600">Dívidas Criadas</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -558,7 +587,7 @@ export const Reports: React.FC = () => {
                   R$ {Math.abs(metrics.netProfit).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
                 <p className="text-sm text-slate-600">
-                  {metrics.netProfit >= 0 ? 'Lucro' : 'Prejuízo'}
+                  {metrics.netProfit >= 0 ? 'Valor Pago' : 'Valor Pago'}
                 </p>
               </div>
             </div>
