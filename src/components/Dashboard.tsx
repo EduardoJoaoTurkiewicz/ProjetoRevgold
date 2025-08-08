@@ -16,118 +16,16 @@ import {
   Target,
   TrendingDown,
   Activity,
-  PieChart
-} from 'lucide-react';
-import { useApp } from '../context/AppContext';
+  PieChart,
+  Filter
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Text, Box, Sphere, Cylinder } from '@react-three/drei';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, AreaChart, Area, RadialBarChart, RadialBar } from 'recharts';
-import * as THREE from 'three';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#84cc16'];
 
-// 3D Animated Chart Component
-function AnimatedBar({ position, height, color, delay = 0 }) {
-  const meshRef = useRef();
-  
-  useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y = Math.sin(state.clock.elapsedTime + delay) * 0.1;
-      meshRef.current.scale.y = Math.max(0.1, height + Math.sin(state.clock.elapsedTime * 2 + delay) * 0.1);
-    }
-  });
-
-  return (
-    <Box
-      ref={meshRef}
-      position={position}
-      scale={[0.8, height, 0.8]}
-      castShadow
-      receiveShadow
-    >
-      <meshStandardMaterial color={color} />
-    </Box>
-  );
-}
-
-// 3D Sales Chart
-function Sales3DChart({ data }) {
-  return (
-    <Canvas camera={{ position: [5, 5, 5], fov: 60 }} style={{ height: '300px' }}>
-      <ambientLight intensity={0.6} />
-      <pointLight position={[10, 10, 10]} intensity={1} castShadow />
-      <pointLight position={[-10, -10, -10]} intensity={0.5} />
-      
-      {data.map((item, index) => (
-        <AnimatedBar
-          key={index}
-          position={[index * 2 - data.length, 0, 0]}
-          height={item.value / 10000}
-          color={COLORS[index % COLORS.length]}
-          delay={index * 0.2}
-        />
-      ))}
-      
-      <Text
-        position={[0, 4, 0]}
-        fontSize={0.5}
-        color="#1f2937"
-        anchorX="center"
-        anchorY="middle"
-      >
-        Vendas 3D
-      </Text>
-      
-      <OrbitControls enableZoom={false} autoRotate autoRotateSpeed={2} />
-    </Canvas>
-  );
-}
-
-// 3D Floating Sphere for metrics
-function FloatingSphere({ position, color, scale = 1 }) {
-  const meshRef = useRef();
-  
-  useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime) * 0.2;
-      meshRef.current.rotation.x = state.clock.elapsedTime * 0.5;
-      meshRef.current.rotation.z = state.clock.elapsedTime * 0.3;
-    }
-  });
-
-  return (
-    <Sphere
-      ref={meshRef}
-      position={position}
-      scale={scale}
-      castShadow
-      receiveShadow
-    >
-      <meshStandardMaterial color={color} metalness={0.8} roughness={0.2} />
-    </Sphere>
-  );
-}
-
-// 3D Metrics Visualization
-function Metrics3D({ metrics }) {
-  return (
-    <Canvas camera={{ position: [0, 0, 8], fov: 60 }} style={{ height: '200px' }}>
-      <ambientLight intensity={0.4} />
-      <pointLight position={[5, 5, 5]} intensity={1} castShadow />
-      <pointLight position={[-5, -5, -5]} intensity={0.5} />
-      
-      <FloatingSphere position={[-3, 0, 0]} color="#10b981" scale={0.8} />
-      <FloatingSphere position={[-1, 0, 0]} color="#3b82f6" scale={0.6} />
-      <FloatingSphere position={[1, 0, 0]} color="#f59e0b" scale={0.7} />
-      <FloatingSphere position={[3, 0, 0]} color="#8b5cf6" scale={0.5} />
-      
-      <OrbitControls enableZoom={false} autoRotate autoRotateSpeed={1} />
-    </Canvas>
-  );
-}
-
 export default function Dashboard() {
   const { state } = useApp();
+  const [periodFilter, setPeriodFilter] = React.useState('30'); // 30 days default
+  const [showPeriodFilter, setShowPeriodFilter] = React.useState(false);
   
   const today = new Date().toISOString().split('T')[0];
   
@@ -157,6 +55,14 @@ export default function Dashboard() {
 
   // Dados para gráficos avançados
   const chartData = useMemo(() => {
+    // Filtrar dados baseado no período selecionado
+    const filterDate = new Date();
+    filterDate.setDate(filterDate.getDate() - parseInt(periodFilter));
+    const filterDateStr = filterDate.toISOString().split('T')[0];
+    
+    const filteredSales = state.sales.filter(sale => sale.date >= filterDateStr);
+    const filteredDebts = state.debts.filter(debt => debt.date >= filterDateStr);
+
     // Vendas por mês (últimos 6 meses)
     const monthlyData = [];
     for (let i = 5; i >= 0; i--) {
@@ -165,8 +71,8 @@ export default function Dashboard() {
       const monthKey = date.toISOString().slice(0, 7);
       const monthName = date.toLocaleDateString('pt-BR', { month: 'short' });
       
-      const monthSales = state.sales.filter(sale => sale.date.startsWith(monthKey));
-      const monthDebts = state.debts.filter(debt => debt.date.startsWith(monthKey));
+      const monthSales = filteredSales.filter(sale => sale.date.startsWith(monthKey));
+      const monthDebts = filteredDebts.filter(debt => debt.date.startsWith(monthKey));
       
       monthlyData.push({
         month: monthName,
@@ -175,6 +81,25 @@ export default function Dashboard() {
         dividas: monthDebts.reduce((sum, debt) => sum + debt.totalValue, 0),
         lucro: monthSales.reduce((sum, sale) => sum + sale.receivedAmount, 0) - monthDebts.reduce((sum, debt) => sum + debt.paidAmount, 0)
       });
+    }
+
+    // Dados para o gráfico de vendas e gastos por período
+    const periodData = [];
+    const days = parseInt(periodFilter);
+    const interval = days <= 7 ? 1 : days <= 30 ? Math.ceil(days / 7) : Math.ceil(days / 10);
+    
+    for (let i = days - 1; i >= 0; i -= interval) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      const label = days <= 7 ? date.toLocaleDateString('pt-BR', { weekday: 'short' }) : 
+                   days <= 30 ? `${date.getDate()}/${date.getMonth() + 1}` :
+                   date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      
+      const dayVendas = filteredSales.filter(sale => sale.date === dateStr).reduce((sum, sale) => sum + sale.totalValue, 0);
+      const dayGastos = filteredDebts.filter(debt => debt.date === dateStr).reduce((sum, debt) => sum + debt.totalValue, 0);
+      
+      periodData.push({ periodo: label, vendas: dayVendas, gastos: dayGastos, lucro: dayVendas - dayGastos });
     }
 
     // Status das vendas
@@ -215,6 +140,8 @@ export default function Dashboard() {
 
     return {
       monthlyData,
+      periodData,
+      filteredSales,
       salesStatus,
       employeePerformance,
       cashFlow
@@ -424,41 +351,152 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Gráficos Avançados 3D */}
+      {/* Gráficos Avançados */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Gráfico 3D de Vendas */}
+        {/* Vendas e Gastos por Período */}
         <div className="relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-green-900/20 via-emerald-900/30 to-green-900/20 blur-3xl"></div>
           <div className="relative bg-gradient-to-br from-slate-800 via-green-900/70 to-emerald-900/70 rounded-3xl p-8 text-white shadow-2xl border border-green-400/30">
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-xl floating-animation">
                 <BarChart3 className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-black text-white mb-2">Vendas 3D Interativo</h2>
-                <p className="text-green-200 font-bold">Visualização tridimensional das vendas</p>
+                <h2 className="text-2xl font-black text-white mb-2">Vendas e Gastos por Período</h2>
+                <p className="text-green-200 font-bold">Análise comparativa de receitas e despesas</p>
               </div>
+              </div>
+              <button
+                onClick={() => setShowPeriodFilter(!showPeriodFilter)}
+                className="bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl p-3 transition-all duration-300 border border-green-400/30"
+              >
+                <Filter className="w-5 h-5 text-white" />
+              </button>
             </div>
             
-            <Sales3DChart data={chartData.monthlyData.map(item => ({ name: item.month, value: item.vendas }))} />
+            {showPeriodFilter && (
+              <div className="mb-6 p-4 bg-white/10 backdrop-blur-xl rounded-2xl border border-green-400/30">
+                <label className="block text-green-200 font-bold mb-3">Período de Análise:</label>
+                <select
+                  value={periodFilter}
+                  onChange={(e) => setPeriodFilter(e.target.value)}
+                  className="w-full px-4 py-2 bg-white/20 backdrop-blur-sm border border-green-400/30 rounded-xl text-white font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
+                >
+                  <option value="7" className="text-slate-900">Últimos 7 dias</option>
+                  <option value="15" className="text-slate-900">Últimos 15 dias</option>
+                  <option value="30" className="text-slate-900">Últimos 30 dias</option>
+                  <option value="60" className="text-slate-900">Últimos 60 dias</option>
+                  <option value="90" className="text-slate-900">Últimos 90 dias</option>
+                </select>
+              </div>
+            )}
+            
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={chartData.periodData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                <XAxis dataKey="periodo" stroke="#fff" />
+                <YAxis stroke="#fff" />
+                <Tooltip 
+                  formatter={(value, name) => [
+                    `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+                    name === 'vendas' ? 'Vendas' : name === 'gastos' ? 'Gastos' : 'Lucro'
+                  ]}
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(0,0,0,0.8)', 
+                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                    borderRadius: '12px',
+                    color: '#fff'
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="vendas" fill="#10b981" name="Vendas" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="gastos" fill="#ef4444" name="Gastos" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="lucro" fill="#3b82f6" name="Lucro" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            
+            <div className="mt-6 grid grid-cols-3 gap-4">
+              <div className="text-center p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-green-400/20">
+                <p className="text-green-200 text-sm font-bold">Total Vendas</p>
+                <p className="text-xl font-black text-white">
+                  R$ {chartData.periodData.reduce((sum, item) => sum + item.vendas, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div className="text-center p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-red-400/20">
+                <p className="text-red-200 text-sm font-bold">Total Gastos</p>
+                <p className="text-xl font-black text-white">
+                  R$ {chartData.periodData.reduce((sum, item) => sum + item.gastos, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div className="text-center p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-blue-400/20">
+                <p className="text-blue-200 text-sm font-bold">Lucro Líquido</p>
+                <p className={`text-xl font-black ${chartData.periodData.reduce((sum, item) => sum + item.lucro, 0) >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                  R$ {chartData.periodData.reduce((sum, item) => sum + item.lucro, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Métricas 3D Flutuantes */}
+        {/* Top Clientes do Período */}
         <div className="relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-purple-900/20 via-violet-900/30 to-purple-900/20 blur-3xl"></div>
           <div className="relative bg-gradient-to-br from-slate-800 via-purple-900/70 to-violet-900/70 rounded-3xl p-8 text-white shadow-2xl border border-purple-400/30">
             <div className="flex items-center gap-4 mb-6">
               <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-xl floating-animation">
-                <Target className="w-8 h-8 text-white" />
+                <Users className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-black text-white mb-2">Métricas 3D</h2>
-                <p className="text-purple-200 font-bold">Esferas flutuantes representando KPIs</p>
+                <h2 className="text-2xl font-black text-white mb-2">Top Clientes do Período</h2>
+                <p className="text-purple-200 font-bold">Maiores compradores dos últimos {periodFilter} dias</p>
               </div>
             </div>
             
-            <Metrics3D metrics={todayMetrics} />
+            <div className="space-y-3 max-h-80 overflow-y-auto">
+              {(() => {
+                const clientsInPeriod = {};
+                chartData.filteredSales.forEach(sale => {
+                  if (!clientsInPeriod[sale.client]) {
+                    clientsInPeriod[sale.client] = { name: sale.client, total: 0, count: 0 };
+                  }
+                  clientsInPeriod[sale.client].total += sale.totalValue;
+                  clientsInPeriod[sale.client].count += 1;
+                });
+                
+                return Object.values(clientsInPeriod)
+                  .sort((a, b) => b.total - a.total)
+                  .slice(0, 8)
+                  .map((client, index) => (
+                    <div key={client.name} className="flex items-center justify-between p-4 bg-white/10 backdrop-blur-sm rounded-xl border border-purple-400/20 hover:bg-white/20 transition-all duration-300">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-violet-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="font-bold text-white">{client.name}</p>
+                          <p className="text-purple-200 text-sm">{client.count} compra(s)</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-black text-white">
+                          R$ {client.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-purple-200 text-sm">
+                          Média: R$ {(client.total / client.count).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    </div>
+                  ));
+              })()}
+              
+              {chartData.filteredSales.length === 0 && (
+                <div className="text-center py-8">
+                  <Users className="w-16 h-16 mx-auto mb-4 text-purple-300 opacity-50" />
+                  <p className="text-purple-200">Nenhuma venda no período selecionado</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
