@@ -148,6 +148,17 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     }
   }, [formData.products]);
 
+  // Auto-calculate total value when products change
+  useEffect(() => {
+    const calculatedTotal = formData.products.reduce((sum, product) => {
+      return sum + ((product.quantity || 0) * (product.unitPrice || 0));
+    }, 0);
+    
+    if (calculatedTotal > 0) {
+      setFormData(prev => ({ ...prev, totalValue: calculatedTotal }));
+    }
+  }, [formData.products]);
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -285,6 +296,27 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                     </div>
                   </div>
                 ))}
+                
+                {/* Total Geral dos Produtos */}
+                <div className="p-6 bg-gradient-to-r from-green-100 to-emerald-100 rounded-2xl border-2 border-green-300">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="text-xl font-bold text-green-800">Total Geral dos Produtos</h3>
+                      <p className="text-green-600 font-medium">
+                        {formData.products.length} produto(s) • 
+                        {formData.products.reduce((sum, p) => sum + (p.quantity || 0), 0)} unidade(s)
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-3xl font-black text-green-700">
+                        R$ {formData.products.reduce((sum, product) => {
+                          return sum + ((product.quantity || 0) * (product.unitPrice || 0));
+                        }, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-sm text-green-600 font-semibold">Calculado automaticamente</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -311,6 +343,11 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                   placeholder="0,00"
                   required
                 />
+                <p className="text-xs text-green-600 mt-1 font-medium">
+                  ✓ Valor calculado automaticamente: R$ {formData.products.reduce((sum, product) => {
+                    return sum + ((product.quantity || 0) * (product.unitPrice || 0));
+                  }, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
               </div>
             </div>
 

@@ -48,7 +48,7 @@ export const Reports: React.FC = () => {
   const { state } = useApp();
   const { sales, debts, checks, employees, boletos } = state;
   
-  const [dateFilter, setDateFilter] = useState('30'); // 7, 15, 30 days
+  const [dateFilter, setDateFilter] = useState('30'); // Expandido para incluir períodos maiores
   const [selectedMetric, setSelectedMetric] = useState('revenue');
 
   // Calculate date range based on filter
@@ -293,6 +293,8 @@ export const Reports: React.FC = () => {
                 <option value="30">Últimos 30 dias</option>
                 <option value="60">Últimos 60 dias</option>
                 <option value="90">Últimos 90 dias</option>
+                <option value="180">Últimos 6 meses</option>
+                <option value="365">Último ano</option>
               </select>
             </div>
             
