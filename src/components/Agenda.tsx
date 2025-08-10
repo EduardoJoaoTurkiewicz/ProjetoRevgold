@@ -136,6 +136,19 @@ export function Agenda() {
 
     // Vendas a receber (parcelas pendentes)
     state.sales.forEach(sale => {
+      // Adicionar evento para data de entrega se existir
+      if (sale.deliveryDate && sale.deliveryDate === dateStr) {
+        events.push({
+          id: `delivery-${sale.id}`,
+          type: 'receivable',
+          title: `Entrega - ${sale.client}`,
+          amount: sale.totalValue,
+          description: `Entrega programada - ${Array.isArray(sale.products) ? sale.products.map(p => p.name).join(', ') : sale.products}`,
+          status: 'Entrega Programada',
+          details: { ...sale, isDelivery: true }
+        });
+      }
+      
       sale.paymentMethods.forEach((method, methodIndex) => {
         if (method.installments && method.installments > 1) {
           for (let i = 0; i < method.installments; i++) {
@@ -185,6 +198,9 @@ export function Agenda() {
   };
 
   const getEventColor = (type: string, status: string) => {
+    if (status === 'Entrega Programada') {
+      return 'bg-purple-100 text-purple-800 border-purple-200';
+    }
     if (type === 'debt') {
       return status === 'Pago' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200';
     }
@@ -477,10 +493,22 @@ export function Agenda() {
                   <div>
                     <h3 className="font-bold text-slate-900 mb-4">Detalhes do Recebimento</h3>
                     <div className="bg-purple-50 p-6 rounded-xl border border-purple-200">
+                      {viewingEvent.details.isDelivery ? (
+                        <>
+                          <p><strong>Tipo:</strong> Entrega Programada</p>
+                          <p><strong>Cliente:</strong> {viewingEvent.details.client}</p>
+                          <p><strong>Data da Venda:</strong> {new Date(viewingEvent.details.date).toLocaleDateString('pt-BR')}</p>
+                          <p><strong>Data de Entrega:</strong> {new Date(viewingEvent.details.deliveryDate).toLocaleDateString('pt-BR')}</p>
+                          <p><strong>Valor Total da Venda:</strong> R$ {viewingEvent.details.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        </>
+                      ) : (
+                        <>
                       <p><strong>Cliente:</strong> {viewingEvent.details.client}</p>
                       <p><strong>Data da Venda:</strong> {new Date(viewingEvent.details.date).toLocaleDateString('pt-BR')}</p>
                       <p><strong>Parcela:</strong> {viewingEvent.details.installment}/{viewingEvent.details.totalInstallments}</p>
                       <p><strong>Valor Total da Venda:</strong> R$ {viewingEvent.details.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}

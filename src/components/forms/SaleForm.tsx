@@ -25,9 +25,10 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   const { state } = useApp();
   const [formData, setFormData] = useState({
     date: sale?.date || new Date().toISOString().split('T')[0],
+    deliveryDate: sale?.deliveryDate || '',
     client: sale?.client || '',
     sellerId: sale?.sellerId || '',
-    products: sale?.products || [{ name: '', quantity: 1, unitPrice: 0, totalPrice: 0 }],
+    products: sale?.products || [{ name: '', quantity: 0, unitPrice: 0, totalPrice: 0 }],
     observations: sale?.observations || '',
     totalValue: sale?.totalValue || 0,
     paymentMethods: sale?.paymentMethods || [{ type: 'dinheiro' as const, amount: 0 }],
@@ -40,7 +41,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   const addProduct = () => {
     setFormData(prev => ({
       ...prev,
-      products: [...prev.products, { name: '', quantity: 1, unitPrice: 0, totalPrice: 0 }]
+      products: [...prev.products, { name: '', quantity: 0, unitPrice: 0, totalPrice: 0 }]
     }));
   };
 
@@ -60,7 +61,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
           
           // Calculate total price when quantity or unit price changes
           if (field === 'quantity' || field === 'unitPrice') {
-            updatedProduct.totalPrice = (updatedProduct.quantity || 0) * (updatedProduct.unitPrice || 0);
+            updatedProduct.totalPrice = Math.max(0, (updatedProduct.quantity || 0) * (updatedProduct.unitPrice || 0));
           }
           
           return updatedProduct;
@@ -102,6 +103,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
             delete updatedMethod.installmentValue;
             delete updatedMethod.installmentInterval;
             delete updatedMethod.startDate;
+            delete updatedMethod.firstInstallmentDate;
           }
           
           return updatedMethod;
@@ -205,6 +207,17 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
               </div>
 
               <div className="form-group">
+                <label className="form-label">Data de Entrega</label>
+                <input
+                  type="date"
+                  value={formData.deliveryDate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, deliveryDate: e.target.value }))}
+                  className="input-field"
+                  placeholder="Data prevista para entrega"
+                />
+              </div>
+
+              <div className="form-group">
                 <label className="form-label">Cliente *</label>
                 <input
                   type="text"
@@ -216,7 +229,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                 />
               </div>
 
-              <div className="form-group md:col-span-2">
+              <div className="form-group">
                 <label className="form-label">Vendedor (Opcional)</label>
                 <select
                   value={formData.sellerId || ''}
@@ -286,10 +299,11 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                         <label className="form-label">Quantidade *</label>
                         <input
                           type="number"
-                          min="1"
+                          min="0"
                           value={product.quantity}
-                          onChange={(e) => updateProduct(index, 'quantity', parseInt(e.target.value) || 1)}
+                          onChange={(e) => updateProduct(index, 'quantity', parseInt(e.target.value) || 0)}
                           className="input-field"
+                          placeholder="0"
                           required
                         />
                       </div>
@@ -299,6 +313,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                         <input
                           type="number"
                           step="0.01"
+                          min="0"
                           value={product.unitPrice || ''}
                           onChange={(e) => updateProduct(index, 'unitPrice', parseFloat(e.target.value) || 0)}
                           className="input-field"
@@ -369,6 +384,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                 <input
                   type="number"
                   step="0.01"
+                  min="0"
                   value={formData.totalValue}
                   onChange={(e) => setFormData(prev => ({ ...prev, totalValue: parseFloat(e.target.value) || 0 }))}
                   className="input-field bg-green-50 border-green-200 font-bold text-green-700"
@@ -435,6 +451,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                         <input
                           type="number"
                           step="0.01"
+                          min="0"
                           value={method.amount}
                           onChange={(e) => updatePaymentMethod(index, 'amount', parseFloat(e.target.value) || 0)}
                           className="input-field"
@@ -462,6 +479,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                 <input
                                   type="number"
                                   step="0.01"
+                                  min="0"
                                   value={method.installmentValue || 0}
                                   onChange={(e) => updatePaymentMethod(index, 'installmentValue', parseFloat(e.target.value) || 0)}
                                   className="input-field"
@@ -481,15 +499,6 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                 />
                               </div>
 
-                              <div>
-                                <label className="form-label">Data de Início</label>
-                                <input
-                                  type="date"
-                                  value={method.startDate || formData.date}
-                                  onChange={(e) => updatePaymentMethod(index, 'startDate', e.target.value)}
-                                  className="input-field"
-                                />
-                              </div>
 
                               <div>
                                 <label className="form-label">Data da Primeira Parcela</label>

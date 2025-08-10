@@ -17,6 +17,7 @@ export interface PaymentMethod {
 export interface Sale {
   id: string;
   date: string;
+  deliveryDate?: string;
   client: string;
   sellerId?: string; // ID do funcionário vendedor
   products: Product[];

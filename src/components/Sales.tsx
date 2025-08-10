@@ -215,6 +215,7 @@ export function Sales() {
               <thead>
                 <tr className="border-b">
                   <th className="text-left py-3 px-4 font-semibold text-slate-700">Data</th>
+                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Entrega</th>
                   <th className="text-left py-3 px-4 font-semibold text-slate-700">Cliente</th>
                   <th className="text-left py-3 px-4 font-semibold text-slate-700">Vendedor</th>
                   <th className="text-left py-3 px-4 font-semibold text-slate-700">Produtos</th>
@@ -230,6 +231,15 @@ export function Sales() {
                   <tr key={sale.id} className="border-b hover:bg-slate-50 transition-colors">
                     <td className="py-3 px-4 text-sm">
                       {new Date(sale.date).toLocaleDateString('pt-BR')}
+                    </td>
+                    <td className="py-3 px-4 text-sm">
+                      {sale.deliveryDate ? (
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold">
+                          {new Date(sale.deliveryDate).toLocaleDateString('pt-BR')}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-sm font-semibold text-slate-900">{sale.client}</td>
                     <td className="py-3 px-4 text-sm">
@@ -353,6 +363,14 @@ export function Sales() {
                     {new Date(viewingSale.date).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
+                {viewingSale.deliveryDate && (
+                  <div>
+                    <label className="form-label">Data de Entrega</label>
+                    <p className="text-base text-blue-700 font-semibold">
+                      {new Date(viewingSale.deliveryDate).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <label className="form-label">Cliente</label>
                   <p className="text-base text-green-700 font-bold">{viewingSale.client}</p>

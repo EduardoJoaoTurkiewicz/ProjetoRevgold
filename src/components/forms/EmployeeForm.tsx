@@ -11,7 +11,7 @@ interface EmployeeFormProps {
 export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps) {
   const [formData, setFormData] = useState({
     name: employee?.name || '',
-    position: employee?.position || '',
+    position: employee?.position || (employee?.isSeller ? 'Vendedor' : ''),
     isSeller: employee?.isSeller || false,
     salary: employee?.salary || 0,
     paymentDay: employee?.paymentDay || 5,
@@ -20,6 +20,15 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
     hireDate: employee?.hireDate || new Date().toISOString().split('T')[0],
     observations: employee?.observations || ''
   });
+
+  // Atualizar cargo quando "É Vendedor" for marcado/desmarcado
+  const handleSellerChange = (isSeller: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      isSeller,
+      position: isSeller ? 'Vendedor' : ''
+    }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,10 +68,16 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
                   type="text"
                   value={formData.position}
                   onChange={(e) => setFormData(prev => ({ ...prev, position: e.target.value }))}
-                  className="input-field"
+                  className={`input-field ${formData.isSeller ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                   placeholder="Ex: Vendedor, Gerente, Auxiliar"
+                  disabled={formData.isSeller}
                   required
                 />
+                {formData.isSeller && (
+                  <p className="text-xs text-blue-600 mt-1 font-medium">
+                    ✓ Cargo definido automaticamente como "Vendedor". Desmarque "É Vendedor" para alterar.
+                  </p>
+                )}
               </div>
 
               <div className="form-group md:col-span-2">
@@ -70,13 +85,13 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
                   <input
                     type="checkbox"
                     checked={formData.isSeller}
-                    onChange={(e) => setFormData(prev => ({ ...prev, isSeller: e.target.checked }))}
+                    onChange={(e) => handleSellerChange(e.target.checked)}
                     className="rounded"
                   />
                   <span className="form-label mb-0">É Vendedor</span>
                 </label>
                 <p className="text-xs text-gray-500 mt-1">
-                  Marque esta opção se o funcionário é vendedor e deve receber comissões de 5% sobre as vendas.
+                  Marque esta opção se o funcionário é vendedor e deve receber comissões de 5% sobre as vendas. O cargo será definido automaticamente como "Vendedor".
                 </p>
               </div>
               <div className="form-group">
