@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Eye, DollarSign, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { Sale, PaymentMethod } from '../types';
+import { Sale, PaymentMethod, EmployeeCommission } from '../types';
 import { SaleForm } from './forms/SaleForm';
 
 export function Sales() {
@@ -18,6 +18,25 @@ export function Sales() {
     };
     
     dispatch({ type: 'ADD_SALE', payload: newSale });
+    
+    // Criar comissão se há vendedor associado
+    if (sale.sellerId) {
+      const seller = state.employees.find(emp => emp.id === sale.sellerId);
+      if (seller && seller.isSeller) {
+        const commission: EmployeeCommission = {
+          id: `commission-${newSale.id}`,
+          employeeId: sale.sellerId,
+          saleId: newSale.id,
+          saleValue: sale.totalValue,
+          commissionRate: 5, // 5%
+          commissionAmount: sale.totalValue * 0.05,
+          date: sale.date,
+          status: 'pendente',
+          createdAt: new Date().toISOString()
+        };
+        dispatch({ type: 'ADD_EMPLOYEE_COMMISSION', payload: commission });
+      }
+    }
     
     // Create installments if needed
     sale.paymentMethods.forEach(method => {
@@ -122,6 +141,39 @@ export function Sales() {
         createdAt: editingSale.createdAt
       };
       dispatch({ type: 'UPDATE_SALE', payload: updatedSale });
+      
+      // Atualizar comissão se necessário
+      const existingCommission = state.employeeCommissions.find(c => c.saleId === editingSale.id);
+      if (sale.sellerId && state.employees.find(emp => emp.id === sale.sellerId)?.isSeller) {
+        const commissionAmount = sale.totalValue * 0.05;
+        if (existingCommission) {
+          const updatedCommission = {
+            ...existingCommission,
+            employeeId: sale.sellerId,
+            saleValue: sale.totalValue,
+            commissionAmount,
+            date: sale.date
+          };
+          dispatch({ type: 'UPDATE_EMPLOYEE_COMMISSION', payload: updatedCommission });
+        } else {
+          const newCommission: EmployeeCommission = {
+            id: `commission-${editingSale.id}`,
+            employeeId: sale.sellerId,
+            saleId: editingSale.id,
+            saleValue: sale.totalValue,
+            commissionRate: 5,
+            commissionAmount,
+            date: sale.date,
+            status: 'pendente',
+            createdAt: new Date().toISOString()
+          };
+          dispatch({ type: 'ADD_EMPLOYEE_COMMISSION', payload: newCommission });
+        }
+      } else if (existingCommission) {
+        // Remove comissão se vendedor foi removido
+        dispatch({ type: 'DELETE_EMPLOYEE_COMMISSION', payload: existingCommission.id });
+      }
+      
       setEditingSale(null);
     }
   };
@@ -164,6 +216,7 @@ export function Sales() {
                 <tr className="border-b">
                   <th className="text-left py-3 px-4 font-semibold text-slate-700">Data</th>
                   <th className="text-left py-3 px-4 font-semibold text-slate-700">Cliente</th>
+                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Vendedor</th>
                   <th className="text-left py-3 px-4 font-semibold text-slate-700">Produtos</th>
                   <th className="text-left py-3 px-4 font-semibold text-slate-700">Valor Total</th>
                   <th className="text-left py-3 px-4 font-semibold text-slate-700">Recebido</th>
@@ -179,6 +232,22 @@ export function Sales() {
                       {new Date(sale.date).toLocaleDateString('pt-BR')}
                     </td>
                     <td className="py-3 px-4 text-sm font-semibold text-slate-900">{sale.client}</td>
+                    <td className="py-3 px-4 text-sm">
+                      {sale.sellerId ? (
+                        (() => {
+                          const seller = state.employees.find(e => e.id === sale.sellerId);
+                          return seller ? (
+                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold">
+                              {seller.name}
+                            </span>
+                          ) : (
+                            <span className="text-gray-500 text-xs">Vendedor não encontrado</span>
+                          );
+                        })()
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
+                    </td>
                     <td className="py-3 px-4 text-sm">
                       {Array.isArray(sale.products) 
                         ? sale.products.map(p => `${p.quantity}x ${p.name}`).join(', ')
@@ -300,6 +369,15 @@ export function Sales() {
                       <span className="text-gray-500">Não informado</span>
                     )}
                   </p>
+                  {viewingSale.sellerId && (() => {
+                    const seller = state.employees.find(e => e.id === viewingSale.sellerId);
+                    const commission = state.employeeCommissions.find(c => c.saleId === viewingSale.id);
+                    return seller && seller.isSeller && commission ? (
+                      <p className="text-sm text-green-600 font-bold mt-1">
+                        Comissão: R$ {commission.commissionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (5%)
+                      </p>
+                    ) : null;
+                  })()}
                 </div>
                 <div className="md:col-span-2">
                   <label className="form-label">Produtos</label>

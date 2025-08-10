@@ -12,6 +12,7 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
   const [formData, setFormData] = useState({
     name: employee?.name || '',
     position: employee?.position || '',
+    isSeller: employee?.isSeller || false,
     salary: employee?.salary || 0,
     paymentDay: employee?.paymentDay || 5,
     nextPaymentDate: employee?.nextPaymentDate || '',
@@ -64,6 +65,20 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
                 />
               </div>
 
+              <div className="form-group md:col-span-2">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.isSeller}
+                    onChange={(e) => setFormData(prev => ({ ...prev, isSeller: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="form-label mb-0">É Vendedor</span>
+                </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Marque esta opção se o funcionário é vendedor e deve receber comissões de 5% sobre as vendas.
+                </p>
+              </div>
               <div className="form-group">
                 <label className="form-label">Salário *</label>
                 <input
@@ -76,7 +91,7 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
                   required
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Valor base do salário. Pode ser editado no momento do pagamento para incluir comissões e horas extras.
+                  Valor base do salário fixo. {formData.isSeller ? 'Comissões de 5% serão calculadas automaticamente.' : ''}
                 </p>
               </div>
 

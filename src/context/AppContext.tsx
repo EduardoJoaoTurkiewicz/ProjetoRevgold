@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { User, Sale, Debt, Check, Installment, Product, Employee, EmployeePayment, Boleto } from '../types';
+import { User, Sale, Debt, Check, Installment, Product, Employee, EmployeePayment, EmployeeAdvance, EmployeeOvertime, EmployeeCommission, Boleto } from '../types';
 
 interface AppState {
   user: User | null;
@@ -10,6 +10,9 @@ interface AppState {
   installments: Installment[];
   employees: Employee[];
   employeePayments: EmployeePayment[];
+  employeeAdvances: EmployeeAdvance[];
+  employeeOvertimes: EmployeeOvertime[];
+  employeeCommissions: EmployeeCommission[];
 }
 
 type AppAction =
@@ -34,6 +37,15 @@ type AppAction =
   | { type: 'ADD_EMPLOYEE_PAYMENT'; payload: EmployeePayment }
   | { type: 'UPDATE_EMPLOYEE_PAYMENT'; payload: EmployeePayment }
   | { type: 'DELETE_EMPLOYEE_PAYMENT'; payload: string }
+  | { type: 'ADD_EMPLOYEE_ADVANCE'; payload: EmployeeAdvance }
+  | { type: 'UPDATE_EMPLOYEE_ADVANCE'; payload: EmployeeAdvance }
+  | { type: 'DELETE_EMPLOYEE_ADVANCE'; payload: string }
+  | { type: 'ADD_EMPLOYEE_OVERTIME'; payload: EmployeeOvertime }
+  | { type: 'UPDATE_EMPLOYEE_OVERTIME'; payload: EmployeeOvertime }
+  | { type: 'DELETE_EMPLOYEE_OVERTIME'; payload: string }
+  | { type: 'ADD_EMPLOYEE_COMMISSION'; payload: EmployeeCommission }
+  | { type: 'UPDATE_EMPLOYEE_COMMISSION'; payload: EmployeeCommission }
+  | { type: 'DELETE_EMPLOYEE_COMMISSION'; payload: string }
   | { type: 'LOAD_DATA'; payload: Partial<AppState> };
 
 const initialState: AppState = {
@@ -44,7 +56,10 @@ const initialState: AppState = {
   boletos: [],
   installments: [],
   employees: [],
-  employeePayments: []
+  employeePayments: [],
+  employeeAdvances: [],
+  employeeOvertimes: [],
+  employeeCommissions: []
 };
 
 function appReducer(state: AppState, action: AppAction): AppState {
@@ -64,7 +79,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { 
         ...state, 
         sales: state.sales.filter(sale => sale.id !== action.payload),
-        installments: state.installments.filter(installment => installment.saleId !== action.payload)
+        installments: state.installments.filter(installment => installment.saleId !== action.payload),
+        employeeCommissions: state.employeeCommissions.filter(commission => commission.saleId !== action.payload)
       };
     case 'ADD_DEBT':
       return { ...state, debts: [...state.debts, action.payload] };
@@ -131,7 +147,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { 
         ...state, 
         employees: state.employees.filter(employee => employee.id !== action.payload),
-        employeePayments: state.employeePayments.filter(payment => payment.employeeId !== action.payload)
+        employeePayments: state.employeePayments.filter(payment => payment.employeeId !== action.payload),
+        employeeAdvances: state.employeeAdvances.filter(advance => advance.employeeId !== action.payload),
+        employeeOvertimes: state.employeeOvertimes.filter(overtime => overtime.employeeId !== action.payload),
+        employeeCommissions: state.employeeCommissions.filter(commission => commission.employeeId !== action.payload)
       };
     case 'ADD_EMPLOYEE_PAYMENT':
       return { ...state, employeePayments: [...state.employeePayments, action.payload] };
@@ -146,6 +165,48 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { 
         ...state, 
         employeePayments: state.employeePayments.filter(payment => payment.id !== action.payload)
+      };
+    case 'ADD_EMPLOYEE_ADVANCE':
+      return { ...state, employeeAdvances: [...state.employeeAdvances, action.payload] };
+    case 'UPDATE_EMPLOYEE_ADVANCE':
+      return { 
+        ...state, 
+        employeeAdvances: state.employeeAdvances.map(advance => 
+          advance.id === action.payload.id ? action.payload : advance
+        ) 
+      };
+    case 'DELETE_EMPLOYEE_ADVANCE':
+      return { 
+        ...state, 
+        employeeAdvances: state.employeeAdvances.filter(advance => advance.id !== action.payload)
+      };
+    case 'ADD_EMPLOYEE_OVERTIME':
+      return { ...state, employeeOvertimes: [...state.employeeOvertimes, action.payload] };
+    case 'UPDATE_EMPLOYEE_OVERTIME':
+      return { 
+        ...state, 
+        employeeOvertimes: state.employeeOvertimes.map(overtime => 
+          overtime.id === action.payload.id ? action.payload : overtime
+        ) 
+      };
+    case 'DELETE_EMPLOYEE_OVERTIME':
+      return { 
+        ...state, 
+        employeeOvertimes: state.employeeOvertimes.filter(overtime => overtime.id !== action.payload)
+      };
+    case 'ADD_EMPLOYEE_COMMISSION':
+      return { ...state, employeeCommissions: [...state.employeeCommissions, action.payload] };
+    case 'UPDATE_EMPLOYEE_COMMISSION':
+      return { 
+        ...state, 
+        employeeCommissions: state.employeeCommissions.map(commission => 
+          commission.id === action.payload.id ? action.payload : commission
+        ) 
+      };
+    case 'DELETE_EMPLOYEE_COMMISSION':
+      return { 
+        ...state, 
+        employeeCommissions: state.employeeCommissions.filter(commission => commission.id !== action.payload)
       };
     case 'LOAD_DATA':
       return { ...state, ...action.payload };
@@ -178,7 +239,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Save data to localStorage whenever state changes
   useEffect(() => {
     // Always save data, even without user (for persistence)
-    if (state.sales.length > 0 || state.debts.length > 0 || state.checks.length > 0 || state.boletos.length > 0 || state.employees.length > 0) {
+    if (state.sales.length > 0 || state.debts.length > 0 || state.checks.length > 0 || state.boletos.length > 0 || state.employees.length > 0 || state.employeeAdvances.length > 0 || state.employeeOvertimes.length > 0 || state.employeeCommissions.length > 0) {
       localStorage.setItem('revgold-data', JSON.stringify({
         user: state.user,
         sales: state.sales,
@@ -187,7 +248,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         boletos: state.boletos,
         installments: state.installments,
         employees: state.employees,
-        employeePayments: state.employeePayments
+        employeePayments: state.employeePayments,
+        employeeAdvances: state.employeeAdvances,
+        employeeOvertimes: state.employeeOvertimes,
+        employeeCommissions: state.employeeCommissions
       }));
       
       // Trigger notification system update

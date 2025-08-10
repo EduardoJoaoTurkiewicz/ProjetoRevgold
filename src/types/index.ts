@@ -92,6 +92,7 @@ export interface Employee {
   id: string;
   name: string;
   position: string;
+  isSeller: boolean; // Indica se é vendedor
   salary: number;
   paymentDay: number; // Day of month (1-31)
   nextPaymentDate?: string; // Optional specific date for next payment
@@ -112,6 +113,40 @@ export interface EmployeePayment {
   createdAt: string;
 }
 
+export interface EmployeeAdvance {
+  id: string;
+  employeeId: string;
+  amount: number;
+  date: string;
+  description: string;
+  paymentMethod: 'dinheiro' | 'pix' | 'transferencia' | 'desconto_folha';
+  status: 'pendente' | 'descontado';
+  createdAt: string;
+}
+
+export interface EmployeeOvertime {
+  id: string;
+  employeeId: string;
+  hours: number;
+  hourlyRate: number;
+  totalAmount: number;
+  date: string;
+  description: string;
+  status: 'pendente' | 'pago';
+  createdAt: string;
+}
+
+export interface EmployeeCommission {
+  id: string;
+  employeeId: string;
+  saleId: string;
+  saleValue: number;
+  commissionRate: number; // Porcentagem (ex: 5 para 5%)
+  commissionAmount: number;
+  date: string;
+  status: 'pendente' | 'pago';
+  createdAt: string;
+}
 export interface Boleto {
   id: string;
   saleId: string;

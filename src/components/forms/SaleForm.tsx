@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Package } from 'lucide-react';
 import { Sale, PaymentMethod } from '../../types';
+import { useApp } from '../../context/AppContext';
 
 interface SaleFormProps {
   sale?: Sale | null;
@@ -21,15 +22,20 @@ const PAYMENT_TYPES = [
 const INSTALLMENT_TYPES = ['cartao_credito', 'cheque', 'boleto'];
 
 export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
+  const { state } = useApp();
   const [formData, setFormData] = useState({
     date: sale?.date || new Date().toISOString().split('T')[0],
     client: sale?.client || '',
+    sellerId: sale?.sellerId || '',
     products: sale?.products || [{ name: '', quantity: 1, unitPrice: 0, totalPrice: 0 }],
     observations: sale?.observations || '',
     totalValue: sale?.totalValue || 0,
     paymentMethods: sale?.paymentMethods || [{ type: 'dinheiro' as const, amount: 0 }],
     paymentDescription: sale?.paymentDescription || ''
   });
+
+  // Filtrar apenas vendedores ativos
+  const sellers = state.employees.filter(emp => emp.isActive && emp.isSeller);
 
   const addProduct = () => {
     setFormData(prev => ({
@@ -217,10 +223,15 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                   onChange={(e) => setFormData(prev => ({ ...prev, sellerId: e.target.value }))}
                   className="input-field"
                 >
-                  <option value="">Selecionar funcionário...</option>
+                  <option value="">Selecionar vendedor...</option>
+                  {sellers.map(seller => (
+                    <option key={seller.id} value={seller.id}>
+                      {seller.name} - {seller.position}
+                    </option>
+                  ))}
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  Selecione o funcionário responsável por esta venda (opcional)
+                  Selecione o vendedor responsável por esta venda. Comissão de 5% será calculada automaticamente.
                 </p>
               </div>
             </div>
