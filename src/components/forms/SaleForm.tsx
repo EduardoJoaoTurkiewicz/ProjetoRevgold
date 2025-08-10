@@ -498,6 +498,55 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                 ))}
               </div>
             </div>
+
+            {/* Summary */}
+            <div className="relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-400/20 to-gray-500/20 blur-2xl"></div>
+              <div className="relative p-6 bg-gradient-to-r from-slate-50 to-gray-100 rounded-2xl border-2 border-slate-300 shadow-xl"
+                   style={{ 
+                     boxShadow: '0 20px 40px -12px rgba(71, 85, 105, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.5)' 
+                   }}>
+                <h3 className="text-xl font-black text-slate-800 mb-4 bg-gradient-to-r from-slate-700 to-gray-600 bg-clip-text text-transparent">
+                  Resumo da Venda
+                </h3>
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="text-center">
+                    <span className="text-slate-600 font-semibold block mb-1">Total:</span>
+                    <p className="text-2xl font-black text-slate-800">
+                      R$ {formData.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-slate-600 font-semibold block mb-1">Recebido:</span>
+                    <p className="text-2xl font-black text-green-600">
+                      R$ {calculateAmounts().receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-slate-600 font-semibold block mb-1">Pendente:</span>
+                    <p className="text-2xl font-black text-orange-600">
+                      R$ {calculateAmounts().pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-4">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="btn-secondary"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="btn-primary"
+              >
+                {sale ? 'Atualizar Venda' : 'Criar Venda'}
+              </button>
+            </div>
           </form>
         </div>
       </div>
