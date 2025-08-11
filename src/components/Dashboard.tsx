@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { 
-  DollarSign, 
+  DollarSign,
   TrendingUp, 
   Users, 
   ShoppingCart, 
@@ -15,7 +15,9 @@ import {
   Target,
   TrendingDown,
   Activity,
-  PieChart
+  PieChart,
+  ArrowUpCircle,
+  ArrowDownCircle
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, AreaChart, Area, RadialBarChart, RadialBar } from 'recharts';
@@ -26,6 +28,9 @@ const Dashboard: React.FC = () => {
   const { state } = useApp();
 
   // Calculate metrics for TODAY only
+  const today = new Date();
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
   const metrics = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     
@@ -91,6 +96,143 @@ const Dashboard: React.FC = () => {
       dueTodayCount: dueTodayChecks.length + dueTodayBoletos.length
     };
   }, [state]);
+
+  // Vendas a receber do mês atual
+  const monthlyReceivables = useMemo(() => {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const receivables = [];
+
+    // Cheques pendentes do mês atual
+    state.checks.forEach(check => {
+      const checkDate = new Date(check.dueDate);
+      if (checkDate.getMonth() === currentMonth && 
+          checkDate.getFullYear() === currentYear &&
+          check.dueDate >= todayStr &&
+          check.status === 'pendente') {
+        const sale = state.sales.find(s => s.id === check.saleId);
+        receivables.push({
+          id: check.id,
+          type: 'cheque',
+          client: check.client,
+          amount: check.value,
+          dueDate: check.dueDate,
+          saleDate: sale?.date || check.dueDate,
+          description: `Cheque - ${check.installmentNumber ? `Parcela ${check.installmentNumber}/${check.totalInstallments}` : 'Pagamento único'}`,
+          sale: sale
+        });
+      }
+    });
+
+    // Boletos pendentes do mês atual
+    state.boletos.forEach(boleto => {
+      const boletoDate = new Date(boleto.dueDate);
+      if (boletoDate.getMonth() === currentMonth && 
+          boletoDate.getFullYear() === currentYear &&
+          boleto.dueDate >= todayStr &&
+          boleto.status === 'pendente') {
+        const sale = state.sales.find(s => s.id === boleto.saleId);
+        receivables.push({
+          id: boleto.id,
+          type: 'boleto',
+          client: boleto.client,
+          amount: boleto.value,
+          dueDate: boleto.dueDate,
+          saleDate: sale?.date || boleto.dueDate,
+          description: `Boleto - Parcela ${boleto.installmentNumber}/${boleto.totalInstallments}`,
+          sale: sale
+        });
+      }
+    });
+
+    // Vendas com parcelas pendentes do mês atual
+    state.sales.forEach(sale => {
+      if (sale.status !== 'pago' && sale.pendingAmount > 0) {
+        sale.paymentMethods.forEach((method, methodIndex) => {
+          if (method.installments && method.installments > 1) {
+            for (let i = 1; i < method.installments; i++) { // Começar da segunda parcela
+              const dueDate = new Date(method.firstInstallmentDate || method.startDate || sale.date);
+              dueDate.setDate(dueDate.getDate() + (i * (method.installmentInterval || 30)));
+              const dueDateStr = dueDate.toISOString().split('T')[0];
+              
+              if (dueDate.getMonth() === currentMonth && 
+                  dueDate.getFullYear() === currentYear &&
+                  dueDateStr >= todayStr &&
+                  method.type !== 'cheque' && method.type !== 'boleto') { // Evitar duplicatas
+                receivables.push({
+                  id: `${sale.id}-${methodIndex}-${i}`,
+                  type: method.type,
+                  client: sale.client,
+                  amount: method.installmentValue || 0,
+                  dueDate: dueDateStr,
+                  saleDate: sale.date,
+                  description: `${method.type.replace('_', ' ')} - Parcela ${i + 1}/${method.installments}`,
+                  sale: sale
+                });
+              }
+            }
+          }
+        });
+      }
+    });
+
+    return receivables.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  }, [state, currentMonth, currentYear]);
+
+  // Dívidas a pagar do mês atual
+  const monthlyPayables = useMemo(() => {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const payables = [];
+
+    state.debts.forEach(debt => {
+      if (!debt.isPaid && debt.pendingAmount > 0) {
+        debt.paymentMethods.forEach((method, methodIndex) => {
+          if (method.installments && method.installments > 1) {
+            for (let i = 0; i < method.installments; i++) {
+              const dueDate = new Date(method.startDate || debt.date);
+              dueDate.setDate(dueDate.getDate() + (i * (method.installmentInterval || 30)));
+              const dueDateStr = dueDate.toISOString().split('T')[0];
+              
+              if (dueDate.getMonth() === currentMonth && 
+                  dueDate.getFullYear() === currentYear &&
+                  dueDateStr >= todayStr) {
+                payables.push({
+                  id: `${debt.id}-${methodIndex}-${i}`,
+                  type: method.type,
+                  company: debt.company,
+                  amount: method.installmentValue || 0,
+                  dueDate: dueDateStr,
+                  debtDate: debt.date,
+                  description: `${debt.description} - Parcela ${i + 1}/${method.installments}`,
+                  debt: debt
+                });
+              }
+            }
+          } else {
+            // Pagamento único
+            const debtDate = new Date(debt.date);
+            if (debtDate.getMonth() === currentMonth && 
+                debtDate.getFullYear() === currentYear &&
+                debt.date >= todayStr) {
+              payables.push({
+                id: debt.id,
+                type: method.type,
+                company: debt.company,
+                amount: method.amount,
+                dueDate: debt.date,
+                debtDate: debt.date,
+                description: debt.description,
+                debt: debt
+              });
+            }
+          }
+        });
+      }
+    });
+
+    return payables.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  }, [state, currentMonth, currentYear]);
 
   // Sales by month data
   const salesByMonth = useMemo(() => {
@@ -425,6 +567,194 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Vendas a Receber do Mês */}
+      <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="p-3 rounded-xl bg-green-600 modern-shadow-lg">
+            <ArrowUpCircle className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-green-900">Vendas a Receber - {today.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</h3>
+            <p className="text-green-700 font-semibold">
+              {monthlyReceivables.length} recebimento(s) • Total: R$ {monthlyReceivables.reduce((sum, item) => sum + item.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+        </div>
+        
+        {monthlyReceivables.length > 0 ? (
+          <div className="space-y-4 max-h-96 overflow-y-auto modern-scrollbar">
+            {monthlyReceivables.map(item => {
+              const daysUntilDue = Math.ceil((new Date(item.dueDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+              const isUrgent = daysUntilDue <= 3;
+              const isSoon = daysUntilDue <= 7;
+              
+              return (
+                <div
+                  key={item.id}
+                  className={`p-4 rounded-xl border-2 transition-all duration-300 ${
+                    isUrgent ? 'bg-red-50 border-red-200 hover:bg-red-100' :
+                    isSoon ? 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100' :
+                    'bg-green-50 border-green-200 hover:bg-green-100'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">{item.client}</h4>
+                      <p className="text-sm text-slate-600 mb-2">{item.description}</p>
+                      <div className="flex items-center gap-4 text-xs">
+                        <span className="text-slate-500">
+                          <strong>Venda:</strong> {new Date(item.saleDate).toLocaleDateString('pt-BR')}
+                        </span>
+                        <span className={`font-bold ${
+                          isUrgent ? 'text-red-600' :
+                          isSoon ? 'text-yellow-600' :
+                          'text-green-600'
+                        }`}>
+                          <strong>Vencimento:</strong> {new Date(item.dueDate).toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-black text-green-600 mb-1">
+                        R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                        item.type === 'cheque' ? 'bg-blue-100 text-blue-800' :
+                        item.type === 'boleto' ? 'bg-purple-100 text-purple-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {item.type === 'cheque' ? 'Cheque' :
+                         item.type === 'boleto' ? 'Boleto' :
+                         item.type.replace('_', ' ')}
+                      </span>
+                      <div className={`text-xs font-bold mt-1 ${
+                        isUrgent ? 'text-red-600' :
+                        isSoon ? 'text-yellow-600' :
+                        'text-green-600'
+                      }`}>
+                        {daysUntilDue === 0 ? 'Hoje!' :
+                         daysUntilDue === 1 ? 'Amanhã' :
+                         `${daysUntilDue} dias`}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            
+            {/* Total Geral */}
+            <div className="p-6 bg-gradient-to-r from-green-100 to-emerald-100 rounded-2xl border-2 border-green-300 mt-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h4 className="text-xl font-black text-green-800">Total a Receber no Mês</h4>
+                  <p className="text-green-700 font-semibold">{monthlyReceivables.length} recebimento(s)</p>
+                </div>
+                <p className="text-3xl font-black text-green-700">
+                  R$ {monthlyReceivables.reduce((sum, item) => sum + item.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <ArrowUpCircle className="w-16 h-16 mx-auto mb-4 text-green-300" />
+            <p className="text-green-600 font-medium">Nenhuma venda a receber neste mês</p>
+            <p className="text-green-500 text-sm">Todos os recebimentos estão em dia!</p>
+          </div>
+        )}
+      </div>
+
+      {/* Dívidas a Pagar do Mês */}
+      <div className="card bg-gradient-to-br from-red-50 to-rose-50 border-red-200 modern-shadow-xl">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="p-3 rounded-xl bg-red-600 modern-shadow-lg">
+            <ArrowDownCircle className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-red-900">Dívidas a Pagar - {today.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</h3>
+            <p className="text-red-700 font-semibold">
+              {monthlyPayables.length} pagamento(s) • Total: R$ {monthlyPayables.reduce((sum, item) => sum + item.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+        </div>
+        
+        {monthlyPayables.length > 0 ? (
+          <div className="space-y-4 max-h-96 overflow-y-auto modern-scrollbar">
+            {monthlyPayables.map(item => {
+              const daysUntilDue = Math.ceil((new Date(item.dueDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+              const isUrgent = daysUntilDue <= 3;
+              const isSoon = daysUntilDue <= 7;
+              
+              return (
+                <div
+                  key={item.id}
+                  className={`p-4 rounded-xl border-2 transition-all duration-300 ${
+                    isUrgent ? 'bg-red-100 border-red-300 hover:bg-red-200' :
+                    isSoon ? 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100' :
+                    'bg-red-50 border-red-200 hover:bg-red-100'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">{item.company}</h4>
+                      <p className="text-sm text-slate-600 mb-2">{item.description}</p>
+                      <div className="flex items-center gap-4 text-xs">
+                        <span className="text-slate-500">
+                          <strong>Dívida:</strong> {new Date(item.debtDate).toLocaleDateString('pt-BR')}
+                        </span>
+                        <span className={`font-bold ${
+                          isUrgent ? 'text-red-600' :
+                          isSoon ? 'text-yellow-600' :
+                          'text-red-600'
+                        }`}>
+                          <strong>Vencimento:</strong> {new Date(item.dueDate).toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-black text-red-600 mb-1">
+                        R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800">
+                        {item.type.replace('_', ' ')}
+                      </span>
+                      <div className={`text-xs font-bold mt-1 ${
+                        isUrgent ? 'text-red-700' :
+                        isSoon ? 'text-yellow-600' :
+                        'text-red-600'
+                      }`}>
+                        {daysUntilDue === 0 ? 'Hoje!' :
+                         daysUntilDue === 1 ? 'Amanhã' :
+                         `${daysUntilDue} dias`}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            
+            {/* Total Geral */}
+            <div className="p-6 bg-gradient-to-r from-red-100 to-rose-100 rounded-2xl border-2 border-red-300 mt-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h4 className="text-xl font-black text-red-800">Total a Pagar no Mês</h4>
+                  <p className="text-red-700 font-semibold">{monthlyPayables.length} pagamento(s)</p>
+                </div>
+                <p className="text-3xl font-black text-red-700">
+                  R$ {monthlyPayables.reduce((sum, item) => sum + item.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <ArrowDownCircle className="w-16 h-16 mx-auto mb-4 text-red-300" />
+            <p className="text-red-600 font-medium">Nenhuma dívida a pagar neste mês</p>
+            <p className="text-red-500 text-sm">Todos os pagamentos estão em dia!</p>
+          </div>
+        )}
       </div>
 
       {/* Charts Section */}
