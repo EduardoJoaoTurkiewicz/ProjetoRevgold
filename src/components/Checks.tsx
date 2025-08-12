@@ -3,6 +3,7 @@ import { Plus, Edit, Eye, Upload, Calendar, Trash2, ChevronDown, ChevronRight } 
 import { useApp } from '../context/AppContext';
 import { Check } from '../types';
 import { CheckForm } from './forms/CheckForm';
+import { getCheckImageUrl } from '../lib/supabase';
 
 export function Checks() {
   const { state, dispatch } = useApp();
@@ -551,18 +552,40 @@ export function Checks() {
                     {viewingCheck.frontImage && (
                       <div>
                         <p className="text-sm text-gray-600 mb-2">Frente</p>
-                        <div className="bg-gray-100 p-4 rounded-lg text-center">
-                          <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                          <p className="text-sm text-gray-500">Imagem da frente anexada</p>
+                        <div className="relative group">
+                          <img
+                            src={getCheckImageUrl(viewingCheck.frontImage)}
+                            alt="Frente do cheque"
+                            className="w-full h-48 object-cover rounded-lg border border-gray-200 shadow-sm"
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg flex items-center justify-center">
+                            <button
+                              onClick={() => window.open(getCheckImageUrl(viewingCheck.frontImage), '_blank')}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                              Ver em tamanho real
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}
                     {viewingCheck.backImage && (
                       <div>
                         <p className="text-sm text-gray-600 mb-2">Verso</p>
-                        <div className="bg-gray-100 p-4 rounded-lg text-center">
-                          <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                          <p className="text-sm text-gray-500">Imagem do verso anexada</p>
+                        <div className="relative group">
+                          <img
+                            src={getCheckImageUrl(viewingCheck.backImage)}
+                            alt="Verso do cheque"
+                            className="w-full h-48 object-cover rounded-lg border border-gray-200 shadow-sm"
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg flex items-center justify-center">
+                            <button
+                              onClick={() => window.open(getCheckImageUrl(viewingCheck.backImage), '_blank')}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                              Ver em tamanho real
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}

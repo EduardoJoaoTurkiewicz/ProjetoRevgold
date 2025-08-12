@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, Upload } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Check } from '../../types';
 import { useApp } from '../../context/AppContext';
+import { ImageUpload } from '../ImageUpload';
 
 interface CheckFormProps {
   check?: Check | null;
@@ -184,54 +185,26 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
               </div>
 
               {/* Image Upload Areas */}
-              <div className="form-group">
-                <label className="form-label">Imagem da Frente</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                  <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-500">
-                    Clique para adicionar a imagem da frente
-                  </p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        // In a real app, you'd upload to a server
-                        setFormData(prev => ({ ...prev, frontImage: `front-${Date.now()}` }));
-                      }
-                    }}
-                    className="hidden"
-                  />
-                </div>
-                {formData.frontImage && (
-                  <p className="text-sm text-green-600 mt-2">✓ Imagem da frente anexada</p>
-                )}
+              <div className="form-group md:col-span-2">
+                <ImageUpload
+                  checkId={check?.id || `temp-${Date.now()}`}
+                  imageType="front"
+                  currentImage={formData.frontImage}
+                  onImageUploaded={(imageUrl) => setFormData(prev => ({ ...prev, frontImage: imageUrl }))}
+                  onImageDeleted={() => setFormData(prev => ({ ...prev, frontImage: '' }))}
+                  label="Imagem da Frente do Cheque"
+                />
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Imagem do Verso</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                  <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-500">
-                    Clique para adicionar a imagem do verso
-                  </p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        // In a real app, you'd upload to a server
-                        setFormData(prev => ({ ...prev, backImage: `back-${Date.now()}` }));
-                      }
-                    }}
-                    className="hidden"
-                  />
-                </div>
-                {formData.backImage && (
-                  <p className="text-sm text-green-600 mt-2">✓ Imagem do verso anexada</p>
-                )}
+              <div className="form-group md:col-span-2">
+                <ImageUpload
+                  checkId={check?.id || `temp-${Date.now()}`}
+                  imageType="back"
+                  currentImage={formData.backImage}
+                  onImageUploaded={(imageUrl) => setFormData(prev => ({ ...prev, backImage: imageUrl }))}
+                  onImageDeleted={() => setFormData(prev => ({ ...prev, backImage: '' }))}
+                  label="Imagem do Verso do Cheque"
+                />
               </div>
             </div>
 
