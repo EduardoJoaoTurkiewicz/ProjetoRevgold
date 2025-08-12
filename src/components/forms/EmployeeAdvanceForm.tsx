@@ -97,15 +97,17 @@ export function EmployeeAdvanceForm({ employeeId, employeeName, advance, onSubmi
               </div>
 
               <div className="form-group md:col-span-2">
-                <label className="form-label">Descrição *</label>
+                <label className="form-label">Descrição</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   className="input-field"
                   rows={3}
                   placeholder="Motivo do adiantamento..."
-                  required
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Campo opcional para descrever o motivo do adiantamento
+                </p>
               </div>
             </div>
 

@@ -28,7 +28,7 @@ export interface Sale {
   pendingAmount: number;
   status: 'pago' | 'pendente' | 'parcial';
   paymentDescription?: string;
-  paymentDescription?: string;
+  paymentObservations?: string;
   createdAt: string;
 }
 

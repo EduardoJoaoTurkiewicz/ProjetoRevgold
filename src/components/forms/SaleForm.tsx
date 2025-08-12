@@ -32,7 +32,8 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     observations: sale?.observations || '',
     totalValue: sale?.totalValue || 0,
     paymentMethods: sale?.paymentMethods || [{ type: 'dinheiro' as const, amount: 0 }],
-    paymentDescription: sale?.paymentDescription || ''
+    paymentDescription: sale?.paymentDescription || '',
+    paymentObservations: sale?.paymentObservations || ''
   });
 
   // Filtrar apenas vendedores ativos
@@ -95,6 +96,9 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
           // Calculate installment value when installments change
           if (field === 'installments' && value > 1) {
             updatedMethod.installmentValue = method.amount / value;
+          } else if (field === 'amount' && method.installments && method.installments > 1) {
+            // Recalculate installment value when amount changes
+            updatedMethod.installmentValue = value / method.installments;
           }
           
           // Reset installment fields if payment type doesn't support installments
@@ -142,8 +146,17 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     
     const amounts = calculateAmounts();
     
+    // Adicionar descrição do pagamento às observações se fornecida
+    let finalObservations = formData.observations;
+    if (formData.paymentObservations.trim()) {
+      finalObservations = finalObservations 
+        ? `${finalObservations}\n\nDescrição do Pagamento: ${formData.paymentObservations}`
+        : `Descrição do Pagamento: ${formData.paymentObservations}`;
+    }
+    
     onSubmit({
       ...formData,
+      observations: finalObservations,
       ...amounts
     } as Omit<Sale, 'id' | 'createdAt'>);
   };
@@ -379,6 +392,19 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                 />
               </div>
 
+              <div className="form-group md:col-span-2">
+                <label className="form-label">Descrição sobre o Pagamento (Opcional)</label>
+                <textarea
+                  value={formData.paymentObservations}
+                  onChange={(e) => setFormData(prev => ({ ...prev, paymentObservations: e.target.value }))}
+                  className="input-field"
+                  rows={2}
+                  placeholder="Informações específicas sobre como será feito o pagamento (opcional)"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Esta descrição será adicionada automaticamente às observações da venda.
+                </p>
+              </div>
               <div className="form-group">
                 <label className="form-label">Valor Total *</label>
                 <input
@@ -484,7 +510,11 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                   onChange={(e) => updatePaymentMethod(index, 'installmentValue', parseFloat(e.target.value) || 0)}
                                   className="input-field"
                                   placeholder="0,00"
+                                  readOnly
                                 />
+                                <p className="text-xs text-blue-600 mt-1 font-bold">
+                                  ✓ Calculado automaticamente: R$ {method.amount && method.installments ? (method.amount / method.installments).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'} por parcela
+                                </p>
                               </div>
 
                               <div>
@@ -510,6 +540,23 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                 />
                               </div>
                             </>
+                          )}
+
+                          {/* Campo para data de pagamento único para cheque e boleto */}
+                          {(method.type === 'cheque' || method.type === 'boleto') && (!method.installments || method.installments === 1) && (
+                            <div>
+                              <label className="form-label">Data de Vencimento/Pagamento *</label>
+                              <input
+                                type="date"
+                                value={method.firstInstallmentDate || formData.date}
+                                onChange={(e) => updatePaymentMethod(index, 'firstInstallmentDate', e.target.value)}
+                                className="input-field"
+                                required
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Data em que o {method.type === 'cheque' ? 'cheque' : 'boleto'} será pago/vencerá
+                              </p>
+                            </div>
                           )}
                         </>
                       )}

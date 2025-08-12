@@ -318,6 +318,23 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
                               </div>
                             </>
                           )}
+
+                          {/* Campo para data de pagamento único para cheque e boleto */}
+                          {(method.type === 'cheque' || method.type === 'boleto') && (!method.installments || method.installments === 1) && (
+                            <div>
+                              <label className="form-label">Data de Vencimento/Pagamento *</label>
+                              <input
+                                type="date"
+                                value={method.startDate || formData.date}
+                                onChange={(e) => updatePaymentMethod(index, 'startDate', e.target.value)}
+                                className="input-field"
+                                required
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Data em que o {method.type === 'cheque' ? 'cheque' : 'boleto'} será pago/vencerá
+                              </p>
+                            </div>
+                          )}
                         </>
                       )}
                     </div>
