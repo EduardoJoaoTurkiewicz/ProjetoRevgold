@@ -148,18 +148,6 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
                 </p>
               </div>
 
-              <div className="form-group">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-                    className="rounded"
-                  />
-                  <span className="form-label mb-0">Funcionário Ativo</span>
-                </label>
-              </div>
-
               <div className="form-group md:col-span-2">
                 <label className="form-label">Observações</label>
                 <textarea

@@ -31,18 +31,54 @@ const Dashboard: React.FC = () => {
   const today = new Date();
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
+  const todayStr = today.toISOString().split('T')[0];
+  
   const metrics = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    
     // Sales made today
-    const todaySales = state.sales.filter(sale => sale.date === today);
+    const todaySales = state.sales.filter(sale => sale.date === todayStr);
     const todayTotalSales = todaySales.reduce((sum, sale) => sum + sale.totalValue, 0);
     
-    // Amount received today (from sales made today)
-    const todayReceived = todaySales.reduce((sum, sale) => sum + sale.receivedAmount, 0);
+    // Amount actually received today (payments that were processed today)
+    let todayReceived = 0;
+    
+    // Check for payments received today from any sales
+    state.sales.forEach(sale => {
+      sale.paymentMethods.forEach(method => {
+        // For immediate payment methods (dinheiro, pix, cartao_debito)
+        if ((method.type === 'dinheiro' || method.type === 'pix' || method.type === 'cartao_debito') && sale.date === todayStr) {
+          todayReceived += method.amount;
+        }
+        
+        // For installment payments, check if any installment is due today
+        if (method.installments && method.installments > 1) {
+          for (let i = 0; i < method.installments; i++) {
+            const dueDate = new Date(method.firstInstallmentDate || method.startDate || sale.date);
+            dueDate.setDate(dueDate.getDate() + (i * (method.installmentInterval || 30)));
+            
+            if (dueDate.toISOString().split('T')[0] === todayStr) {
+              todayReceived += method.installmentValue || 0;
+            }
+          }
+        }
+      });
+    });
+    
+    // Check for checks compensated today
+    state.checks.forEach(check => {
+      if (check.status === 'compensado' && check.dueDate === todayStr) {
+        todayReceived += check.value;
+      }
+    });
+    
+    // Check for boletos paid today
+    state.boletos.forEach(boleto => {
+      if (boleto.status === 'compensado' && boleto.dueDate === todayStr) {
+        todayReceived += boleto.value;
+      }
+    });
     
     // Debts created today
-    const todayDebts = state.debts.filter(debt => debt.date === today);
+    const todayDebts = state.debts.filter(debt => debt.date === todayStr);
     const todayTotalDebts = todayDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
     
     // Amount paid today (debts paid today)
@@ -60,15 +96,15 @@ const Dashboard: React.FC = () => {
 
     // Overdue items
     const overdueChecks = state.checks.filter(check => 
-      check.dueDate < today && check.status === 'pendente'
+      check.dueDate < todayStr && check.status === 'pendente'
     );
     const overdueBoletos = state.boletos.filter(boleto => 
-      boleto.dueDate < today && boleto.status === 'pendente'
+      boleto.dueDate < todayStr && boleto.status === 'pendente'
     );
 
     // Due today
-    const dueTodayChecks = state.checks.filter(check => check.dueDate === today);
-    const dueTodayBoletos = state.boletos.filter(boleto => boleto.dueDate === today);
+    const dueTodayChecks = state.checks.filter(check => check.dueDate === todayStr);
+    const dueTodayBoletos = state.boletos.filter(boleto => boleto.dueDate === todayStr);
 
     return {
       // Today's metrics
@@ -95,7 +131,7 @@ const Dashboard: React.FC = () => {
       overdueCount: overdueChecks.length + overdueBoletos.length,
       dueTodayCount: dueTodayChecks.length + dueTodayBoletos.length
     };
-  }, [state]);
+  }, [state, todayStr]);
 
   // Vendas a receber do mês atual
   const monthlyReceivables = useMemo(() => {
@@ -667,14 +703,14 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Dívidas a Pagar do Mês */}
-      <div className="card bg-gradient-to-br from-red-50 to-rose-50 border-red-200 modern-shadow-xl">
+      <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl">
         <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 rounded-xl bg-red-600 modern-shadow-lg">
+          <div className="p-3 rounded-xl bg-green-600 modern-shadow-lg">
             <ArrowDownCircle className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-red-900">Dívidas a Pagar - {today.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</h3>
-            <p className="text-red-700 font-semibold">
+            <h3 className="text-xl font-bold text-green-900">Dívidas a Pagar - {today.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</h3>
+            <p className="text-green-700 font-semibold">
               {monthlyPayables.length} pagamento(s) • Total: R$ {monthlyPayables.reduce((sum, item) => sum + item.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </p>
           </div>
@@ -693,7 +729,7 @@ const Dashboard: React.FC = () => {
                   className={`p-4 rounded-xl border-2 transition-all duration-300 ${
                     isUrgent ? 'bg-red-100 border-red-300 hover:bg-red-200' :
                     isSoon ? 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100' :
-                    'bg-red-50 border-red-200 hover:bg-red-100'
+                    'bg-green-50 border-green-200 hover:bg-green-100'
                   }`}
                 >
                   <div className="flex justify-between items-start mb-3">
@@ -717,13 +753,13 @@ const Dashboard: React.FC = () => {
                       <p className="text-xl font-black text-red-600 mb-1">
                         R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
-                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800">
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">
                         {item.type.replace('_', ' ')}
                       </span>
                       <div className={`text-xs font-bold mt-1 ${
                         isUrgent ? 'text-red-700' :
                         isSoon ? 'text-yellow-600' :
-                        'text-red-600'
+                        'text-green-600'
                       }`}>
                         {daysUntilDue === 0 ? 'Hoje!' :
                          daysUntilDue === 1 ? 'Amanhã' :
@@ -736,13 +772,13 @@ const Dashboard: React.FC = () => {
             })}
             
             {/* Total Geral */}
-            <div className="p-6 bg-gradient-to-r from-red-100 to-rose-100 rounded-2xl border-2 border-red-300 mt-6">
+            <div className="p-6 bg-gradient-to-r from-green-100 to-emerald-100 rounded-2xl border-2 border-green-300 mt-6">
               <div className="flex justify-between items-center">
                 <div>
-                  <h4 className="text-xl font-black text-red-800">Total a Pagar no Mês</h4>
-                  <p className="text-red-700 font-semibold">{monthlyPayables.length} pagamento(s)</p>
+                  <h4 className="text-xl font-black text-green-800">Total a Pagar no Mês</h4>
+                  <p className="text-green-700 font-semibold">{monthlyPayables.length} pagamento(s)</p>
                 </div>
-                <p className="text-3xl font-black text-red-700">
+                <p className="text-3xl font-black text-green-700">
                   R$ {monthlyPayables.reduce((sum, item) => sum + item.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
               </div>
@@ -750,9 +786,9 @@ const Dashboard: React.FC = () => {
           </div>
         ) : (
           <div className="text-center py-12">
-            <ArrowDownCircle className="w-16 h-16 mx-auto mb-4 text-red-300" />
-            <p className="text-red-600 font-medium">Nenhuma dívida a pagar neste mês</p>
-            <p className="text-red-500 text-sm">Todos os pagamentos estão em dia!</p>
+            <ArrowDownCircle className="w-16 h-16 mx-auto mb-4 text-green-300" />
+            <p className="text-green-600 font-medium">Nenhuma dívida a pagar neste mês</p>
+            <p className="text-green-500 text-sm">Todos os pagamentos estão em dia!</p>
           </div>
         )}
       </div>
