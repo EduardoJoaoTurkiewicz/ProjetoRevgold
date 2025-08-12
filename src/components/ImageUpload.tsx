@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
-import { uploadCheckImage, deleteCheckImage, getCheckImageUrl } from '../lib/supabase';
+import { uploadCheckImage, deleteCheckImage, getCheckImageUrl, isSupabaseConfigured } from '../lib/supabase';
 
 interface ImageUploadProps {
   checkId: string;
@@ -26,6 +26,11 @@ export function ImageUpload({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isSupabaseConfigured()) {
+      alert('Upload de imagens não está disponível. Configure o Supabase para usar esta funcionalidade.');
+      return;
+    }
+
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -74,6 +79,11 @@ export function ImageUpload({
   const handleDeleteImage = async () => {
     if (!currentImage) return;
 
+    if (!isSupabaseConfigured()) {
+      alert('Funcionalidade de imagens não está disponível. Configure o Supabase para usar esta funcionalidade.');
+      return;
+    }
+
     if (!confirm('Tem certeza que deseja remover esta imagem?')) return;
 
     try {
@@ -95,6 +105,14 @@ export function ImageUpload({
   return (
     <div className="form-group">
       <label className="form-label">{label}</label>
+      
+      {!isSupabaseConfigured() && (
+        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+          <p className="text-sm text-yellow-800 font-medium">
+            ⚠️ Upload de imagens não disponível. Configure o Supabase para usar esta funcionalidade.
+          </p>
+        </div>
+      )}
       
       <div className="relative">
         {previewUrl ? (
@@ -136,8 +154,9 @@ export function ImageUpload({
             onClick={handleClick}
             className={`
               border-2 border-dashed border-green-300 rounded-xl p-8 text-center cursor-pointer
-              hover:border-green-400 hover:bg-green-50 transition-all duration-300
+              ${isSupabaseConfigured() ? 'hover:border-green-400 hover:bg-green-50' : 'opacity-50 cursor-not-allowed'}
               ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}
+              transition-all duration-300
             `}
           >
             {isUploading ? (
@@ -150,11 +169,16 @@ export function ImageUpload({
                 <ImageIcon className="w-12 h-12 text-green-500" />
                 <div>
                   <p className="text-green-700 font-semibold mb-2">
-                    Clique para adicionar {label.toLowerCase()}
+                    {isSupabaseConfigured() 
+                      ? `Clique para adicionar ${label.toLowerCase()}`
+                      : 'Upload não disponível'
+                    }
                   </p>
-                  <p className="text-sm text-green-600">
-                    Formatos aceitos: JPG, PNG, GIF (máx. 5MB)
-                  </p>
+                  {isSupabaseConfigured() && (
+                    <p className="text-sm text-green-600">
+                      Formatos aceitos: JPG, PNG, GIF (máx. 5MB)
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -168,6 +192,7 @@ export function ImageUpload({
           onChange={handleFileSelect}
           className="hidden"
           disabled={isUploading}
+          disabled={!isSupabaseConfigured() || isUploading}
         />
       </div>
       
