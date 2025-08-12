@@ -557,6 +557,12 @@ export function Checks() {
                             src={getCheckImageUrl(viewingCheck.frontImage)}
                             alt="Frente do cheque"
                             className="w-full h-48 object-cover rounded-lg border border-gray-200 shadow-sm"
+                            onError={(e) => {
+                              console.error('Erro ao carregar imagem da frente:', viewingCheck.frontImage);
+                              const target = e.target as HTMLImageElement;
+                              target.src = '/logo-fallback.svg';
+                              target.className = 'w-full h-48 object-contain rounded-lg border border-gray-200 shadow-sm bg-gray-100';
+                            }}
                           />
                           <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg flex items-center justify-center">
                             <button
@@ -577,6 +583,12 @@ export function Checks() {
                             src={getCheckImageUrl(viewingCheck.backImage)}
                             alt="Verso do cheque"
                             className="w-full h-48 object-cover rounded-lg border border-gray-200 shadow-sm"
+                            onError={(e) => {
+                              console.error('Erro ao carregar imagem do verso:', viewingCheck.backImage);
+                              const target = e.target as HTMLImageElement;
+                              target.src = '/logo-fallback.svg';
+                              target.className = 'w-full h-48 object-contain rounded-lg border border-gray-200 shadow-sm bg-gray-100';
+                            }}
                           />
                           <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg flex items-center justify-center">
                             <button

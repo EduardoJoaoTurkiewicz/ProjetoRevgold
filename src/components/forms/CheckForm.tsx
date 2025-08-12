@@ -185,7 +185,7 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
               </div>
 
               {/* Image Upload Areas */}
-              <div className="form-group md:col-span-2">
+              <div className="form-group md:col-span-2 relative">
                 <ImageUpload
                   checkId={check?.id || `temp-${Date.now()}`}
                   imageType="front"
@@ -196,7 +196,7 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
                 />
               </div>
 
-              <div className="form-group md:col-span-2">
+              <div className="form-group md:col-span-2 relative">
                 <ImageUpload
                   checkId={check?.id || `temp-${Date.now()}`}
                   imageType="back"

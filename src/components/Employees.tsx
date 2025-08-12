@@ -820,14 +820,27 @@ export function Employees() {
                   
                   <div>
                     <label className="form-label">Recibo de Comprovação</label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                      <Upload className="w-6 h-6 mx-auto text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-500">Anexar recibo (opcional)</p>
+                    <div className="border-2 border-dashed border-green-300 rounded-xl p-6 text-center hover:border-green-400 hover:bg-green-50 transition-all duration-300 cursor-pointer">
+                      <Upload className="w-8 h-8 mx-auto text-green-500 mb-3" />
+                      <p className="text-sm text-green-700 font-semibold mb-2">Anexar recibo (opcional)</p>
+                      <p className="text-xs text-green-600">PDF, JPG, PNG (máx. 10MB)</p>
                       <input
                         type="file"
                         name="receipt"
-                        accept="image/*,.pdf"
-                        className="hidden"
+                        accept="image/*,.pdf,.doc,.docx"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            console.log('Arquivo de recibo selecionado:', file.name, file.size);
+                            // Aqui você pode adicionar validação adicional se necessário
+                            if (file.size > 10 * 1024 * 1024) {
+                              alert('Arquivo muito grande. Máximo 10MB.');
+                              e.target.value = '';
+                              return;
+                            }
+                          }
+                        }}
                       />
                     </div>
                   </div>

@@ -133,11 +133,26 @@ export function UserSelection() {
           <div className="inline-flex items-center justify-center mb-12 relative">
             <div className="w-48 h-48 bg-gradient-to-br from-green-600 to-emerald-700 rounded-full flex items-center justify-center shadow-2xl revgold-hover-lift revgold-animate-floating relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full"></div>
-              <img 
-                src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
-                alt="RevGold Logo" 
-                className="w-32 h-32 object-contain relative z-10"
-              />
+              <div className="w-32 h-32 flex items-center justify-center relative z-10">
+                <img 
+                  src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
+                  alt="RevGold Logo" 
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    console.warn('Logo principal não encontrada na tela de seleção, usando fallback');
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent && !parent.querySelector('.logo-fallback-main')) {
+                      const fallback = document.createElement('div');
+                      fallback.className = 'logo-fallback-main w-full h-full bg-white/90 rounded-full flex items-center justify-center text-green-600 font-black text-6xl shadow-inner';
+                      fallback.textContent = 'RG';
+                      parent.appendChild(fallback);
+                    }
+                  }}
+                  onLoad={() => console.log('Logo principal carregada com sucesso')}
+                />
+              </div>
             </div>
           </div>
           

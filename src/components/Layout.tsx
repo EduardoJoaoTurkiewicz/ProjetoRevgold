@@ -62,11 +62,26 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
         <div className="flex items-center justify-between p-8 border-b border-green-700/30">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-xl">
-              <img 
-                src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
-                alt="RevGold" 
-                className="w-10 h-10 object-contain"
-              />
+              <div className="w-10 h-10 flex items-center justify-center">
+                <img 
+                  src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
+                  alt="RevGold" 
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    console.warn('Logo principal não encontrada, usando fallback');
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent && !parent.querySelector('.logo-fallback')) {
+                      const fallback = document.createElement('div');
+                      fallback.className = 'logo-fallback w-full h-full bg-white rounded-lg flex items-center justify-center text-green-600 font-black text-lg';
+                      fallback.textContent = 'RG';
+                      parent.appendChild(fallback);
+                    }
+                  }}
+                  onLoad={() => console.log('Logo carregada com sucesso')}
+                />
+              </div>
             </div>
             <div>
               <h1 className="text-2xl font-black text-white">RevGold</h1>
@@ -187,8 +202,11 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
                 <span className="text-green-700 font-semibold text-sm">Sistema Ativo</span>
               </div>
               
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg">
-                {state.user?.username.charAt(0).toUpperCase()}
+              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
+                <span className="relative z-10">
+                  {state.user?.username.charAt(0).toUpperCase()}
+                </span>
               </div>
             </div>
           </div>
