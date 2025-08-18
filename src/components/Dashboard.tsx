@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, AreaChart, Area, RadialBarChart, RadialBar } from 'recharts';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
 
@@ -400,6 +401,51 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-8">
+      {/* Database Status Banner */}
+      {!isSupabaseConfigured() && (
+        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center">
+              <AlertTriangle className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-yellow-800">Modo Local Ativo</h3>
+              <p className="text-yellow-700">
+                Os dados estão sendo salvos apenas neste navegador. Para sincronizar entre dispositivos, 
+                clique no botão "Connect to Supabase" no canto superior direito.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {state.isLoading && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+              <Clock className="w-6 h-6 text-white animate-spin" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-blue-800">Carregando Dados...</h3>
+              <p className="text-blue-700">Sincronizando informações do banco de dados.</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {state.error && (
+        <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center">
+              <AlertTriangle className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-red-800">Erro de Conexão</h3>
+              <p className="text-red-700">{state.error}</p>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Welcome Section */}
       <div className="flex items-center justify-between">
         <div>

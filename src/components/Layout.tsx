@@ -15,6 +15,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 interface LayoutProps {
   currentPage: string;
@@ -161,6 +162,9 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
             <div className="flex items-center justify-center gap-2 mb-2">
               <Building2 className="w-4 h-4 text-green-400" />
               <span className="text-green-300 text-sm font-bold">RevGold System</span>
+              {isSupabaseConfigured() && (
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" title="Conectado ao banco de dados"></div>
+              )}
             </div>
             <p className="text-green-400 text-xs italic">
               "Colorindo seu ambiente e levando vida para os seus dias"
@@ -199,7 +203,9 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
             <div className="flex items-center gap-4">
               <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-green-100 rounded-full">
                 <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-green-700 font-semibold text-sm">Sistema Ativo</span>
+                <span className="text-green-700 font-semibold text-sm">
+                  {isSupabaseConfigured() ? 'Banco Online' : 'Modo Local'}
+                </span>
               </div>
               
               <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg relative overflow-hidden">
