@@ -1,18 +1,22 @@
 import React, { useState } from 'react';
-import { Database, AlertCircle, CheckCircle, ExternalLink, Copy, Eye, EyeOff } from 'lucide-react';
+                O Supabase é um banco de dados gratuito que permitirá que TODOS os sócios acessem os mesmos dados de qualquer dispositivo.
 
 interface SupabaseSetupProps {
   onClose: () => void;
   onConfigured: () => void;
-}
+                  <span className="text-blue-800">Gratuito para até 50.000 registros</span>
 
 export function SupabaseSetup({ onClose, onConfigured }: SupabaseSetupProps) {
   const [step, setStep] = useState(1);
-  const [credentials, setCredentials] = useState({
+                  <span className="text-blue-800">Dados sincronizados em tempo real</span>
     url: '',
     anonKey: ''
   });
-  const [showKey, setShowKey] = useState(false);
+                  <span className="text-blue-800">Todos os sócios veem os mesmos dados</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <span className="text-blue-800">Backup automático e seguro</span>
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,7 +33,7 @@ export function SupabaseSetup({ onClose, onConfigured }: SupabaseSetupProps) {
       // Test connection
       const { createClient } = await import('@supabase/supabase-js');
       const testClient = createClient(credentials.url, credentials.anonKey);
-      
+              <h3 className="text-xl font-bold text-green-900 mb-4">🚀 Configuração para Múltiplos Usuários:</h3>
       // Test the connection
       const { error: testError } = await testClient.from('users').select('count').limit(1);
       
@@ -52,6 +56,11 @@ export function SupabaseSetup({ onClose, onConfigured }: SupabaseSetupProps) {
     }
   };
 
+              <div className="mt-6 p-4 bg-green-100 rounded-xl border border-green-300">
+                <p className="text-green-800 font-bold text-sm">
+                  ⚠️ IMPORTANTE: Após configurar, TODOS os sócios poderão acessar os mesmos dados de qualquer dispositivo!
+                </p>
+              </div>
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
   };
@@ -61,7 +70,7 @@ export function SupabaseSetup({ onClose, onConfigured }: SupabaseSetupProps) {
       <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
         <div className="p-8">
           <div className="flex items-center gap-4 mb-8">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 modern-shadow-xl">
+                Agora você precisa copiar as credenciais do seu projeto Supabase para conectar TODOS os dados.
               <Database className="w-8 h-8 text-white" />
             </div>
             <div>
@@ -77,6 +86,11 @@ export function SupabaseSetup({ onClose, onConfigured }: SupabaseSetupProps) {
                 <p className="text-blue-700 mb-4">
                   O Supabase é um banco de dados gratuito que permitirá sincronizar seus dados entre todos os dispositivos.
                 </p>
+              <div className="mt-6 p-4 bg-purple-100 rounded-xl border border-purple-300">
+                <p className="text-purple-800 font-bold text-sm">
+                  🔐 SEGURANÇA: Compartilhe essas credenciais apenas com os sócios autorizados!
+                </p>
+              </div>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-green-600" />
@@ -204,6 +218,16 @@ export function SupabaseSetup({ onClose, onConfigured }: SupabaseSetupProps) {
                       value={credentials.anonKey}
                       onChange={(e) => setCredentials(prev => ({ ...prev, anonKey: e.target.value }))}
                       className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200 text-slate-700 pr-20"
+            <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
+              <h3 className="text-lg font-bold text-green-900 mb-3">✅ Após Conectar:</h3>
+              <ul className="space-y-2 text-green-800 text-sm">
+                <li>• Todos os dados serão salvos automaticamente no Supabase</li>
+                <li>• Qualquer sócio pode acessar de qualquer dispositivo</li>
+                <li>• Dados são sincronizados em tempo real</li>
+                <li>• Backup automático na nuvem</li>
+                <li>• Histórico completo preservado</li>
+              </ul>
+            </div>
                       placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                     />
                     <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
@@ -250,7 +274,7 @@ export function SupabaseSetup({ onClose, onConfigured }: SupabaseSetupProps) {
                   className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isConnecting ? 'Conectando...' : 'Conectar ao Banco'}
-                </button>
+                {isConnecting ? 'Conectando e Sincronizando...' : 'Conectar e Sincronizar Tudo'}
               </div>
             </div>
           )}

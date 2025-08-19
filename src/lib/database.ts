@@ -329,6 +329,7 @@ export const database = {
   async updateSale(sale: Sale): Promise<Sale | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('sales')
       .update(convertToDatabase.sale(sale))
@@ -341,12 +342,18 @@ export const database = {
       return null;
     }
     
+    console.log('✅ Venda atualizada no Supabase:', sale.id);
     return data ? convertFromDatabase.sale(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao atualizar venda:', error);
+      return null;
+    }
   },
 
   async deleteSale(id: string): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
     
+    try {
     const { error } = await supabase!
       .from('sales')
       .delete()
@@ -357,13 +364,19 @@ export const database = {
       return false;
     }
     
+    console.log('✅ Venda deletada do Supabase:', id);
     return true;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao deletar venda:', error);
+      return false;
+    }
   },
 
   // Debts
   async getDebts(): Promise<Debt[]> {
     if (!isSupabaseConfigured()) return [];
     
+    try {
     const { data, error } = await supabase!
       .from('debts')
       .select('*')
@@ -375,11 +388,16 @@ export const database = {
     }
     
     return data?.map(convertFromDatabase.debt) || [];
+    } catch (error) {
+      console.error('❌ Erro de conexão ao buscar dívidas:', error);
+      return [];
+    }
   },
 
   async createDebt(debt: Omit<Debt, 'id' | 'createdAt'>): Promise<Debt | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('debts')
       .insert(convertToDatabase.debt(debt))
@@ -391,12 +409,18 @@ export const database = {
       return null;
     }
     
+    console.log('✅ Dívida criada no Supabase:', data.id);
     return data ? convertFromDatabase.debt(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao criar dívida:', error);
+      return null;
+    }
   },
 
   async updateDebt(debt: Debt): Promise<Debt | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('debts')
       .update(convertToDatabase.debt(debt))
@@ -409,12 +433,18 @@ export const database = {
       return null;
     }
     
+    console.log('✅ Dívida atualizada no Supabase:', debt.id);
     return data ? convertFromDatabase.debt(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao atualizar dívida:', error);
+      return null;
+    }
   },
 
   async deleteDebt(id: string): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
     
+    try {
     const { error } = await supabase!
       .from('debts')
       .delete()
@@ -425,13 +455,19 @@ export const database = {
       return false;
     }
     
+    console.log('✅ Dívida deletada do Supabase:', id);
     return true;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao deletar dívida:', error);
+      return false;
+    }
   },
 
   // Checks
   async getChecks(): Promise<Check[]> {
     if (!isSupabaseConfigured()) return [];
     
+    try {
     const { data, error } = await supabase!
       .from('checks')
       .select('*')
@@ -443,11 +479,16 @@ export const database = {
     }
     
     return data?.map(convertFromDatabase.check) || [];
+    } catch (error) {
+      console.error('❌ Erro de conexão ao buscar cheques:', error);
+      return [];
+    }
   },
 
   async createCheck(check: Omit<Check, 'id' | 'createdAt'>): Promise<Check | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('checks')
       .insert(convertToDatabase.check(check))
@@ -459,12 +500,18 @@ export const database = {
       return null;
     }
     
+    console.log('✅ Cheque criado no Supabase:', data.id);
     return data ? convertFromDatabase.check(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao criar cheque:', error);
+      return null;
+    }
   },
 
   async updateCheck(check: Check): Promise<Check | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('checks')
       .update(convertToDatabase.check(check))
@@ -477,12 +524,18 @@ export const database = {
       return null;
     }
     
+    console.log('✅ Cheque atualizado no Supabase:', check.id);
     return data ? convertFromDatabase.check(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao atualizar cheque:', error);
+      return null;
+    }
   },
 
   async deleteCheck(id: string): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
     
+    try {
     const { error } = await supabase!
       .from('checks')
       .delete()
@@ -493,13 +546,19 @@ export const database = {
       return false;
     }
     
+    console.log('✅ Cheque deletado do Supabase:', id);
     return true;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao deletar cheque:', error);
+      return false;
+    }
   },
 
   // Boletos
   async getBoletos(): Promise<Boleto[]> {
     if (!isSupabaseConfigured()) return [];
     
+    try {
     const { data, error } = await supabase!
       .from('boletos')
       .select('*')
@@ -511,11 +570,16 @@ export const database = {
     }
     
     return data?.map(convertFromDatabase.boleto) || [];
+    } catch (error) {
+      console.error('❌ Erro de conexão ao buscar boletos:', error);
+      return [];
+    }
   },
 
   async createBoleto(boleto: Omit<Boleto, 'id' | 'createdAt'>): Promise<Boleto | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('boletos')
       .insert(convertToDatabase.boleto(boleto))
@@ -527,12 +591,18 @@ export const database = {
       return null;
     }
     
+    console.log('✅ Boleto criado no Supabase:', data.id);
     return data ? convertFromDatabase.boleto(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao criar boleto:', error);
+      return null;
+    }
   },
 
   async updateBoleto(boleto: Boleto): Promise<Boleto | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('boletos')
       .update(convertToDatabase.boleto(boleto))
@@ -545,12 +615,18 @@ export const database = {
       return null;
     }
     
+    console.log('✅ Boleto atualizado no Supabase:', boleto.id);
     return data ? convertFromDatabase.boleto(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao atualizar boleto:', error);
+      return null;
+    }
   },
 
   async deleteBoleto(id: string): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
     
+    try {
     const { error } = await supabase!
       .from('boletos')
       .delete()
@@ -561,13 +637,19 @@ export const database = {
       return false;
     }
     
+    console.log('✅ Boleto deletado do Supabase:', id);
     return true;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao deletar boleto:', error);
+      return false;
+    }
   },
 
   // Employees
   async getEmployees(): Promise<Employee[]> {
     if (!isSupabaseConfigured()) return [];
     
+    try {
     const { data, error } = await supabase!
       .from('employees')
       .select('*')
@@ -579,11 +661,16 @@ export const database = {
     }
     
     return data?.map(convertFromDatabase.employee) || [];
+    } catch (error) {
+      console.error('❌ Erro de conexão ao buscar funcionários:', error);
+      return [];
+    }
   },
 
   async createEmployee(employee: Omit<Employee, 'id' | 'createdAt'>): Promise<Employee | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('employees')
       .insert(convertToDatabase.employee(employee))
@@ -595,12 +682,18 @@ export const database = {
       return null;
     }
     
+    console.log('✅ Funcionário criado no Supabase:', data.id);
     return data ? convertFromDatabase.employee(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao criar funcionário:', error);
+      return null;
+    }
   },
 
   async updateEmployee(employee: Employee): Promise<Employee | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('employees')
       .update(convertToDatabase.employee(employee))
@@ -613,12 +706,18 @@ export const database = {
       return null;
     }
     
+    console.log('✅ Funcionário atualizado no Supabase:', employee.id);
     return data ? convertFromDatabase.employee(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao atualizar funcionário:', error);
+      return null;
+    }
   },
 
   async deleteEmployee(id: string): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
     
+    try {
     const { error } = await supabase!
       .from('employees')
       .delete()
@@ -629,13 +728,19 @@ export const database = {
       return false;
     }
     
+    console.log('✅ Funcionário deletado do Supabase:', id);
     return true;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao deletar funcionário:', error);
+      return false;
+    }
   },
 
   // Employee Payments
   async getEmployeePayments(): Promise<EmployeePayment[]> {
     if (!isSupabaseConfigured()) return [];
     
+    try {
     const { data, error } = await supabase!
       .from('employee_payments')
       .select('*')
@@ -647,11 +752,16 @@ export const database = {
     }
     
     return data?.map(convertFromDatabase.employeePayment) || [];
+    } catch (error) {
+      console.error('❌ Erro de conexão ao buscar pagamentos:', error);
+      return [];
+    }
   },
 
   async createEmployeePayment(payment: Omit<EmployeePayment, 'id' | 'createdAt'>): Promise<EmployeePayment | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('employee_payments')
       .insert(convertToDatabase.employeePayment(payment))
@@ -663,13 +773,19 @@ export const database = {
       return null;
     }
     
+    console.log('✅ Pagamento criado no Supabase:', data.id);
     return data ? convertFromDatabase.employeePayment(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao criar pagamento:', error);
+      return null;
+    }
   },
 
   // Employee Advances
   async getEmployeeAdvances(): Promise<EmployeeAdvance[]> {
     if (!isSupabaseConfigured()) return [];
     
+    try {
     const { data, error } = await supabase!
       .from('employee_advances')
       .select('*')
@@ -681,11 +797,16 @@ export const database = {
     }
     
     return data?.map(convertFromDatabase.employeeAdvance) || [];
+    } catch (error) {
+      console.error('❌ Erro de conexão ao buscar adiantamentos:', error);
+      return [];
+    }
   },
 
   async createEmployeeAdvance(advance: Omit<EmployeeAdvance, 'id' | 'createdAt'>): Promise<EmployeeAdvance | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('employee_advances')
       .insert(convertToDatabase.employeeAdvance(advance))
@@ -697,12 +818,18 @@ export const database = {
       return null;
     }
     
+    console.log('✅ Adiantamento criado no Supabase:', data.id);
     return data ? convertFromDatabase.employeeAdvance(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao criar adiantamento:', error);
+      return null;
+    }
   },
 
   async updateEmployeeAdvance(advance: EmployeeAdvance): Promise<EmployeeAdvance | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('employee_advances')
       .update(convertToDatabase.employeeAdvance(advance))
@@ -715,13 +842,19 @@ export const database = {
       return null;
     }
     
+    console.log('✅ Adiantamento atualizado no Supabase:', advance.id);
     return data ? convertFromDatabase.employeeAdvance(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao atualizar adiantamento:', error);
+      return null;
+    }
   },
 
   // Employee Overtimes
   async getEmployeeOvertimes(): Promise<EmployeeOvertime[]> {
     if (!isSupabaseConfigured()) return [];
     
+    try {
     const { data, error } = await supabase!
       .from('employee_overtimes')
       .select('*')
@@ -733,11 +866,16 @@ export const database = {
     }
     
     return data?.map(convertFromDatabase.employeeOvertime) || [];
+    } catch (error) {
+      console.error('❌ Erro de conexão ao buscar horas extras:', error);
+      return [];
+    }
   },
 
   async createEmployeeOvertime(overtime: Omit<EmployeeOvertime, 'id' | 'createdAt'>): Promise<EmployeeOvertime | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('employee_overtimes')
       .insert(convertToDatabase.employeeOvertime(overtime))
@@ -749,12 +887,18 @@ export const database = {
       return null;
     }
     
+    console.log('✅ Horas extras criadas no Supabase:', data.id);
     return data ? convertFromDatabase.employeeOvertime(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao criar horas extras:', error);
+      return null;
+    }
   },
 
   async updateEmployeeOvertime(overtime: EmployeeOvertime): Promise<EmployeeOvertime | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('employee_overtimes')
       .update(convertToDatabase.employeeOvertime(overtime))
@@ -767,13 +911,19 @@ export const database = {
       return null;
     }
     
+    console.log('✅ Horas extras atualizadas no Supabase:', overtime.id);
     return data ? convertFromDatabase.employeeOvertime(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao atualizar horas extras:', error);
+      return null;
+    }
   },
 
   // Employee Commissions
   async getEmployeeCommissions(): Promise<EmployeeCommission[]> {
     if (!isSupabaseConfigured()) return [];
     
+    try {
     const { data, error } = await supabase!
       .from('employee_commissions')
       .select('*')
@@ -785,11 +935,16 @@ export const database = {
     }
     
     return data?.map(convertFromDatabase.employeeCommission) || [];
+    } catch (error) {
+      console.error('❌ Erro de conexão ao buscar comissões:', error);
+      return [];
+    }
   },
 
   async createEmployeeCommission(commission: Omit<EmployeeCommission, 'id' | 'createdAt'>): Promise<EmployeeCommission | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('employee_commissions')
       .insert(convertToDatabase.employeeCommission(commission))
@@ -801,12 +956,18 @@ export const database = {
       return null;
     }
     
+    console.log('✅ Comissão criada no Supabase:', data.id);
     return data ? convertFromDatabase.employeeCommission(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao criar comissão:', error);
+      return null;
+    }
   },
 
   async updateEmployeeCommission(commission: EmployeeCommission): Promise<EmployeeCommission | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('employee_commissions')
       .update(convertToDatabase.employeeCommission(commission))
@@ -819,13 +980,19 @@ export const database = {
       return null;
     }
     
+    console.log('✅ Comissão atualizada no Supabase:', commission.id);
     return data ? convertFromDatabase.employeeCommission(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao atualizar comissão:', error);
+      return null;
+    }
   },
 
   // Installments
   async getInstallments(): Promise<Installment[]> {
     if (!isSupabaseConfigured()) return [];
     
+    try {
     const { data, error } = await supabase!
       .from('installments')
       .select('*')
@@ -837,11 +1004,16 @@ export const database = {
     }
     
     return data?.map(convertFromDatabase.installment) || [];
+    } catch (error) {
+      console.error('❌ Erro de conexão ao buscar parcelas:', error);
+      return [];
+    }
   },
 
   async createInstallment(installment: Omit<Installment, 'id'>): Promise<Installment | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('installments')
       .insert(convertToDatabase.installment(installment))
@@ -853,12 +1025,18 @@ export const database = {
       return null;
     }
     
+    console.log('✅ Parcela criada no Supabase:', data.id);
     return data ? convertFromDatabase.installment(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao criar parcela:', error);
+      return null;
+    }
   },
 
   async updateInstallment(installment: Installment): Promise<Installment | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('installments')
       .update(convertToDatabase.installment(installment))
@@ -871,6 +1049,96 @@ export const database = {
       return null;
     }
     
+    console.log('✅ Parcela atualizada no Supabase:', installment.id);
     return data ? convertFromDatabase.installment(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao atualizar parcela:', error);
+      return null;
+    }
+  },
+
+  // Função para sincronizar todos os dados
+  async syncAllData(): Promise<{
+    sales: Sale[];
+    debts: Debt[];
+    checks: Check[];
+    boletos: Boleto[];
+    employees: Employee[];
+    employeePayments: EmployeePayment[];
+    employeeAdvances: EmployeeAdvance[];
+    employeeOvertimes: EmployeeOvertime[];
+    employeeCommissions: EmployeeCommission[];
+    installments: Installment[];
+  }> {
+    if (!isSupabaseConfigured()) {
+      return {
+        sales: [],
+        debts: [],
+        checks: [],
+        boletos: [],
+        employees: [],
+        employeePayments: [],
+        employeeAdvances: [],
+        employeeOvertimes: [],
+        employeeCommissions: [],
+        installments: []
+      };
+    }
+
+    try {
+      console.log('🔄 Iniciando sincronização completa com Supabase...');
+      
+      const [
+        sales,
+        debts,
+        checks,
+        boletos,
+        employees,
+        employeePayments,
+        employeeAdvances,
+        employeeOvertimes,
+        employeeCommissions,
+        installments
+      ] = await Promise.all([
+        database.getSales(),
+        database.getDebts(),
+        database.getChecks(),
+        database.getBoletos(),
+        database.getEmployees(),
+        database.getEmployeePayments(),
+        database.getEmployeeAdvances(),
+        database.getEmployeeOvertimes(),
+        database.getEmployeeCommissions(),
+        database.getInstallments()
+      ]);
+
+      console.log('✅ Sincronização completa finalizada:', {
+        sales: sales.length,
+        debts: debts.length,
+        checks: checks.length,
+        boletos: boletos.length,
+        employees: employees.length,
+        employeePayments: employeePayments.length,
+        employeeAdvances: employeeAdvances.length,
+        employeeOvertimes: employeeOvertimes.length,
+        employeeCommissions: employeeCommissions.length,
+        installments: installments.length
+      });
+      return {
+        sales,
+        debts,
+        checks,
+        boletos,
+        employees,
+        employeePayments,
+        employeeAdvances,
+        employeeOvertimes,
+        employeeCommissions,
+        installments
+      };
+    } catch (error) {
+      console.error('❌ Erro na sincronização completa:', error);
+      throw error;
+    }
   }
 };

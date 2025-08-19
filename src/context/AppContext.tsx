@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { User, Sale, Debt, Check, Installment, Product, Employee, EmployeePayment, EmployeeAdvance, EmployeeOvertime, EmployeeCommission, Boleto } from '../types';
 import { database } from '../lib/database';
-import { isSupabaseConfigured } from '../lib/supabase';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
 interface AppState {
   user: User | null;
@@ -440,6 +440,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
 const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
+  reloadFromSupabase?: () => Promise<void>;
 } | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -453,60 +454,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       try {
         if (isSupabaseConfigured()) {
-          console.log('🔄 Carregando dados do Supabase...');
+          console.log('🔄 Carregando TODOS os dados do Supabase...');
           
-          // Load all data from Supabase
-          const [
-            sales,
-            debts,
-            checks,
-            boletos,
-            employees,
-            employeePayments,
-            employeeAdvances,
-            employeeOvertimes,
-            employeeCommissions,
-            installments
-          ] = await Promise.all([
-            database.getSales(),
-            database.getDebts(),
-            database.getChecks(),
-            database.getBoletos(),
-            database.getEmployees(),
-            database.getEmployeePayments(),
-            database.getEmployeeAdvances(),
-            database.getEmployeeOvertimes(),
-            database.getEmployeeCommissions(),
-            database.getInstallments()
-          ]);
+          // Usar função de sincronização completa
+          const allData = await database.syncAllData();
           
           dispatch({ 
             type: 'LOAD_DATA', 
-            payload: {
-              sales,
-              debts,
-              checks,
-              boletos,
-              employees,
-              employeePayments,
-              employeeAdvances,
-              employeeOvertimes,
-              employeeCommissions,
-              installments
-            }
+            payload: allData
           });
           
-          console.log('✅ Dados carregados do Supabase com sucesso');
+          console.log('✅ TODOS os dados carregados do Supabase com sucesso');
           
           // Migrate localStorage data to Supabase if it exists
           const localData = localStorage.getItem('revgold-data');
           if (localData) {
             try {
               const parsedData = JSON.parse(localData);
-              console.log('🔄 Migrando dados do localStorage para Supabase...');
+              console.log('🔄 Migrando TODOS os dados do localStorage para Supabase...');
               
               // Migrate sales
               if (parsedData.sales && parsedData.sales.length > 0) {
+                console.log(`Migrando ${parsedData.sales.length} vendas...`);
                 for (const sale of parsedData.sales) {
                   await database.createSale(sale);
                 }
@@ -514,26 +483,85 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               
               // Migrate debts
               if (parsedData.debts && parsedData.debts.length > 0) {
+                console.log(`Migrando ${parsedData.debts.length} dívidas...`);
                 for (const debt of parsedData.debts) {
                   await database.createDebt(debt);
                 }
               }
               
+              // Migrate checks
+              if (parsedData.checks && parsedData.checks.length > 0) {
+                console.log(`Migrando ${parsedData.checks.length} cheques...`);
+                for (const check of parsedData.checks) {
+                  await database.createCheck(check);
+                }
+              }
+              
+              // Migrate boletos
+              if (parsedData.boletos && parsedData.boletos.length > 0) {
+                console.log(`Migrando ${parsedData.boletos.length} boletos...`);
+                for (const boleto of parsedData.boletos) {
+                  await database.createBoleto(boleto);
+                }
+              }
+              
               // Migrate employees
               if (parsedData.employees && parsedData.employees.length > 0) {
+                console.log(`Migrando ${parsedData.employees.length} funcionários...`);
                 for (const employee of parsedData.employees) {
                   await database.createEmployee(employee);
                 }
               }
               
+              // Migrate employee payments
+              if (parsedData.employeePayments && parsedData.employeePayments.length > 0) {
+                console.log(`Migrando ${parsedData.employeePayments.length} pagamentos...`);
+                for (const payment of parsedData.employeePayments) {
+                  await database.createEmployeePayment(payment);
+                }
+              }
+              
+              // Migrate employee advances
+              if (parsedData.employeeAdvances && parsedData.employeeAdvances.length > 0) {
+                console.log(`Migrando ${parsedData.employeeAdvances.length} adiantamentos...`);
+                for (const advance of parsedData.employeeAdvances) {
+                  await database.createEmployeeAdvance(advance);
+                }
+              }
+              
+              // Migrate employee overtimes
+              if (parsedData.employeeOvertimes && parsedData.employeeOvertimes.length > 0) {
+                console.log(`Migrando ${parsedData.employeeOvertimes.length} horas extras...`);
+                for (const overtime of parsedData.employeeOvertimes) {
+                  await database.createEmployeeOvertime(overtime);
+                }
+              }
+              
+              // Migrate employee commissions
+              if (parsedData.employeeCommissions && parsedData.employeeCommissions.length > 0) {
+                console.log(`Migrando ${parsedData.employeeCommissions.length} comissões...`);
+                for (const commission of parsedData.employeeCommissions) {
+                  await database.createEmployeeCommission(commission);
+                }
+              }
+              
+              // Migrate installments
+              if (parsedData.installments && parsedData.installments.length > 0) {
+                console.log(`Migrando ${parsedData.installments.length} parcelas...`);
+                for (const installment of parsedData.installments) {
+                  await database.createInstallment(installment);
+                }
+              }
+              
               // Clear localStorage after successful migration
               localStorage.removeItem('revgold-data');
-              console.log('✅ Migração concluída com sucesso');
+              console.log('✅ Migração COMPLETA concluída com sucesso - todos os dados foram transferidos para o Supabase');
               
               // Reload data from Supabase
               window.location.reload();
             } catch (migrationError) {
-              console.error('❌ Erro na migração:', migrationError);
+              console.error('❌ Erro na migração completa:', migrationError);
+              dispatch({ type: 'SET_ERROR', payload: 'Erro durante a migração dos dados. Alguns dados podem não ter sido transferidos.' });
             }
           }
         } else {
@@ -549,7 +577,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.error('❌ Erro ao carregar dados:', error);
-        dispatch({ type: 'SET_ERROR', payload: 'Erro ao conectar com o banco de dados. Usando dados locais...' });
+        dispatch({ type: 'SET_ERROR', payload: 'Erro ao conectar com o banco de dados. Verifique sua conexão e tente novamente.' });
         
         // Fallback to localStorage on error
         try {
@@ -569,6 +597,77 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
     
     loadData();
+  }, []);
+
+  // Função para recarregar dados do Supabase
+  const reloadFromSupabase = async () => {
+    if (!isSupabaseConfigured()) return;
+    
+    dispatch({ type: 'SET_LOADING', payload: true });
+    dispatch({ type: 'SET_ERROR', payload: null });
+    
+    try {
+      console.log('🔄 Recarregando TODOS os dados do Supabase...');
+      const allData = await database.syncAllData();
+      dispatch({ type: 'LOAD_DATA', payload: allData });
+      console.log('✅ Dados recarregados com sucesso do Supabase');
+    } catch (error) {
+      console.error('❌ Erro ao recarregar dados:', error);
+      dispatch({ type: 'SET_ERROR', payload: 'Erro ao recarregar dados do banco' });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
+
+  // Configurar listener para mudanças em tempo real (opcional)
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+
+    console.log('🔄 Configurando listeners de tempo real...');
+
+    // Listener para vendas
+    const salesSubscription = supabase!
+      .channel('sales-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'sales' },
+        (payload) => {
+          console.log('🔄 Mudança detectada em vendas:', payload);
+          reloadFromSupabase();
+        }
+      )
+      .subscribe();
+
+    // Listener para dívidas
+    const debtsSubscription = supabase!
+      .channel('debts-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'debts' },
+        (payload) => {
+          console.log('🔄 Mudança detectada em dívidas:', payload);
+          reloadFromSupabase();
+        }
+      )
+      .subscribe();
+
+    // Listener para funcionários
+    const employeesSubscription = supabase!
+      .channel('employees-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'employees' },
+        (payload) => {
+          console.log('🔄 Mudança detectada em funcionários:', payload);
+          reloadFromSupabase();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscriptions
+    return () => {
+      console.log('🔄 Removendo listeners de tempo real...');
+      salesSubscription.unsubscribe();
+      debtsSubscription.unsubscribe();
+      employeesSubscription.unsubscribe();
+    };
   }, []);
 
   // Save data to database and localStorage whenever state changes
@@ -606,7 +705,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         employeeCommissions: state.employeeCommissions
       }));
       
-      console.log('Dados salvos no localStorage como backup');
+      console.log('💾 Dados salvos no localStorage como backup');
       
       // Trigger notification system update
       window.dispatchEvent(new CustomEvent('revgold-data-updated', {
@@ -619,7 +718,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [state.sales, state.debts, state.checks, state.boletos, state.employees, state.employeePayments, state.employeeAdvances, state.employeeOvertimes, state.employeeCommissions, state.installments, state.user, state.isLoading]);
 
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
+    <AppContext.Provider value={{ state, dispatch, reloadFromSupabase }}>
       {children}
     </AppContext.Provider>
   );
