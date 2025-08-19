@@ -412,7 +412,7 @@ const Dashboard: React.FC = () => {
               <h3 className="text-lg font-bold text-red-800">⚠️ Banco de Dados Não Configurado</h3>
               <p className="text-red-700 font-medium">
                 <strong>IMPORTANTE:</strong> Os dados estão sendo salvos apenas neste navegador e serão perdidos se você limpar o cache. 
-                Para ter um banco de dados real e acessar de qualquer dispositivo, clique no botão "Connect to Supabase" no canto superior direito.
+                Para ter um banco de dados real e acessar de qualquer dispositivo, clique no botão "Connect to Supabase\" no canto superior direito.
               </p>
             </div>
           </div>
