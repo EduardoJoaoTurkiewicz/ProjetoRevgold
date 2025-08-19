@@ -263,9 +263,7 @@ export function Sales() {
                       )}
                     </td>
                     <td className="py-3 px-4 text-sm">
-                      {Array.isArray(sale.products) 
-                        ? sale.products.map(p => `${p.quantity}x ${p.name}`).join(', ')
-                        : sale.products}
+                      {typeof sale.products === 'string' ? sale.products : 'Produtos vendidos'}
                     </td>
                     <td className="py-3 px-4 text-sm font-bold text-green-600">
                       R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -404,23 +402,11 @@ export function Sales() {
                 <div className="md:col-span-2">
                   <label className="form-label">Produtos</label>
                   <div className="text-base text-green-700">
-                    {Array.isArray(viewingSale.products) ? (
-                      <div className="space-y-3">
-                        {viewingSale.products.map((product, index) => (
-                          <div key={index} className="p-4 bg-green-50 rounded-xl border border-green-100">
-                            <span className="font-bold text-green-800">{product.quantity}x {product.name}</span>
-                            {product.unitPrice && (
-                              <span className="text-green-600 ml-2 font-semibold">
-                                @ R$ {product.unitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} = 
-                                R$ {(product.totalPrice || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="font-semibold">{viewingSale.products}</p>
-                    )}
+                    <div className="p-4 bg-green-50 rounded-xl border border-green-100">
+                      <p className="font-semibold text-green-800">
+                        {typeof viewingSale.products === 'string' ? viewingSale.products : 'Produtos vendidos'}
+                      </p>
+                    </div>
                   </div>
                 </div>
                 {viewingSale.observations && (

@@ -47,7 +47,9 @@ export const reinitializeSupabase = (newUrl?: string, newKey?: string) => {
 
 // Check if Supabase is configured
 export const isSupabaseConfigured = () => {
-  return Boolean(supabase && supabaseUrl && supabaseAnonKey);
+  return Boolean(supabase && supabaseUrl && supabaseAnonKey && 
+    supabaseUrl !== 'https://your-project.supabase.co' && 
+    supabaseAnonKey !== 'your-anon-key');
 };
 
 // Upload de imagem para o bucket de cheques

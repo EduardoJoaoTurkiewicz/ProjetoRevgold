@@ -17,8 +17,7 @@ import {
   Settings
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { isSupabaseConfigured, reinitializeSupabase } from '../lib/supabase';
-import { SupabaseSetup } from './SupabaseSetup';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 interface LayoutProps {
   currentPage: string;
@@ -40,7 +39,6 @@ const menuItems = [
 export default function Layout({ currentPage, onPageChange, children }: LayoutProps) {
   const { state, dispatch } = useApp();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
-  const [showSupabaseSetup, setShowSupabaseSetup] = React.useState(false);
 
   const handleLogout = () => {
     if (window.confirm('Tem certeza que deseja sair?')) {
@@ -48,9 +46,6 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
     }
   };
 
-  const handleConnectSupabase = () => {
-    setShowSupabaseSetup(true);
-  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50">
       {/* Mobile Sidebar Overlay */}
@@ -161,33 +156,15 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
 
         {/* Footer */}
         <div className="p-6 border-t border-green-700/30">
-          {/* Connection Status */}
-          {!isSupabaseConfigured() && (
-            <div className="mb-6">
-              <button
-                onClick={handleConnectSupabase}
-                className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-semibold transition-all duration-300 group text-yellow-100 hover:text-yellow-50 hover:bg-yellow-700/40"
-              >
-                <Database className="w-6 h-6 transition-transform duration-300 group-hover:scale-110" />
-                <div className="text-left flex-1">
-                  <span className="text-lg block">Conectar ao Banco</span>
-                  <span className="text-xs opacity-75">Configure o Supabase</span>
-                </div>
-              </button>
-            </div>
-          )}
-          
-          {isSupabaseConfigured() && (
-            <div className="mb-6 p-4 bg-green-700/20 rounded-2xl border border-green-600/30">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                <div>
-                  <p className="text-green-200 font-bold">Sistema Conectado</p>
-                  <p className="text-green-300 text-sm">Sincronização automática ativa</p>
-                </div>
+          <div className="mb-6 p-4 bg-green-700/20 rounded-2xl border border-green-600/30">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+              <div>
+                <p className="text-green-200 font-bold">Sistema Conectado</p>
+                <p className="text-green-300 text-sm">Sincronização automática ativa</p>
               </div>
             </div>
-          )}
+          </div>
 
           <button
             onClick={handleLogout}
@@ -240,31 +217,15 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
             </div>
 
             <div className="flex items-center gap-4">
-              {!isSupabaseConfigured() && (
-                <button
-                  onClick={handleConnectSupabase}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold shadow-lg"
-                >
-                  <Database className="w-4 h-4" />
-                  Connect to Supabase
-                </button>
-              )}
-              
-              {isSupabaseConfigured() && (
-                <div className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl shadow-lg">
-                  <Database className="w-4 h-4" />
-                  <span className="font-semibold">Conectado</span>
-                  <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
-                </div>
-              )}
+              <div className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl shadow-lg">
+                <Database className="w-4 h-4" />
+                <span className="font-semibold">Sistema Online</span>
+                <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
+              </div>
               
               <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-green-100 rounded-full">
-                <div className={`w-3 h-3 rounded-full animate-pulse ${
-                  isSupabaseConfigured() ? 'bg-green-500' : 'bg-yellow-500'
-                }`}></div>
-                <span className="text-green-700 font-semibold text-sm">
-                  {isSupabaseConfigured() ? 'Sincronização Ativa' : 'Modo Local'}
-                </span>
+                <div className="w-3 h-3 rounded-full animate-pulse bg-green-500"></div>
+                <span className="text-green-700 font-semibold text-sm">Sincronização Ativa</span>
               </div>
               
               <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg relative overflow-hidden">
@@ -282,19 +243,6 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
           {children}
         </main>
       </div>
-      
-      {/* Supabase Setup Modal */}
-      {showSupabaseSetup && (
-        <SupabaseSetup
-          onClose={() => setShowSupabaseSetup(false)}
-          onConfigured={() => {
-            setShowSupabaseSetup(false);
-            // Reinitialize and reload
-            reinitializeSupabase();
-            setTimeout(() => window.location.reload(), 500);
-          }}
-        />
-      )}
     </div>
   );
 }

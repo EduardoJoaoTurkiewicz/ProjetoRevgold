@@ -402,24 +402,6 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      {/* Database Status Banner */}
-      {!isSupabaseConfigured() && (
-        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6 modern-shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center modern-shadow-lg">
-              <Database className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-yellow-800">⚠️ Sistema em Modo Local</h3>
-              <p className="text-yellow-700 font-medium">
-                <strong>IMPORTANTE:</strong> Dados salvos apenas neste navegador. 
-                Para acesso compartilhado entre sócios, clique em "Connect to Supabase\" no canto superior direito.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-      
       {state.isLoading && (
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
           <div className="flex items-center gap-4">

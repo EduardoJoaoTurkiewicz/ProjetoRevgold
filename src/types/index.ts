@@ -21,7 +21,7 @@ export interface Sale {
   client: string;
   sellerId?: string; // ID do funcionário vendedor
   customCommissionRate?: number; // Porcentagem personalizada de comissão para esta venda
-  products: Product[];
+  products: string; // Simplified to string description
   observations?: string;
   totalValue: number;
   paymentMethods: PaymentMethod[];

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Package } from 'lucide-react';
+import { X, Plus, Trash2 } from 'lucide-react';
 import { Sale, PaymentMethod } from '../../types';
 import { useApp } from '../../context/AppContext';
 
@@ -29,7 +29,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     client: sale?.client || '',
     sellerId: sale?.sellerId || '',
     customCommissionRate: sale?.customCommissionRate || 5,
-    products: sale?.products || [{ name: '', quantity: 0, unitPrice: 0, totalPrice: 0 }],
+    products: sale?.products || 'Produtos vendidos', // Simplified to string
     observations: sale?.observations || '',
     totalValue: sale?.totalValue || 0,
     paymentMethods: sale?.paymentMethods || [{ type: 'dinheiro' as const, amount: 0 }],
@@ -39,39 +39,6 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
 
   // Filtrar apenas vendedores ativos
   const sellers = state.employees.filter(emp => emp.isActive && emp.isSeller);
-
-  const addProduct = () => {
-    setFormData(prev => ({
-      ...prev,
-      products: [...prev.products, { name: '', quantity: 0, unitPrice: 0, totalPrice: 0 }]
-    }));
-  };
-
-  const removeProduct = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      products: prev.products.filter((_, i) => i !== index)
-    }));
-  };
-
-  const updateProduct = (index: number, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      products: prev.products.map((product, i) => {
-        if (i === index) {
-          const updatedProduct = { ...product, [field]: value };
-          
-          // Calculate total price when quantity or unit price changes
-          if (field === 'quantity' || field === 'unitPrice') {
-            updatedProduct.totalPrice = Math.max(0, (updatedProduct.quantity || 0) * (updatedProduct.unitPrice || 0));
-          }
-          
-          return updatedProduct;
-        }
-        return product;
-      })
-    }));
-  };
 
   const addPaymentMethod = () => {
     setFormData(prev => ({
@@ -162,37 +129,18 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     } as Omit<Sale, 'id' | 'createdAt'>);
   };
 
-  // Auto-calculate total when payment methods change
+  // Auto-update payment method amount when total value changes
   useEffect(() => {
-    const totalFromProducts = formData.products.reduce((sum, product) => sum + (product.totalPrice || 0), 0);
-    if (totalFromProducts > 0) {
-      setFormData(prev => ({ ...prev, totalValue: totalFromProducts }));
+    if (formData.paymentMethods.length === 1 && formData.paymentMethods[0].amount === 0) {
+      setFormData(prev => ({
+        ...prev,
+        paymentMethods: [{
+          ...prev.paymentMethods[0],
+          amount: prev.totalValue
+        }]
+      }));
     }
-  }, [formData.products]);
-
-  // Auto-calculate total value and update payment methods when products change
-  useEffect(() => {
-    const calculatedTotal = formData.products.reduce((sum, product) => {
-      return sum + (product.totalPrice || 0);
-    }, 0);
-    
-    if (calculatedTotal > 0) {
-      setFormData(prev => {
-        // Update total value
-        const newFormData = { ...prev, totalValue: calculatedTotal };
-        
-        // If there's only one payment method and it has no amount set, auto-fill it
-        if (prev.paymentMethods.length === 1 && prev.paymentMethods[0].amount === 0) {
-          newFormData.paymentMethods = [{
-            ...prev.paymentMethods[0],
-            amount: calculatedTotal
-          }];
-        }
-        
-        return newFormData;
-      });
-    }
-  }, [formData.products]);
+  }, [formData.totalValue]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -276,127 +224,33 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* Products Section */}
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium flex items-center gap-2">
-                  <Package className="w-5 h-5 text-green-600" />
-                  Produtos Vendidos
-                </h3>
-                <button
-                  type="button"
-                  onClick={addProduct}
-                  className="btn-secondary flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Adicionar Produto
-                </button>
+              <div className="form-group">
+                <label className="form-label">Descrição dos Produtos *</label>
+                <textarea
+                  value={typeof formData.products === 'string' ? formData.products : 'Produtos vendidos'}
+                  onChange={(e) => setFormData(prev => ({ ...prev, products: e.target.value }))}
+                  className="input-field"
+                  rows={3}
+                  placeholder="Descreva os produtos vendidos..."
+                  required
+                />
               </div>
 
-              <div className="space-y-4">
-                {formData.products.map((product, index) => (
-                  <div key={index} className="p-4 border rounded-lg bg-gray-50">
-                    <div className="flex justify-between items-start mb-4">
-                      <h4 className="font-medium">Produto {index + 1}</h4>
-                      {formData.products.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeProduct(index)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div className="md:col-span-2">
-                        <label className="form-label">Nome do Produto *</label>
-                        <input
-                          type="text"
-                          value={product.name}
-                          onChange={(e) => updateProduct(index, 'name', e.target.value)}
-                          className="input-field"
-                          placeholder="Ex: Tinta Branca 18L"
-                          required
-                        />
-                      </div>
-
-                      <div>
-                        <label className="form-label">Quantidade *</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={product.quantity}
-                          onChange={(e) => updateProduct(index, 'quantity', parseInt(e.target.value) || 0)}
-                          className="input-field"
-                          placeholder="0"
-                          required
-                        />
-                      </div>
-
-                      <div>
-                        <label className="form-label">Preço Unitário</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={product.unitPrice || ''}
-                          onChange={(e) => updateProduct(index, 'unitPrice', parseFloat(e.target.value) || 0)}
-                          className="input-field"
-                          placeholder="0,00"
-                        />
-                      </div>
-
-                      <div className="md:col-span-4">
-                        <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
-                          <span className="font-medium text-green-800">
-                            {product.quantity}x {product.name || 'Produto'} 
-                            {product.unitPrice ? ` @ R$ ${product.unitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''}
-                          </span>
-                          <span className="font-bold text-green-900">
-                            Total: R$ {(product.totalPrice || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {/* Total Geral dos Produtos */}
-                <div className="relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-green-400/20 to-emerald-500/20 blur-2xl"></div>
-                  <div className="relative p-8 bg-gradient-to-r from-green-50 via-emerald-50 to-green-100 rounded-3xl border-2 border-green-300 shadow-2xl"
-                       style={{ 
-                         boxShadow: '0 25px 50px -12px rgba(34, 197, 94, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.5)' 
-                       }}>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="text-2xl font-black text-green-800 mb-2 bg-gradient-to-r from-green-700 to-emerald-600 bg-clip-text text-transparent">
-                        Total Geral dos Produtos
-                      </h3>
-                      <p className="text-green-600 font-bold">
-                        {formData.products.length} produto(s) • 
-                        {formData.products.reduce((sum, p) => sum + (p.quantity || 0), 0)} unidade(s)
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-4xl font-black text-green-700 mb-1">
-                        R$ {formData.products.reduce((sum, product) => {
-                          return sum + ((product.quantity || 0) * (product.unitPrice || 0));
-                        }, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                      <p className="text-sm text-green-600 font-bold">✓ Calculado automaticamente</p>
-                    </div>
-                  </div>
-                  </div>
-                </div>
+              <div className="form-group">
+                <label className="form-label">Valor Total da Venda *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.totalValue}
+                  onChange={(e) => setFormData(prev => ({ ...prev, totalValue: parseFloat(e.target.value) || 0 }))}
+                  className="input-field"
+                  placeholder="0,00"
+                  required
+                />
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="form-group md:col-span-2">
                 <label className="form-label">Observações</label>
                 <textarea
@@ -419,25 +273,6 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Esta descrição será adicionada automaticamente às observações da venda.
-                </p>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Valor Total *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.totalValue}
-                  onChange={(e) => setFormData(prev => ({ ...prev, totalValue: parseFloat(e.target.value) || 0 }))}
-                  className="input-field bg-green-50 border-green-200 font-bold text-green-700"
-                  placeholder="0,00"
-                  required
-                  readOnly
-                />
-                <p className="text-sm text-green-600 mt-2 font-bold bg-green-50 p-3 rounded-xl border border-green-200">
-                  ✓ Valor calculado automaticamente: R$ {formData.products.reduce((sum, product) => {
-                    return sum + ((product.quantity || 0) * (product.unitPrice || 0));
-                  }, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
@@ -544,7 +379,6 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                   placeholder="30"
                                 />
                               </div>
-
 
                               <div>
                                 <label className="form-label">Data da Primeira Parcela</label>
