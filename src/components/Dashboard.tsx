@@ -420,23 +420,6 @@ const Dashboard: React.FC = () => {
         </div>
       )}
       
-      {isSupabaseConfigured() && (
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6 modern-shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center modern-shadow-lg">
-              <Database className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-green-800">✅ Sistema Totalmente Conectado</h3>
-              <p className="text-green-700 font-medium">
-                <strong>PERFEITO:</strong> Sincronização automática ativa. Todos os sócios veem os mesmos dados em tempo real, 
-                independente do dispositivo ou navegador usado.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-      
       {state.isLoading && (
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
           <div className="flex items-center gap-4">
