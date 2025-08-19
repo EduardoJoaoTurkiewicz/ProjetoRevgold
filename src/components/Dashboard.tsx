@@ -413,7 +413,7 @@ const Dashboard: React.FC = () => {
               <h3 className="text-lg font-bold text-yellow-800">⚠️ Modo Local Ativo</h3>
               <p className="text-yellow-700 font-medium">
                 <strong>ATENÇÃO:</strong> Os dados estão sendo salvos apenas neste navegador. 
-                Para sincronizar entre dispositivos e usuários, clique em "Connect to Supabase" no canto superior direito.
+                Para sincronizar entre dispositivos e usuários, clique em "Connect to Supabase\" no canto superior direito.
               </p>
             </div>
           </div>
