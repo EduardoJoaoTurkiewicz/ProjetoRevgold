@@ -17,7 +17,7 @@ import {
   Settings
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { isSupabaseConfigured } from '../lib/supabase';
+import { isSupabaseConfigured, reinitializeSupabase } from '../lib/supabase';
 import { SupabaseSetup } from './SupabaseSetup';
 
 interface LayoutProps {
@@ -50,6 +50,9 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
   };
 
   const handleRefreshData = async () => {
+    // Try to reinitialize Supabase first
+    reinitializeSupabase();
+    
     if (!isSupabaseConfigured()) {
       setShowSupabaseSetup(true);
       return;
@@ -57,8 +60,13 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
 
     setIsRefreshing(true);
     try {
-      // Force reload from Supabase
-      window.location.reload();
+      // Use the reload function from context if available
+      if (state.reloadFromSupabase) {
+        await state.reloadFromSupabase();
+      } else {
+        // Force reload from Supabase
+        window.location.reload();
+      }
     } catch (error) {
       console.error('Erro ao atualizar dados:', error);
     } finally {
@@ -307,7 +315,9 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
           onClose={() => setShowSupabaseSetup(false)}
           onConfigured={() => {
             setShowSupabaseSetup(false);
-            window.location.reload();
+            // Reinitialize and reload
+            reinitializeSupabase();
+            setTimeout(() => window.location.reload(), 500);
           }}
         />
       )}

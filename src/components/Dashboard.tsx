@@ -404,16 +404,33 @@ const Dashboard: React.FC = () => {
     <div className="space-y-8">
       {/* Database Status Banner */}
       {!isSupabaseConfigured() && (
-        <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-2xl p-6 modern-shadow-xl">
+        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6 modern-shadow-xl">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center modern-shadow-lg">
+            <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center modern-shadow-lg">
               <Database className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-red-800">⚠️ Banco de Dados Não Configurado</h3>
-              <p className="text-red-700 font-medium">
-                <strong>IMPORTANTE:</strong> Os dados estão sendo salvos apenas neste navegador e serão perdidos se você limpar o cache. 
-                Para ter um banco de dados real e acessar de qualquer dispositivo, clique no botão "Connect to Supabase\" no canto superior direito.
+              <h3 className="text-lg font-bold text-yellow-800">⚠️ Modo Local Ativo</h3>
+              <p className="text-yellow-700 font-medium">
+                <strong>ATENÇÃO:</strong> Os dados estão sendo salvos apenas neste navegador. 
+                Para sincronizar entre dispositivos e usuários, clique em "Connect to Supabase" no canto superior direito.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {isSupabaseConfigured() && (
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center modern-shadow-lg">
+              <Database className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-green-800">✅ Sistema Conectado ao Supabase</h3>
+              <p className="text-green-700 font-medium">
+                <strong>PERFEITO:</strong> Todos os dados estão sendo sincronizados em tempo real. 
+                Qualquer usuário pode acessar as mesmas informações de qualquer dispositivo.
               </p>
             </div>
           </div>

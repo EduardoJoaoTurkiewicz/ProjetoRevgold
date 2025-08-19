@@ -15,7 +15,7 @@ import {
 // Função para converter dados do banco para o formato da aplicação
 const convertFromDatabase = {
   sale: (dbSale: any): Sale => ({
-    id: dbSale.id,
+    id: dbSale.id.toString(),
     date: dbSale.date,
     deliveryDate: dbSale.delivery_date,
     client: dbSale.client,
@@ -33,7 +33,7 @@ const convertFromDatabase = {
   }),
 
   debt: (dbDebt: any): Debt => ({
-    id: dbDebt.id,
+    id: dbDebt.id.toString(),
     date: dbDebt.date,
     description: dbDebt.description,
     company: dbDebt.company,
@@ -49,7 +49,7 @@ const convertFromDatabase = {
   }),
 
   check: (dbCheck: any): Check => ({
-    id: dbCheck.id,
+    id: dbCheck.id.toString(),
     saleId: dbCheck.sale_id,
     debtId: dbCheck.debt_id,
     client: dbCheck.client,
@@ -70,7 +70,7 @@ const convertFromDatabase = {
   }),
 
   boleto: (dbBoleto: any): Boleto => ({
-    id: dbBoleto.id,
+    id: dbBoleto.id.toString(),
     saleId: dbBoleto.sale_id,
     client: dbBoleto.client,
     value: parseFloat(dbBoleto.value || 0),
@@ -84,7 +84,7 @@ const convertFromDatabase = {
   }),
 
   employee: (dbEmployee: any): Employee => ({
-    id: dbEmployee.id,
+    id: dbEmployee.id.toString(),
     name: dbEmployee.name,
     position: dbEmployee.position,
     isSeller: dbEmployee.is_seller,
@@ -98,7 +98,7 @@ const convertFromDatabase = {
   }),
 
   employeePayment: (dbPayment: any): EmployeePayment => ({
-    id: dbPayment.id,
+    id: dbPayment.id.toString(),
     employeeId: dbPayment.employee_id,
     amount: parseFloat(dbPayment.amount || 0),
     paymentDate: dbPayment.payment_date,
@@ -109,7 +109,7 @@ const convertFromDatabase = {
   }),
 
   employeeAdvance: (dbAdvance: any): EmployeeAdvance => ({
-    id: dbAdvance.id,
+    id: dbAdvance.id.toString(),
     employeeId: dbAdvance.employee_id,
     amount: parseFloat(dbAdvance.amount || 0),
     date: dbAdvance.date,
@@ -120,7 +120,7 @@ const convertFromDatabase = {
   }),
 
   employeeOvertime: (dbOvertime: any): EmployeeOvertime => ({
-    id: dbOvertime.id,
+    id: dbOvertime.id.toString(),
     employeeId: dbOvertime.employee_id,
     hours: parseFloat(dbOvertime.hours || 0),
     hourlyRate: parseFloat(dbOvertime.hourly_rate || 0),
@@ -132,7 +132,7 @@ const convertFromDatabase = {
   }),
 
   employeeCommission: (dbCommission: any): EmployeeCommission => ({
-    id: dbCommission.id,
+    id: dbCommission.id.toString(),
     employeeId: dbCommission.employee_id,
     saleId: dbCommission.sale_id,
     saleValue: parseFloat(dbCommission.sale_value || 0),
@@ -144,7 +144,7 @@ const convertFromDatabase = {
   }),
 
   installment: (dbInstallment: any): Installment => ({
-    id: dbInstallment.id,
+    id: dbInstallment.id.toString(),
     saleId: dbInstallment.sale_id,
     debtId: dbInstallment.debt_id,
     amount: parseFloat(dbInstallment.amount || 0),
@@ -158,6 +158,7 @@ const convertFromDatabase = {
 // Função para converter dados da aplicação para o formato do banco
 const convertToDatabase = {
   sale: (sale: Omit<Sale, 'id' | 'createdAt'>) => ({
+    id: sale.id || undefined, // Allow manual ID setting for migration
     date: sale.date,
     delivery_date: sale.deliveryDate,
     client: sale.client,
@@ -174,6 +175,7 @@ const convertToDatabase = {
   }),
 
   debt: (debt: Omit<Debt, 'id' | 'createdAt'>) => ({
+    id: debt.id || undefined, // Allow manual ID setting for migration
     date: debt.date,
     description: debt.description,
     company: debt.company,
@@ -188,6 +190,7 @@ const convertToDatabase = {
   }),
 
   check: (check: Omit<Check, 'id' | 'createdAt'>) => ({
+    id: check.id || undefined, // Allow manual ID setting for migration
     sale_id: check.saleId,
     debt_id: check.debtId,
     client: check.client,
@@ -207,6 +210,7 @@ const convertToDatabase = {
   }),
 
   boleto: (boleto: Omit<Boleto, 'id' | 'createdAt'>) => ({
+    id: boleto.id || undefined, // Allow manual ID setting for migration
     sale_id: boleto.saleId,
     client: boleto.client,
     value: boleto.value,
@@ -219,6 +223,7 @@ const convertToDatabase = {
   }),
 
   employee: (employee: Omit<Employee, 'id' | 'createdAt'>) => ({
+    id: employee.id || undefined, // Allow manual ID setting for migration
     name: employee.name,
     position: employee.position,
     is_seller: employee.isSeller,
@@ -231,6 +236,7 @@ const convertToDatabase = {
   }),
 
   employeePayment: (payment: Omit<EmployeePayment, 'id' | 'createdAt'>) => ({
+    id: payment.id || undefined, // Allow manual ID setting for migration
     employee_id: payment.employeeId,
     amount: payment.amount,
     payment_date: payment.paymentDate,
@@ -240,6 +246,7 @@ const convertToDatabase = {
   }),
 
   employeeAdvance: (advance: Omit<EmployeeAdvance, 'id' | 'createdAt'>) => ({
+    id: advance.id || undefined, // Allow manual ID setting for migration
     employee_id: advance.employeeId,
     amount: advance.amount,
     date: advance.date,
@@ -249,6 +256,7 @@ const convertToDatabase = {
   }),
 
   employeeOvertime: (overtime: Omit<EmployeeOvertime, 'id' | 'createdAt'>) => ({
+    id: overtime.id || undefined, // Allow manual ID setting for migration
     employee_id: overtime.employeeId,
     hours: overtime.hours,
     hourly_rate: overtime.hourlyRate,
@@ -259,6 +267,7 @@ const convertToDatabase = {
   }),
 
   employeeCommission: (commission: Omit<EmployeeCommission, 'id' | 'createdAt'>) => ({
+    id: commission.id || undefined, // Allow manual ID setting for migration
     employee_id: commission.employeeId,
     sale_id: commission.saleId,
     sale_value: commission.saleValue,
@@ -269,6 +278,7 @@ const convertToDatabase = {
   }),
 
   installment: (installment: Omit<Installment, 'id'>) => ({
+    id: installment.id || undefined, // Allow manual ID setting for migration
     sale_id: installment.saleId,
     debt_id: installment.debtId,
     amount: installment.amount,
@@ -307,22 +317,24 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('sales')
-      .insert(convertToDatabase.sale(sale))
-      .select()
-      .single();
+      const saleData = convertToDatabase.sale(sale);
+      
+      const { data, error } = await supabase!
+        .from('sales')
+        .insert(saleData)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('❌ Erro ao criar venda:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao criar venda:', error);
+        throw error;
+      }
     
-    console.log('✅ Venda criada no Supabase:', data.id);
-    return data ? convertFromDatabase.sale(data) : null;
+      console.log('✅ Venda criada no Supabase:', data.id);
+      return data ? convertFromDatabase.sale(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao criar venda:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -330,23 +342,25 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('sales')
-      .update(convertToDatabase.sale(sale))
-      .eq('id', sale.id)
-      .select()
-      .single();
+      const saleData = convertToDatabase.sale(sale);
+      
+      const { data, error } = await supabase!
+        .from('sales')
+        .update(saleData)
+        .eq('id', sale.id)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('Erro ao atualizar venda:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao atualizar venda:', error);
+        throw error;
+      }
     
-    console.log('✅ Venda atualizada no Supabase:', sale.id);
-    return data ? convertFromDatabase.sale(data) : null;
+      console.log('✅ Venda atualizada no Supabase:', sale.id);
+      return data ? convertFromDatabase.sale(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao atualizar venda:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -354,21 +368,21 @@ export const database = {
     if (!isSupabaseConfigured()) return false;
     
     try {
-    const { error } = await supabase!
-      .from('sales')
-      .delete()
-      .eq('id', id);
+      const { error } = await supabase!
+        .from('sales')
+        .delete()
+        .eq('id', id);
     
-    if (error) {
-      console.error('Erro ao deletar venda:', error);
-      return false;
-    }
+      if (error) {
+        console.error('❌ Erro ao deletar venda:', error);
+        throw error;
+      }
     
-    console.log('✅ Venda deletada do Supabase:', id);
-    return true;
+      console.log('✅ Venda deletada do Supabase:', id);
+      return true;
     } catch (error) {
       console.error('❌ Erro de conexão ao deletar venda:', error);
-      return false;
+      throw error;
     }
   },
 
@@ -398,22 +412,24 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('debts')
-      .insert(convertToDatabase.debt(debt))
-      .select()
-      .single();
+      const debtData = convertToDatabase.debt(debt);
+      
+      const { data, error } = await supabase!
+        .from('debts')
+        .insert(debtData)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('Erro ao criar dívida:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao criar dívida:', error);
+        throw error;
+      }
     
-    console.log('✅ Dívida criada no Supabase:', data.id);
-    return data ? convertFromDatabase.debt(data) : null;
+      console.log('✅ Dívida criada no Supabase:', data.id);
+      return data ? convertFromDatabase.debt(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao criar dívida:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -421,23 +437,25 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('debts')
-      .update(convertToDatabase.debt(debt))
-      .eq('id', debt.id)
-      .select()
-      .single();
+      const debtData = convertToDatabase.debt(debt);
+      
+      const { data, error } = await supabase!
+        .from('debts')
+        .update(debtData)
+        .eq('id', debt.id)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('Erro ao atualizar dívida:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao atualizar dívida:', error);
+        throw error;
+      }
     
-    console.log('✅ Dívida atualizada no Supabase:', debt.id);
-    return data ? convertFromDatabase.debt(data) : null;
+      console.log('✅ Dívida atualizada no Supabase:', debt.id);
+      return data ? convertFromDatabase.debt(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao atualizar dívida:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -445,21 +463,21 @@ export const database = {
     if (!isSupabaseConfigured()) return false;
     
     try {
-    const { error } = await supabase!
-      .from('debts')
-      .delete()
-      .eq('id', id);
+      const { error } = await supabase!
+        .from('debts')
+        .delete()
+        .eq('id', id);
     
-    if (error) {
-      console.error('Erro ao deletar dívida:', error);
-      return false;
-    }
+      if (error) {
+        console.error('❌ Erro ao deletar dívida:', error);
+        throw error;
+      }
     
-    console.log('✅ Dívida deletada do Supabase:', id);
-    return true;
+      console.log('✅ Dívida deletada do Supabase:', id);
+      return true;
     } catch (error) {
       console.error('❌ Erro de conexão ao deletar dívida:', error);
-      return false;
+      throw error;
     }
   },
 
@@ -489,22 +507,24 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('checks')
-      .insert(convertToDatabase.check(check))
-      .select()
-      .single();
+      const checkData = convertToDatabase.check(check);
+      
+      const { data, error } = await supabase!
+        .from('checks')
+        .insert(checkData)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('Erro ao criar cheque:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao criar cheque:', error);
+        throw error;
+      }
     
-    console.log('✅ Cheque criado no Supabase:', data.id);
-    return data ? convertFromDatabase.check(data) : null;
+      console.log('✅ Cheque criado no Supabase:', data.id);
+      return data ? convertFromDatabase.check(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao criar cheque:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -512,23 +532,25 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('checks')
-      .update(convertToDatabase.check(check))
-      .eq('id', check.id)
-      .select()
-      .single();
+      const checkData = convertToDatabase.check(check);
+      
+      const { data, error } = await supabase!
+        .from('checks')
+        .update(checkData)
+        .eq('id', check.id)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('Erro ao atualizar cheque:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao atualizar cheque:', error);
+        throw error;
+      }
     
-    console.log('✅ Cheque atualizado no Supabase:', check.id);
-    return data ? convertFromDatabase.check(data) : null;
+      console.log('✅ Cheque atualizado no Supabase:', check.id);
+      return data ? convertFromDatabase.check(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao atualizar cheque:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -536,21 +558,21 @@ export const database = {
     if (!isSupabaseConfigured()) return false;
     
     try {
-    const { error } = await supabase!
-      .from('checks')
-      .delete()
-      .eq('id', id);
+      const { error } = await supabase!
+        .from('checks')
+        .delete()
+        .eq('id', id);
     
-    if (error) {
-      console.error('Erro ao deletar cheque:', error);
-      return false;
-    }
+      if (error) {
+        console.error('❌ Erro ao deletar cheque:', error);
+        throw error;
+      }
     
-    console.log('✅ Cheque deletado do Supabase:', id);
-    return true;
+      console.log('✅ Cheque deletado do Supabase:', id);
+      return true;
     } catch (error) {
       console.error('❌ Erro de conexão ao deletar cheque:', error);
-      return false;
+      throw error;
     }
   },
 
@@ -580,22 +602,24 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('boletos')
-      .insert(convertToDatabase.boleto(boleto))
-      .select()
-      .single();
+      const boletoData = convertToDatabase.boleto(boleto);
+      
+      const { data, error } = await supabase!
+        .from('boletos')
+        .insert(boletoData)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('Erro ao criar boleto:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao criar boleto:', error);
+        throw error;
+      }
     
-    console.log('✅ Boleto criado no Supabase:', data.id);
-    return data ? convertFromDatabase.boleto(data) : null;
+      console.log('✅ Boleto criado no Supabase:', data.id);
+      return data ? convertFromDatabase.boleto(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao criar boleto:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -603,23 +627,25 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('boletos')
-      .update(convertToDatabase.boleto(boleto))
-      .eq('id', boleto.id)
-      .select()
-      .single();
+      const boletoData = convertToDatabase.boleto(boleto);
+      
+      const { data, error } = await supabase!
+        .from('boletos')
+        .update(boletoData)
+        .eq('id', boleto.id)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('Erro ao atualizar boleto:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao atualizar boleto:', error);
+        throw error;
+      }
     
-    console.log('✅ Boleto atualizado no Supabase:', boleto.id);
-    return data ? convertFromDatabase.boleto(data) : null;
+      console.log('✅ Boleto atualizado no Supabase:', boleto.id);
+      return data ? convertFromDatabase.boleto(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao atualizar boleto:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -627,21 +653,21 @@ export const database = {
     if (!isSupabaseConfigured()) return false;
     
     try {
-    const { error } = await supabase!
-      .from('boletos')
-      .delete()
-      .eq('id', id);
+      const { error } = await supabase!
+        .from('boletos')
+        .delete()
+        .eq('id', id);
     
-    if (error) {
-      console.error('Erro ao deletar boleto:', error);
-      return false;
-    }
+      if (error) {
+        console.error('❌ Erro ao deletar boleto:', error);
+        throw error;
+      }
     
-    console.log('✅ Boleto deletado do Supabase:', id);
-    return true;
+      console.log('✅ Boleto deletado do Supabase:', id);
+      return true;
     } catch (error) {
       console.error('❌ Erro de conexão ao deletar boleto:', error);
-      return false;
+      throw error;
     }
   },
 
@@ -671,22 +697,24 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('employees')
-      .insert(convertToDatabase.employee(employee))
-      .select()
-      .single();
+      const employeeData = convertToDatabase.employee(employee);
+      
+      const { data, error } = await supabase!
+        .from('employees')
+        .insert(employeeData)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('Erro ao criar funcionário:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao criar funcionário:', error);
+        throw error;
+      }
     
-    console.log('✅ Funcionário criado no Supabase:', data.id);
-    return data ? convertFromDatabase.employee(data) : null;
+      console.log('✅ Funcionário criado no Supabase:', data.id);
+      return data ? convertFromDatabase.employee(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao criar funcionário:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -694,23 +722,25 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('employees')
-      .update(convertToDatabase.employee(employee))
-      .eq('id', employee.id)
-      .select()
-      .single();
+      const employeeData = convertToDatabase.employee(employee);
+      
+      const { data, error } = await supabase!
+        .from('employees')
+        .update(employeeData)
+        .eq('id', employee.id)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('Erro ao atualizar funcionário:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao atualizar funcionário:', error);
+        throw error;
+      }
     
-    console.log('✅ Funcionário atualizado no Supabase:', employee.id);
-    return data ? convertFromDatabase.employee(data) : null;
+      console.log('✅ Funcionário atualizado no Supabase:', employee.id);
+      return data ? convertFromDatabase.employee(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao atualizar funcionário:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -718,21 +748,21 @@ export const database = {
     if (!isSupabaseConfigured()) return false;
     
     try {
-    const { error } = await supabase!
-      .from('employees')
-      .delete()
-      .eq('id', id);
+      const { error } = await supabase!
+        .from('employees')
+        .delete()
+        .eq('id', id);
     
-    if (error) {
-      console.error('Erro ao deletar funcionário:', error);
-      return false;
-    }
+      if (error) {
+        console.error('❌ Erro ao deletar funcionário:', error);
+        throw error;
+      }
     
-    console.log('✅ Funcionário deletado do Supabase:', id);
-    return true;
+      console.log('✅ Funcionário deletado do Supabase:', id);
+      return true;
     } catch (error) {
       console.error('❌ Erro de conexão ao deletar funcionário:', error);
-      return false;
+      throw error;
     }
   },
 
@@ -762,22 +792,24 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('employee_payments')
-      .insert(convertToDatabase.employeePayment(payment))
-      .select()
-      .single();
+      const paymentData = convertToDatabase.employeePayment(payment);
+      
+      const { data, error } = await supabase!
+        .from('employee_payments')
+        .insert(paymentData)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('Erro ao criar pagamento:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao criar pagamento:', error);
+        throw error;
+      }
     
-    console.log('✅ Pagamento criado no Supabase:', data.id);
-    return data ? convertFromDatabase.employeePayment(data) : null;
+      console.log('✅ Pagamento criado no Supabase:', data.id);
+      return data ? convertFromDatabase.employeePayment(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao criar pagamento:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -807,22 +839,24 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('employee_advances')
-      .insert(convertToDatabase.employeeAdvance(advance))
-      .select()
-      .single();
+      const advanceData = convertToDatabase.employeeAdvance(advance);
+      
+      const { data, error } = await supabase!
+        .from('employee_advances')
+        .insert(advanceData)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('Erro ao criar adiantamento:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao criar adiantamento:', error);
+        throw error;
+      }
     
-    console.log('✅ Adiantamento criado no Supabase:', data.id);
-    return data ? convertFromDatabase.employeeAdvance(data) : null;
+      console.log('✅ Adiantamento criado no Supabase:', data.id);
+      return data ? convertFromDatabase.employeeAdvance(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao criar adiantamento:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -830,23 +864,25 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('employee_advances')
-      .update(convertToDatabase.employeeAdvance(advance))
-      .eq('id', advance.id)
-      .select()
-      .single();
+      const advanceData = convertToDatabase.employeeAdvance(advance);
+      
+      const { data, error } = await supabase!
+        .from('employee_advances')
+        .update(advanceData)
+        .eq('id', advance.id)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('Erro ao atualizar adiantamento:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao atualizar adiantamento:', error);
+        throw error;
+      }
     
-    console.log('✅ Adiantamento atualizado no Supabase:', advance.id);
-    return data ? convertFromDatabase.employeeAdvance(data) : null;
+      console.log('✅ Adiantamento atualizado no Supabase:', advance.id);
+      return data ? convertFromDatabase.employeeAdvance(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao atualizar adiantamento:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -876,22 +912,24 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('employee_overtimes')
-      .insert(convertToDatabase.employeeOvertime(overtime))
-      .select()
-      .single();
+      const overtimeData = convertToDatabase.employeeOvertime(overtime);
+      
+      const { data, error } = await supabase!
+        .from('employee_overtimes')
+        .insert(overtimeData)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('Erro ao criar horas extras:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao criar horas extras:', error);
+        throw error;
+      }
     
-    console.log('✅ Horas extras criadas no Supabase:', data.id);
-    return data ? convertFromDatabase.employeeOvertime(data) : null;
+      console.log('✅ Horas extras criadas no Supabase:', data.id);
+      return data ? convertFromDatabase.employeeOvertime(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao criar horas extras:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -899,23 +937,25 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('employee_overtimes')
-      .update(convertToDatabase.employeeOvertime(overtime))
-      .eq('id', overtime.id)
-      .select()
-      .single();
+      const overtimeData = convertToDatabase.employeeOvertime(overtime);
+      
+      const { data, error } = await supabase!
+        .from('employee_overtimes')
+        .update(overtimeData)
+        .eq('id', overtime.id)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('Erro ao atualizar horas extras:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao atualizar horas extras:', error);
+        throw error;
+      }
     
-    console.log('✅ Horas extras atualizadas no Supabase:', overtime.id);
-    return data ? convertFromDatabase.employeeOvertime(data) : null;
+      console.log('✅ Horas extras atualizadas no Supabase:', overtime.id);
+      return data ? convertFromDatabase.employeeOvertime(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao atualizar horas extras:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -945,22 +985,24 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('employee_commissions')
-      .insert(convertToDatabase.employeeCommission(commission))
-      .select()
-      .single();
+      const commissionData = convertToDatabase.employeeCommission(commission);
+      
+      const { data, error } = await supabase!
+        .from('employee_commissions')
+        .insert(commissionData)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('Erro ao criar comissão:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao criar comissão:', error);
+        throw error;
+      }
     
-    console.log('✅ Comissão criada no Supabase:', data.id);
-    return data ? convertFromDatabase.employeeCommission(data) : null;
+      console.log('✅ Comissão criada no Supabase:', data.id);
+      return data ? convertFromDatabase.employeeCommission(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao criar comissão:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -968,23 +1010,25 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('employee_commissions')
-      .update(convertToDatabase.employeeCommission(commission))
-      .eq('id', commission.id)
-      .select()
-      .single();
+      const commissionData = convertToDatabase.employeeCommission(commission);
+      
+      const { data, error } = await supabase!
+        .from('employee_commissions')
+        .update(commissionData)
+        .eq('id', commission.id)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('Erro ao atualizar comissão:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao atualizar comissão:', error);
+        throw error;
+      }
     
-    console.log('✅ Comissão atualizada no Supabase:', commission.id);
-    return data ? convertFromDatabase.employeeCommission(data) : null;
+      console.log('✅ Comissão atualizada no Supabase:', commission.id);
+      return data ? convertFromDatabase.employeeCommission(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao atualizar comissão:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -1014,22 +1058,24 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('installments')
-      .insert(convertToDatabase.installment(installment))
-      .select()
-      .single();
+      const installmentData = convertToDatabase.installment(installment);
+      
+      const { data, error } = await supabase!
+        .from('installments')
+        .insert(installmentData)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('Erro ao criar parcela:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao criar parcela:', error);
+        throw error;
+      }
     
-    console.log('✅ Parcela criada no Supabase:', data.id);
-    return data ? convertFromDatabase.installment(data) : null;
+      console.log('✅ Parcela criada no Supabase:', data.id);
+      return data ? convertFromDatabase.installment(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao criar parcela:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -1037,23 +1083,25 @@ export const database = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase!
-      .from('installments')
-      .update(convertToDatabase.installment(installment))
-      .eq('id', installment.id)
-      .select()
-      .single();
+      const installmentData = convertToDatabase.installment(installment);
+      
+      const { data, error } = await supabase!
+        .from('installments')
+        .update(installmentData)
+        .eq('id', installment.id)
+        .select()
+        .single();
     
-    if (error) {
-      console.error('Erro ao atualizar parcela:', error);
-      return null;
-    }
+      if (error) {
+        console.error('❌ Erro ao atualizar parcela:', error);
+        throw error;
+      }
     
-    console.log('✅ Parcela atualizada no Supabase:', installment.id);
-    return data ? convertFromDatabase.installment(data) : null;
+      console.log('✅ Parcela atualizada no Supabase:', installment.id);
+      return data ? convertFromDatabase.installment(data) : null;
     } catch (error) {
       console.error('❌ Erro de conexão ao atualizar parcela:', error);
-      return null;
+      throw error;
     }
   },
 

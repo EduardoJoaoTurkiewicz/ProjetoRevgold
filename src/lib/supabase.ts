@@ -33,6 +33,25 @@ if (supabaseUrl && supabaseAnonKey) {
   console.warn('⚠️ Variáveis de ambiente do Supabase não encontradas');
 }
 
+// Function to reinitialize Supabase with new credentials
+export const reinitializeSupabase = () => {
+  const { url, key } = getSupabaseCredentials();
+  
+  if (url && key) {
+    try {
+      supabase = createClient(url, key);
+      console.log('✅ Supabase reinicializado com sucesso');
+      return true;
+    } catch (error) {
+      console.error('❌ Erro ao reinicializar Supabase:', error);
+      supabase = null;
+      return false;
+    }
+  }
+  
+  return false;
+};
+
 // Check if Supabase is configured
 export const isSupabaseConfigured = () => {
   const configured = Boolean(supabase);

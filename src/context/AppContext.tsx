@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { User, Sale, Debt, Check, Installment, Product, Employee, EmployeePayment, EmployeeAdvance, EmployeeOvertime, EmployeeCommission, Boleto } from '../types';
 import { database } from '../lib/database';
-import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { isSupabaseConfigured, supabase, reinitializeSupabase } from '../lib/supabase';
 
 interface AppState {
   user: User | null;
@@ -449,6 +449,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Load data from database or localStorage on mount
   useEffect(() => {
     const loadData = async () => {
+      // Try to reinitialize Supabase in case credentials were added
+      reinitializeSupabase();
+      
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
       
@@ -601,6 +604,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Função para recarregar dados do Supabase
   const reloadFromSupabase = async () => {
+    // Try to reinitialize Supabase in case credentials were added
+    reinitializeSupabase();
+    
     if (!isSupabaseConfigured()) return;
     
     dispatch({ type: 'SET_LOADING', payload: true });
@@ -621,6 +627,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Configurar listener para mudanças em tempo real (opcional)
   useEffect(() => {
+    // Try to reinitialize Supabase in case credentials were added
+    reinitializeSupabase();
+    
     if (!isSupabaseConfigured()) return;
 
     console.log('🔄 Configurando listeners de tempo real...');
@@ -632,7 +641,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         { event: '*', schema: 'public', table: 'sales' },
         (payload) => {
           console.log('🔄 Mudança detectada em vendas:', payload);
-          reloadFromSupabase();
+          // Reload after a short delay to avoid too many reloads
+          setTimeout(() => reloadFromSupabase(), 1000);
         }
       )
       .subscribe();
@@ -644,7 +654,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         { event: '*', schema: 'public', table: 'debts' },
         (payload) => {
           console.log('🔄 Mudança detectada em dívidas:', payload);
-          reloadFromSupabase();
+          setTimeout(() => reloadFromSupabase(), 1000);
+        }
+      )
+      .subscribe();
+
+    // Listener para cheques
+    const checksSubscription = supabase!
+      .channel('checks-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'checks' },
+        (payload) => {
+          console.log('🔄 Mudança detectada em cheques:', payload);
+          setTimeout(() => reloadFromSupabase(), 1000);
+        }
+      )
+      .subscribe();
+
+    // Listener para boletos
+    const boletosSubscription = supabase!
+      .channel('boletos-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'boletos' },
+        (payload) => {
+          console.log('🔄 Mudança detectada em boletos:', payload);
+          setTimeout(() => reloadFromSupabase(), 1000);
         }
       )
       .subscribe();
@@ -656,7 +690,55 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         { event: '*', schema: 'public', table: 'employees' },
         (payload) => {
           console.log('🔄 Mudança detectada em funcionários:', payload);
-          reloadFromSupabase();
+          setTimeout(() => reloadFromSupabase(), 1000);
+        }
+      )
+      .subscribe();
+
+    // Listener para pagamentos de funcionários
+    const employeePaymentsSubscription = supabase!
+      .channel('employee-payments-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'employee_payments' },
+        (payload) => {
+          console.log('🔄 Mudança detectada em pagamentos:', payload);
+          setTimeout(() => reloadFromSupabase(), 1000);
+        }
+      )
+      .subscribe();
+
+    // Listener para adiantamentos
+    const employeeAdvancesSubscription = supabase!
+      .channel('employee-advances-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'employee_advances' },
+        (payload) => {
+          console.log('🔄 Mudança detectada em adiantamentos:', payload);
+          setTimeout(() => reloadFromSupabase(), 1000);
+        }
+      )
+      .subscribe();
+
+    // Listener para horas extras
+    const employeeOvertimesSubscription = supabase!
+      .channel('employee-overtimes-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'employee_overtimes' },
+        (payload) => {
+          console.log('🔄 Mudança detectada em horas extras:', payload);
+          setTimeout(() => reloadFromSupabase(), 1000);
+        }
+      )
+      .subscribe();
+
+    // Listener para comissões
+    const employeeCommissionsSubscription = supabase!
+      .channel('employee-commissions-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'employee_commissions' },
+        (payload) => {
+          console.log('🔄 Mudança detectada em comissões:', payload);
+          setTimeout(() => reloadFromSupabase(), 1000);
         }
       )
       .subscribe();
@@ -666,7 +748,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.log('🔄 Removendo listeners de tempo real...');
       salesSubscription.unsubscribe();
       debtsSubscription.unsubscribe();
+      checksSubscription.unsubscribe();
+      boletosSubscription.unsubscribe();
       employeesSubscription.unsubscribe();
+      employeePaymentsSubscription.unsubscribe();
+      employeeAdvancesSubscription.unsubscribe();
+      employeeOvertimesSubscription.unsubscribe();
+      employeeCommissionsSubscription.unsubscribe();
     };
   }, []);
 
