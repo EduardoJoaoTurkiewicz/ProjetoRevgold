@@ -21,7 +21,7 @@ const convertFromDatabase = {
     client: dbSale.client,
     sellerId: dbSale.seller_id,
     customCommissionRate: parseFloat(dbSale.custom_commission_rate || 0),
-    products: dbSale.products || [],
+    products: dbSale.products || '',
     observations: dbSale.observations,
     totalValue: parseFloat(dbSale.total_value || 0),
     paymentMethods: dbSale.payment_methods || [],
@@ -158,8 +158,8 @@ const convertFromDatabase = {
 
 // Função para converter dados da aplicação para o formato do banco
 const convertToDatabase = {
-  sale: (sale: Omit<Sale, 'id' | 'createdAt'>) => ({
-    id: sale.id || undefined, // Allow manual ID setting for migration
+  sale: (sale: Sale | Omit<Sale, 'id' | 'createdAt'>) => ({
+    id: 'id' in sale ? sale.id : undefined, // Allow manual ID setting for migration
     date: sale.date,
     delivery_date: sale.deliveryDate,
     client: sale.client,
@@ -176,8 +176,8 @@ const convertToDatabase = {
     payment_observations: sale.paymentObservations
   }),
 
-  debt: (debt: Omit<Debt, 'id' | 'createdAt'>) => ({
-    id: debt.id || undefined, // Allow manual ID setting for migration
+  debt: (debt: Debt | Omit<Debt, 'id' | 'createdAt'>) => ({
+    id: 'id' in debt ? debt.id : undefined, // Allow manual ID setting for migration
     date: debt.date,
     description: debt.description,
     company: debt.company,
@@ -191,8 +191,8 @@ const convertToDatabase = {
     debt_payment_description: debt.debtPaymentDescription
   }),
 
-  check: (check: Omit<Check, 'id' | 'createdAt'>) => ({
-    id: check.id || undefined, // Allow manual ID setting for migration
+  check: (check: Check | Omit<Check, 'id' | 'createdAt'>) => ({
+    id: 'id' in check ? check.id : undefined, // Allow manual ID setting for migration
     sale_id: check.saleId,
     debt_id: check.debtId,
     client: check.client,
@@ -211,8 +211,8 @@ const convertToDatabase = {
     discount_date: check.discountDate
   }),
 
-  boleto: (boleto: Omit<Boleto, 'id' | 'createdAt'>) => ({
-    id: boleto.id || undefined, // Allow manual ID setting for migration
+  boleto: (boleto: Boleto | Omit<Boleto, 'id' | 'createdAt'>) => ({
+    id: 'id' in boleto ? boleto.id : undefined, // Allow manual ID setting for migration
     sale_id: boleto.saleId,
     client: boleto.client,
     value: boleto.value,
@@ -224,8 +224,8 @@ const convertToDatabase = {
     observations: boleto.observations
   }),
 
-  employee: (employee: Omit<Employee, 'id' | 'createdAt'>) => ({
-    id: employee.id || undefined, // Allow manual ID setting for migration
+  employee: (employee: Employee | Omit<Employee, 'id' | 'createdAt'>) => ({
+    id: 'id' in employee ? employee.id : undefined, // Allow manual ID setting for migration
     name: employee.name,
     position: employee.position,
     is_seller: employee.isSeller,
@@ -237,8 +237,8 @@ const convertToDatabase = {
     observations: employee.observations
   }),
 
-  employeePayment: (payment: Omit<EmployeePayment, 'id' | 'createdAt'>) => ({
-    id: payment.id || undefined, // Allow manual ID setting for migration
+  employeePayment: (payment: EmployeePayment | Omit<EmployeePayment, 'id' | 'createdAt'>) => ({
+    id: 'id' in payment ? payment.id : undefined, // Allow manual ID setting for migration
     employee_id: payment.employeeId,
     amount: payment.amount,
     payment_date: payment.paymentDate,
@@ -247,8 +247,8 @@ const convertToDatabase = {
     observations: payment.observations
   }),
 
-  employeeAdvance: (advance: Omit<EmployeeAdvance, 'id' | 'createdAt'>) => ({
-    id: advance.id || undefined, // Allow manual ID setting for migration
+  employeeAdvance: (advance: EmployeeAdvance | Omit<EmployeeAdvance, 'id' | 'createdAt'>) => ({
+    id: 'id' in advance ? advance.id : undefined, // Allow manual ID setting for migration
     employee_id: advance.employeeId,
     amount: advance.amount,
     date: advance.date,
@@ -257,8 +257,8 @@ const convertToDatabase = {
     status: advance.status
   }),
 
-  employeeOvertime: (overtime: Omit<EmployeeOvertime, 'id' | 'createdAt'>) => ({
-    id: overtime.id || undefined, // Allow manual ID setting for migration
+  employeeOvertime: (overtime: EmployeeOvertime | Omit<EmployeeOvertime, 'id' | 'createdAt'>) => ({
+    id: 'id' in overtime ? overtime.id : undefined, // Allow manual ID setting for migration
     employee_id: overtime.employeeId,
     hours: overtime.hours,
     hourly_rate: overtime.hourlyRate,
@@ -268,8 +268,8 @@ const convertToDatabase = {
     status: overtime.status
   }),
 
-  employeeCommission: (commission: Omit<EmployeeCommission, 'id' | 'createdAt'>) => ({
-    id: commission.id || undefined, // Allow manual ID setting for migration
+  employeeCommission: (commission: EmployeeCommission | Omit<EmployeeCommission, 'id' | 'createdAt'>) => ({
+    id: 'id' in commission ? commission.id : undefined, // Allow manual ID setting for migration
     employee_id: commission.employeeId,
     sale_id: commission.saleId,
     sale_value: commission.saleValue,
@@ -279,8 +279,8 @@ const convertToDatabase = {
     status: commission.status
   }),
 
-  installment: (installment: Omit<Installment, 'id'>) => ({
-    id: installment.id || undefined, // Allow manual ID setting for migration
+  installment: (installment: Installment | Omit<Installment, 'id'>) => ({
+    id: 'id' in installment ? installment.id : undefined, // Allow manual ID setting for migration
     sale_id: installment.saleId,
     debt_id: installment.debtId,
     amount: installment.amount,
@@ -320,6 +320,11 @@ export const database = {
     
     try {
       const saleData = convertToDatabase.sale(sale);
+      
+      // Garantir que o ID seja gerado pelo banco se não fornecido
+      if (saleData.id) {
+        delete saleData.id;
+      }
       
       const { data, error } = await supabase!
         .from('sales')
@@ -416,6 +421,11 @@ export const database = {
     try {
       const debtData = convertToDatabase.debt(debt);
       
+      // Garantir que o ID seja gerado pelo banco se não fornecido
+      if (debtData.id) {
+        delete debtData.id;
+      }
+      
       const { data, error } = await supabase!
         .from('debts')
         .insert(debtData)
@@ -510,6 +520,11 @@ export const database = {
     
     try {
       const checkData = convertToDatabase.check(check);
+      
+      // Garantir que o ID seja gerado pelo banco se não fornecido
+      if (checkData.id) {
+        delete checkData.id;
+      }
       
       const { data, error } = await supabase!
         .from('checks')
@@ -606,6 +621,11 @@ export const database = {
     try {
       const boletoData = convertToDatabase.boleto(boleto);
       
+      // Garantir que o ID seja gerado pelo banco se não fornecido
+      if (boletoData.id) {
+        delete boletoData.id;
+      }
+      
       const { data, error } = await supabase!
         .from('boletos')
         .insert(boletoData)
@@ -700,6 +720,11 @@ export const database = {
     
     try {
       const employeeData = convertToDatabase.employee(employee);
+      
+      // Garantir que o ID seja gerado pelo banco se não fornecido
+      if (employeeData.id) {
+        delete employeeData.id;
+      }
       
       const { data, error } = await supabase!
         .from('employees')
@@ -796,6 +821,11 @@ export const database = {
     try {
       const paymentData = convertToDatabase.employeePayment(payment);
       
+      // Garantir que o ID seja gerado pelo banco se não fornecido
+      if (paymentData.id) {
+        delete paymentData.id;
+      }
+      
       const { data, error } = await supabase!
         .from('employee_payments')
         .insert(paymentData)
@@ -842,6 +872,11 @@ export const database = {
     
     try {
       const advanceData = convertToDatabase.employeeAdvance(advance);
+      
+      // Garantir que o ID seja gerado pelo banco se não fornecido
+      if (advanceData.id) {
+        delete advanceData.id;
+      }
       
       const { data, error } = await supabase!
         .from('employee_advances')
@@ -916,6 +951,11 @@ export const database = {
     try {
       const overtimeData = convertToDatabase.employeeOvertime(overtime);
       
+      // Garantir que o ID seja gerado pelo banco se não fornecido
+      if (overtimeData.id) {
+        delete overtimeData.id;
+      }
+      
       const { data, error } = await supabase!
         .from('employee_overtimes')
         .insert(overtimeData)
@@ -989,6 +1029,11 @@ export const database = {
     try {
       const commissionData = convertToDatabase.employeeCommission(commission);
       
+      // Garantir que o ID seja gerado pelo banco se não fornecido
+      if (commissionData.id) {
+        delete commissionData.id;
+      }
+      
       const { data, error } = await supabase!
         .from('employee_commissions')
         .insert(commissionData)
@@ -1061,6 +1106,11 @@ export const database = {
     
     try {
       const installmentData = convertToDatabase.installment(installment);
+      
+      // Garantir que o ID seja gerado pelo banco se não fornecido
+      if (installmentData.id) {
+        delete installmentData.id;
+      }
       
       const { data, error } = await supabase!
         .from('installments')

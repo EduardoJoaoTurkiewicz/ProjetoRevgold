@@ -226,15 +226,17 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Descrição dos Produtos *</label>
+                <label className="form-label">Descrição dos Produtos</label>
                 <textarea
                   value={typeof formData.products === 'string' ? formData.products : 'Produtos vendidos'}
                   onChange={(e) => setFormData(prev => ({ ...prev, products: e.target.value }))}
                   className="input-field"
                   rows={3}
                   placeholder="Descreva os produtos vendidos..."
-                  required
                 />
+                <p className="text-xs text-slate-500 mt-1">
+                  Campo opcional - deixe em branco se não quiser especificar
+                </p>
               </div>
 
               <div className="form-group">

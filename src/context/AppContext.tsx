@@ -102,13 +102,22 @@ function appReducer(state: AppState, action: AppAction): AppState {
     // Regular actions that trigger database sync
     case 'ADD_SALE':
       // Don't sync during loading
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createSale(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        // Sempre tentar salvar no Supabase se configurado
+        if (isSupabaseConfigured()) {
+          database.createSale(action.payload).catch(error => {
+            console.error('❌ Erro ao salvar venda no Supabase:', error);
+          });
+        }
       }
       return { ...state, sales: [...state.sales, action.payload] };
     case 'UPDATE_SALE':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.updateSale(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.updateSale(action.payload).catch(error => {
+            console.error('❌ Erro ao atualizar venda no Supabase:', error);
+          });
+        }
       }
       return { 
         ...state, 
@@ -117,8 +126,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ) 
       };
     case 'DELETE_SALE':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.deleteSale(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.deleteSale(action.payload).catch(error => {
+            console.error('❌ Erro ao deletar venda no Supabase:', error);
+          });
+        }
       }
       return { 
         ...state, 
@@ -127,13 +140,21 @@ function appReducer(state: AppState, action: AppAction): AppState {
         employeeCommissions: state.employeeCommissions.filter(commission => commission.saleId !== action.payload)
       };
     case 'ADD_DEBT':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createDebt(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.createDebt(action.payload).catch(error => {
+            console.error('❌ Erro ao salvar dívida no Supabase:', error);
+          });
+        }
       }
       return { ...state, debts: [...state.debts, action.payload] };
     case 'UPDATE_DEBT':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.updateDebt(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.updateDebt(action.payload).catch(error => {
+            console.error('❌ Erro ao atualizar dívida no Supabase:', error);
+          });
+        }
       }
       return { 
         ...state, 
@@ -142,8 +163,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ) 
       };
     case 'DELETE_DEBT':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.deleteDebt(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.deleteDebt(action.payload).catch(error => {
+            console.error('❌ Erro ao deletar dívida no Supabase:', error);
+          });
+        }
       }
       return { 
         ...state, 
@@ -151,13 +176,21 @@ function appReducer(state: AppState, action: AppAction): AppState {
         installments: state.installments.filter(installment => installment.debtId !== action.payload)
       };
     case 'ADD_CHECK':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createCheck(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.createCheck(action.payload).catch(error => {
+            console.error('❌ Erro ao salvar cheque no Supabase:', error);
+          });
+        }
       }
       return { ...state, checks: [...state.checks, action.payload] };
     case 'UPDATE_CHECK':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.updateCheck(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.updateCheck(action.payload).catch(error => {
+            console.error('❌ Erro ao atualizar cheque no Supabase:', error);
+          });
+        }
       }
       return { 
         ...state, 
@@ -166,21 +199,33 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ) 
       };
     case 'DELETE_CHECK':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.deleteCheck(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.deleteCheck(action.payload).catch(error => {
+            console.error('❌ Erro ao deletar cheque no Supabase:', error);
+          });
+        }
       }
       return { 
         ...state, 
         checks: state.checks.filter(check => check.id !== action.payload)
       };
     case 'ADD_BOLETO':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createBoleto(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.createBoleto(action.payload).catch(error => {
+            console.error('❌ Erro ao salvar boleto no Supabase:', error);
+          });
+        }
       }
       return { ...state, boletos: [...state.boletos, action.payload] };
     case 'UPDATE_BOLETO':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.updateBoleto(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.updateBoleto(action.payload).catch(error => {
+            console.error('❌ Erro ao atualizar boleto no Supabase:', error);
+          });
+        }
       }
       return { 
         ...state, 
@@ -189,21 +234,33 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ) 
       };
     case 'DELETE_BOLETO':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.deleteBoleto(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.deleteBoleto(action.payload).catch(error => {
+            console.error('❌ Erro ao deletar boleto no Supabase:', error);
+          });
+        }
       }
       return { 
         ...state, 
         boletos: state.boletos.filter(boleto => boleto.id !== action.payload)
       };
     case 'ADD_INSTALLMENT':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createInstallment(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.createInstallment(action.payload).catch(error => {
+            console.error('❌ Erro ao salvar parcela no Supabase:', error);
+          });
+        }
       }
       return { ...state, installments: [...state.installments, action.payload] };
     case 'UPDATE_INSTALLMENT':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.updateInstallment(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.updateInstallment(action.payload).catch(error => {
+            console.error('❌ Erro ao atualizar parcela no Supabase:', error);
+          });
+        }
       }
       return { 
         ...state, 
@@ -212,13 +269,21 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ) 
       };
     case 'ADD_EMPLOYEE':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createEmployee(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.createEmployee(action.payload).catch(error => {
+            console.error('❌ Erro ao salvar funcionário no Supabase:', error);
+          });
+        }
       }
       return { ...state, employees: [...state.employees, action.payload] };
     case 'UPDATE_EMPLOYEE':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.updateEmployee(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.updateEmployee(action.payload).catch(error => {
+            console.error('❌ Erro ao atualizar funcionário no Supabase:', error);
+          });
+        }
       }
       return { 
         ...state, 
@@ -227,8 +292,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ) 
       };
     case 'DELETE_EMPLOYEE':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.deleteEmployee(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.deleteEmployee(action.payload).catch(error => {
+            console.error('❌ Erro ao deletar funcionário no Supabase:', error);
+          });
+        }
       }
       return { 
         ...state, 
@@ -239,8 +308,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
         employeeCommissions: state.employeeCommissions.filter(commission => commission.employeeId !== action.payload)
       };
     case 'ADD_EMPLOYEE_PAYMENT':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createEmployeePayment(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.createEmployeePayment(action.payload).catch(error => {
+            console.error('❌ Erro ao salvar pagamento no Supabase:', error);
+          });
+        }
       }
       return { ...state, employeePayments: [...state.employeePayments, action.payload] };
     case 'UPDATE_EMPLOYEE_PAYMENT':
@@ -256,13 +329,21 @@ function appReducer(state: AppState, action: AppAction): AppState {
         employeePayments: state.employeePayments.filter(payment => payment.id !== action.payload)
       };
     case 'ADD_EMPLOYEE_ADVANCE':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createEmployeeAdvance(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.createEmployeeAdvance(action.payload).catch(error => {
+            console.error('❌ Erro ao salvar adiantamento no Supabase:', error);
+          });
+        }
       }
       return { ...state, employeeAdvances: [...state.employeeAdvances, action.payload] };
     case 'UPDATE_EMPLOYEE_ADVANCE':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.updateEmployeeAdvance(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.updateEmployeeAdvance(action.payload).catch(error => {
+            console.error('❌ Erro ao atualizar adiantamento no Supabase:', error);
+          });
+        }
       }
       return { 
         ...state, 
@@ -276,13 +357,21 @@ function appReducer(state: AppState, action: AppAction): AppState {
         employeeAdvances: state.employeeAdvances.filter(advance => advance.id !== action.payload)
       };
     case 'ADD_EMPLOYEE_OVERTIME':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createEmployeeOvertime(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.createEmployeeOvertime(action.payload).catch(error => {
+            console.error('❌ Erro ao salvar horas extras no Supabase:', error);
+          });
+        }
       }
       return { ...state, employeeOvertimes: [...state.employeeOvertimes, action.payload] };
     case 'UPDATE_EMPLOYEE_OVERTIME':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.updateEmployeeOvertime(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.updateEmployeeOvertime(action.payload).catch(error => {
+            console.error('❌ Erro ao atualizar horas extras no Supabase:', error);
+          });
+        }
       }
       return { 
         ...state, 
@@ -296,13 +385,21 @@ function appReducer(state: AppState, action: AppAction): AppState {
         employeeOvertimes: state.employeeOvertimes.filter(overtime => overtime.id !== action.payload)
       };
     case 'ADD_EMPLOYEE_COMMISSION':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createEmployeeCommission(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.createEmployeeCommission(action.payload).catch(error => {
+            console.error('❌ Erro ao salvar comissão no Supabase:', error);
+          });
+        }
       }
       return { ...state, employeeCommissions: [...state.employeeCommissions, action.payload] };
     case 'UPDATE_EMPLOYEE_COMMISSION':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.updateEmployeeCommission(action.payload).catch(console.error);
+      if (!state.isLoading) {
+        if (isSupabaseConfigured()) {
+          database.updateEmployeeCommission(action.payload).catch(error => {
+            console.error('❌ Erro ao atualizar comissão no Supabase:', error);
+          });
+        }
       }
       return { 
         ...state, 
@@ -456,7 +553,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       try {
         if (isSupabaseConfigured()) {
-          console.log('🔄 Carregando TODOS os dados do Supabase automaticamente...');
+          console.log('🔄 Supabase configurado - carregando TODOS os dados automaticamente...');
           
           // Usar função de sincronização completa
           const allData = await database.syncAllData();
@@ -466,20 +563,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             payload: allData
           });
           
-          console.log('✅ TODOS os dados carregados do Supabase automaticamente');
+          console.log('✅ TODOS os dados carregados do Supabase automaticamente:', {
+            sales: allData.sales.length,
+            debts: allData.debts.length,
+            checks: allData.checks.length,
+            boletos: allData.boletos.length,
+            employees: allData.employees.length,
+            employeePayments: allData.employeePayments.length,
+            employeeAdvances: allData.employeeAdvances.length,
+            employeeOvertimes: allData.employeeOvertimes.length,
+            employeeCommissions: allData.employeeCommissions.length,
+            installments: allData.installments.length
+          });
           
           // Migrate localStorage data to Supabase if it exists
           const localData = localStorage.getItem('revgold-data');
           if (localData) {
             try {
               const parsedData = JSON.parse(localData);
-              console.log('🔄 Migrando dados locais para Supabase...');
+              console.log('🔄 Dados locais encontrados - iniciando migração para Supabase...');
               
               // Migrate sales
               if (parsedData.sales && parsedData.sales.length > 0) {
                 console.log(`Migrando ${parsedData.sales.length} vendas...`);
                 for (const sale of parsedData.sales) {
-                  await database.createSale(sale);
+                  try {
+                    await database.createSale(sale);
+                    console.log(`✅ Venda migrada: ${sale.client}`);
+                  } catch (error) {
+                    console.error(`❌ Erro ao migrar venda ${sale.client}:`, error);
+                  }
                 }
               }
               
@@ -487,7 +600,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               if (parsedData.debts && parsedData.debts.length > 0) {
                 console.log(`Migrando ${parsedData.debts.length} dívidas...`);
                 for (const debt of parsedData.debts) {
-                  await database.createDebt(debt);
+                  try {
+                    await database.createDebt(debt);
+                    console.log(`✅ Dívida migrada: ${debt.company}`);
+                  } catch (error) {
+                    console.error(`❌ Erro ao migrar dívida ${debt.company}:`, error);
+                  }
                 }
               }
               
@@ -495,7 +613,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               if (parsedData.checks && parsedData.checks.length > 0) {
                 console.log(`Migrando ${parsedData.checks.length} cheques...`);
                 for (const check of parsedData.checks) {
-                  await database.createCheck(check);
+                  try {
+                    await database.createCheck(check);
+                    console.log(`✅ Cheque migrado: ${check.client}`);
+                  } catch (error) {
+                    console.error(`❌ Erro ao migrar cheque ${check.client}:`, error);
+                  }
                 }
               }
               
@@ -503,7 +626,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               if (parsedData.boletos && parsedData.boletos.length > 0) {
                 console.log(`Migrando ${parsedData.boletos.length} boletos...`);
                 for (const boleto of parsedData.boletos) {
-                  await database.createBoleto(boleto);
+                  try {
+                    await database.createBoleto(boleto);
+                    console.log(`✅ Boleto migrado: ${boleto.client}`);
+                  } catch (error) {
+                    console.error(`❌ Erro ao migrar boleto ${boleto.client}:`, error);
+                  }
                 }
               }
               
@@ -511,7 +639,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               if (parsedData.employees && parsedData.employees.length > 0) {
                 console.log(`Migrando ${parsedData.employees.length} funcionários...`);
                 for (const employee of parsedData.employees) {
-                  await database.createEmployee(employee);
+                  try {
+                    await database.createEmployee(employee);
+                    console.log(`✅ Funcionário migrado: ${employee.name}`);
+                  } catch (error) {
+                    console.error(`❌ Erro ao migrar funcionário ${employee.name}:`, error);
+                  }
                 }
               }
               
@@ -519,7 +652,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               if (parsedData.employeePayments && parsedData.employeePayments.length > 0) {
                 console.log(`Migrando ${parsedData.employeePayments.length} pagamentos...`);
                 for (const payment of parsedData.employeePayments) {
-                  await database.createEmployeePayment(payment);
+                  try {
+                    await database.createEmployeePayment(payment);
+                    console.log(`✅ Pagamento migrado`);
+                  } catch (error) {
+                    console.error(`❌ Erro ao migrar pagamento:`, error);
+                  }
                 }
               }
               
@@ -527,7 +665,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               if (parsedData.employeeAdvances && parsedData.employeeAdvances.length > 0) {
                 console.log(`Migrando ${parsedData.employeeAdvances.length} adiantamentos...`);
                 for (const advance of parsedData.employeeAdvances) {
-                  await database.createEmployeeAdvance(advance);
+                  try {
+                    await database.createEmployeeAdvance(advance);
+                    console.log(`✅ Adiantamento migrado`);
+                  } catch (error) {
+                    console.error(`❌ Erro ao migrar adiantamento:`, error);
+                  }
                 }
               }
               
@@ -535,7 +678,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               if (parsedData.employeeOvertimes && parsedData.employeeOvertimes.length > 0) {
                 console.log(`Migrando ${parsedData.employeeOvertimes.length} horas extras...`);
                 for (const overtime of parsedData.employeeOvertimes) {
-                  await database.createEmployeeOvertime(overtime);
+                  try {
+                    await database.createEmployeeOvertime(overtime);
+                    console.log(`✅ Horas extras migradas`);
+                  } catch (error) {
+                    console.error(`❌ Erro ao migrar horas extras:`, error);
+                  }
                 }
               }
               
@@ -543,7 +691,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               if (parsedData.employeeCommissions && parsedData.employeeCommissions.length > 0) {
                 console.log(`Migrando ${parsedData.employeeCommissions.length} comissões...`);
                 for (const commission of parsedData.employeeCommissions) {
-                  await database.createEmployeeCommission(commission);
+                  try {
+                    await database.createEmployeeCommission(commission);
+                    console.log(`✅ Comissão migrada`);
+                  } catch (error) {
+                    console.error(`❌ Erro ao migrar comissão:`, error);
+                  }
                 }
               }
               
@@ -551,36 +704,57 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               if (parsedData.installments && parsedData.installments.length > 0) {
                 console.log(`Migrando ${parsedData.installments.length} parcelas...`);
                 for (const installment of parsedData.installments) {
-                  await database.createInstallment(installment);
+                  try {
+                    await database.createInstallment(installment);
+                    console.log(`✅ Parcela migrada`);
+                  } catch (error) {
+                    console.error(`❌ Erro ao migrar parcela:`, error);
+                  }
                 }
               }
               
               // Clear localStorage after successful migration
               localStorage.removeItem('revgold-data');
-              console.log('✅ Migração concluída - dados transferidos para Supabase');
+              console.log('✅ Migração concluída - dados locais transferidos para Supabase e localStorage limpo');
               
               // Reload data from Supabase
               const refreshedData = await database.syncAllData();
               dispatch({ type: 'LOAD_DATA', payload: refreshedData });
+              
+              console.log('✅ Dados atualizados após migração:', {
+                sales: refreshedData.sales.length,
+                debts: refreshedData.debts.length,
+                checks: refreshedData.checks.length,
+                boletos: refreshedData.boletos.length,
+                employees: refreshedData.employees.length
+              });
             } catch (migrationError) {
               console.error('❌ Erro na migração:', migrationError);
-              dispatch({ type: 'SET_ERROR', payload: 'Erro durante a migração dos dados. Alguns dados podem não ter sido transferidos.' });
+              dispatch({ type: 'SET_ERROR', payload: 'Erro durante a migração dos dados locais para o Supabase. Alguns dados podem não ter sido transferidos. Verifique o console para mais detalhes.' });
             }
           }
         } else {
-          console.log('⚠️ Supabase não configurado, usando dados locais...');
+          console.log('⚠️ Supabase não configurado - carregando dados do localStorage...');
           
           // Fallback to localStorage
           const savedData = localStorage.getItem('revgold-data');
           if (savedData) {
             const data = JSON.parse(savedData);
             dispatch({ type: 'LOAD_DATA', payload: data });
-            console.log('📱 Dados locais carregados');
+            console.log('📱 Dados locais carregados:', {
+              sales: data.sales?.length || 0,
+              debts: data.debts?.length || 0,
+              checks: data.checks?.length || 0,
+              boletos: data.boletos?.length || 0,
+              employees: data.employees?.length || 0
+            });
+          } else {
+            console.log('📱 Nenhum dado local encontrado - iniciando com dados vazios');
           }
         }
       } catch (error) {
         console.error('❌ Erro ao carregar dados do Supabase:', error);
-        dispatch({ type: 'SET_ERROR', payload: 'Erro ao conectar com o banco de dados. Usando dados locais como backup.' });
+        dispatch({ type: 'SET_ERROR', payload: 'Erro ao conectar com o banco de dados Supabase. Usando dados locais como backup. Verifique sua conexão e configurações.' });
         
         // Fallback to localStorage on error
         try {
@@ -588,11 +762,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (savedData) {
             const data = JSON.parse(savedData);
             dispatch({ type: 'LOAD_DATA', payload: data });
-            console.log('📱 Backup local carregado');
+            console.log('📱 Backup local carregado após erro no Supabase');
           }
         } catch (localError) {
           console.error('❌ Erro no backup local:', localError);
-          dispatch({ type: 'SET_ERROR', payload: 'Erro ao carregar dados' });
+          dispatch({ type: 'SET_ERROR', payload: 'Erro crítico: não foi possível carregar dados nem do Supabase nem do localStorage.' });
         }
       } finally {
         dispatch({ type: 'SET_LOADING', payload: false });
@@ -600,6 +774,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
     
     loadData();
+    
+    // Listen for Supabase reconnection events
+    const handleSupabaseReconnect = () => {
+      console.log('🔄 Supabase reconectado - recarregando dados...');
+      loadData();
+    };
+    
+    window.addEventListener('supabase-reconnected', handleSupabaseReconnect);
+    
+    return () => {
+      window.removeEventListener('supabase-reconnected', handleSupabaseReconnect);
+    };
   }, []);
 
   // Configurar listener para mudanças em tempo real (opcional)
@@ -786,13 +972,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         employeeCommissions: state.employeeCommissions
       }));
       
-      console.log('💾 Dados salvos no localStorage como backup');
+      console.log('💾 Dados salvos no localStorage como backup:', {
+        sales: state.sales.length,
+        debts: state.debts.length,
+        checks: state.checks.length,
+        boletos: state.boletos.length,
+        employees: state.employees.length,
+        supabaseConfigured: isSupabaseConfigured()
+      });
       
       // Trigger notification system update
       window.dispatchEvent(new CustomEvent('revgold-data-updated', {
         detail: {
           type: 'data-change',
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          supabaseConfigured: isSupabaseConfigured()
         }
       }));
     }

@@ -35,14 +35,27 @@ export const reinitializeSupabase = (newUrl?: string, newKey?: string) => {
     // Save to localStorage
     localStorage.setItem('supabase_url', newUrl);
     localStorage.setItem('supabase_anon_key', newKey);
+    
+    console.log('🔄 Credenciais do Supabase atualizadas e salvas');
   } else {
     // Re-read from localStorage
     supabaseUrl = import.meta.env.VITE_SUPABASE_URL || localStorage.getItem('supabase_url');
     supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || localStorage.getItem('supabase_anon_key');
+    
+    if (supabaseUrl && supabaseAnonKey) {
+      console.log('🔄 Credenciais do Supabase carregadas do localStorage');
+    }
   }
   
   // Reinitialize client
   initializeSupabaseClient();
+  
+  // Trigger a data reload if configured
+  if (isSupabaseConfigured()) {
+    console.log('✅ Supabase reinicializado com sucesso');
+    // Dispatch custom event to trigger data reload
+    window.dispatchEvent(new CustomEvent('supabase-reconnected'));
+  }
 };
 
 // Check if Supabase is configured
