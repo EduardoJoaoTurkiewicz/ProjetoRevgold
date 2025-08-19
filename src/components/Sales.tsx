@@ -23,13 +23,15 @@ export function Sales() {
     if (sale.sellerId) {
       const seller = state.employees.find(emp => emp.id === sale.sellerId);
       if (seller && seller.isSeller) {
+        const commissionRate = sale.customCommissionRate || 5;
+        const commissionAmount = sale.totalValue * (commissionRate / 100);
         const commission: EmployeeCommission = {
           id: `commission-${newSale.id}`,
           employeeId: sale.sellerId,
           saleId: newSale.id,
           saleValue: sale.totalValue,
-          commissionRate: 5, // 5%
-          commissionAmount: sale.totalValue * 0.05,
+          commissionRate: commissionRate,
+          commissionAmount: commissionAmount,
           date: sale.date,
           status: 'pendente',
           createdAt: new Date().toISOString()
@@ -145,12 +147,14 @@ export function Sales() {
       // Atualizar comissão se necessário
       const existingCommission = state.employeeCommissions.find(c => c.saleId === editingSale.id);
       if (sale.sellerId && state.employees.find(emp => emp.id === sale.sellerId)?.isSeller) {
-        const commissionAmount = sale.totalValue * 0.05;
+        const commissionRate = sale.customCommissionRate || 5;
+        const commissionAmount = sale.totalValue * (commissionRate / 100);
         if (existingCommission) {
           const updatedCommission = {
             ...existingCommission,
             employeeId: sale.sellerId,
             saleValue: sale.totalValue,
+            commissionRate: commissionRate,
             commissionAmount,
             date: sale.date
           };
@@ -161,7 +165,7 @@ export function Sales() {
             employeeId: sale.sellerId,
             saleId: editingSale.id,
             saleValue: sale.totalValue,
-            commissionRate: 5,
+            commissionRate: commissionRate,
             commissionAmount,
             date: sale.date,
             status: 'pendente',
@@ -392,7 +396,7 @@ export function Sales() {
                     const commission = state.employeeCommissions.find(c => c.saleId === viewingSale.id);
                     return seller && seller.isSeller && commission ? (
                       <p className="text-sm text-green-600 font-bold mt-1">
-                        Comissão: R$ {commission.commissionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (5%)
+                        Comissão: R$ {commission.commissionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({commission.commissionRate}%)
                       </p>
                     ) : null;
                   })()}

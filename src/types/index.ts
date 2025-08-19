@@ -20,6 +20,7 @@ export interface Sale {
   deliveryDate?: string;
   client: string;
   sellerId?: string; // ID do funcionário vendedor
+  customCommissionRate?: number; // Porcentagem personalizada de comissão para esta venda
   products: Product[];
   observations?: string;
   totalValue: number;
@@ -142,7 +143,7 @@ export interface EmployeeCommission {
   employeeId: string;
   saleId: string;
   saleValue: number;
-  commissionRate: number; // Porcentagem (ex: 5 para 5%)
+  commissionRate: number; // Porcentagem personalizada para esta venda
   commissionAmount: number;
   date: string;
   status: 'pendente' | 'pago';

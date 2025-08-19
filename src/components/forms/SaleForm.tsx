@@ -28,6 +28,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     deliveryDate: sale?.deliveryDate || '',
     client: sale?.client || '',
     sellerId: sale?.sellerId || '',
+    customCommissionRate: sale?.customCommissionRate || 5,
     products: sale?.products || [{ name: '', quantity: 0, unitPrice: 0, totalPrice: 0 }],
     observations: sale?.observations || '',
     totalValue: sale?.totalValue || 0,
@@ -256,9 +257,24 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Selecione o vendedor responsável por esta venda. Comissão de 5% será calculada automaticamente.
-                </p>
+                {formData.sellerId && (
+                  <div className="mt-3">
+                    <label className="form-label">Comissão Personalizada (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      value={formData.customCommissionRate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, customCommissionRate: parseFloat(e.target.value) || 0 }))}
+                      className="input-field"
+                      placeholder="5.0"
+                    />
+                    <p className="text-xs text-blue-600 mt-1 font-bold">
+                      ✓ Comissão: R$ {((formData.totalValue * (formData.customCommissionRate || 0)) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({formData.customCommissionRate}%)
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

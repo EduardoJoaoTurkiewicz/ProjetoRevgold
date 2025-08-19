@@ -440,7 +440,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
 const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
-  reloadFromSupabase?: () => Promise<void>;
 } | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -457,7 +456,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       try {
         if (isSupabaseConfigured()) {
-          console.log('🔄 Carregando TODOS os dados do Supabase...');
+          console.log('🔄 Carregando TODOS os dados do Supabase automaticamente...');
           
           // Usar função de sincronização completa
           const allData = await database.syncAllData();
@@ -467,14 +466,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             payload: allData
           });
           
-          console.log('✅ TODOS os dados carregados do Supabase com sucesso');
+          console.log('✅ TODOS os dados carregados do Supabase automaticamente');
           
           // Migrate localStorage data to Supabase if it exists
           const localData = localStorage.getItem('revgold-data');
           if (localData) {
             try {
               const parsedData = JSON.parse(localData);
-              console.log('🔄 Migrando TODOS os dados do localStorage para Supabase...');
+              console.log('🔄 Migrando dados locais para Supabase...');
               
               // Migrate sales
               if (parsedData.sales && parsedData.sales.length > 0) {
@@ -558,29 +557,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               
               // Clear localStorage after successful migration
               localStorage.removeItem('revgold-data');
-              console.log('✅ Migração COMPLETA concluída com sucesso - todos os dados foram transferidos para o Supabase');
+              console.log('✅ Migração concluída - dados transferidos para Supabase');
               
               // Reload data from Supabase
-              window.location.reload();
+              const refreshedData = await database.syncAllData();
+              dispatch({ type: 'LOAD_DATA', payload: refreshedData });
             } catch (migrationError) {
-              console.error('❌ Erro na migração completa:', migrationError);
+              console.error('❌ Erro na migração:', migrationError);
               dispatch({ type: 'SET_ERROR', payload: 'Erro durante a migração dos dados. Alguns dados podem não ter sido transferidos.' });
             }
           }
         } else {
-          console.log('⚠️ Supabase não configurado, carregando do localStorage...');
+          console.log('⚠️ Supabase não configurado, usando dados locais...');
           
           // Fallback to localStorage
           const savedData = localStorage.getItem('revgold-data');
           if (savedData) {
             const data = JSON.parse(savedData);
             dispatch({ type: 'LOAD_DATA', payload: data });
-            console.log('📱 Dados carregados do localStorage');
+            console.log('📱 Dados locais carregados');
           }
         }
       } catch (error) {
-        console.error('❌ Erro ao carregar dados:', error);
-        dispatch({ type: 'SET_ERROR', payload: 'Erro ao conectar com o banco de dados. Verifique sua conexão e tente novamente.' });
+        console.error('❌ Erro ao carregar dados do Supabase:', error);
+        dispatch({ type: 'SET_ERROR', payload: 'Erro ao conectar com o banco de dados. Usando dados locais como backup.' });
         
         // Fallback to localStorage on error
         try {
@@ -588,10 +588,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (savedData) {
             const data = JSON.parse(savedData);
             dispatch({ type: 'LOAD_DATA', payload: data });
-            console.log('📱 Dados carregados do backup local');
+            console.log('📱 Backup local carregado');
           }
         } catch (localError) {
-          console.error('❌ Erro ao carregar backup local:', localError);
+          console.error('❌ Erro no backup local:', localError);
           dispatch({ type: 'SET_ERROR', payload: 'Erro ao carregar dados' });
         }
       } finally {
@@ -602,29 +602,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     loadData();
   }, []);
 
-  // Função para recarregar dados do Supabase
-  const reloadFromSupabase = async () => {
-    // Try to reinitialize Supabase in case credentials were added
-    reinitializeSupabase();
-    
-    if (!isSupabaseConfigured()) return;
-    
-    dispatch({ type: 'SET_LOADING', payload: true });
-    dispatch({ type: 'SET_ERROR', payload: null });
-    
-    try {
-      console.log('🔄 Recarregando TODOS os dados do Supabase...');
-      const allData = await database.syncAllData();
-      dispatch({ type: 'LOAD_DATA', payload: allData });
-      console.log('✅ Dados recarregados com sucesso do Supabase');
-    } catch (error) {
-      console.error('❌ Erro ao recarregar dados:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao recarregar dados do banco' });
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
   // Configurar listener para mudanças em tempo real (opcional)
   useEffect(() => {
     // Try to reinitialize Supabase in case credentials were added
@@ -632,7 +609,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     if (!isSupabaseConfigured()) return;
 
-    console.log('🔄 Configurando listeners de tempo real...');
+    console.log('🔄 Configurando sincronização automática em tempo real...');
+    
+    let reloadTimeout: NodeJS.Timeout;
+    
+    const reloadData = async () => {
+      // Debounce reloads to avoid too many requests
+      clearTimeout(reloadTimeout);
+      reloadTimeout = setTimeout(async () => {
+        try {
+          const allData = await database.syncAllData();
+          dispatch({ type: 'LOAD_DATA', payload: allData });
+          console.log('🔄 Dados sincronizados automaticamente');
+        } catch (error) {
+          console.error('❌ Erro na sincronização automática:', error);
+        }
+      }, 1000);
+    };
 
     // Listener para vendas
     const salesSubscription = supabase!
@@ -640,9 +633,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'sales' },
         (payload) => {
-          console.log('🔄 Mudança detectada em vendas:', payload);
-          // Reload after a short delay to avoid too many reloads
-          setTimeout(() => reloadFromSupabase(), 1000);
+          console.log('🔄 Venda atualizada automaticamente');
+          reloadData();
         }
       )
       .subscribe();
@@ -653,8 +645,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'debts' },
         (payload) => {
-          console.log('🔄 Mudança detectada em dívidas:', payload);
-          setTimeout(() => reloadFromSupabase(), 1000);
+          console.log('🔄 Dívida atualizada automaticamente');
+          reloadData();
         }
       )
       .subscribe();
@@ -665,8 +657,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'checks' },
         (payload) => {
-          console.log('🔄 Mudança detectada em cheques:', payload);
-          setTimeout(() => reloadFromSupabase(), 1000);
+          console.log('🔄 Cheque atualizado automaticamente');
+          reloadData();
         }
       )
       .subscribe();
@@ -677,8 +669,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'boletos' },
         (payload) => {
-          console.log('🔄 Mudança detectada em boletos:', payload);
-          setTimeout(() => reloadFromSupabase(), 1000);
+          console.log('🔄 Boleto atualizado automaticamente');
+          reloadData();
         }
       )
       .subscribe();
@@ -689,8 +681,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'employees' },
         (payload) => {
-          console.log('🔄 Mudança detectada em funcionários:', payload);
-          setTimeout(() => reloadFromSupabase(), 1000);
+          console.log('🔄 Funcionário atualizado automaticamente');
+          reloadData();
         }
       )
       .subscribe();
@@ -701,8 +693,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'employee_payments' },
         (payload) => {
-          console.log('🔄 Mudança detectada em pagamentos:', payload);
-          setTimeout(() => reloadFromSupabase(), 1000);
+          console.log('🔄 Pagamento atualizado automaticamente');
+          reloadData();
         }
       )
       .subscribe();
@@ -713,8 +705,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'employee_advances' },
         (payload) => {
-          console.log('🔄 Mudança detectada em adiantamentos:', payload);
-          setTimeout(() => reloadFromSupabase(), 1000);
+          console.log('🔄 Adiantamento atualizado automaticamente');
+          reloadData();
         }
       )
       .subscribe();
@@ -725,8 +717,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'employee_overtimes' },
         (payload) => {
-          console.log('🔄 Mudança detectada em horas extras:', payload);
-          setTimeout(() => reloadFromSupabase(), 1000);
+          console.log('🔄 Horas extras atualizadas automaticamente');
+          reloadData();
         }
       )
       .subscribe();
@@ -737,15 +729,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'employee_commissions' },
         (payload) => {
-          console.log('🔄 Mudança detectada em comissões:', payload);
-          setTimeout(() => reloadFromSupabase(), 1000);
+          console.log('🔄 Comissão atualizada automaticamente');
+          reloadData();
         }
       )
       .subscribe();
 
     // Cleanup subscriptions
     return () => {
-      console.log('🔄 Removendo listeners de tempo real...');
+      console.log('🔄 Desconectando sincronização automática...');
+      clearTimeout(reloadTimeout);
       salesSubscription.unsubscribe();
       debtsSubscription.unsubscribe();
       checksSubscription.unsubscribe();
@@ -806,7 +799,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [state.sales, state.debts, state.checks, state.boletos, state.employees, state.employeePayments, state.employeeAdvances, state.employeeOvertimes, state.employeeCommissions, state.installments, state.user, state.isLoading]);
 
   return (
-    <AppContext.Provider value={{ state, dispatch, reloadFromSupabase }}>
+    <AppContext.Provider value={{ state, dispatch }}>
       {children}
     </AppContext.Provider>
   );

@@ -137,6 +137,10 @@ export function Employees() {
              c.status === 'pendente';
     });
     const totalCommissions = monthlyCommissions.reduce((sum, c) => sum + c.commissionAmount, 0);
+    
+    // Comissões totais acumuladas (todas as pendentes, não só do mês)
+    const allPendingCommissions = getEmployeeCommissions(employeeId).filter(c => c.status === 'pendente');
+    const totalPendingCommissions = allPendingCommissions.reduce((sum, c) => sum + c.commissionAmount, 0);
 
     // Horas extras pendentes
     const pendingOvertimes = getEmployeeOvertimes(employeeId).filter(o => o.status === 'pendente');
@@ -152,10 +156,12 @@ export function Employees() {
     return {
       baseSalary,
       totalCommissions,
+      totalPendingCommissions,
       totalOvertimes,
       totalAdvances,
       totalToPay,
       monthlyCommissions,
+      allPendingCommissions,
       pendingOvertimes,
       pendingAdvances
     };
@@ -603,7 +609,10 @@ export function Employees() {
                       <div className="text-center p-6 bg-blue-50 rounded-2xl border border-blue-200">
                         <h4 className="font-bold text-blue-900 mb-2">Comissões</h4>
                         <p className="text-2xl font-black text-blue-700">
-                          R$ {payroll.totalCommissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          R$ {payroll.totalPendingCommissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-xs text-blue-600 mt-1">
+                          {payroll.allPendingCommissions.length} comissão(ões) pendente(s)
                         </p>
                       </div>
                       <div className="text-center p-6 bg-purple-50 rounded-2xl border border-purple-200">
@@ -624,18 +633,21 @@ export function Employees() {
                     <div className="p-8 bg-gradient-to-r from-green-100 to-emerald-100 rounded-3xl border-2 border-green-300 text-center">
                       <h3 className="text-2xl font-bold text-green-900 mb-4">Total a Pagar</h3>
                       <p className="text-5xl font-black text-green-700">
-                        R$ {payroll.totalToPay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {(payroll.baseSalary + payroll.totalPendingCommissions + payroll.totalOvertimes - payroll.totalAdvances).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-sm text-green-600 font-bold mt-2">
+                        Inclui TODAS as comissões pendentes acumuladas
                       </p>
                     </div>
 
                     {/* Detailed Sections */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                       {/* Commissions */}
-                      {payroll.monthlyCommissions.length > 0 && (
+                      {payroll.allPendingCommissions.length > 0 && (
                         <div className="card">
-                          <h4 className="font-bold text-slate-900 mb-4">Comissões do Mês</h4>
+                          <h4 className="font-bold text-slate-900 mb-4">Todas as Comissões Pendentes</h4>
                           <div className="space-y-3">
-                            {payroll.monthlyCommissions.map(commission => {
+                            {payroll.allPendingCommissions.map(commission => {
                               const sale = state.sales.find(s => s.id === commission.saleId);
                               return (
                                 <div key={commission.id} className="p-3 bg-blue-50 rounded-xl">
@@ -646,7 +658,7 @@ export function Employees() {
                                     Venda: R$ {commission.saleValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                   </p>
                                   <p className="text-sm font-bold text-blue-800">
-                                    Comissão: R$ {commission.commissionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (5%)
+                                    Comissão: R$ {commission.commissionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({commission.commissionRate}%)
                                   </p>
                                   <p className="text-xs text-blue-600">
                                     {new Date(commission.date).toLocaleDateString('pt-BR')}
@@ -764,7 +776,7 @@ export function Employees() {
                             {payroll.totalCommissions > 0 && (
                               <div className="flex justify-between text-green-700">
                                 <span>+ Comissões:</span>
-                                <span className="font-bold">R$ {payroll.totalCommissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                <span className="font-bold">R$ {payroll.totalPendingCommissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                               </div>
                             )}
                             {payroll.totalOvertimes > 0 && (
@@ -781,7 +793,7 @@ export function Employees() {
                             )}
                             <div className="flex justify-between border-t pt-2 text-lg font-black text-green-700">
                               <span>Total:</span>
-                              <span>R$ {payroll.totalToPay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                              <span>R$ {(payroll.baseSalary + payroll.totalPendingCommissions + payroll.totalOvertimes - payroll.totalAdvances).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                             </div>
                           </div>
                         </div>

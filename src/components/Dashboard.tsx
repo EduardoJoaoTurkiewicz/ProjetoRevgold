@@ -410,10 +410,10 @@ const Dashboard: React.FC = () => {
               <Database className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-yellow-800">⚠️ Modo Local Ativo</h3>
+              <h3 className="text-lg font-bold text-yellow-800">⚠️ Sistema em Modo Local</h3>
               <p className="text-yellow-700 font-medium">
-                <strong>ATENÇÃO:</strong> Os dados estão sendo salvos apenas neste navegador. 
-                Para sincronizar entre dispositivos e usuários, clique em "Connect to Supabase\" no canto superior direito.
+                <strong>IMPORTANTE:</strong> Dados salvos apenas neste navegador. 
+                Para acesso compartilhado entre sócios, clique em "Connect to Supabase" no canto superior direito.
               </p>
             </div>
           </div>
@@ -427,10 +427,10 @@ const Dashboard: React.FC = () => {
               <Database className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-green-800">✅ Sistema Conectado ao Supabase</h3>
+              <h3 className="text-lg font-bold text-green-800">✅ Sistema Totalmente Conectado</h3>
               <p className="text-green-700 font-medium">
-                <strong>PERFEITO:</strong> Todos os dados estão sendo sincronizados em tempo real. 
-                Qualquer usuário pode acessar as mesmas informações de qualquer dispositivo.
+                <strong>PERFEITO:</strong> Sincronização automática ativa. Todos os sócios veem os mesmos dados em tempo real, 
+                independente do dispositivo ou navegador usado.
               </p>
             </div>
           </div>
@@ -444,8 +444,8 @@ const Dashboard: React.FC = () => {
               <Clock className="w-6 h-6 text-white animate-spin" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-blue-800">Carregando Dados...</h3>
-              <p className="text-blue-700">Sincronizando informações do banco de dados.</p>
+              <h3 className="text-lg font-bold text-blue-800">Carregando Sistema...</h3>
+              <p className="text-blue-700">Conectando ao banco de dados e carregando informações.</p>
             </div>
           </div>
         </div>
@@ -458,7 +458,7 @@ const Dashboard: React.FC = () => {
               <AlertTriangle className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-red-800">Erro de Conexão</h3>
+              <h3 className="text-lg font-bold text-red-800">Aviso do Sistema</h3>
               <p className="text-red-700">{state.error}</p>
             </div>
           </div>
