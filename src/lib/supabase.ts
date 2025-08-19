@@ -1,70 +1,34 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Try to get credentials from environment variables or localStorage
-const getSupabaseCredentials = () => {
-  // First try environment variables
-  let url = import.meta.env.VITE_SUPABASE_URL;
-  let key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  
-  // If not found, try localStorage
-  if (!url || !key) {
-    url = localStorage.getItem('supabase_url') || '';
-    key = localStorage.getItem('supabase_anon_key') || '';
-  }
-  
-  return { url, key };
-};
-
-const { url: supabaseUrl, key: supabaseAnonKey } = getSupabaseCredentials();
+// Get credentials from environment variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Create Supabase client
 export let supabase: any = null;
 
-// Initialize Supabase if credentials are available
+// Initialize Supabase automatically
 if (supabaseUrl && supabaseAnonKey) {
   try {
     supabase = createClient(supabaseUrl, supabaseAnonKey);
-    console.log('✅ Supabase inicializado com sucesso');
+    console.log('✅ Supabase conectado automaticamente');
   } catch (error) {
-    console.error('❌ Erro ao inicializar Supabase:', error);
+    console.error('❌ Erro ao conectar ao Supabase:', error);
     supabase = null;
   }
 } else {
-  console.warn('⚠️ Variáveis de ambiente do Supabase não encontradas');
+  console.warn('⚠️ Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env');
 }
-
-// Function to reinitialize Supabase with new credentials
-export const reinitializeSupabase = () => {
-  const { url, key } = getSupabaseCredentials();
-  
-  if (url && key) {
-    try {
-      supabase = createClient(url, key);
-      console.log('✅ Supabase reinicializado com sucesso');
-      return true;
-    } catch (error) {
-      console.error('❌ Erro ao reinicializar Supabase:', error);
-      supabase = null;
-      return false;
-    }
-  }
-  
-  return false;
-};
 
 // Check if Supabase is configured
 export const isSupabaseConfigured = () => {
-  const configured = Boolean(supabase);
-  if (!configured) {
-    console.warn('⚠️ Supabase não está configurado. Clique em "Connect to Supabase" para configurar.');
-  }
-  return configured;
+  return Boolean(supabase && supabaseUrl && supabaseAnonKey);
 };
 
 // Upload de imagem para o bucket de cheques
 export const uploadCheckImage = async (file: File, checkId: string, imageType: 'front' | 'back'): Promise<string> => {
   if (!supabase) {
-    throw new Error('Supabase não está configurado. Configure as variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY para usar o upload de imagens.');
+    throw new Error('Supabase não está configurado. Configure as variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.');
   }
 
   try {
@@ -94,7 +58,7 @@ export const uploadCheckImage = async (file: File, checkId: string, imageType: '
       .from('check-images')
       .upload(filePath, file, {
         cacheControl: '3600',
-        upsert: true, // Substitui se já existir
+        upsert: true,
         contentType: file.type
       });
 
