@@ -1,24 +1,49 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Get credentials from environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Get credentials from environment variables or localStorage
+let supabaseUrl = import.meta.env.VITE_SUPABASE_URL || localStorage.getItem('supabase_url');
+let supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || localStorage.getItem('supabase_anon_key');
 
 // Create Supabase client
 export let supabase: any = null;
 
-// Initialize Supabase automatically
-if (supabaseUrl && supabaseAnonKey) {
-  try {
-    supabase = createClient(supabaseUrl, supabaseAnonKey);
-    console.log('✅ Supabase conectado automaticamente');
-  } catch (error) {
-    console.error('❌ Erro ao conectar ao Supabase:', error);
-    supabase = null;
+// Initialize Supabase client
+const initializeSupabaseClient = () => {
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      supabase = createClient(supabaseUrl, supabaseAnonKey);
+      console.log('✅ Supabase conectado automaticamente');
+    } catch (error) {
+      console.error('❌ Erro ao conectar ao Supabase:', error);
+      supabase = null;
+    }
+  } else {
+    console.warn('⚠️ Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env');
   }
-} else {
-  console.warn('⚠️ Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env');
-}
+};
+
+// Initialize on module load
+initializeSupabaseClient();
+
+// Function to reinitialize Supabase with new credentials
+export const reinitializeSupabase = (newUrl?: string, newKey?: string) => {
+  if (newUrl && newKey) {
+    // Update credentials
+    supabaseUrl = newUrl;
+    supabaseAnonKey = newKey;
+    
+    // Save to localStorage
+    localStorage.setItem('supabase_url', newUrl);
+    localStorage.setItem('supabase_anon_key', newKey);
+  } else {
+    // Re-read from localStorage
+    supabaseUrl = import.meta.env.VITE_SUPABASE_URL || localStorage.getItem('supabase_url');
+    supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || localStorage.getItem('supabase_anon_key');
+  }
+  
+  // Reinitialize client
+  initializeSupabaseClient();
+};
 
 // Check if Supabase is configured
 export const isSupabaseConfigured = () => {
