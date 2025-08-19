@@ -413,7 +413,7 @@ const Dashboard: React.FC = () => {
               <h3 className="text-lg font-bold text-yellow-800">⚠️ Sistema em Modo Local</h3>
               <p className="text-yellow-700 font-medium">
                 <strong>IMPORTANTE:</strong> Dados salvos apenas neste navegador. 
-                Para acesso compartilhado entre sócios, clique em "Connect to Supabase" no canto superior direito.
+                Para acesso compartilhado entre sócios, clique em "Connect to Supabase\" no canto superior direito.
               </p>
             </div>
           </div>
