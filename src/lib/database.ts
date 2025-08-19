@@ -285,22 +285,28 @@ export const database = {
   async getSales(): Promise<Sale[]> {
     if (!isSupabaseConfigured()) return [];
     
+    try {
     const { data, error } = await supabase!
       .from('sales')
       .select('*')
       .order('date', { ascending: false });
     
     if (error) {
-      console.error('Erro ao buscar vendas:', error);
+      console.error('❌ Erro ao buscar vendas:', error);
       return [];
     }
     
     return data?.map(convertFromDatabase.sale) || [];
+    } catch (error) {
+      console.error('❌ Erro de conexão ao buscar vendas:', error);
+      return [];
+    }
   },
 
   async createSale(sale: Omit<Sale, 'id' | 'createdAt'>): Promise<Sale | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase!
       .from('sales')
       .insert(convertToDatabase.sale(sale))
@@ -308,11 +314,16 @@ export const database = {
       .single();
     
     if (error) {
-      console.error('Erro ao criar venda:', error);
+      console.error('❌ Erro ao criar venda:', error);
       return null;
     }
     
+    console.log('✅ Venda criada no Supabase:', data.id);
     return data ? convertFromDatabase.sale(data) : null;
+    } catch (error) {
+      console.error('❌ Erro de conexão ao criar venda:', error);
+      return null;
+    }
   },
 
   async updateSale(sale: Sale): Promise<Sale | null> {

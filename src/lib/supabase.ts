@@ -1,18 +1,43 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Try to get credentials from environment variables or localStorage
+const getSupabaseCredentials = () => {
+  // First try environment variables
+  let url = import.meta.env.VITE_SUPABASE_URL;
+  let key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  
+  // If not found, try localStorage
+  if (!url || !key) {
+    url = localStorage.getItem('supabase_url') || '';
+    key = localStorage.getItem('supabase_anon_key') || '';
+  }
+  
+  return { url, key };
+};
 
-// Create Supabase client only if environment variables are provided
-export const supabase = supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+const { url: supabaseUrl, key: supabaseAnonKey } = getSupabaseCredentials();
+
+// Create Supabase client
+export let supabase: any = null;
+
+// Initialize Supabase if credentials are available
+if (supabaseUrl && supabaseAnonKey) {
+  try {
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
+    console.log('✅ Supabase inicializado com sucesso');
+  } catch (error) {
+    console.error('❌ Erro ao inicializar Supabase:', error);
+    supabase = null;
+  }
+} else {
+  console.warn('⚠️ Variáveis de ambiente do Supabase não encontradas');
+}
 
 // Check if Supabase is configured
 export const isSupabaseConfigured = () => {
-  const configured = Boolean(supabase && supabaseUrl && supabaseAnonKey);
+  const configured = Boolean(supabase);
   if (!configured) {
-    console.warn('Supabase não está configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY para usar funcionalidades de upload.');
+    console.warn('⚠️ Supabase não está configurado. Clique em "Connect to Supabase" para configurar.');
   }
   return configured;
 };

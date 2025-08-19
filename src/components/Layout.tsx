@@ -12,10 +12,13 @@ import {
   Menu,
   X,
   Building2,
-  Sparkles
+  Sparkles,
+  Database,
+  Settings
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { SupabaseSetup } from './SupabaseSetup';
 
 interface LayoutProps {
   currentPage: string;
@@ -37,6 +40,7 @@ const menuItems = [
 export default function Layout({ currentPage, onPageChange, children }: LayoutProps) {
   const { state, dispatch } = useApp();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [showSupabaseSetup, setShowSupabaseSetup] = React.useState(false);
 
   const handleLogout = () => {
     if (window.confirm('Tem certeza que deseja sair?')) {
@@ -201,6 +205,16 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
             </div>
 
             <div className="flex items-center gap-4">
+              {!isSupabaseConfigured() && (
+                <button
+                  onClick={() => setShowSupabaseSetup(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold shadow-lg"
+                >
+                  <Database className="w-4 h-4" />
+                  Connect to Supabase
+                </button>
+              )}
+              
               <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-green-100 rounded-full">
                 <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-green-700 font-semibold text-sm">
@@ -223,6 +237,17 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
           {children}
         </main>
       </div>
+      
+      {/* Supabase Setup Modal */}
+      {showSupabaseSetup && (
+        <SupabaseSetup
+          onClose={() => setShowSupabaseSetup(false)}
+          onConfigured={() => {
+            setShowSupabaseSetup(false);
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 }

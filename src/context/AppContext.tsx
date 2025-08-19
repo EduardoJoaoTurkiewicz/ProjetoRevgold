@@ -453,7 +453,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       try {
         if (isSupabaseConfigured()) {
-          console.log('Carregando dados do Supabase...');
+          console.log('🔄 Carregando dados do Supabase...');
           
           // Load all data from Supabase
           const [
@@ -496,21 +496,60 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             }
           });
           
-          console.log('Dados carregados do Supabase com sucesso');
+          console.log('✅ Dados carregados do Supabase com sucesso');
+          
+          // Migrate localStorage data to Supabase if it exists
+          const localData = localStorage.getItem('revgold-data');
+          if (localData) {
+            try {
+              const parsedData = JSON.parse(localData);
+              console.log('🔄 Migrando dados do localStorage para Supabase...');
+              
+              // Migrate sales
+              if (parsedData.sales && parsedData.sales.length > 0) {
+                for (const sale of parsedData.sales) {
+                  await database.createSale(sale);
+                }
+              }
+              
+              // Migrate debts
+              if (parsedData.debts && parsedData.debts.length > 0) {
+                for (const debt of parsedData.debts) {
+                  await database.createDebt(debt);
+                }
+              }
+              
+              // Migrate employees
+              if (parsedData.employees && parsedData.employees.length > 0) {
+                for (const employee of parsedData.employees) {
+                  await database.createEmployee(employee);
+                }
+              }
+              
+              // Clear localStorage after successful migration
+              localStorage.removeItem('revgold-data');
+              console.log('✅ Migração concluída com sucesso');
+              
+              // Reload data from Supabase
+              window.location.reload();
+            } catch (migrationError) {
+              console.error('❌ Erro na migração:', migrationError);
+            }
+          }
         } else {
-          console.log('Supabase não configurado, carregando do localStorage...');
+          console.log('⚠️ Supabase não configurado, carregando do localStorage...');
           
           // Fallback to localStorage
           const savedData = localStorage.getItem('revgold-data');
           if (savedData) {
             const data = JSON.parse(savedData);
             dispatch({ type: 'LOAD_DATA', payload: data });
-            console.log('Dados carregados do localStorage');
+            console.log('📱 Dados carregados do localStorage');
           }
         }
       } catch (error) {
-        console.error('Erro ao carregar dados:', error);
-        dispatch({ type: 'SET_ERROR', payload: 'Erro ao carregar dados. Tentando carregar do backup local...' });
+        console.error('❌ Erro ao carregar dados:', error);
+        dispatch({ type: 'SET_ERROR', payload: 'Erro ao conectar com o banco de dados. Usando dados locais...' });
         
         // Fallback to localStorage on error
         try {
@@ -518,10 +557,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (savedData) {
             const data = JSON.parse(savedData);
             dispatch({ type: 'LOAD_DATA', payload: data });
-            console.log('Dados carregados do backup local');
+            console.log('📱 Dados carregados do backup local');
           }
         } catch (localError) {
-          console.error('Erro ao carregar backup local:', localError);
+          console.error('❌ Erro ao carregar backup local:', localError);
           dispatch({ type: 'SET_ERROR', payload: 'Erro ao carregar dados' });
         }
       } finally {
