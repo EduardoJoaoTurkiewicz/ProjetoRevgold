@@ -5,134 +5,17 @@ import { Sale, PaymentMethod, EmployeeCommission } from '../types';
 import { SaleForm } from './forms/SaleForm';
 
 export function Sales() {
-  const { state, dispatch } = useApp();
+  const { state, createSale, updateSale, deleteSale } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [viewingSale, setViewingSale] = useState<Sale | null>(null);
 
   const handleAddSale = (sale: Omit<Sale, 'id' | 'createdAt'>) => {
-    const newSale: Sale = {
-      ...sale,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
-    };
-    
-    dispatch({ type: 'ADD_SALE', payload: newSale });
-    
-    // Criar comissão se há vendedor associado
-    if (sale.sellerId) {
-      const seller = state.employees.find(emp => emp.id === sale.sellerId);
-      if (seller && seller.isSeller) {
-        const commissionRate = sale.customCommissionRate || 5;
-        const commissionAmount = sale.totalValue * (commissionRate / 100);
-        const commission: EmployeeCommission = {
-          id: `commission-${newSale.id}`,
-          employeeId: sale.sellerId,
-          saleId: newSale.id,
-          saleValue: sale.totalValue,
-          commissionRate: commissionRate,
-          commissionAmount: commissionAmount,
-          date: sale.date,
-          status: 'pendente',
-          createdAt: new Date().toISOString()
-        };
-        dispatch({ type: 'ADD_EMPLOYEE_COMMISSION', payload: commission });
-      }
-    }
-    
-    // Create installments if needed
-    sale.paymentMethods.forEach(method => {
-      if (method.installments && method.installments > 1) {
-        for (let i = 0; i < method.installments; i++) {
-          const dueDate = new Date(method.firstInstallmentDate || method.startDate || sale.date);
-          dueDate.setDate(dueDate.getDate() + (i * (method.installmentInterval || 30)));
-          
-          const installment = {
-            id: `${newSale.id}-${i}`,
-            saleId: newSale.id,
-            amount: method.installmentValue || 0,
-            dueDate: dueDate.toISOString().split('T')[0],
-            isPaid: i === 0, // First installment is considered paid
-            type: 'venda' as const,
-            description: `${sale.client} - Parcela ${i + 1}/${method.installments}`
-          };
-          
-          dispatch({ type: 'ADD_INSTALLMENT', payload: installment });
-          
-          // Create checks for each installment if payment method is check
-          if (method.type === 'cheque') {
-            const check = {
-              id: `${newSale.id}-check-${i}`,
-              saleId: newSale.id,
-              client: sale.client,
-              value: method.installmentValue || 0,
-              dueDate: dueDate.toISOString().split('T')[0],
-              status: 'pendente' as const,
-              isOwnCheck: false,
-              installmentNumber: i + 1,
-              totalInstallments: method.installments,
-              usedFor: `Venda - ${sale.client} - Parcela ${i + 1}/${method.installments}`,
-              observations: `Cheque gerado automaticamente para parcela ${i + 1} de ${method.installments}`,
-              createdAt: new Date().toISOString()
-            };
-            
-            dispatch({ type: 'ADD_CHECK', payload: check });
-          } else if (method.type === 'boleto') {
-            // Create boletos for each installment if payment method is boleto
-            const boleto = {
-              id: `${newSale.id}-boleto-${i}`,
-              saleId: newSale.id,
-              client: sale.client,
-              value: method.installmentValue || 0,
-              dueDate: dueDate.toISOString().split('T')[0],
-              status: 'pendente' as const,
-              installmentNumber: i + 1,
-              totalInstallments: method.installments,
-              observations: `Boleto gerado automaticamente para parcela ${i + 1} de ${method.installments}`,
-              createdAt: new Date().toISOString()
-            };
-            
-            dispatch({ type: 'ADD_BOLETO', payload: boleto });
-          }
-        }
-      } else if (method.type === 'cheque') {
-        // Single check payment
-        const check = {
-          id: `${newSale.id}-check-single`,
-          saleId: newSale.id,
-          client: sale.client,
-          value: method.amount,
-          dueDate: method.firstInstallmentDate || sale.date,
-          status: 'pendente' as const,
-          isOwnCheck: false,
-          installmentNumber: 1,
-          totalInstallments: 1,
-          usedFor: `Venda - ${sale.client}`,
-          observations: `Cheque gerado automaticamente para venda`,
-          createdAt: new Date().toISOString()
-        };
-        
-        dispatch({ type: 'ADD_CHECK', payload: check });
-      } else if (method.type === 'boleto') {
-        // Single boleto payment
-        const boleto = {
-          id: `${newSale.id}-boleto-single`,
-          saleId: newSale.id,
-          client: sale.client,
-          value: method.amount,
-          dueDate: method.firstInstallmentDate || sale.date,
-          status: 'pendente' as const,
-          installmentNumber: 1,
-          totalInstallments: 1,
-          observations: `Boleto gerado automaticamente para venda`,
-          createdAt: new Date().toISOString()
-        };
-        
-        dispatch({ type: 'ADD_BOLETO', payload: boleto });
-      }
+    createSale(sale).then(() => {
+      setIsFormOpen(false);
+    }).catch(error => {
+      alert('Erro ao criar venda: ' + error.message);
     });
-    
-    setIsFormOpen(false);
   };
 
   const handleEditSale = (sale: Omit<Sale, 'id' | 'createdAt'>) => {
@@ -142,49 +25,19 @@ export function Sales() {
         id: editingSale.id,
         createdAt: editingSale.createdAt
       };
-      dispatch({ type: 'UPDATE_SALE', payload: updatedSale });
-      
-      // Atualizar comissão se necessário
-      const existingCommission = state.employeeCommissions.find(c => c.saleId === editingSale.id);
-      if (sale.sellerId && state.employees.find(emp => emp.id === sale.sellerId)?.isSeller) {
-        const commissionRate = sale.customCommissionRate || 5;
-        const commissionAmount = sale.totalValue * (commissionRate / 100);
-        if (existingCommission) {
-          const updatedCommission = {
-            ...existingCommission,
-            employeeId: sale.sellerId,
-            saleValue: sale.totalValue,
-            commissionRate: commissionRate,
-            commissionAmount,
-            date: sale.date
-          };
-          dispatch({ type: 'UPDATE_EMPLOYEE_COMMISSION', payload: updatedCommission });
-        } else {
-          const newCommission: EmployeeCommission = {
-            id: `commission-${editingSale.id}`,
-            employeeId: sale.sellerId,
-            saleId: editingSale.id,
-            saleValue: sale.totalValue,
-            commissionRate: commissionRate,
-            commissionAmount,
-            date: sale.date,
-            status: 'pendente',
-            createdAt: new Date().toISOString()
-          };
-          dispatch({ type: 'ADD_EMPLOYEE_COMMISSION', payload: newCommission });
-        }
-      } else if (existingCommission) {
-        // Remove comissão se vendedor foi removido
-        dispatch({ type: 'DELETE_EMPLOYEE_COMMISSION', payload: existingCommission.id });
-      }
-      
-      setEditingSale(null);
+      updateSale(updatedSale).then(() => {
+        setEditingSale(null);
+      }).catch(error => {
+        alert('Erro ao atualizar venda: ' + error.message);
+      });
     }
   };
 
   const handleDeleteSale = (id: string) => {
     if (window.confirm('Tem certeza que deseja excluir esta venda?')) {
-      dispatch({ type: 'DELETE_SALE', payload: id });
+      deleteSale(id).catch(error => {
+        alert('Erro ao excluir venda: ' + error.message);
+      });
     }
   };
 
@@ -349,7 +202,7 @@ export function Sales() {
           <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-slate-900">Detalhes da Venda</h2>
+                <h2 className="text-2xl font-bold text-slate-900">Detalhes Completos da Venda</h2>
                 <button
                   onClick={() => setViewingSale(null)}
                   className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -409,14 +262,38 @@ export function Sales() {
                     </div>
                   </div>
                 </div>
-                {viewingSale.observations && (
-                  <div className="md:col-span-2">
-                    <label className="form-label">Observações</label>
-                    <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-                      <p className="text-base text-blue-700 font-medium">{viewingSale.observations}</p>
+                <div className="md:col-span-2">
+                  <label className="form-label">Todas as Observações e Informações</label>
+                  <div className="p-6 bg-blue-50 rounded-xl border border-blue-100 space-y-4">
+                    {viewingSale.observations && (
+                      <div>
+                        <h4 className="font-bold text-blue-900 mb-2">Observações Gerais:</h4>
+                        <p className="text-blue-700 font-medium">{viewingSale.observations}</p>
+                      </div>
+                    )}
+                    {viewingSale.paymentDescription && (
+                      <div>
+                        <h4 className="font-bold text-blue-900 mb-2">Descrição do Pagamento:</h4>
+                        <p className="text-blue-700 font-medium">{viewingSale.paymentDescription}</p>
+                      </div>
+                    )}
+                    {viewingSale.paymentObservations && (
+                      <div>
+                        <h4 className="font-bold text-blue-900 mb-2">Observações do Pagamento:</h4>
+                        <p className="text-blue-700 font-medium">{viewingSale.paymentObservations}</p>
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="font-bold text-blue-900 mb-2">Informações do Sistema:</h4>
+                      <div className="text-sm text-blue-600 space-y-1">
+                        <p><strong>ID da Venda:</strong> {viewingSale.id}</p>
+                        <p><strong>Data de Criação:</strong> {new Date(viewingSale.createdAt).toLocaleString('pt-BR')}</p>
+                        <p><strong>Valor Recebido:</strong> R$ {viewingSale.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        <p><strong>Valor Pendente:</strong> R$ {viewingSale.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                      </div>
                     </div>
                   </div>
-                )}
+                </div>
                 <div>
                   <label className="form-label">Valor Total</label>
                   <p className="text-xl font-black text-green-600">

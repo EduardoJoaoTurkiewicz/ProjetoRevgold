@@ -17,8 +17,7 @@ import {
   Activity,
   PieChart,
   ArrowUpCircle,
-  ArrowDownCircle,
-  Database
+  ArrowDownCircle
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, AreaChart, Area, RadialBarChart, RadialBar } from 'recharts';
@@ -26,7 +25,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
 
 const Dashboard: React.FC = () => {
-  const { state, getStorageStats } = useApp();
+  const { state } = useApp();
 
   // Calculate metrics for TODAY only
   const today = new Date();
@@ -431,34 +430,6 @@ const Dashboard: React.FC = () => {
         </div>
       )}
       
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
-            <Database className="w-6 h-6 text-white" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-bold text-green-800">Sistema Local Robusto</h3>
-            <p className="text-green-700">
-              Dados salvos automaticamente com backup e validação de integridade.
-            </p>
-          </div>
-          <div className="text-right">
-            {(() => {
-              const stats = getStorageStats();
-              return (
-                <div>
-                  <p className="text-sm text-green-600 font-bold">
-                    {(stats.totalSize / 1024).toFixed(1)}KB armazenados
-                  </p>
-                  <p className="text-xs text-green-500">
-                    Versão {stats.version}
-                  </p>
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-      </div>
       
       {/* Welcome Section */}
       <div className="flex items-center justify-between">

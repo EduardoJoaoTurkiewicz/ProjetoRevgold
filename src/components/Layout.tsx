@@ -12,14 +12,7 @@ import {
   Menu,
   X,
   Building2,
-  Sparkles,
-  Database,
-  Settings,
-  Download,
-  Upload,
-  RotateCcw,
-  Trash2,
-  HardDrive
+  Sparkles
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -42,7 +35,7 @@ const menuItems = [
 ];
 
 export default function Layout({ currentPage, onPageChange, children }: LayoutProps) {
-  const { state, dispatch, exportData, importData, restoreBackup, getStorageStats, clearAllData } = useApp();
+  const { state, dispatch } = useApp();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [showDataManager, setShowDataManager] = React.useState(false);
 
@@ -58,7 +51,6 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
       const blob = new Blob([data], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
       a.download = `revgold-backup-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
@@ -66,63 +58,6 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
       URL.revokeObjectURL(url);
       console.log('✅ Dados exportados com sucesso');
     } catch (error) {
-      console.error('❌ Erro ao exportar dados:', error);
-      alert('Erro ao exportar dados. Tente novamente.');
-    }
-  };
-
-  const handleImportData = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          try {
-            const data = e.target?.result as string;
-            const success = importData(data);
-            if (success) {
-              alert('✅ Dados importados com sucesso!');
-            } else {
-              alert('❌ Erro ao importar dados. Verifique o arquivo.');
-            }
-          } catch (error) {
-            console.error('❌ Erro ao importar:', error);
-            alert('❌ Erro ao importar dados. Arquivo inválido.');
-          }
-        };
-        reader.readAsText(file);
-      }
-    };
-    input.click();
-  };
-
-  const handleRestoreBackup = () => {
-    if (window.confirm('Deseja restaurar o backup? Os dados atuais serão substituídos.')) {
-      const success = restoreBackup();
-      if (success) {
-        alert('✅ Backup restaurado com sucesso!');
-      } else {
-        alert('❌ Nenhum backup encontrado.');
-      }
-    }
-  };
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50">
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-80 bg-gradient-to-b from-slate-900 via-green-900 to-emerald-900 transform ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0 transition-transform duration-300 ease-in-out`}>
         
         {/* Logo Section */}
         <div className="flex items-center justify-between p-8 border-b border-green-700/30">
@@ -265,153 +200,6 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
             <div className="p-8">
               <div className="flex justify-between items-center mb-8">
                 <div className="flex items-center gap-4">
-                  <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 modern-shadow-xl">
-                    <HardDrive className="w-8 h-8 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-3xl font-bold text-slate-900">Gerenciador de Dados</h2>
-                    <p className="text-slate-600">Backup, restauração e estatísticas</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowDataManager(false)}
-                  className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-all"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-
-              {/* Storage Statistics */}
-              <div className="mb-8 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
-                <h3 className="text-xl font-bold text-green-900 mb-4">Estatísticas do Sistema</h3>
-                {(() => {
-                  const stats = getStorageStats();
-                  return (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="text-center">
-                        <p className="text-2xl font-black text-green-700">{stats.itemCounts.sales}</p>
-                        <p className="text-sm text-green-600 font-semibold">Vendas</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-2xl font-black text-green-700">{stats.itemCounts.debts}</p>
-                        <p className="text-sm text-green-600 font-semibold">Dívidas</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-2xl font-black text-green-700">{stats.itemCounts.checks}</p>
-                        <p className="text-sm text-green-600 font-semibold">Cheques</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-2xl font-black text-green-700">{stats.itemCounts.employees}</p>
-                        <p className="text-sm text-green-600 font-semibold">Funcionários</p>
-                      </div>
-                      <div className="text-center md:col-span-2">
-                        <p className="text-lg font-black text-blue-700">{(stats.totalSize / 1024).toFixed(1)}KB</p>
-                        <p className="text-sm text-blue-600 font-semibold">Tamanho dos Dados</p>
-                      </div>
-                      <div className="text-center md:col-span-2">
-                        <p className="text-lg font-black text-purple-700">v{stats.version}</p>
-                        <p className="text-sm text-purple-600 font-semibold">Versão do Sistema</p>
-                      </div>
-                    </div>
-                  );
-                })()}
-                <div className="mt-4 text-center">
-                  <p className="text-sm text-green-600">
-                    Última sincronização: {new Date(getStorageStats().lastSync).toLocaleString('pt-BR')}
-                  </p>
-                </div>
-              </div>
-
-              {/* Data Management Actions */}
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <button
-                    onClick={handleExportData}
-                    className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 transition-all duration-300 hover:scale-105"
-                  >
-                    <div className="p-2 bg-blue-600 rounded-lg">
-                      <Download className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-bold text-blue-900">Exportar Dados</p>
-                      <p className="text-sm text-blue-700">Baixar backup completo</p>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={handleImportData}
-                    className="flex items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-xl border border-purple-200 transition-all duration-300 hover:scale-105"
-                  >
-                    <div className="p-2 bg-purple-600 rounded-lg">
-                      <Upload className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-bold text-purple-900">Importar Dados</p>
-                      <p className="text-sm text-purple-700">Restaurar de arquivo</p>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={handleRestoreBackup}
-                    className="flex items-center gap-3 p-4 bg-orange-50 hover:bg-orange-100 rounded-xl border border-orange-200 transition-all duration-300 hover:scale-105"
-                  >
-                    <div className="p-2 bg-orange-600 rounded-lg">
-                      <RotateCcw className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-bold text-orange-900">Restaurar Backup</p>
-                      <p className="text-sm text-orange-700">Voltar versão anterior</p>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={clearAllData}
-                    className="flex items-center gap-3 p-4 bg-red-50 hover:bg-red-100 rounded-xl border border-red-200 transition-all duration-300 hover:scale-105"
-                  >
-                    <div className="p-2 bg-red-600 rounded-lg">
-                      <Trash2 className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-bold text-red-900">Limpar Tudo</p>
-                      <p className="text-sm text-red-700">Apagar todos os dados</p>
-                    </div>
-                  </button>
-                </div>
-
-                <div className="p-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl border border-yellow-200">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Database className="w-6 h-6 text-yellow-600" />
-                    <h4 className="text-lg font-bold text-yellow-900">Sistema de Armazenamento</h4>
-                  </div>
-                  <div className="space-y-2 text-sm text-yellow-800">
-                    <p>✅ <strong>Salvamento automático:</strong> Dados salvos a cada alteração</p>
-                    <p>✅ <strong>Backup automático:</strong> Cópias de segurança criadas automaticamente</p>
-                    <p>✅ <strong>Migração de versão:</strong> Dados atualizados automaticamente</p>
-                    <p>✅ <strong>Limpeza automática:</strong> Dados antigos removidos quando necessário</p>
-                    <p>✅ <strong>Validação de dados:</strong> Verificação de integridade na inicialização</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end mt-8">
-                <button
-                  onClick={() => setShowDataManager(false)}
-                  className="btn-secondary"
-                >
-                  Fechar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Main Content */}
-      <div className="lg:ml-80">
-        {/* Top Header */}
-        <header className="bg-white/80 backdrop-blur-xl border-b border-green-100/50 shadow-sm sticky top-0 z-30">
-          <div className="flex items-center justify-between px-6 py-4">
-            <div className="flex items-center gap-4">
-              <button
                 onClick={() => setSidebarOpen(true)}
                 className="lg:hidden text-slate-600 hover:text-slate-800 p-2 rounded-lg hover:bg-slate-100 transition-colors"
               >

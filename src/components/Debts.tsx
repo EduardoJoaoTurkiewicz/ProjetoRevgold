@@ -5,43 +5,17 @@ import { Debt } from '../types';
 import { DebtForm } from './forms/DebtForm';
 
 export function Debts() {
-  const { state, dispatch } = useApp();
+  const { state, createDebt, updateDebt, deleteDebt } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
   const [viewingDebt, setViewingDebt] = useState<Debt | null>(null);
 
   const handleAddDebt = (debt: Omit<Debt, 'id' | 'createdAt'>) => {
-    const newDebt: Debt = {
-      ...debt,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
-    };
-    
-    dispatch({ type: 'ADD_DEBT', payload: newDebt });
-    
-    // Create installments if needed
-    debt.paymentMethods.forEach(method => {
-      if (method.installments && method.installments > 1) {
-        for (let i = 0; i < method.installments; i++) {
-          const dueDate = new Date(method.startDate || debt.date);
-          dueDate.setDate(dueDate.getDate() + (i * (method.installmentInterval || 30)));
-          
-          const installment = {
-            id: `${newDebt.id}-${i}`,
-            debtId: newDebt.id,
-            amount: method.installmentValue || 0,
-            dueDate: dueDate.toISOString().split('T')[0],
-            isPaid: debt.isPaid && i === 0, // First installment paid if debt is paid
-            type: 'divida' as const,
-            description: `${debt.description} - Parcela ${i + 1}/${method.installments}`
-          };
-          
-          dispatch({ type: 'ADD_INSTALLMENT', payload: installment });
-        }
-      }
+    createDebt(debt).then(() => {
+      setIsFormOpen(false);
+    }).catch(error => {
+      alert('Erro ao criar dívida: ' + error.message);
     });
-    
-    setIsFormOpen(false);
   };
 
   const handleEditDebt = (debt: Omit<Debt, 'id' | 'createdAt'>) => {
@@ -51,14 +25,19 @@ export function Debts() {
         id: editingDebt.id,
         createdAt: editingDebt.createdAt
       };
-      dispatch({ type: 'UPDATE_DEBT', payload: updatedDebt });
-      setEditingDebt(null);
+      updateDebt(updatedDebt).then(() => {
+        setEditingDebt(null);
+      }).catch(error => {
+        alert('Erro ao atualizar dívida: ' + error.message);
+      });
     }
   };
 
   const handleDeleteDebt = (id: string) => {
     if (window.confirm('Tem certeza que deseja excluir esta dívida?')) {
-      dispatch({ type: 'DELETE_DEBT', payload: id });
+      deleteDebt(id).catch(error => {
+        alert('Erro ao excluir dívida: ' + error.message);
+      });
     }
   };
 
@@ -131,7 +110,7 @@ export function Debts() {
                         <button
                           onClick={() => setViewingDebt(debt)}
                           className="text-blue-600 hover:text-blue-800"
-                          title="Visualizar"
+                          title="Ver Detalhes Completos"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
@@ -186,7 +165,7 @@ export function Debts() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <h2 className="text-xl font-bold mb-4">Detalhes da Dívida</h2>
+              <h2 className="text-xl font-bold mb-4">Detalhes Completos da Dívida</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
@@ -223,6 +202,42 @@ export function Debts() {
                     R$ {viewingDebt.paidAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
+                <div>
+                  <label className="form-label">Valor Pendente</label>
+                  <p className="text-sm text-red-600">
+                    R$ {viewingDebt.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="form-label">Todas as Observações e Informações</label>
+                <div className="p-6 bg-red-50 rounded-xl border border-red-100 space-y-4">
+                  {viewingDebt.paymentDescription && (
+                    <div>
+                      <h4 className="font-bold text-red-900 mb-2">Descrição do Pagamento:</h4>
+                      <p className="text-red-700 font-medium">{viewingDebt.paymentDescription}</p>
+                    </div>
+                  )}
+                  {viewingDebt.debtPaymentDescription && (
+                    <div>
+                      <h4 className="font-bold text-red-900 mb-2">Descrição da Dívida:</h4>
+                      <p className="text-red-700 font-medium">{viewingDebt.debtPaymentDescription}</p>
+                    </div>
+                  )}
+                  <div>
+                    <h4 className="font-bold text-red-900 mb-2">Informações do Sistema:</h4>
+                    <div className="text-sm text-red-600 space-y-1">
+                      <p><strong>ID da Dívida:</strong> {viewingDebt.id}</p>
+                      <p><strong>Data de Criação:</strong> {new Date(viewingDebt.createdAt).toLocaleString('pt-BR')}</p>
+                      <p><strong>Valor Pago:</strong> R$ {viewingDebt.paidAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                      <p><strong>Valor Pendente:</strong> R$ {viewingDebt.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                      {viewingDebt.checksUsed && viewingDebt.checksUsed.length > 0 && (
+                        <p><strong>Cheques Utilizados:</strong> {viewingDebt.checksUsed.length} cheque(s)</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="mb-6">
@@ -239,13 +254,6 @@ export function Debts() {
                       {method.installments && method.installments > 1 && (
                         <div className="text-sm text-gray-600 mt-1">
                           {method.installments}x de R$ {method.installmentValue?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          <button
-                            onClick={() => handleDeleteDebt(debt.id)}
-                            className="text-red-600 hover:text-red-800"
-                            title="Excluir"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
                         </div>
                       )}
                     </div>

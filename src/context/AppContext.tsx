@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { User, Sale, Debt, Check, Installment, Product, Employee, EmployeePayment, EmployeeAdvance, EmployeeOvertime, EmployeeCommission, Boleto } from '../types';
-import { storage, AppData } from '../lib/storage';
+import { salesService, debtsService, employeesService, checksService, boletosService } from '../lib/supabase';
 
 interface AppState {
   user: User | null;
@@ -16,28 +16,32 @@ interface AppState {
   employeeCommissions: EmployeeCommission[];
   isLoading: boolean;
   error: string | null;
-  lastSync: string;
 }
 
 type AppAction =
   | { type: 'SET_USER'; payload: User | null }
+  | { type: 'SET_SALES'; payload: Sale[] }
   | { type: 'ADD_SALE'; payload: Sale }
   | { type: 'UPDATE_SALE'; payload: Sale }
   | { type: 'DELETE_SALE'; payload: string }
+  | { type: 'SET_DEBTS'; payload: Debt[] }
   | { type: 'ADD_DEBT'; payload: Debt }
   | { type: 'UPDATE_DEBT'; payload: Debt }
   | { type: 'DELETE_DEBT'; payload: string }
+  | { type: 'SET_CHECKS'; payload: Check[] }
   | { type: 'ADD_CHECK'; payload: Check }
   | { type: 'UPDATE_CHECK'; payload: Check }
   | { type: 'DELETE_CHECK'; payload: string }
+  | { type: 'SET_BOLETOS'; payload: Boleto[] }
   | { type: 'ADD_BOLETO'; payload: Boleto }
   | { type: 'UPDATE_BOLETO'; payload: Boleto }
   | { type: 'DELETE_BOLETO'; payload: string }
-  | { type: 'ADD_INSTALLMENT'; payload: Installment }
-  | { type: 'UPDATE_INSTALLMENT'; payload: Installment }
+  | { type: 'SET_EMPLOYEES'; payload: Employee[] }
   | { type: 'ADD_EMPLOYEE'; payload: Employee }
   | { type: 'UPDATE_EMPLOYEE'; payload: Employee }
   | { type: 'DELETE_EMPLOYEE'; payload: string }
+  | { type: 'ADD_INSTALLMENT'; payload: Installment }
+  | { type: 'UPDATE_INSTALLMENT'; payload: Installment }
   | { type: 'ADD_EMPLOYEE_PAYMENT'; payload: EmployeePayment }
   | { type: 'UPDATE_EMPLOYEE_PAYMENT'; payload: EmployeePayment }
   | { type: 'DELETE_EMPLOYEE_PAYMENT'; payload: string }
@@ -50,7 +54,6 @@ type AppAction =
   | { type: 'ADD_EMPLOYEE_COMMISSION'; payload: EmployeeCommission }
   | { type: 'UPDATE_EMPLOYEE_COMMISSION'; payload: EmployeeCommission }
   | { type: 'DELETE_EMPLOYEE_COMMISSION'; payload: string }
-  | { type: 'LOAD_DATA'; payload: AppData }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null };
 
@@ -67,22 +70,21 @@ const initialState: AppState = {
   employeeOvertimes: [],
   employeeCommissions: [],
   isLoading: false,
-  error: null,
-  lastSync: new Date().toISOString()
+  error: null
 };
 
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'SET_USER':
-      storage.setUser(action.payload);
       return { ...state, user: action.payload };
       
+    case 'SET_SALES':
+      return { ...state, sales: action.payload };
+      
     case 'ADD_SALE':
-      storage.addSale(action.payload);
       return { ...state, sales: [...state.sales, action.payload] };
       
     case 'UPDATE_SALE':
-      storage.updateSale(action.payload);
       return { 
         ...state, 
         sales: state.sales.map(sale => 
@@ -91,22 +93,18 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
       
     case 'DELETE_SALE':
-      storage.deleteSale(action.payload);
       return { 
         ...state, 
-        sales: state.sales.filter(sale => sale.id !== action.payload),
-        installments: state.installments.filter(installment => installment.saleId !== action.payload),
-        employeeCommissions: state.employeeCommissions.filter(commission => commission.saleId !== action.payload),
-        checks: state.checks.filter(check => check.saleId !== action.payload),
-        boletos: state.boletos.filter(boleto => boleto.saleId !== action.payload)
+        sales: state.sales.filter(sale => sale.id !== action.payload)
       };
       
+    case 'SET_DEBTS':
+      return { ...state, debts: action.payload };
+      
     case 'ADD_DEBT':
-      storage.addDebt(action.payload);
       return { ...state, debts: [...state.debts, action.payload] };
       
     case 'UPDATE_DEBT':
-      storage.updateDebt(action.payload);
       return { 
         ...state, 
         debts: state.debts.map(debt => 
@@ -115,20 +113,18 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
       
     case 'DELETE_DEBT':
-      storage.deleteDebt(action.payload);
       return { 
         ...state, 
-        debts: state.debts.filter(debt => debt.id !== action.payload),
-        installments: state.installments.filter(installment => installment.debtId !== action.payload),
-        checks: state.checks.filter(check => check.debtId !== action.payload)
+        debts: state.debts.filter(debt => debt.id !== action.payload)
       };
       
+    case 'SET_CHECKS':
+      return { ...state, checks: action.payload };
+      
     case 'ADD_CHECK':
-      storage.addCheck(action.payload);
       return { ...state, checks: [...state.checks, action.payload] };
       
     case 'UPDATE_CHECK':
-      storage.updateCheck(action.payload);
       return { 
         ...state, 
         checks: state.checks.map(check => 
@@ -137,18 +133,18 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
       
     case 'DELETE_CHECK':
-      storage.deleteCheck(action.payload);
       return { 
         ...state, 
         checks: state.checks.filter(check => check.id !== action.payload)
       };
       
+    case 'SET_BOLETOS':
+      return { ...state, boletos: action.payload };
+      
     case 'ADD_BOLETO':
-      storage.addBoleto(action.payload);
       return { ...state, boletos: [...state.boletos, action.payload] };
       
     case 'UPDATE_BOLETO':
-      storage.updateBoleto(action.payload);
       return { 
         ...state, 
         boletos: state.boletos.map(boleto => 
@@ -157,31 +153,18 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
       
     case 'DELETE_BOLETO':
-      storage.deleteBoleto(action.payload);
       return { 
         ...state, 
         boletos: state.boletos.filter(boleto => boleto.id !== action.payload)
       };
       
-    case 'ADD_INSTALLMENT':
-      storage.addInstallment(action.payload);
-      return { ...state, installments: [...state.installments, action.payload] };
-      
-    case 'UPDATE_INSTALLMENT':
-      storage.updateInstallment(action.payload);
-      return { 
-        ...state, 
-        installments: state.installments.map(installment => 
-          installment.id === action.payload.id ? action.payload : installment
-        ) 
-      };
+    case 'SET_EMPLOYEES':
+      return { ...state, employees: action.payload };
       
     case 'ADD_EMPLOYEE':
-      storage.addEmployee(action.payload);
       return { ...state, employees: [...state.employees, action.payload] };
       
     case 'UPDATE_EMPLOYEE':
-      storage.updateEmployee(action.payload);
       return { 
         ...state, 
         employees: state.employees.map(employee => 
@@ -190,18 +173,23 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
       
     case 'DELETE_EMPLOYEE':
-      storage.deleteEmployee(action.payload);
       return { 
         ...state, 
-        employees: state.employees.filter(employee => employee.id !== action.payload),
-        employeePayments: state.employeePayments.filter(payment => payment.employeeId !== action.payload),
-        employeeAdvances: state.employeeAdvances.filter(advance => advance.employeeId !== action.payload),
-        employeeOvertimes: state.employeeOvertimes.filter(overtime => overtime.employeeId !== action.payload),
-        employeeCommissions: state.employeeCommissions.filter(commission => commission.employeeId !== action.payload)
+        employees: state.employees.filter(employee => employee.id !== action.payload)
+      };
+      
+    case 'ADD_INSTALLMENT':
+      return { ...state, installments: [...state.installments, action.payload] };
+      
+    case 'UPDATE_INSTALLMENT':
+      return { 
+        ...state, 
+        installments: state.installments.map(installment => 
+          installment.id === action.payload.id ? action.payload : installment
+        ) 
       };
       
     case 'ADD_EMPLOYEE_PAYMENT':
-      storage.addEmployeePayment(action.payload);
       return { ...state, employeePayments: [...state.employeePayments, action.payload] };
       
     case 'UPDATE_EMPLOYEE_PAYMENT':
@@ -219,11 +207,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
       
     case 'ADD_EMPLOYEE_ADVANCE':
-      storage.addEmployeeAdvance(action.payload);
       return { ...state, employeeAdvances: [...state.employeeAdvances, action.payload] };
       
     case 'UPDATE_EMPLOYEE_ADVANCE':
-      storage.updateEmployeeAdvance(action.payload);
       return { 
         ...state, 
         employeeAdvances: state.employeeAdvances.map(advance => 
@@ -238,11 +224,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
       
     case 'ADD_EMPLOYEE_OVERTIME':
-      storage.addEmployeeOvertime(action.payload);
       return { ...state, employeeOvertimes: [...state.employeeOvertimes, action.payload] };
       
     case 'UPDATE_EMPLOYEE_OVERTIME':
-      storage.updateEmployeeOvertime(action.payload);
       return { 
         ...state, 
         employeeOvertimes: state.employeeOvertimes.map(overtime => 
@@ -257,11 +241,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
       
     case 'ADD_EMPLOYEE_COMMISSION':
-      storage.addEmployeeCommission(action.payload);
       return { ...state, employeeCommissions: [...state.employeeCommissions, action.payload] };
       
     case 'UPDATE_EMPLOYEE_COMMISSION':
-      storage.updateEmployeeCommission(action.payload);
       return { 
         ...state, 
         employeeCommissions: state.employeeCommissions.map(commission => 
@@ -273,13 +255,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { 
         ...state, 
         employeeCommissions: state.employeeCommissions.filter(commission => commission.id !== action.payload)
-      };
-      
-    case 'LOAD_DATA':
-      return { 
-        ...state, 
-        ...action.payload,
-        lastSync: action.payload.lastSync || new Date().toISOString()
       };
       
     case 'SET_LOADING':
@@ -296,114 +271,180 @@ function appReducer(state: AppState, action: AppAction): AppState {
 const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
-  exportData: () => string;
-  importData: (data: string) => boolean;
-  restoreBackup: () => boolean;
-  getStorageStats: () => any;
-  clearAllData: () => void;
+  loadAllData: () => Promise<void>;
+  createSale: (sale: Omit<Sale, 'id' | 'createdAt'>) => Promise<void>;
+  updateSale: (sale: Sale) => Promise<void>;
+  deleteSale: (id: string) => Promise<void>;
+  createDebt: (debt: Omit<Debt, 'id' | 'createdAt'>) => Promise<void>;
+  updateDebt: (debt: Debt) => Promise<void>;
+  deleteDebt: (id: string) => Promise<void>;
+  createEmployee: (employee: Omit<Employee, 'id' | 'createdAt'>) => Promise<void>;
+  updateEmployee: (employee: Employee) => Promise<void>;
+  deleteEmployee: (id: string) => Promise<void>;
 } | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
-  // Carregar dados na inicialização
-  useEffect(() => {
-    const loadData = async () => {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      dispatch({ type: 'SET_ERROR', payload: null });
-      
-      try {
-        console.log('🔄 Inicializando sistema de dados...');
-        const data = await storage.initialize();
-        
-        dispatch({ type: 'LOAD_DATA', payload: data });
-        
-        console.log('✅ Sistema inicializado com sucesso:', {
-          sales: data.sales.length,
-          debts: data.debts.length,
-          checks: data.checks.length,
-          boletos: data.boletos.length,
-          employees: data.employees.length,
-          version: data.version,
-          lastSync: data.lastSync
-        });
-        
-      } catch (error) {
-        console.error('❌ Erro ao inicializar sistema:', error);
-        dispatch({ type: 'SET_ERROR', payload: 'Erro ao carregar dados. Usando dados padrão.' });
-      } finally {
-        dispatch({ type: 'SET_LOADING', payload: false });
-      }
-    };
+  // Load all data from Supabase
+  const loadAllData = async () => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    dispatch({ type: 'SET_ERROR', payload: null });
     
-    loadData();
-  }, []);
+    try {
+      console.log('🔄 Carregando dados do Supabase...');
+      
+      const [sales, debts, employees, checks, boletos] = await Promise.all([
+        salesService.getAll(),
+        debtsService.getAll(),
+        employeesService.getAll(),
+        checksService.getAll(),
+        boletosService.getAll()
+      ]);
+      
+      dispatch({ type: 'SET_SALES', payload: sales });
+      dispatch({ type: 'SET_DEBTS', payload: debts });
+      dispatch({ type: 'SET_EMPLOYEES', payload: employees });
+      dispatch({ type: 'SET_CHECKS', payload: checks });
+      dispatch({ type: 'SET_BOLETOS', payload: boletos });
+      
+      console.log('✅ Dados carregados do Supabase:', {
+        sales: sales.length,
+        debts: debts.length,
+        employees: employees.length,
+        checks: checks.length,
+        boletos: boletos.length
+      });
+      
+    } catch (error) {
+      console.error('❌ Erro ao carregar dados do Supabase:', error);
+      dispatch({ type: 'SET_ERROR', payload: 'Erro ao carregar dados do banco. Verifique sua conexão.' });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
 
-  // Listener para eventos de salvamento
+  // Sales operations
+  const createSale = async (saleData: Omit<Sale, 'id' | 'createdAt'>) => {
+    try {
+      const sale = await salesService.create(saleData);
+      dispatch({ type: 'ADD_SALE', payload: sale });
+      console.log('✅ Venda criada no Supabase:', sale.id);
+    } catch (error) {
+      console.error('❌ Erro ao criar venda:', error);
+      throw error;
+    }
+  };
+
+  const updateSale = async (sale: Sale) => {
+    try {
+      const updatedSale = await salesService.update(sale);
+      dispatch({ type: 'UPDATE_SALE', payload: updatedSale });
+      console.log('✅ Venda atualizada no Supabase:', sale.id);
+    } catch (error) {
+      console.error('❌ Erro ao atualizar venda:', error);
+      throw error;
+    }
+  };
+
+  const deleteSale = async (id: string) => {
+    try {
+      await salesService.delete(id);
+      dispatch({ type: 'DELETE_SALE', payload: id });
+      console.log('✅ Venda excluída do Supabase:', id);
+    } catch (error) {
+      console.error('❌ Erro ao excluir venda:', error);
+      throw error;
+    }
+  };
+
+  // Debts operations
+  const createDebt = async (debtData: Omit<Debt, 'id' | 'createdAt'>) => {
+    try {
+      const debt = await debtsService.create(debtData);
+      dispatch({ type: 'ADD_DEBT', payload: debt });
+      console.log('✅ Dívida criada no Supabase:', debt.id);
+    } catch (error) {
+      console.error('❌ Erro ao criar dívida:', error);
+      throw error;
+    }
+  };
+
+  const updateDebt = async (debt: Debt) => {
+    try {
+      const updatedDebt = await debtsService.update(debt);
+      dispatch({ type: 'UPDATE_DEBT', payload: updatedDebt });
+      console.log('✅ Dívida atualizada no Supabase:', debt.id);
+    } catch (error) {
+      console.error('❌ Erro ao atualizar dívida:', error);
+      throw error;
+    }
+  };
+
+  const deleteDebt = async (id: string) => {
+    try {
+      await debtsService.delete(id);
+      dispatch({ type: 'DELETE_DEBT', payload: id });
+      console.log('✅ Dívida excluída do Supabase:', id);
+    } catch (error) {
+      console.error('❌ Erro ao excluir dívida:', error);
+      throw error;
+    }
+  };
+
+  // Employees operations
+  const createEmployee = async (employeeData: Omit<Employee, 'id' | 'createdAt'>) => {
+    try {
+      const employee = await employeesService.create(employeeData);
+      dispatch({ type: 'ADD_EMPLOYEE', payload: employee });
+      console.log('✅ Funcionário criado no Supabase:', employee.id);
+    } catch (error) {
+      console.error('❌ Erro ao criar funcionário:', error);
+      throw error;
+    }
+  };
+
+  const updateEmployee = async (employee: Employee) => {
+    try {
+      const updatedEmployee = await employeesService.update(employee);
+      dispatch({ type: 'UPDATE_EMPLOYEE', payload: updatedEmployee });
+      console.log('✅ Funcionário atualizado no Supabase:', employee.id);
+    } catch (error) {
+      console.error('❌ Erro ao atualizar funcionário:', error);
+      throw error;
+    }
+  };
+
+  const deleteEmployee = async (id: string) => {
+    try {
+      await employeesService.delete(id);
+      dispatch({ type: 'DELETE_EMPLOYEE', payload: id });
+      console.log('✅ Funcionário excluído do Supabase:', id);
+    } catch (error) {
+      console.error('❌ Erro ao excluir funcionário:', error);
+      throw error;
+    }
+  };
+
+  // Load data on mount
   useEffect(() => {
-    const handleDataSaved = (event: CustomEvent) => {
-      console.log('💾 Dados salvos automaticamente:', event.detail);
-    };
-
-    const handleStorageError = (event: CustomEvent) => {
-      console.error('❌ Erro no armazenamento:', event.detail);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao salvar dados. Verifique o espaço disponível.' });
-    };
-
-    window.addEventListener('revgold-data-saved', handleDataSaved as EventListener);
-    window.addEventListener('revgold-storage-error', handleStorageError as EventListener);
-
-    return () => {
-      window.removeEventListener('revgold-data-saved', handleDataSaved as EventListener);
-      window.removeEventListener('revgold-storage-error', handleStorageError as EventListener);
-    };
+    loadAllData();
   }, []);
-
-  // Funções utilitárias
-  const exportData = () => {
-    return storage.exportData();
-  };
-
-  const importData = (jsonData: string) => {
-    const success = storage.importData(jsonData);
-    if (success) {
-      // Recarregar dados após importação
-      const data = storage.getData();
-      dispatch({ type: 'LOAD_DATA', payload: data });
-    }
-    return success;
-  };
-
-  const restoreBackup = () => {
-    const success = storage.restoreBackup();
-    if (success) {
-      // Recarregar dados após restauração
-      const data = storage.getData();
-      dispatch({ type: 'LOAD_DATA', payload: data });
-    }
-    return success;
-  };
-
-  const getStorageStats = () => {
-    return storage.getStorageStats();
-  };
-
-  const clearAllData = () => {
-    if (window.confirm('⚠️ ATENÇÃO: Esta ação irá apagar TODOS os dados permanentemente. Tem certeza?')) {
-      storage.clearAllData();
-      dispatch({ type: 'LOAD_DATA', payload: storage.getData() });
-    }
-  };
 
   return (
     <AppContext.Provider value={{ 
       state, 
-      dispatch, 
-      exportData, 
-      importData, 
-      restoreBackup, 
-      getStorageStats, 
-      clearAllData 
+      dispatch,
+      loadAllData,
+      createSale,
+      updateSale,
+      deleteSale,
+      createDebt,
+      updateDebt,
+      deleteDebt,
+      createEmployee,
+      updateEmployee,
+      deleteEmployee
     }}>
       {children}
     </AppContext.Provider>

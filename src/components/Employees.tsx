@@ -7,7 +7,7 @@ import { EmployeeAdvanceForm } from './forms/EmployeeAdvanceForm';
 import { EmployeeOvertimeForm } from './forms/EmployeeOvertimeForm';
 
 export function Employees() {
-  const { state, dispatch } = useApp();
+  const { state, createEmployee, updateEmployee, deleteEmployee } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [viewingEmployee, setViewingEmployee] = useState<Employee | null>(null);
@@ -17,14 +17,11 @@ export function Employees() {
   const [viewingPayrollEmployee, setViewingPayrollEmployee] = useState<Employee | null>(null);
 
   const handleAddEmployee = (employee: Omit<Employee, 'id' | 'createdAt'>) => {
-    const newEmployee: Employee = {
-      ...employee,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
-    };
-    
-    dispatch({ type: 'ADD_EMPLOYEE', payload: newEmployee });
-    setIsFormOpen(false);
+    createEmployee(employee).then(() => {
+      setIsFormOpen(false);
+    }).catch(error => {
+      alert('Erro ao criar funcionário: ' + error.message);
+    });
   };
 
   const handleEditEmployee = (employee: Omit<Employee, 'id' | 'createdAt'>) => {
@@ -34,14 +31,19 @@ export function Employees() {
         id: editingEmployee.id,
         createdAt: editingEmployee.createdAt
       };
-      dispatch({ type: 'UPDATE_EMPLOYEE', payload: updatedEmployee });
-      setEditingEmployee(null);
+      updateEmployee(updatedEmployee).then(() => {
+        setEditingEmployee(null);
+      }).catch(error => {
+        alert('Erro ao atualizar funcionário: ' + error.message);
+      });
     }
   };
 
   const handleDeleteEmployee = (id: string) => {
     if (window.confirm('Tem certeza que deseja excluir este funcionário?')) {
-      dispatch({ type: 'DELETE_EMPLOYEE', payload: id });
+      deleteEmployee(id).catch(error => {
+        alert('Erro ao excluir funcionário: ' + error.message);
+      });
     }
   };
 
@@ -52,7 +54,8 @@ export function Employees() {
       createdAt: new Date().toISOString()
     };
     
-    dispatch({ type: 'ADD_EMPLOYEE_ADVANCE', payload: newAdvance });
+    // TODO: Implement advance service
+    // advanceService.create(advance)
     setAdvanceEmployee(null);
   };
 
@@ -63,7 +66,8 @@ export function Employees() {
       createdAt: new Date().toISOString()
     };
     
-    dispatch({ type: 'ADD_EMPLOYEE_OVERTIME', payload: newOvertime });
+    // TODO: Implement overtime service
+    // overtimeService.create(overtime)
     setOvertimeEmployee(null);
   };
   const handlePayment = (payment: { amount: number; observations: string; receipt?: string }) => {
@@ -79,24 +83,28 @@ export function Employees() {
         createdAt: new Date().toISOString()
       };
       
-      dispatch({ type: 'ADD_EMPLOYEE_PAYMENT', payload: newPayment });
+      // TODO: Implement payment service
+      // paymentService.create(newPayment)
       
       // Marcar adiantamentos como descontados
       const pendingAdvances = getEmployeeAdvances(paymentEmployee.id).filter(a => a.status === 'pendente');
       pendingAdvances.forEach(advance => {
-        dispatch({ type: 'UPDATE_EMPLOYEE_ADVANCE', payload: { ...advance, status: 'descontado' } });
+        // TODO: Implement advance update
+        // advanceService.update({ ...advance, status: 'descontado' })
       });
       
       // Marcar horas extras como pagas
       const pendingOvertimes = getEmployeeOvertimes(paymentEmployee.id).filter(o => o.status === 'pendente');
       pendingOvertimes.forEach(overtime => {
-        dispatch({ type: 'UPDATE_EMPLOYEE_OVERTIME', payload: { ...overtime, status: 'pago' } });
+        // TODO: Implement overtime update
+        // overtimeService.update({ ...overtime, status: 'pago' })
       });
       
       // Marcar comissões como pagas
       const pendingCommissions = getEmployeeCommissions(paymentEmployee.id).filter(c => c.status === 'pendente');
       pendingCommissions.forEach(commission => {
-        dispatch({ type: 'UPDATE_EMPLOYEE_COMMISSION', payload: { ...commission, status: 'pago' } });
+        // TODO: Implement commission update
+        // commissionService.update({ ...commission, status: 'pago' })
       });
       
       setPaymentEmployee(null);
