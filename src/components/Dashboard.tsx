@@ -21,13 +21,11 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, AreaChart, Area, RadialBarChart, RadialBar } from 'recharts';
-import { isSupabaseConfigured } from '../lib/supabase';
-import { Database, Wifi, WifiOff } from 'lucide-react';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
 
 const Dashboard: React.FC = () => {
-  const { state } = useApp();
+  const { state, getStorageStats } = useApp();
 
   // Calculate metrics for TODAY only
   const today = new Date();
@@ -411,7 +409,7 @@ const Dashboard: React.FC = () => {
             <div>
               <h3 className="text-lg font-bold text-blue-800">Carregando Sistema...</h3>
               <p className="text-blue-700">
-                {isSupabaseConfigured() ? 'Conectando ao Supabase e carregando dados...' : 'Carregando dados locais...'}
+                Carregando dados do sistema local...
               </p>
             </div>
           </div>
@@ -427,53 +425,39 @@ const Dashboard: React.FC = () => {
             <div>
               <h3 className="text-lg font-bold text-red-800">Aviso do Sistema</h3>
               <p className="text-red-700">{state.error}</p>
-              {!isSupabaseConfigured() && (
-                <p className="text-red-600 text-sm mt-2 font-medium">
-                  💡 Configure o Supabase para salvar dados permanentemente no banco de dados.
-                </p>
-              )}
             </div>
           </div>
         </div>
       )}
       
-      {!isSupabaseConfigured() && (
-        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center">
-              <WifiOff className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-yellow-800">Modo Local Ativo</h3>
-              <p className="text-yellow-700">
-                Configure o Supabase para salvar dados permanentemente no banco de dados.
-              </p>
-              <p className="text-yellow-600 text-sm mt-2 font-medium">
-                💡 Clique no botão "Connect to Supabase" no topo direito para configurar.
-              </p>
-            </div>
+      <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+            <Database className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-bold text-green-800">Sistema Local Robusto</h3>
+            <p className="text-green-700">
+              Dados salvos automaticamente com backup e validação de integridade.
+            </p>
+          </div>
+          <div className="text-right">
+            {(() => {
+              const stats = getStorageStats();
+              return (
+                <div>
+                  <p className="text-sm text-green-600 font-bold">
+                    {(stats.totalSize / 1024).toFixed(1)}KB armazenados
+                  </p>
+                  <p className="text-xs text-green-500">
+                    Versão {stats.version}
+                  </p>
+                </div>
+              );
+            })()}
           </div>
         </div>
-      )}
-      
-      {isSupabaseConfigured() && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
-              <Database className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-blue-800">Supabase Conectado</h3>
-              <p className="text-blue-700">
-                Todos os dados estão sendo salvos automaticamente no banco de dados.
-              </p>
-              <p className="text-blue-600 text-sm mt-2 font-medium">
-                ✅ Sistema pronto para uso em múltiplos dispositivos.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
       
       {/* Welcome Section */}
       <div className="flex items-center justify-between">

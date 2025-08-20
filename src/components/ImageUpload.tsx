@@ -61,7 +61,7 @@ export function ImageUpload({
     }
 
     if (!isSupabaseConfigured()) {
-      setUploadError('Upload de imagens não está disponível. Configure o Supabase para usar esta funcionalidade.');
+      setUploadError('Upload de imagens não está disponível. Configure o Supabase nas variáveis de ambiente para usar esta funcionalidade.');
       return;
     }
 
@@ -105,7 +105,7 @@ export function ImageUpload({
     if (!currentImage) return;
 
     if (!isSupabaseConfigured()) {
-      setUploadError('Funcionalidade de imagens não está disponível. Configure o Supabase para usar esta funcionalidade.');
+      setUploadError('Funcionalidade de imagens não está disponível. Configure o Supabase nas variáveis de ambiente.');
       return;
     }
 
@@ -153,7 +153,7 @@ export function ImageUpload({
                 Upload de imagens não disponível
               </p>
               <p className="text-xs text-yellow-700 mt-1">
-                Configure o Supabase para usar esta funcionalidade.
+                Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env para usar esta funcionalidade.
               </p>
             </div>
           </div>

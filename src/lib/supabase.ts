@@ -1,10 +1,11 @@
+// Sistema simplificado apenas para upload de imagens (opcional)
 import { createClient } from '@supabase/supabase-js';
 
 // Get credentials from environment variables or localStorage
 let supabaseUrl = import.meta.env.VITE_SUPABASE_URL || localStorage.getItem('supabase_url');
 let supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || localStorage.getItem('supabase_anon_key');
 
-// Create Supabase client
+// Create Supabase client (apenas para upload de imagens)
 export let supabase: any = null;
 
 // Initialize Supabase client
@@ -12,247 +13,30 @@ const initializeSupabaseClient = () => {
   if (supabaseUrl && supabaseAnonKey) {
     try {
       supabase = createClient(supabaseUrl, supabaseAnonKey);
-      console.log('✅ Supabase conectado automaticamente');
+      console.log('✅ Supabase conectado para upload de imagens');
     } catch (error) {
       console.error('❌ Erro ao conectar ao Supabase:', error);
       supabase = null;
     }
   } else {
-    console.warn('⚠️ Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env');
+    console.log('⚠️ Supabase não configurado - upload de imagens não disponível');
   }
 };
 
 // Initialize on module load
 initializeSupabaseClient();
 
-// Function to reinitialize Supabase with new credentials
-export const reinitializeSupabase = (newUrl?: string, newKey?: string) => {
-  if (newUrl && newKey) {
-    // Update credentials
-    supabaseUrl = newUrl;
-    supabaseAnonKey = newKey;
-    
-    // Save to localStorage
-    localStorage.setItem('supabase_url', newUrl);
-    localStorage.setItem('supabase_anon_key', newKey);
-    
-    console.log('🔄 Credenciais do Supabase atualizadas e salvas');
-  } else {
-    // Re-read from localStorage
-    supabaseUrl = import.meta.env.VITE_SUPABASE_URL || localStorage.getItem('supabase_url');
-    supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || localStorage.getItem('supabase_anon_key');
-    
-    if (supabaseUrl && supabaseAnonKey) {
-      console.log('🔄 Credenciais do Supabase carregadas do localStorage');
-    }
-  }
-  
-  // Reinitialize client
-  initializeSupabaseClient();
-  
-  // Trigger a data reload if configured
-  if (isSupabaseConfigured()) {
-    console.log('✅ Supabase reinicializado com sucesso');
-    // Dispatch custom event to trigger data reload
-    window.dispatchEvent(new CustomEvent('supabase-reconnected'));
-  }
-};
-
-// Check if Supabase is configured
+// Check if Supabase is configured (apenas para imagens)
 export const isSupabaseConfigured = () => {
   return Boolean(supabase && supabaseUrl && supabaseAnonKey && 
     supabaseUrl !== 'https://your-project.supabase.co' && 
     supabaseAnonKey !== 'your-anon-key');
 };
 
-// Sistema de autenticação automática simplificado
-let authPromise: Promise<boolean> | null = null;
-let isAuthenticatedCache = false;
-let lastAuthCheck = 0;
-let defaultUser: any = null;
-
-// Função para autenticar automaticamente sem criar usuários
-export const ensureAuthenticated = async (): Promise<boolean> => {
-  if (!supabase) {
-    console.log('⚠️ Supabase não configurado - usando modo local');
-    return false;
-  }
-
-  // Cache authentication check for 30 seconds
-  const now = Date.now();
-  if (isAuthenticatedCache && (now - lastAuthCheck) < 30000) {
-    return true;
-  }
-
-  // Prevent multiple simultaneous auth attempts
-  if (authPromise) {
-    return authPromise;
-  }
-
-  authPromise = (async () => {
-    try {
-      // Check if already authenticated
-      const { data: { user }, error } = await supabase.auth.getUser();
-      
-      if (user && !error) {
-        console.log('✅ Usuário já autenticado:', user.email);
-        defaultUser = user;
-        isAuthenticatedCache = true;
-        lastAuthCheck = now;
-        return true;
-      }
-
-      // Try to get session
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        console.log('✅ Sessão ativa encontrada:', session.user.email);
-        defaultUser = session.user;
-        isAuthenticatedCache = true;
-        lastAuthCheck = now;
-        return true;
-      }
-
-      console.log('⚠️ Nenhuma sessão ativa - dados serão salvos apenas localmente');
-      console.log('💡 Para salvar no banco, faça login no Supabase ou configure autenticação');
-      isAuthenticatedCache = false;
-      return false;
-
-    } catch (error) {
-      console.error('❌ Erro na verificação de autenticação:', error);
-      isAuthenticatedCache = false;
-      return false;
-    } finally {
-      authPromise = null;
-    }
-  })();
-
-  return authPromise;
-};
-
-// Check if user is authenticated (without trying to authenticate)
-export const isAuthenticated = async (): Promise<boolean> => {
-  if (!supabase) return false;
-  
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    return Boolean(user);
-  } catch (error) {
-    console.error('❌ Erro ao verificar autenticação:', error);
-    return false;
-  }
-};
-
-// Get current user
-export const getCurrentUser = async () => {
-  if (!supabase) return null;
-  
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    return user || defaultUser;
-  } catch (error) {
-    console.error('❌ Erro ao obter usuário atual:', error);
-    return defaultUser;
-  }
-};
-
-// Sign out user
-export const signOut = async (): Promise<boolean> => {
-  if (!supabase) return false;
-  
-  try {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('❌ Erro ao fazer logout:', error);
-      return false;
-    }
-    console.log('✅ Logout realizado com sucesso');
-    isAuthenticatedCache = false;
-    defaultUser = null;
-    return true;
-  } catch (error) {
-    console.error('❌ Erro ao fazer logout:', error);
-    return false;
-  }
-};
-
-// Função para fazer login manual
-export const signInWithEmail = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-  if (!supabase) {
-    return { success: false, error: 'Supabase não configurado' };
-  }
-
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) {
-      console.error('❌ Erro no login:', error.message);
-      return { success: false, error: error.message };
-    }
-
-    if (data?.user) {
-      console.log('✅ Login realizado com sucesso:', data.user.email);
-      defaultUser = data.user;
-      isAuthenticatedCache = true;
-      lastAuthCheck = Date.now();
-      return { success: true };
-    }
-
-    return { success: false, error: 'Usuário não encontrado' };
-  } catch (error) {
-    console.error('❌ Erro no login:', error);
-    return { success: false, error: 'Erro de conexão' };
-  }
-};
-
-// Função para criar conta manual
-export const signUpWithEmail = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-  if (!supabase) {
-    return { success: false, error: 'Supabase não configurado' };
-  }
-
-  try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: undefined
-      }
-    });
-
-    if (error) {
-      console.error('❌ Erro no cadastro:', error.message);
-      return { success: false, error: error.message };
-    }
-
-    if (data?.user) {
-      console.log('✅ Cadastro realizado com sucesso:', data.user.email);
-      defaultUser = data.user;
-      isAuthenticatedCache = true;
-      lastAuthCheck = Date.now();
-      return { success: true };
-    }
-
-    return { success: false, error: 'Erro ao criar usuário' };
-  } catch (error) {
-    console.error('❌ Erro no cadastro:', error);
-    return { success: false, error: 'Erro de conexão' };
-  }
-};
-
 // Upload de imagem para o bucket de cheques
 export const uploadCheckImage = async (file: File, checkId: string, imageType: 'front' | 'back'): Promise<string> => {
   if (!supabase) {
-    throw new Error('Supabase não está configurado. Configure as variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.');
-  }
-
-  // Ensure authentication before upload
-  const isAuth = await ensureAuthenticated();
-  if (!isAuth) {
-    throw new Error('Não foi possível autenticar para fazer upload de imagens.');
+    throw new Error('Supabase não está configurado. Configure as variáveis de ambiente para usar upload de imagens.');
   }
 
   try {
@@ -324,12 +108,6 @@ export const uploadCheckImage = async (file: File, checkId: string, imageType: '
 export const deleteCheckImage = async (imagePath: string): Promise<void> => {
   if (!supabase) {
     throw new Error('Supabase não está configurado.');
-  }
-
-  // Ensure authentication before delete
-  const isAuth = await ensureAuthenticated();
-  if (!isAuth) {
-    throw new Error('Não foi possível autenticar para deletar imagens.');
   }
 
   try {
@@ -412,126 +190,5 @@ export const getCheckImageUrl = (imagePath: string): string => {
   } catch (error) {
     console.error('Erro ao gerar URL da imagem:', error);
     return '';
-  }
-};
-
-// Função para upload de recibos de funcionários
-export const uploadEmployeeReceipt = async (file: File, employeeId: string, paymentId: string): Promise<string> => {
-  if (!supabase) {
-    throw new Error('Supabase não está configurado.');
-  }
-
-  // Ensure authentication before upload
-  const isAuth = await ensureAuthenticated();
-  if (!isAuth) {
-    throw new Error('Não foi possível autenticar para fazer upload de recibos.');
-  }
-
-  try {
-    // Validar arquivo
-    if (!file || file.size === 0) {
-      throw new Error('Arquivo inválido ou vazio.');
-    }
-
-    if (file.size > 10 * 1024 * 1024) { // 10MB
-      throw new Error('O arquivo deve ter no máximo 10MB.');
-    }
-
-    // Gerar nome único para o arquivo
-    const timestamp = Date.now();
-    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'pdf';
-    const fileName = `receipt_${employeeId}_${paymentId}_${timestamp}.${fileExt}`;
-    const filePath = `employee-receipts/${fileName}`;
-
-    console.log('Iniciando upload de recibo:', { fileName, filePath, fileSize: file.size });
-
-    // Fazer upload do arquivo
-    const { data, error } = await supabase.storage
-      .from('employee-documents')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: true,
-        contentType: file.type
-      });
-
-    if (error) {
-      console.error('Erro no upload do recibo:', error);
-      throw new Error(`Erro no upload: ${error.message}`);
-    }
-
-    if (!data || !data.path) {
-      throw new Error('Upload realizado mas caminho do arquivo não foi retornado.');
-    }
-
-    // Obter URL pública
-    const { data: { publicUrl } } = supabase.storage
-      .from('employee-documents')
-      .getPublicUrl(data.path);
-
-    if (!publicUrl) {
-      throw new Error('Não foi possível obter a URL pública do recibo.');
-    }
-
-    console.log('Upload de recibo realizado com sucesso:', publicUrl);
-    return publicUrl;
-
-  } catch (error) {
-    console.error('Erro no upload de recibo:', error);
-    
-    if (error instanceof Error) {
-      throw error;
-    } else {
-      throw new Error('Erro desconhecido durante o upload do recibo.');
-    }
-  }
-};
-
-// Função para deletar recibos de funcionários
-export const deleteEmployeeReceipt = async (receiptPath: string): Promise<void> => {
-  if (!supabase) {
-    throw new Error('Supabase não está configurado.');
-  }
-
-  // Ensure authentication before delete
-  const isAuth = await ensureAuthenticated();
-  if (!isAuth) {
-    throw new Error('Não foi possível autenticar para deletar recibos.');
-  }
-
-  try {
-    if (!receiptPath) {
-      throw new Error('Caminho do recibo não fornecido.');
-    }
-
-    // Extrair o caminho relativo da URL completa
-    let relativePath = receiptPath;
-    
-    if (receiptPath.includes('/storage/v1/object/public/employee-documents/')) {
-      relativePath = receiptPath.split('/storage/v1/object/public/employee-documents/')[1];
-    } else if (receiptPath.startsWith('employee-receipts/')) {
-      relativePath = receiptPath;
-    }
-
-    console.log('Deletando recibo:', { originalPath: receiptPath, relativePath });
-
-    const { error } = await supabase.storage
-      .from('employee-documents')
-      .remove([relativePath]);
-
-    if (error) {
-      console.error('Erro ao deletar recibo:', error);
-      throw new Error(`Erro ao deletar recibo: ${error.message}`);
-    }
-
-    console.log('Recibo deletado com sucesso:', relativePath);
-
-  } catch (error) {
-    console.error('Erro na deleção do recibo:', error);
-    
-    if (error instanceof Error) {
-      throw error;
-    } else {
-      throw new Error('Erro desconhecido ao deletar o recibo.');
-    }
   }
 };
