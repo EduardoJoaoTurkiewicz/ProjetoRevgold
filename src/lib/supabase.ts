@@ -27,6 +27,12 @@ export const isSupabaseConfigured = () => {
 // Criar cliente Supabase com configuração robusta
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co', 
+  supabaseAnonKey || 'placeholder-key'
+);
+
+// Função para garantir autenticação (desenvolvimento)
+const ensureAuthenticated = async (): Promise<boolean> => {
+  try {
     // Para desenvolvimento, permitir acesso sem autenticação
     // Em produção, você deve implementar um sistema de login adequado
     console.log('⚠️ Executando sem autenticação - apenas para desenvolvimento');
