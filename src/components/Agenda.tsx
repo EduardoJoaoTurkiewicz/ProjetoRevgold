@@ -329,7 +329,7 @@ export function Agenda() {
         <div className="lg:col-span-1">
           <div className="card modern-shadow-xl sticky top-6">
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-600 to-emerald-700 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-violet-700 rounded-xl flex items-center justify-center">
                 <Clock className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -447,7 +447,7 @@ export function Agenda() {
                 {viewingEvent.type === 'debt' && (
                   <div>
                     <h3 className="font-bold text-slate-900 mb-4">Detalhes da Dívida</h3>
-                    <div className="bg-green-50 p-6 rounded-xl border border-green-200">
+                    <div className="bg-red-50 p-6 rounded-xl border border-red-200">
                       <p><strong>Empresa:</strong> {viewingEvent.details.company}</p>
                       <p><strong>Descrição:</strong> {viewingEvent.details.description}</p>
                       <p><strong>Data:</strong> {new Date(viewingEvent.details.date).toLocaleDateString('pt-BR')}</p>
@@ -461,7 +461,7 @@ export function Agenda() {
                 {viewingEvent.type === 'check' && (
                   <div>
                     <h3 className="font-bold text-slate-900 mb-4">Detalhes do Cheque</h3>
-                    <div className="bg-green-50 p-6 rounded-xl border border-green-200">
+                    <div className="bg-yellow-50 p-6 rounded-xl border border-yellow-200">
                       <p><strong>Cliente:</strong> {viewingEvent.details.client}</p>
                       <p><strong>Vencimento:</strong> {new Date(viewingEvent.details.dueDate).toLocaleDateString('pt-BR')}</p>
                       <p><strong>Tipo:</strong> {viewingEvent.details.isOwnCheck ? 'Cheque Próprio' : 'Cheque de Terceiros'}</p>
@@ -478,7 +478,7 @@ export function Agenda() {
                 {viewingEvent.type === 'boleto' && (
                   <div>
                     <h3 className="font-bold text-slate-900 mb-4">Detalhes do Boleto</h3>
-                    <div className="bg-green-50 p-6 rounded-xl border border-green-200">
+                    <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
                       <p><strong>Cliente:</strong> {viewingEvent.details.client}</p>
                       <p><strong>Vencimento:</strong> {new Date(viewingEvent.details.dueDate).toLocaleDateString('pt-BR')}</p>
                       <p><strong>Parcela:</strong> {viewingEvent.details.installmentNumber}/{viewingEvent.details.totalInstallments}</p>
@@ -492,7 +492,7 @@ export function Agenda() {
                 {viewingEvent.type === 'receivable' && (
                   <div>
                     <h3 className="font-bold text-slate-900 mb-4">Detalhes do Recebimento</h3>
-                    <div className="bg-green-50 p-6 rounded-xl border border-green-200">
+                    <div className="bg-purple-50 p-6 rounded-xl border border-purple-200">
                       {viewingEvent.details.isDelivery ? (
                         <>
                           <p><strong>Tipo:</strong> Entrega Programada</p>
@@ -517,7 +517,7 @@ export function Agenda() {
               <div className="flex justify-end mt-8">
                 <button
                   onClick={() => setViewingEvent(null)}
-                  className="btn-success"
+                  className="btn-secondary"
                 >
                   Fechar
                 </button>

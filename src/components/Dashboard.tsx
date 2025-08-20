@@ -575,30 +575,30 @@ const Dashboard: React.FC = () => {
 
         <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl">
           <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-green-600 modern-shadow-lg">
+            <div className="p-3 rounded-xl bg-red-600 modern-shadow-lg">
               <AlertTriangle className="w-6 h-6 text-white" />
             </div>
             <h3 className="text-xl font-bold text-green-900">Alertas</h3>
           </div>
           <div className="space-y-4">
             {metrics.overdueCount > 0 && (
-              <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+              <div className="p-4 bg-red-50 rounded-xl border border-red-200">
                 <div className="flex items-center gap-3">
-                  <AlertTriangle className="w-5 h-5 text-green-600" />
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
                   <div>
-                    <p className="font-bold text-green-800">{metrics.overdueCount} itens vencidos</p>
-                    <p className="text-sm text-green-600">Cheques e boletos em atraso</p>
+                    <p className="font-bold text-red-800">{metrics.overdueCount} itens vencidos</p>
+                    <p className="text-sm text-red-600">Cheques e boletos em atraso</p>
                   </div>
                 </div>
               </div>
             )}
             {metrics.dueTodayCount > 0 && (
-              <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+              <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-200">
                 <div className="flex items-center gap-3">
-                  <Clock className="w-5 h-5 text-green-600" />
+                  <Clock className="w-5 h-5 text-yellow-600" />
                   <div>
-                    <p className="font-bold text-green-800">{metrics.dueTodayCount} vencem hoje</p>
-                    <p className="text-sm text-green-600">Acompanhe os recebimentos</p>
+                    <p className="font-bold text-yellow-800">{metrics.dueTodayCount} vencem hoje</p>
+                    <p className="text-sm text-yellow-600">Acompanhe os recebimentos</p>
                   </div>
                 </div>
               </div>
@@ -674,8 +674,8 @@ const Dashboard: React.FC = () => {
                 <div
                   key={item.id}
                   className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                    isUrgent ? 'bg-green-100 border-green-300 hover:bg-green-200' :
-                    isSoon ? 'bg-green-50 border-green-200 hover:bg-green-100' :
+                    isUrgent ? 'bg-red-50 border-red-200 hover:bg-red-100' :
+                    isSoon ? 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100' :
                     'bg-green-50 border-green-200 hover:bg-green-100'
                   }`}
                 >
@@ -688,8 +688,8 @@ const Dashboard: React.FC = () => {
                           <strong>Venda:</strong> {new Date(item.saleDate).toLocaleDateString('pt-BR')}
                         </span>
                         <span className={`font-bold ${
-                          isUrgent ? 'text-green-600' :
-                          isSoon ? 'text-green-600' :
+                          isUrgent ? 'text-red-600' :
+                          isSoon ? 'text-yellow-600' :
                           'text-green-600'
                         }`}>
                           <strong>Vencimento:</strong> {new Date(item.dueDate).toLocaleDateString('pt-BR')}
@@ -701,17 +701,17 @@ const Dashboard: React.FC = () => {
                         R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                       <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        item.type === 'cheque' ? 'bg-green-100 text-green-800' :
-                        item.type === 'boleto' ? 'bg-green-100 text-green-800' :
-                        'bg-green-100 text-green-800'
+                        item.type === 'cheque' ? 'bg-blue-100 text-blue-800' :
+                        item.type === 'boleto' ? 'bg-purple-100 text-purple-800' :
+                        'bg-gray-100 text-gray-800'
                       }`}>
                         {item.type === 'cheque' ? 'Cheque' :
                          item.type === 'boleto' ? 'Boleto' :
                          item.type.replace('_', ' ')}
                       </span>
                       <div className={`text-xs font-bold mt-1 ${
-                        isUrgent ? 'text-green-600' :
-                        isSoon ? 'text-green-600' :
+                        isUrgent ? 'text-red-600' :
+                        isSoon ? 'text-yellow-600' :
                         'text-green-600'
                       }`}>
                         {daysUntilDue === 0 ? 'Hoje!' :
@@ -771,8 +771,8 @@ const Dashboard: React.FC = () => {
                 <div
                   key={item.id}
                   className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                    isUrgent ? 'bg-green-100 border-green-300 hover:bg-green-200' :
-                    isSoon ? 'bg-green-50 border-green-200 hover:bg-green-100' :
+                    isUrgent ? 'bg-red-100 border-red-300 hover:bg-red-200' :
+                    isSoon ? 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100' :
                     'bg-green-50 border-green-200 hover:bg-green-100'
                   }`}
                 >
@@ -785,9 +785,9 @@ const Dashboard: React.FC = () => {
                           <strong>Dívida:</strong> {new Date(item.debtDate).toLocaleDateString('pt-BR')}
                         </span>
                         <span className={`font-bold ${
-                          isUrgent ? 'text-green-600' :
-                          isSoon ? 'text-green-600' :
-                          'text-green-600'
+                          isUrgent ? 'text-red-600' :
+                          isSoon ? 'text-yellow-600' :
+                          'text-red-600'
                         }`}>
                           <strong>Vencimento:</strong> {new Date(item.dueDate).toLocaleDateString('pt-BR')}
                         </span>
@@ -801,8 +801,8 @@ const Dashboard: React.FC = () => {
                         {item.type.replace('_', ' ')}
                       </span>
                       <div className={`text-xs font-bold mt-1 ${
-                        isUrgent ? 'text-green-700' :
-                        isSoon ? 'text-green-600' :
+                        isUrgent ? 'text-red-700' :
+                        isSoon ? 'text-yellow-600' :
                         'text-green-600'
                       }`}>
                         {daysUntilDue === 0 ? 'Hoje!' :
@@ -1004,7 +1004,7 @@ const Dashboard: React.FC = () => {
       {/* Recent Activities */}
       <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl">
         <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 rounded-xl bg-green-600 modern-shadow-lg">
+          <div className="p-3 rounded-xl bg-green-700 modern-shadow-lg">
             <Clock className="w-6 h-6 text-white" />
           </div>
           <h3 className="text-xl font-bold text-green-900">Atividades Recentes</h3>
