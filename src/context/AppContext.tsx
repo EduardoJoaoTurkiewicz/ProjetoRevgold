@@ -649,26 +649,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       try {
         if (isSupabaseConfigured()) {
-          console.log('🔄 Supabase configurado - verificando autenticação...');
-          
-          // Ensure user is authenticated before loading data
-          const isAuth = await ensureAuthenticated();
-          if (!isAuth) {
-            console.log('⚠️ Modo local ativo - carregando dados do localStorage');
-            
-            // Try to load from localStorage as fallback
-            const savedData = localStorage.getItem('revgold-data');
-            if (savedData) {
-              const data = JSON.parse(savedData);
-              dispatch({ type: 'LOAD_DATA', payload: data });
-              console.log('📱 Dados locais carregados');
-            }
-            
-            dispatch({ type: 'SET_ERROR', payload: null });
-            return;
-          }
-          
-          console.log('🔄 Usuário autenticado - carregando TODOS os dados automaticamente...');
+          console.log('🔄 Supabase configurado - carregando TODOS os dados automaticamente...');
           
           // Usar função de sincronização completa
           const allData = await database.syncAllData();

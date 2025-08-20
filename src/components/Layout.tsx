@@ -9,6 +9,7 @@ import {
   Calendar, 
   BarChart3,
   LogOut,
+  LogIn,
   Menu,
   X,
   Building2,
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { AuthModal } from './AuthModal';
 
 interface LayoutProps {
   currentPage: string;
@@ -39,6 +41,7 @@ const menuItems = [
 export default function Layout({ currentPage, onPageChange, children }: LayoutProps) {
   const { state, dispatch } = useApp();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [showAuthModal, setShowAuthModal] = React.useState(false);
 
   const handleLogout = () => {
     if (window.confirm('Tem certeza que deseja sair?')) {
@@ -46,6 +49,11 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
     }
   };
 
+  const handleAuthSuccess = () => {
+    setShowAuthModal(false);
+    // Trigger data reload
+    window.location.reload();
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50">
       {/* Mobile Sidebar Overlay */}
@@ -189,6 +197,14 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
         </div>
       </div>
 
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={handleAuthSuccess}
+        />
+      )}
+
       {/* Main Content */}
       <div className="lg:ml-80">
         {/* Top Header */}
@@ -219,13 +235,29 @@ export default function Layout({ currentPage, onPageChange, children }: LayoutPr
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl shadow-lg">
                 <Database className="w-4 h-4" />
-                <span className="font-semibold">Sistema Online</span>
+                <span className="font-semibold">
+                  {isSupabaseConfigured() ? 'Banco Conectado' : 'Modo Local'}
+                </span>
                 <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
               </div>
               
+              {isSupabaseConfigured() && (
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="hidden sm:flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl shadow-lg hover:bg-blue-700 transition-colors"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span className="font-semibold text-sm">Login para Salvar</span>
+                </button>
+              )}
+              
               <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-green-100 rounded-full">
-                <div className="w-3 h-3 rounded-full animate-pulse bg-green-500"></div>
-                <span className="text-green-700 font-semibold text-sm">Sincronização Ativa</span>
+                <div className={`w-3 h-3 rounded-full animate-pulse ${
+                  isSupabaseConfigured() ? 'bg-green-500' : 'bg-yellow-500'
+                }`}></div>
+                <span className="text-green-700 font-semibold text-sm">
+                  {isSupabaseConfigured() ? 'Salvando no Banco' : 'Salvando Localmente'}
+                </span>
               </div>
               
               <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg relative overflow-hidden">

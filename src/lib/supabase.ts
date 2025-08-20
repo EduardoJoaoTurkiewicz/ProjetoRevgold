@@ -65,84 +65,20 @@ export const isSupabaseConfigured = () => {
     supabaseAnonKey !== 'your-anon-key');
 };
 
-// Sistema de autenticação automática
+// Sistema de autenticação automática simplificado
 let authPromise: Promise<boolean> | null = null;
 let isAuthenticatedCache = false;
 let lastAuthCheck = 0;
 let defaultUser: any = null;
 
-// Função para criar usuário padrão automaticamente
-const createDefaultUser = async (): Promise<boolean> => {
-  if (!supabase) return false;
-
-  try {
-    console.log('🔄 Criando usuário padrão para o sistema...');
-    
-    // Tentar fazer login primeiro
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email: 'admin@revgold.com',
-      password: 'revgold123456'
-    });
-
-    if (signInData?.user && !signInError) {
-      console.log('✅ Login realizado com usuário existente');
-      defaultUser = signInData.user;
-      return true;
-    }
-
-    // Se login falhou, tentar criar usuário
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: 'admin@revgold.com',
-      password: 'revgold123456',
-      options: {
-        emailRedirectTo: undefined,
-        data: {
-          username: 'Admin RevGold'
-        }
-      }
-    });
-
-    if (signUpError) {
-      console.error('❌ Erro ao criar usuário padrão:', signUpError.message);
-      
-      // Se erro de rate limit, tentar login novamente
-      if (signUpError.message.includes('rate_limit') || signUpError.message.includes('email_send_rate_limit')) {
-        console.log('⚠️ Rate limit detectado, tentando login...');
-        const { data: retrySignIn, error: retryError } = await supabase.auth.signInWithPassword({
-          email: 'admin@revgold.com',
-          password: 'revgold123456'
-        });
-
-        if (retrySignIn?.user && !retryError) {
-          console.log('✅ Login realizado após rate limit');
-          defaultUser = retrySignIn.user;
-          return true;
-        }
-      }
-      
-      return false;
-    }
-
-    if (signUpData?.user) {
-      console.log('✅ Usuário padrão criado com sucesso');
-      defaultUser = signUpData.user;
-      return true;
-    }
-
-    return false;
-  } catch (error) {
-    console.error('❌ Erro na criação do usuário padrão:', error);
-    return false;
-  }
-};
-
+// Função para autenticar automaticamente sem criar usuários
 export const ensureAuthenticated = async (): Promise<boolean> => {
   if (!supabase) {
     console.log('⚠️ Supabase não configurado - usando modo local');
     return false;
   }
 
-  // Cache authentication check for 30 seconds to avoid rate limits
+  // Cache authentication check for 30 seconds
   const now = Date.now();
   if (isAuthenticatedCache && (now - lastAuthCheck) < 30000) {
     return true;
@@ -166,22 +102,24 @@ export const ensureAuthenticated = async (): Promise<boolean> => {
         return true;
       }
 
-      // Try to authenticate with default user
-      console.log('🔄 Tentando autenticação automática...');
-      const authSuccess = await createDefaultUser();
+      // Try to get session
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (authSuccess) {
+      if (session?.user) {
+        console.log('✅ Sessão ativa encontrada:', session.user.email);
+        defaultUser = session.user;
         isAuthenticatedCache = true;
         lastAuthCheck = now;
         return true;
       }
 
-      console.log('⚠️ Não foi possível autenticar - usando modo local');
+      console.log('⚠️ Nenhuma sessão ativa - dados serão salvos apenas localmente');
+      console.log('💡 Para salvar no banco, faça login no Supabase ou configure autenticação');
       isAuthenticatedCache = false;
       return false;
 
     } catch (error) {
-      console.error('❌ Erro na autenticação:', error);
+      console.error('❌ Erro na verificação de autenticação:', error);
       isAuthenticatedCache = false;
       return false;
     } finally {
@@ -235,6 +173,73 @@ export const signOut = async (): Promise<boolean> => {
   } catch (error) {
     console.error('❌ Erro ao fazer logout:', error);
     return false;
+  }
+};
+
+// Função para fazer login manual
+export const signInWithEmail = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) {
+    return { success: false, error: 'Supabase não configurado' };
+  }
+
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      console.error('❌ Erro no login:', error.message);
+      return { success: false, error: error.message };
+    }
+
+    if (data?.user) {
+      console.log('✅ Login realizado com sucesso:', data.user.email);
+      defaultUser = data.user;
+      isAuthenticatedCache = true;
+      lastAuthCheck = Date.now();
+      return { success: true };
+    }
+
+    return { success: false, error: 'Usuário não encontrado' };
+  } catch (error) {
+    console.error('❌ Erro no login:', error);
+    return { success: false, error: 'Erro de conexão' };
+  }
+};
+
+// Função para criar conta manual
+export const signUpWithEmail = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) {
+    return { success: false, error: 'Supabase não configurado' };
+  }
+
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: undefined
+      }
+    });
+
+    if (error) {
+      console.error('❌ Erro no cadastro:', error.message);
+      return { success: false, error: error.message };
+    }
+
+    if (data?.user) {
+      console.log('✅ Cadastro realizado com sucesso:', data.user.email);
+      defaultUser = data.user;
+      isAuthenticatedCache = true;
+      lastAuthCheck = Date.now();
+      return { success: true };
+    }
+
+    return { success: false, error: 'Erro ao criar usuário' };
+  } catch (error) {
+    console.error('❌ Erro no cadastro:', error);
+    return { success: false, error: 'Erro de conexão' };
   }
 };
 
