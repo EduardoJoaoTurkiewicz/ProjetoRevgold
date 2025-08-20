@@ -31,7 +31,7 @@ export const supabase = createClient(
 );
 
 // Função para garantir autenticação (desenvolvimento)
-const ensureAuthenticated = async (): Promise<boolean> => {
+export const ensureAuthenticated = async (): Promise<boolean> => {
   try {
     // Para desenvolvimento, permitir acesso sem autenticação
     // Em produção, você deve implementar um sistema de login adequado
