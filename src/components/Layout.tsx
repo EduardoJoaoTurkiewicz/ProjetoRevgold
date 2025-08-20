@@ -22,6 +22,7 @@ import {
   HardDrive
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 interface LayoutProps {
   currentPage: string;
