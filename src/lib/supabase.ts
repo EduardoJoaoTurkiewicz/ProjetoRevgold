@@ -4,12 +4,18 @@ import { Sale, Debt, Check, Boleto, Employee, EmployeePayment, EmployeeAdvance, 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Variáveis de ambiente do Supabase não encontradas!');
-  console.error('Certifique-se de que VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY estão definidas no arquivo .env');
+// Only show warnings if we're trying to use default/placeholder values
+if (!supabaseUrl || !supabaseAnonKey || 
+    supabaseUrl === 'https://your-project-id.supabase.co' || 
+    supabaseAnonKey === 'your-anon-key-here') {
+  console.warn('⚠️ Supabase não está configurado. Configure o arquivo .env para usar o banco de dados.');
 }
 
-export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '');
+// Use placeholder values to prevent initialization errors when not configured
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co', 
+  supabaseAnonKey || 'placeholder-key'
+);
 
 // Check if Supabase is configured
 export const isSupabaseConfigured = () => {
