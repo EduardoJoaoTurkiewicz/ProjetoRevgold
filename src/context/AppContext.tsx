@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { User, Sale, Debt, Check, Installment, Product, Employee, EmployeePayment, EmployeeAdvance, EmployeeOvertime, EmployeeCommission, Boleto } from '../types';
-import { salesService, debtsService, employeesService, checksService, boletosService } from '../lib/supabase';
+import { supabase, salesService, debtsService, employeesService, checksService, boletosService } from '../lib/supabase';
 
 interface AppState {
   user: User | null;
