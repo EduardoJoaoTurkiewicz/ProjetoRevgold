@@ -437,6 +437,44 @@ const Dashboard: React.FC = () => {
         </div>
       )}
       
+      {!isSupabaseConfigured() && (
+        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center">
+              <WifiOff className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-yellow-800">Modo Local Ativo</h3>
+              <p className="text-yellow-700">
+                Configure o Supabase para salvar dados permanentemente no banco de dados.
+              </p>
+              <p className="text-yellow-600 text-sm mt-2 font-medium">
+                💡 Clique no botão "Connect to Supabase" no topo direito para configurar.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {isSupabaseConfigured() && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+              <Database className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-blue-800">Supabase Conectado</h3>
+              <p className="text-blue-700">
+                Todos os dados estão sendo salvos automaticamente no banco de dados.
+              </p>
+              <p className="text-blue-600 text-sm mt-2 font-medium">
+                ✅ Sistema pronto para uso em múltiplos dispositivos.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Welcome Section */}
       <div className="flex items-center justify-between">
         <div>
