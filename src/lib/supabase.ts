@@ -65,10 +65,76 @@ export const isSupabaseConfigured = () => {
     supabaseAnonKey !== 'your-anon-key');
 };
 
-// Sistema de autenticação automática simplificado
+// Sistema de autenticação automática
 let authPromise: Promise<boolean> | null = null;
 let isAuthenticatedCache = false;
 let lastAuthCheck = 0;
+let defaultUser: any = null;
+
+// Função para criar usuário padrão automaticamente
+const createDefaultUser = async (): Promise<boolean> => {
+  if (!supabase) return false;
+
+  try {
+    console.log('🔄 Criando usuário padrão para o sistema...');
+    
+    // Tentar fazer login primeiro
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email: 'admin@revgold.com',
+      password: 'revgold123456'
+    });
+
+    if (signInData?.user && !signInError) {
+      console.log('✅ Login realizado com usuário existente');
+      defaultUser = signInData.user;
+      return true;
+    }
+
+    // Se login falhou, tentar criar usuário
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: 'admin@revgold.com',
+      password: 'revgold123456',
+      options: {
+        emailRedirectTo: undefined,
+        data: {
+          username: 'Admin RevGold'
+        }
+      }
+    });
+
+    if (signUpError) {
+      console.error('❌ Erro ao criar usuário padrão:', signUpError.message);
+      
+      // Se erro de rate limit, tentar login novamente
+      if (signUpError.message.includes('rate_limit') || signUpError.message.includes('email_send_rate_limit')) {
+        console.log('⚠️ Rate limit detectado, tentando login...');
+        const { data: retrySignIn, error: retryError } = await supabase.auth.signInWithPassword({
+          email: 'admin@revgold.com',
+          password: 'revgold123456'
+        });
+
+        if (retrySignIn?.user && !retryError) {
+          console.log('✅ Login realizado após rate limit');
+          defaultUser = retrySignIn.user;
+          return true;
+        }
+      }
+      
+      return false;
+    }
+
+    if (signUpData?.user) {
+      console.log('✅ Usuário padrão criado com sucesso');
+      defaultUser = signUpData.user;
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.error('❌ Erro na criação do usuário padrão:', error);
+    return false;
+  }
+};
 
 export const ensureAuthenticated = async (): Promise<boolean> => {
   if (!supabase) {
@@ -94,6 +160,17 @@ export const ensureAuthenticated = async (): Promise<boolean> => {
       
       if (user && !error) {
         console.log('✅ Usuário já autenticado:', user.email);
+        defaultUser = user;
+        isAuthenticatedCache = true;
+        lastAuthCheck = now;
+        return true;
+      }
+
+      // Try to authenticate with default user
+      console.log('🔄 Tentando autenticação automática...');
+      const authSuccess = await createDefaultUser();
+      
+      if (authSuccess) {
         isAuthenticatedCache = true;
         lastAuthCheck = now;
         return true;
@@ -134,10 +211,10 @@ export const getCurrentUser = async () => {
   
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    return user;
+    return user || defaultUser;
   } catch (error) {
     console.error('❌ Erro ao obter usuário atual:', error);
-    return null;
+    return defaultUser;
   }
 };
 
@@ -153,6 +230,7 @@ export const signOut = async (): Promise<boolean> => {
     }
     console.log('✅ Logout realizado com sucesso');
     isAuthenticatedCache = false;
+    defaultUser = null;
     return true;
   } catch (error) {
     console.error('❌ Erro ao fazer logout:', error);
