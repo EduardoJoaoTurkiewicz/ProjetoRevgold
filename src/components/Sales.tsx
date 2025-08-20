@@ -44,7 +44,7 @@ export function Sales() {
 
   if (state.isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
+      <div className="flex items-center justify-center min-h-96 relative z-10">
         <div className="text-center">
           <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
             <DollarSign className="w-8 h-8 text-white" />
@@ -56,7 +56,7 @@ export function Sales() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 relative z-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
           <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 shadow-xl floating-animation">
@@ -78,7 +78,7 @@ export function Sales() {
 
       {/* Error Display */}
       {state.error && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 relative z-10">
           <div className="flex items-center gap-4">
             <AlertCircle className="w-8 h-8 text-red-600" />
             <div>
@@ -90,7 +90,7 @@ export function Sales() {
       )}
 
       {/* Sales List */}
-      <div className="card modern-shadow-xl">
+      <div className="card modern-shadow-xl relative z-10">
         {state.sales.length > 0 ? (
           <div className="overflow-x-auto modern-scrollbar">
             <table className="min-w-full">
@@ -220,19 +220,21 @@ export function Sales() {
 
       {/* Sale Form Modal */}
       {(isFormOpen || editingSale) && (
-        <SaleForm
-          sale={editingSale}
-          onSubmit={editingSale ? handleEditSale : handleAddSale}
-          onCancel={() => {
-            setIsFormOpen(false);
-            setEditingSale(null);
-          }}
-        />
+        <div className="relative z-[60]">
+          <SaleForm
+            sale={editingSale}
+            onSubmit={editingSale ? handleEditSale : handleAddSale}
+            onCancel={() => {
+              setIsFormOpen(false);
+              setEditingSale(null);
+            }}
+          />
+        </div>
       )}
 
       {/* View Sale Modal */}
       {viewingSale && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
           <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
             <div className="p-8">
               <div className="flex justify-between items-center mb-8">
@@ -357,7 +359,7 @@ export function Sales() {
 
       {/* Observations Modal */}
       {viewingObservations && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
           <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
             <div className="p-8">
               <div className="flex justify-between items-center mb-8">

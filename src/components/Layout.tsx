@@ -32,7 +32,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50 flex">
       {/* Sidebar */}
-      <div className="w-80 bg-gradient-to-b from-slate-800 via-green-900 to-emerald-900 shadow-2xl relative overflow-hidden">
+      <div className="w-80 bg-gradient-to-b from-slate-800 via-green-900 to-emerald-900 shadow-2xl relative overflow-hidden z-40">
         {/* Background Effects */}
         <div className="absolute inset-0">
           <div className="absolute top-20 left-10 w-32 h-32 bg-green-400/20 rounded-full blur-2xl"></div>
@@ -72,7 +72,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
         </div>
         
         {/* Navigation */}
-        <nav className="relative z-10 mt-8 px-4">
+        <nav className="relative z-50 mt-8 px-4">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentPage === item.id;
@@ -111,7 +111,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
         </nav>
 
         {/* Footer */}
-        <div className="absolute bottom-8 left-4 right-4 z-10">
+        <div className="absolute bottom-8 left-4 right-4 z-30">
           <div className="bg-green-800/50 backdrop-blur-xl rounded-2xl p-6 border border-green-600/30">
             <p className="text-green-200 text-sm font-semibold mb-2">Sistema RevGold</p>
             <p className="text-green-300 text-xs">Gestão Empresarial Profissional</p>
@@ -125,7 +125,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        <header className="bg-white/80 backdrop-blur-xl border-b border-green-100/50 shadow-lg">
+        <header className="bg-white/80 backdrop-blur-xl border-b border-green-100/50 shadow-lg relative z-30">
           <div className="px-8 py-6">
             <div className="flex items-center gap-4">
               <div className={`p-3 rounded-2xl bg-gradient-to-r ${
@@ -148,7 +148,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
           </div>
         </header>
         
-        <main className="flex-1 p-8 overflow-y-auto">
+        <main className="flex-1 p-8 overflow-y-auto relative z-20">
           {children}
         </main>
       </div>

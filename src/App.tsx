@@ -1,15 +1,48 @@
 import React, { useState } from 'react';
 
-  const removeFloating = () => {
-  document.querySelectorAll('[style*="position: fixed"][style*="bottom: 1rem"][style*="right: 1rem"][style*="z-index: 2147483647"]').forEach(el => el.remove());
+// Sistema robusto para remover elementos flutuantes que interferem com a navegação
+const removeFloatingElements = () => {
+  // Remover elementos flutuantes conhecidos que interferem
+  const selectors = [
+    '[style*="position: fixed"][style*="bottom"][style*="right"][style*="z-index: 2147483647"]',
+    '[style*="position: fixed"][style*="bottom: 1rem"][style*="right: 1rem"]',
+    '[style*="position: fixed"][style*="z-index: 2147483647"]',
+    '.floating-widget',
+    '.chat-widget',
+    '.support-widget'
+  ];
+  
+  selectors.forEach(selector => {
+    document.querySelectorAll(selector).forEach(el => {
+      console.log('Removendo elemento flutuante:', el);
+      el.remove();
+    });
+  });
 };
 
-// executa já no load
-removeFloating();
+// Executar imediatamente
+removeFloatingElements();
 
-// observa mudanças no DOM
-const observer = new MutationObserver(removeFloating);
-observer.observe(document.body, { childList: true, subtree: true });
+// Observar mudanças no DOM com throttling para performance
+let timeoutId: number | null = null;
+const throttledRemove = () => {
+  if (timeoutId) clearTimeout(timeoutId);
+  timeoutId = window.setTimeout(removeFloatingElements, 100);
+};
+
+const observer = new MutationObserver(throttledRemove);
+observer.observe(document.body, { 
+  childList: true, 
+  subtree: true,
+  attributes: true,
+  attributeFilter: ['style', 'class']
+});
+
+// Cleanup no unload
+window.addEventListener('beforeunload', () => {
+  observer.disconnect();
+  if (timeoutId) clearTimeout(timeoutId);
+});
 
 import { AppProvider } from './context/AppContext';
 import { UserSelection } from './components/UserSelection';
@@ -54,17 +87,23 @@ function AppContent() {
   };
 
   return (
-    <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
-      {renderPage()}
-    </Layout>
+    <div className="relative z-10">
+      <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
+        <div className="relative z-20">
+          {renderPage()}
+        </div>
+      </Layout>
+    </div>
   );
 }
 
 function App() {
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <div className="relative z-0">
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+    </div>
   );
 }
 

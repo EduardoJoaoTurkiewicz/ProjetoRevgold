@@ -162,12 +162,46 @@ body {
 body {
   @apply bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  position: relative;
+  z-index: 1;
+}
+
+/* Garantir que elementos flutuantes não interfiram com a navegação */
+.floating-element-blocker {
+  position: fixed !important;
+  bottom: 0 !important;
+  right: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
+
+/* Forçar z-index correto para sidebar e navegação */
+nav, .sidebar, [role="navigation"] {
+  position: relative !important;
+  z-index: 50 !important;
+}
+
+/* Garantir que modais tenham z-index superior */
+.modal, [role="dialog"], .fixed.inset-0 {
+  z-index: 60 !important;
+}
+
+/* Prevenir elementos flutuantes de interferir */
+[style*="position: fixed"][style*="bottom"][style*="right"][style*="z-index: 2147483647"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 /* Professional Card System */
 .revgold-card {
   @apply bg-white/95 backdrop-blur-xl rounded-3xl border border-green-100/50 shadow-lg hover:shadow-xl transition-all duration-500;
   box-shadow: var(--shadow-medium);
+  position: relative;
+  z-index: 10;
 }
 
 .revgold-card:hover {
@@ -178,6 +212,8 @@ body {
 .revgold-card-premium {
   @apply bg-gradient-to-br from-white via-green-50/30 to-emerald-50/20 backdrop-blur-xl rounded-3xl border border-green-200/50;
   box-shadow: var(--shadow-large);
+  position: relative;
+  z-index: 10;
 }
 
 .revgold-card-premium:hover {
