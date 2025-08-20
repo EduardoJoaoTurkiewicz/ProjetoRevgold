@@ -122,8 +122,12 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
         : `Descrição do Pagamento: ${formData.paymentObservations}`;
     }
     
+    // Convert empty sellerId to null for UUID field
+    const sellerId = formData.sellerId === '' ? null : formData.sellerId;
+    
     onSubmit({
       ...formData,
+      sellerId,
       observations: finalObservations,
       ...amounts
     } as Omit<Sale, 'id' | 'createdAt'>);
