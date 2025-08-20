@@ -27,37 +27,6 @@ export const isSupabaseConfigured = () => {
 // Criar cliente Supabase com configuração robusta
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co', 
-  supabaseAnonKey || 'placeholder-key',
-  {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: false
-    },
-    realtime: {
-      params: {
-        eventsPerSecond: 10
-      }
-    }
-  }
-);
-
-// Sistema de autenticação automática
-export const ensureAuthenticated = async (): Promise<boolean> => {
-  if (!isSupabaseConfigured()) {
-    console.warn('❌ Supabase não configurado - dados não serão salvos');
-    return false;
-  }
-
-  try {
-    // Verificar se já está autenticado
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session) {
-      console.log('✅ Usuário já autenticado:', session.user.email);
-      return true;
-    }
-
     // Para desenvolvimento, permitir acesso sem autenticação
     // Em produção, você deve implementar um sistema de login adequado
     console.log('⚠️ Executando sem autenticação - apenas para desenvolvimento');
