@@ -130,8 +130,10 @@ export function BoletoForm({ boleto, onSubmit, onCancel }: BoletoFormProps) {
                   className="input-field"
                 >
                   <option value="pendente">Pendente</option>
-                  <option value="pago">Pago</option>
+                  <option value="compensado">Compensado</option>
                   <option value="vencido">Vencido</option>
+                  <option value="cancelado">Cancelado</option>
+                  <option value="nao_pago">Não Pago</option>
                 </select>
               </div>
 

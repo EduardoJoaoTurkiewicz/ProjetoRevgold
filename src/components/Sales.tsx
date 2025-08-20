@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Eye, DollarSign, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, DollarSign, X, FileText, AlertCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Sale, PaymentMethod, EmployeeCommission } from '../types';
 import { SaleForm } from './forms/SaleForm';
@@ -9,6 +9,7 @@ export function Sales() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [viewingSale, setViewingSale] = useState<Sale | null>(null);
+  const [viewingObservations, setViewingObservations] = useState<Sale | null>(null);
 
   const handleAddSale = (sale: Omit<Sale, 'id' | 'createdAt'>) => {
     createSale(sale).then(() => {
@@ -34,14 +35,25 @@ export function Sales() {
   };
 
   const handleDeleteSale = (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta venda?')) {
+    if (window.confirm('Tem certeza que deseja excluir esta venda? Esta ação não pode ser desfeita.')) {
       deleteSale(id).catch(error => {
         alert('Erro ao excluir venda: ' + error.message);
       });
     }
   };
 
-  const canEdit = true;
+  if (state.isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <DollarSign className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-slate-600 font-semibold">Carregando vendas...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -57,12 +69,25 @@ export function Sales() {
         </div>
         <button
           onClick={() => setIsFormOpen(true)}
-          className="btn-primary group flex items-center gap-2"
+          className="btn-primary group flex items-center gap-2 modern-shadow-xl hover:modern-shadow-lg"
         >
           <Plus className="w-5 h-5" />
           Nova Venda
         </button>
       </div>
+
+      {/* Error Display */}
+      {state.error && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <AlertCircle className="w-8 h-8 text-red-600" />
+            <div>
+              <h3 className="font-bold text-red-800">Erro no Sistema</h3>
+              <p className="text-red-700">{state.error}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sales List */}
       <div className="card modern-shadow-xl">
@@ -70,93 +95,102 @@ export function Sales() {
           <div className="overflow-x-auto modern-scrollbar">
             <table className="min-w-full">
               <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Data</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Entrega</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Cliente</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Vendedor</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Produtos</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Valor Total</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Recebido</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Pendente</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Status</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Ações</th>
+                <tr className="border-b border-slate-200">
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-green-50 to-emerald-50">Data</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-green-50 to-emerald-50">Entrega</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-green-50 to-emerald-50">Cliente</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-green-50 to-emerald-50">Vendedor</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-green-50 to-emerald-50">Produtos</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-green-50 to-emerald-50">Valor Total</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-green-50 to-emerald-50">Recebido</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-green-50 to-emerald-50">Pendente</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-green-50 to-emerald-50">Status</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-green-50 to-emerald-50">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {state.sales.map(sale => (
-                  <tr key={sale.id} className="border-b hover:bg-slate-50 transition-colors">
-                    <td className="py-3 px-4 text-sm">
+                  <tr key={sale.id} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-green-50/50 hover:to-emerald-50/50 transition-all duration-300">
+                    <td className="py-4 px-6 text-sm font-semibold text-slate-900">
                       {new Date(sale.date).toLocaleDateString('pt-BR')}
                     </td>
-                    <td className="py-3 px-4 text-sm">
+                    <td className="py-4 px-6 text-sm">
                       {sale.deliveryDate ? (
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold">
+                        <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold border border-blue-200">
                           {new Date(sale.deliveryDate).toLocaleDateString('pt-BR')}
                         </span>
                       ) : (
-                        <span className="text-gray-400 text-xs">-</span>
+                        <span className="text-slate-400 text-xs">-</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-sm font-semibold text-slate-900">{sale.client}</td>
-                    <td className="py-3 px-4 text-sm">
+                    <td className="py-4 px-6 text-sm font-bold text-slate-900">{sale.client}</td>
+                    <td className="py-4 px-6 text-sm">
                       {sale.sellerId ? (
                         (() => {
                           const seller = state.employees.find(e => e.id === sale.sellerId);
                           return seller ? (
-                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold">
+                            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold border border-green-200">
                               {seller.name}
                             </span>
                           ) : (
-                            <span className="text-gray-500 text-xs">Vendedor não encontrado</span>
+                            <span className="text-slate-500 text-xs">Vendedor não encontrado</span>
                           );
                         })()
                       ) : (
-                        <span className="text-gray-400 text-xs">-</span>
+                        <span className="text-slate-400 text-xs">-</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-sm">
-                      {typeof sale.products === 'string' ? sale.products : 'Produtos vendidos'}
+                    <td className="py-4 px-6 text-sm text-slate-700">
+                      <div className="max-w-32 truncate">
+                        {typeof sale.products === 'string' ? sale.products : 'Produtos vendidos'}
+                      </div>
                     </td>
-                    <td className="py-3 px-4 text-sm font-bold text-green-600">
+                    <td className="py-4 px-6 text-sm font-black text-green-600">
                       R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="py-3 px-4 text-sm font-bold text-emerald-600">
+                    <td className="py-4 px-6 text-sm font-black text-emerald-600">
                       R$ {sale.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="py-3 px-4 text-sm font-bold text-orange-600">
+                    <td className="py-4 px-6 text-sm font-black text-orange-600">
                       R$ {sale.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="py-3 px-4 text-sm">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        sale.status === 'pago' ? 'bg-green-100 text-green-800' :
-                        sale.status === 'parcial' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
+                    <td className="py-4 px-6 text-sm">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                        sale.status === 'pago' ? 'bg-green-100 text-green-800 border-green-200' :
+                        sale.status === 'parcial' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                        'bg-red-100 text-red-800 border-red-200'
                       }`}>
                         {sale.status === 'pago' ? 'Pago' :
                          sale.status === 'parcial' ? 'Parcial' : 'Pendente'}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-sm">
+                    <td className="py-4 px-6 text-sm">
                       <div className="flex items-center gap-2">
                         <button
+                          onClick={() => setViewingObservations(sale)}
+                          className="p-2 rounded-lg text-purple-600 hover:text-purple-800 hover:bg-purple-50 transition-all duration-300 modern-shadow"
+                          title="Ver Todas as Informações"
+                        >
+                          <FileText className="w-5 h-5" />
+                        </button>
+                        <button
                           onClick={() => setViewingSale(sale)}
-                          className="p-2 rounded-lg text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition-colors"
-                          title="Visualizar"
+                          className="p-2 rounded-lg text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition-all duration-300 modern-shadow"
+                          title="Visualizar Detalhes"
                         >
                           <Eye className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => setEditingSale(sale)}
-                          className="p-2 rounded-lg text-green-600 hover:text-green-800 hover:bg-green-50 transition-colors"
-                          title="Editar"
+                          className="p-2 rounded-lg text-green-600 hover:text-green-800 hover:bg-green-50 transition-all duration-300 modern-shadow"
+                          title="Editar Venda"
                         >
                           <Edit className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => handleDeleteSale(sale.id)}
-                          className="p-2 rounded-lg text-red-600 hover:text-red-800 hover:bg-red-50 transition-colors"
-                          title="Excluir"
+                          className="p-2 rounded-lg text-red-600 hover:text-red-800 hover:bg-red-50 transition-all duration-300 modern-shadow"
+                          title="Excluir Venda"
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
@@ -176,7 +210,7 @@ export function Sales() {
             <p className="text-slate-600 mb-8 text-lg">Comece registrando sua primeira venda para acompanhar o desempenho.</p>
             <button
               onClick={() => setIsFormOpen(true)}
-              className="btn-primary"
+              className="btn-primary modern-shadow-xl"
             >
               Registrar primeira venda
             </button>
@@ -198,20 +232,25 @@ export function Sales() {
 
       {/* View Sale Modal */}
       {viewingSale && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-slate-900">Detalhes Completos da Venda</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-xl">
+                    <DollarSign className="w-8 h-8 text-white" />
+                  </div>
+                  <h2 className="text-3xl font-bold text-slate-900">Detalhes da Venda</h2>
+                </div>
                 <button
                   onClick={() => setViewingSale(null)}
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
                 >
                   <X className="w-6 h-6" />
                 </button>
               </div>
               
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>
                   <label className="form-label">Data</label>
                   <p className="text-base text-green-700 font-semibold">
@@ -239,7 +278,7 @@ export function Sales() {
                         return seller ? seller.name : 'Funcionário não encontrado';
                       })()
                     ) : (
-                      <span className="text-gray-500">Não informado</span>
+                      <span className="text-slate-500">Não informado</span>
                     )}
                   </p>
                   {viewingSale.sellerId && (() => {
@@ -262,60 +301,28 @@ export function Sales() {
                     </div>
                   </div>
                 </div>
-                <div className="md:col-span-2">
-                  <label className="form-label">Todas as Observações e Informações</label>
-                  <div className="p-6 bg-blue-50 rounded-xl border border-blue-100 space-y-4">
-                    {viewingSale.observations && (
-                      <div>
-                        <h4 className="font-bold text-blue-900 mb-2">Observações Gerais:</h4>
-                        <p className="text-blue-700 font-medium">{viewingSale.observations}</p>
-                      </div>
-                    )}
-                    {viewingSale.paymentDescription && (
-                      <div>
-                        <h4 className="font-bold text-blue-900 mb-2">Descrição do Pagamento:</h4>
-                        <p className="text-blue-700 font-medium">{viewingSale.paymentDescription}</p>
-                      </div>
-                    )}
-                    {viewingSale.paymentObservations && (
-                      <div>
-                        <h4 className="font-bold text-blue-900 mb-2">Observações do Pagamento:</h4>
-                        <p className="text-blue-700 font-medium">{viewingSale.paymentObservations}</p>
-                      </div>
-                    )}
-                    <div>
-                      <h4 className="font-bold text-blue-900 mb-2">Informações do Sistema:</h4>
-                      <div className="text-sm text-blue-600 space-y-1">
-                        <p><strong>ID da Venda:</strong> {viewingSale.id}</p>
-                        <p><strong>Data de Criação:</strong> {new Date(viewingSale.createdAt).toLocaleString('pt-BR')}</p>
-                        <p><strong>Valor Recebido:</strong> R$ {viewingSale.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                        <p><strong>Valor Pendente:</strong> R$ {viewingSale.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
                 <div>
                   <label className="form-label">Valor Total</label>
-                  <p className="text-xl font-black text-green-600">
+                  <p className="text-2xl font-black text-green-600">
                     R$ {viewingSale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div>
                   <label className="form-label">Status</label>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                    viewingSale.status === 'pago' ? 'bg-green-100 text-green-800' :
-                    viewingSale.status === 'parcial' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
+                  <span className={`px-4 py-2 rounded-full text-sm font-bold border ${
+                    viewingSale.status === 'pago' ? 'bg-green-100 text-green-800 border-green-200' :
+                    viewingSale.status === 'parcial' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                    'bg-red-100 text-red-800 border-red-200'
                   }`}>
                     {viewingSale.status === 'pago' ? 'Pago' :
                      viewingSale.status === 'parcial' ? 'Parcial' : 'Pendente'}
                   </span>
                 </div>
-                </div>
+              </div>
 
-                <div className="mb-8">
-                  <h3 className="text-xl font-bold text-green-800 mb-4">Métodos de Pagamento</h3>
-                  <div className="space-y-3">
+              <div className="mb-8">
+                <h3 className="text-xl font-bold text-green-800 mb-4">Métodos de Pagamento</h3>
+                <div className="space-y-3">
                   {viewingSale.paymentMethods.map((method, index) => (
                     <div key={index} className="p-4 bg-green-50 rounded-xl border border-green-100">
                       <div className="flex justify-between items-center">
@@ -333,16 +340,163 @@ export function Sales() {
                     </div>
                   ))}
                 </div>
+              </div>
+              
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => setViewingSale(null)}
+                  className="btn-secondary"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Observations Modal */}
+      {viewingObservations && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-600 to-violet-700 modern-shadow-xl">
+                    <FileText className="w-8 h-8 text-white" />
+                  </div>
+                  <h2 className="text-3xl font-bold text-slate-900">Todas as Informações da Venda</h2>
                 </div>
-                
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => setViewingSale(null)}
-                    className="btn-secondary"
-                  >
-                    Fechar
-                  </button>
+                <button
+                  onClick={() => setViewingObservations(null)}
+                  className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-8">
+                {/* Basic Information */}
+                <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
+                  <h3 className="text-xl font-bold text-blue-900 mb-4">Informações Básicas</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <p><strong className="text-blue-800">ID da Venda:</strong> <span className="text-blue-700 font-mono">{viewingObservations.id}</span></p>
+                    <p><strong className="text-blue-800">Data:</strong> <span className="text-blue-700">{new Date(viewingObservations.date).toLocaleDateString('pt-BR')}</span></p>
+                    <p><strong className="text-blue-800">Cliente:</strong> <span className="text-blue-700 font-bold">{viewingObservations.client}</span></p>
+                    <p><strong className="text-blue-800">Valor Total:</strong> <span className="text-blue-700 font-bold">R$ {viewingObservations.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p>
+                    <p><strong className="text-blue-800">Valor Recebido:</strong> <span className="text-green-600 font-bold">R$ {viewingObservations.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p>
+                    <p><strong className="text-blue-800">Valor Pendente:</strong> <span className="text-orange-600 font-bold">R$ {viewingObservations.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p>
+                    <p><strong className="text-blue-800">Status:</strong> <span className="text-blue-700 font-bold capitalize">{viewingObservations.status}</span></p>
+                    <p><strong className="text-blue-800">Data de Criação:</strong> <span className="text-blue-700">{new Date(viewingObservations.createdAt).toLocaleString('pt-BR')}</span></p>
+                    {viewingObservations.deliveryDate && (
+                      <p><strong className="text-blue-800">Data de Entrega:</strong> <span className="text-blue-700">{new Date(viewingObservations.deliveryDate).toLocaleDateString('pt-BR')}</span></p>
+                    )}
+                  </div>
                 </div>
+
+                {/* Seller Information */}
+                {viewingObservations.sellerId && (
+                  <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
+                    <h3 className="text-xl font-bold text-green-900 mb-4">Informações do Vendedor</h3>
+                    {(() => {
+                      const seller = state.employees.find(e => e.id === viewingObservations.sellerId);
+                      const commission = state.employeeCommissions.find(c => c.saleId === viewingObservations.id);
+                      return seller ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <p><strong className="text-green-800">Nome:</strong> <span className="text-green-700 font-bold">{seller.name}</span></p>
+                          <p><strong className="text-green-800">Cargo:</strong> <span className="text-green-700">{seller.position}</span></p>
+                          {commission && (
+                            <>
+                              <p><strong className="text-green-800">Taxa de Comissão:</strong> <span className="text-green-700 font-bold">{commission.commissionRate}%</span></p>
+                              <p><strong className="text-green-800">Valor da Comissão:</strong> <span className="text-green-700 font-bold">R$ {commission.commissionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p>
+                              <p><strong className="text-green-800">Status da Comissão:</strong> <span className="text-green-700 font-bold capitalize">{commission.status}</span></p>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-green-700">Vendedor não encontrado</p>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {/* Products */}
+                <div className="p-6 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-2xl border border-yellow-200">
+                  <h3 className="text-xl font-bold text-yellow-900 mb-4">Produtos</h3>
+                  <p className="text-yellow-800 font-semibold">
+                    {typeof viewingObservations.products === 'string' ? viewingObservations.products : 'Produtos vendidos'}
+                  </p>
+                </div>
+
+                {/* Payment Methods */}
+                <div className="p-6 bg-gradient-to-r from-emerald-50 to-green-50 rounded-2xl border border-emerald-200">
+                  <h3 className="text-xl font-bold text-emerald-900 mb-4">Métodos de Pagamento</h3>
+                  <div className="space-y-4">
+                    {viewingObservations.paymentMethods.map((method, index) => (
+                      <div key={index} className="p-4 bg-white rounded-xl border border-emerald-100 shadow-sm">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-bold text-emerald-800 capitalize text-lg">
+                            {method.type.replace('_', ' ')}
+                          </span>
+                          <span className="font-black text-emerald-600 text-xl">
+                            R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                        {method.installments && method.installments > 1 && (
+                          <div className="text-sm text-emerald-600 font-semibold space-y-1">
+                            <p>Parcelas: {method.installments}x de R$ {method.installmentValue?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                            {method.installmentInterval && <p>Intervalo: {method.installmentInterval} dias</p>}
+                            {method.firstInstallmentDate && <p>Primeira parcela: {new Date(method.firstInstallmentDate).toLocaleDateString('pt-BR')}</p>}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* All Observations */}
+                <div className="p-6 bg-gradient-to-r from-slate-50 to-gray-50 rounded-2xl border border-slate-200">
+                  <h3 className="text-xl font-bold text-slate-900 mb-4">Todas as Observações e Informações</h3>
+                  <div className="space-y-4">
+                    {viewingObservations.observations && (
+                      <div>
+                        <h4 className="font-bold text-slate-800 mb-2">Observações Gerais:</h4>
+                        <p className="text-slate-700 font-medium p-4 bg-white rounded-xl border">{viewingObservations.observations}</p>
+                      </div>
+                    )}
+                    {viewingObservations.paymentDescription && (
+                      <div>
+                        <h4 className="font-bold text-slate-800 mb-2">Descrição do Pagamento:</h4>
+                        <p className="text-slate-700 font-medium p-4 bg-white rounded-xl border">{viewingObservations.paymentDescription}</p>
+                      </div>
+                    )}
+                    {viewingObservations.paymentObservations && (
+                      <div>
+                        <h4 className="font-bold text-slate-800 mb-2">Observações do Pagamento:</h4>
+                        <p className="text-slate-700 font-medium p-4 bg-white rounded-xl border">{viewingObservations.paymentObservations}</p>
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="font-bold text-slate-800 mb-2">Informações do Sistema:</h4>
+                      <div className="text-sm text-slate-600 space-y-2 p-4 bg-white rounded-xl border">
+                        <p><strong>ID da Venda:</strong> <span className="font-mono">{viewingObservations.id}</span></p>
+                        <p><strong>Data de Criação:</strong> {new Date(viewingObservations.createdAt).toLocaleString('pt-BR')}</p>
+                        <p><strong>Valor Recebido:</strong> R$ {viewingObservations.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        <p><strong>Valor Pendente:</strong> R$ {viewingObservations.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => setViewingObservations(null)}
+                  className="btn-secondary"
+                >
+                  Fechar
+                </button>
+              </div>
             </div>
           </div>
         </div>

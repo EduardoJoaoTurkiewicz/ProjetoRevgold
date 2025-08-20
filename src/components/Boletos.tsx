@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Eye, Upload, Calendar, AlertTriangle, CheckCircle, Receipt, Plus, Edit, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Eye, Upload, Calendar, AlertTriangle, CheckCircle, Receipt, Plus, Edit, Trash2, ChevronDown, ChevronRight, FileText, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Boleto } from '../types';
 import { BoletoForm } from './forms/BoletoForm';
 
 export function Boletos() {
-  const { state, dispatch } = useApp();
+  const { state, createBoleto, updateBoleto, deleteBoleto } = useApp();
   const [viewingBoleto, setViewingBoleto] = useState<Boleto | null>(null);
   const [uploadingBoleto, setUploadingBoleto] = useState<Boleto | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -37,14 +37,11 @@ export function Boletos() {
   }));
 
   const handleAddBoleto = (boleto: Omit<Boleto, 'id' | 'createdAt'>) => {
-    const newBoleto: Boleto = {
-      ...boleto,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
-    };
-    
-    dispatch({ type: 'ADD_BOLETO', payload: newBoleto });
-    setIsFormOpen(false);
+    createBoleto(boleto).then(() => {
+      setIsFormOpen(false);
+    }).catch(error => {
+      alert('Erro ao criar boleto: ' + error.message);
+    });
   };
 
   const handleEditBoleto = (boleto: Omit<Boleto, 'id' | 'createdAt'>) => {
@@ -54,14 +51,19 @@ export function Boletos() {
         id: editingBoleto.id,
         createdAt: editingBoleto.createdAt
       };
-      dispatch({ type: 'UPDATE_BOLETO', payload: updatedBoleto });
-      setEditingBoleto(null);
+      updateBoleto(updatedBoleto).then(() => {
+        setEditingBoleto(null);
+      }).catch(error => {
+        alert('Erro ao atualizar boleto: ' + error.message);
+      });
     }
   };
 
   const handleDeleteBoleto = (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir este boleto?')) {
-      dispatch({ type: 'DELETE_BOLETO', payload: id });
+    if (window.confirm('Tem certeza que deseja excluir este boleto? Esta ação não pode ser desfeita.')) {
+      deleteBoleto(id).catch(error => {
+        alert('Erro ao excluir boleto: ' + error.message);
+      });
     }
   };
 
@@ -79,7 +81,9 @@ export function Boletos() {
         }
       }
       
-      dispatch({ type: 'UPDATE_BOLETO', payload: updatedBoleto });
+      updateBoleto(updatedBoleto).catch(error => {
+        alert('Erro ao atualizar status: ' + error.message);
+      });
     }
   };
 
@@ -91,8 +95,11 @@ export function Boletos() {
         boletoFile: `boleto-${Date.now()}-${file.name}`,
         observations: `${boleto.observations || ''}\nArquivo anexado: ${file.name}`.trim()
       };
-      dispatch({ type: 'UPDATE_BOLETO', payload: updatedBoleto });
-      setUploadingBoleto(null);
+      updateBoleto(updatedBoleto).then(() => {
+        setUploadingBoleto(null);
+      }).catch(error => {
+        alert('Erro ao anexar arquivo: ' + error.message);
+      });
     }
   };
 
@@ -135,8 +142,6 @@ export function Boletos() {
       default: return 'Pendente';
     }
   };
-
-  const canEdit = true;
 
   return (
     <div className="space-y-8">

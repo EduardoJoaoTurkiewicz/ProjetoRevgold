@@ -5,584 +5,847 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+  console.error('❌ Variáveis de ambiente do Supabase não encontradas!');
+  console.error('Certifique-se de que VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY estão definidas no arquivo .env');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '');
 
 // Check if Supabase is configured
 export const isSupabaseConfigured = () => {
-  return Boolean(supabaseUrl && supabaseAnonKey && 
+  const isConfigured = Boolean(supabaseUrl && supabaseAnonKey && 
     supabaseUrl !== 'https://your-project.supabase.co' && 
     supabaseAnonKey !== 'your-anon-key');
+  
+  if (!isConfigured) {
+    console.warn('⚠️ Supabase não está configurado corretamente. Verifique as variáveis de ambiente.');
+  }
+  
+  return isConfigured;
 };
 
 // Database operations for Sales
 export const salesService = {
   async getAll(): Promise<Sale[]> {
-    const { data, error } = await supabase
-      .from('sales')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    return data || [];
+    try {
+      console.log('🔄 Buscando todas as vendas...');
+      const { data, error } = await supabase
+        .from('sales')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar vendas:', error);
+        throw error;
+      }
+      
+      const sales = (data || []).map(item => ({
+        id: item.id,
+        date: item.date,
+        deliveryDate: item.delivery_date,
+        client: item.client,
+        sellerId: item.seller_id,
+        products: item.products,
+        observations: item.observations,
+        totalValue: Number(item.total_value),
+        paymentMethods: item.payment_methods || [],
+        receivedAmount: Number(item.received_amount),
+        pendingAmount: Number(item.pending_amount),
+        status: item.status,
+        paymentDescription: item.payment_description,
+        paymentObservations: item.payment_observations,
+        createdAt: item.created_at
+      }));
+      
+      console.log('✅ Vendas carregadas:', sales.length);
+      return sales;
+    } catch (error) {
+      console.error('❌ Erro no salesService.getAll:', error);
+      throw error;
+    }
   },
 
   async create(sale: Omit<Sale, 'id' | 'createdAt'>): Promise<Sale> {
-    const { data, error } = await supabase
-      .from('sales')
-      .insert([{
-        date: sale.date,
-        delivery_date: sale.deliveryDate,
-        client: sale.client,
-        seller_id: sale.sellerId,
-        products: sale.products,
-        observations: sale.observations,
-        total_value: sale.totalValue,
-        payment_methods: sale.paymentMethods,
-        received_amount: sale.receivedAmount,
-        pending_amount: sale.pendingAmount,
-        status: sale.status,
-        payment_description: sale.paymentDescription,
-        payment_observations: sale.paymentObservations
-      }])
-      .select()
-      .single();
+    try {
+      console.log('🔄 Criando nova venda:', sale);
+      const { data, error } = await supabase
+        .from('sales')
+        .insert([{
+          date: sale.date,
+          delivery_date: sale.deliveryDate,
+          client: sale.client,
+          seller_id: sale.sellerId,
+          products: sale.products,
+          observations: sale.observations,
+          total_value: sale.totalValue,
+          payment_methods: sale.paymentMethods,
+          received_amount: sale.receivedAmount,
+          pending_amount: sale.pendingAmount,
+          status: sale.status,
+          payment_description: sale.paymentDescription,
+          payment_observations: sale.paymentObservations
+        }])
+        .select()
+        .single();
 
-    if (error) throw error;
-    
-    return {
-      id: data.id,
-      date: data.date,
-      deliveryDate: data.delivery_date,
-      client: data.client,
-      sellerId: data.seller_id,
-      products: data.products,
-      observations: data.observations,
-      totalValue: data.total_value,
-      paymentMethods: data.payment_methods,
-      receivedAmount: data.received_amount,
-      pendingAmount: data.pending_amount,
-      status: data.status,
-      paymentDescription: data.payment_description,
-      paymentObservations: data.payment_observations,
-      createdAt: data.created_at
-    };
+      if (error) {
+        console.error('❌ Erro ao criar venda:', error);
+        throw error;
+      }
+      
+      const newSale = {
+        id: data.id,
+        date: data.date,
+        deliveryDate: data.delivery_date,
+        client: data.client,
+        sellerId: data.seller_id,
+        products: data.products,
+        observations: data.observations,
+        totalValue: Number(data.total_value),
+        paymentMethods: data.payment_methods,
+        receivedAmount: Number(data.received_amount),
+        pendingAmount: Number(data.pending_amount),
+        status: data.status,
+        paymentDescription: data.payment_description,
+        paymentObservations: data.payment_observations,
+        createdAt: data.created_at
+      };
+      
+      console.log('✅ Venda criada com sucesso:', newSale.id);
+      return newSale;
+    } catch (error) {
+      console.error('❌ Erro no salesService.create:', error);
+      throw error;
+    }
   },
 
   async update(sale: Sale): Promise<Sale> {
-    const { data, error } = await supabase
-      .from('sales')
-      .update({
-        date: sale.date,
-        delivery_date: sale.deliveryDate,
-        client: sale.client,
-        seller_id: sale.sellerId,
-        products: sale.products,
-        observations: sale.observations,
-        total_value: sale.totalValue,
-        payment_methods: sale.paymentMethods,
-        received_amount: sale.receivedAmount,
-        pending_amount: sale.pendingAmount,
-        status: sale.status,
-        payment_description: sale.paymentDescription,
-        payment_observations: sale.paymentObservations,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', sale.id)
-      .select()
-      .single();
+    try {
+      console.log('🔄 Atualizando venda:', sale.id);
+      const { data, error } = await supabase
+        .from('sales')
+        .update({
+          date: sale.date,
+          delivery_date: sale.deliveryDate,
+          client: sale.client,
+          seller_id: sale.sellerId,
+          products: sale.products,
+          observations: sale.observations,
+          total_value: sale.totalValue,
+          payment_methods: sale.paymentMethods,
+          received_amount: sale.receivedAmount,
+          pending_amount: sale.pendingAmount,
+          status: sale.status,
+          payment_description: sale.paymentDescription,
+          payment_observations: sale.paymentObservations,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sale.id)
+        .select()
+        .single();
 
-    if (error) throw error;
-    
-    return {
-      id: data.id,
-      date: data.date,
-      deliveryDate: data.delivery_date,
-      client: data.client,
-      sellerId: data.seller_id,
-      products: data.products,
-      observations: data.observations,
-      totalValue: data.total_value,
-      paymentMethods: data.payment_methods,
-      receivedAmount: data.received_amount,
-      pendingAmount: data.pending_amount,
-      status: data.status,
-      paymentDescription: data.payment_description,
-      paymentObservations: data.payment_observations,
-      createdAt: data.created_at
-    };
+      if (error) {
+        console.error('❌ Erro ao atualizar venda:', error);
+        throw error;
+      }
+      
+      const updatedSale = {
+        id: data.id,
+        date: data.date,
+        deliveryDate: data.delivery_date,
+        client: data.client,
+        sellerId: data.seller_id,
+        products: data.products,
+        observations: data.observations,
+        totalValue: Number(data.total_value),
+        paymentMethods: data.payment_methods,
+        receivedAmount: Number(data.received_amount),
+        pendingAmount: Number(data.pending_amount),
+        status: data.status,
+        paymentDescription: data.payment_description,
+        paymentObservations: data.payment_observations,
+        createdAt: data.created_at
+      };
+      
+      console.log('✅ Venda atualizada com sucesso:', updatedSale.id);
+      return updatedSale;
+    } catch (error) {
+      console.error('❌ Erro no salesService.update:', error);
+      throw error;
+    }
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('sales')
-      .delete()
-      .eq('id', id);
+    try {
+      console.log('🔄 Excluindo venda:', id);
+      const { error } = await supabase
+        .from('sales')
+        .delete()
+        .eq('id', id);
 
-    if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao excluir venda:', error);
+        throw error;
+      }
+      
+      console.log('✅ Venda excluída com sucesso:', id);
+    } catch (error) {
+      console.error('❌ Erro no salesService.delete:', error);
+      throw error;
+    }
   }
 };
 
 // Database operations for Debts
 export const debtsService = {
   async getAll(): Promise<Debt[]> {
-    const { data, error } = await supabase
-      .from('debts')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    return data?.map(item => ({
-      id: item.id,
-      date: item.date,
-      description: item.description,
-      company: item.company,
-      totalValue: item.total_value,
-      paymentMethods: item.payment_methods,
-      isPaid: item.is_paid,
-      paidAmount: item.paid_amount,
-      pendingAmount: item.pending_amount,
-      checksUsed: item.checks_used,
-      paymentDescription: item.payment_description,
-      debtPaymentDescription: item.debt_payment_description,
-      createdAt: item.created_at
-    })) || [];
+    try {
+      console.log('🔄 Buscando todas as dívidas...');
+      const { data, error } = await supabase
+        .from('debts')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar dívidas:', error);
+        throw error;
+      }
+      
+      const debts = (data || []).map(item => ({
+        id: item.id,
+        date: item.date,
+        description: item.description,
+        company: item.company,
+        totalValue: Number(item.total_value),
+        paymentMethods: item.payment_methods || [],
+        isPaid: item.is_paid,
+        paidAmount: Number(item.paid_amount),
+        pendingAmount: Number(item.pending_amount),
+        checksUsed: item.checks_used || [],
+        paymentDescription: item.payment_description,
+        debtPaymentDescription: item.debt_payment_description,
+        createdAt: item.created_at
+      }));
+      
+      console.log('✅ Dívidas carregadas:', debts.length);
+      return debts;
+    } catch (error) {
+      console.error('❌ Erro no debtsService.getAll:', error);
+      throw error;
+    }
   },
 
   async create(debt: Omit<Debt, 'id' | 'createdAt'>): Promise<Debt> {
-    const { data, error } = await supabase
-      .from('debts')
-      .insert([{
-        date: debt.date,
-        description: debt.description,
-        company: debt.company,
-        total_value: debt.totalValue,
-        payment_methods: debt.paymentMethods,
-        is_paid: debt.isPaid,
-        paid_amount: debt.paidAmount,
-        pending_amount: debt.pendingAmount,
-        checks_used: debt.checksUsed,
-        payment_description: debt.paymentDescription,
-        debt_payment_description: debt.debtPaymentDescription
-      }])
-      .select()
-      .single();
+    try {
+      console.log('🔄 Criando nova dívida:', debt);
+      const { data, error } = await supabase
+        .from('debts')
+        .insert([{
+          date: debt.date,
+          description: debt.description,
+          company: debt.company,
+          total_value: debt.totalValue,
+          payment_methods: debt.paymentMethods,
+          is_paid: debt.isPaid,
+          paid_amount: debt.paidAmount,
+          pending_amount: debt.pendingAmount,
+          checks_used: debt.checksUsed,
+          payment_description: debt.paymentDescription,
+          debt_payment_description: debt.debtPaymentDescription
+        }])
+        .select()
+        .single();
 
-    if (error) throw error;
-    
-    return {
-      id: data.id,
-      date: data.date,
-      description: data.description,
-      company: data.company,
-      totalValue: data.total_value,
-      paymentMethods: data.payment_methods,
-      isPaid: data.is_paid,
-      paidAmount: data.paid_amount,
-      pendingAmount: data.pending_amount,
-      checksUsed: data.checks_used,
-      paymentDescription: data.payment_description,
-      debtPaymentDescription: data.debt_payment_description,
-      createdAt: data.created_at
-    };
+      if (error) {
+        console.error('❌ Erro ao criar dívida:', error);
+        throw error;
+      }
+      
+      const newDebt = {
+        id: data.id,
+        date: data.date,
+        description: data.description,
+        company: data.company,
+        totalValue: Number(data.total_value),
+        paymentMethods: data.payment_methods,
+        isPaid: data.is_paid,
+        paidAmount: Number(data.paid_amount),
+        pendingAmount: Number(data.pending_amount),
+        checksUsed: data.checks_used,
+        paymentDescription: data.payment_description,
+        debtPaymentDescription: data.debt_payment_description,
+        createdAt: data.created_at
+      };
+      
+      console.log('✅ Dívida criada com sucesso:', newDebt.id);
+      return newDebt;
+    } catch (error) {
+      console.error('❌ Erro no debtsService.create:', error);
+      throw error;
+    }
   },
 
   async update(debt: Debt): Promise<Debt> {
-    const { data, error } = await supabase
-      .from('debts')
-      .update({
-        date: debt.date,
-        description: debt.description,
-        company: debt.company,
-        total_value: debt.totalValue,
-        payment_methods: debt.paymentMethods,
-        is_paid: debt.isPaid,
-        paid_amount: debt.paidAmount,
-        pending_amount: debt.pendingAmount,
-        checks_used: debt.checksUsed,
-        payment_description: debt.paymentDescription,
-        debt_payment_description: debt.debtPaymentDescription,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', debt.id)
-      .select()
-      .single();
+    try {
+      console.log('🔄 Atualizando dívida:', debt.id);
+      const { data, error } = await supabase
+        .from('debts')
+        .update({
+          date: debt.date,
+          description: debt.description,
+          company: debt.company,
+          total_value: debt.totalValue,
+          payment_methods: debt.paymentMethods,
+          is_paid: debt.isPaid,
+          paid_amount: debt.paidAmount,
+          pending_amount: debt.pendingAmount,
+          checks_used: debt.checksUsed,
+          payment_description: debt.paymentDescription,
+          debt_payment_description: debt.debtPaymentDescription,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', debt.id)
+        .select()
+        .single();
 
-    if (error) throw error;
-    
-    return {
-      id: data.id,
-      date: data.date,
-      description: data.description,
-      company: data.company,
-      totalValue: data.total_value,
-      paymentMethods: data.payment_methods,
-      isPaid: data.is_paid,
-      paidAmount: data.paid_amount,
-      pendingAmount: data.pending_amount,
-      checksUsed: data.checks_used,
-      paymentDescription: data.payment_description,
-      debtPaymentDescription: data.debt_payment_description,
-      createdAt: data.created_at
-    };
+      if (error) {
+        console.error('❌ Erro ao atualizar dívida:', error);
+        throw error;
+      }
+      
+      const updatedDebt = {
+        id: data.id,
+        date: data.date,
+        description: data.description,
+        company: data.company,
+        totalValue: Number(data.total_value),
+        paymentMethods: data.payment_methods,
+        isPaid: data.is_paid,
+        paidAmount: Number(data.paid_amount),
+        pendingAmount: Number(data.pending_amount),
+        checksUsed: data.checks_used,
+        paymentDescription: data.payment_description,
+        debtPaymentDescription: data.debt_payment_description,
+        createdAt: data.created_at
+      };
+      
+      console.log('✅ Dívida atualizada com sucesso:', updatedDebt.id);
+      return updatedDebt;
+    } catch (error) {
+      console.error('❌ Erro no debtsService.update:', error);
+      throw error;
+    }
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('debts')
-      .delete()
-      .eq('id', id);
+    try {
+      console.log('🔄 Excluindo dívida:', id);
+      const { error } = await supabase
+        .from('debts')
+        .delete()
+        .eq('id', id);
 
-    if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao excluir dívida:', error);
+        throw error;
+      }
+      
+      console.log('✅ Dívida excluída com sucesso:', id);
+    } catch (error) {
+      console.error('❌ Erro no debtsService.delete:', error);
+      throw error;
+    }
   }
 };
 
 // Database operations for Employees
 export const employeesService = {
   async getAll(): Promise<Employee[]> {
-    const { data, error } = await supabase
-      .from('employees')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    return data?.map(item => ({
-      id: item.id,
-      name: item.name,
-      position: item.position,
-      isSeller: item.is_seller,
-      salary: item.salary,
-      paymentDay: item.payment_day,
-      nextPaymentDate: item.next_payment_date,
-      isActive: item.is_active,
-      hireDate: item.hire_date,
-      observations: item.observations,
-      createdAt: item.created_at
-    })) || [];
+    try {
+      console.log('🔄 Buscando todos os funcionários...');
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar funcionários:', error);
+        throw error;
+      }
+      
+      const employees = (data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        position: item.position,
+        isSeller: item.is_seller,
+        salary: Number(item.salary),
+        paymentDay: item.payment_day,
+        nextPaymentDate: item.next_payment_date,
+        isActive: item.is_active,
+        hireDate: item.hire_date,
+        observations: item.observations,
+        createdAt: item.created_at
+      }));
+      
+      console.log('✅ Funcionários carregados:', employees.length);
+      return employees;
+    } catch (error) {
+      console.error('❌ Erro no employeesService.getAll:', error);
+      throw error;
+    }
   },
 
   async create(employee: Omit<Employee, 'id' | 'createdAt'>): Promise<Employee> {
-    const { data, error } = await supabase
-      .from('employees')
-      .insert([{
-        name: employee.name,
-        position: employee.position,
-        is_seller: employee.isSeller,
-        salary: employee.salary,
-        payment_day: employee.paymentDay,
-        next_payment_date: employee.nextPaymentDate,
-        is_active: employee.isActive,
-        hire_date: employee.hireDate,
-        observations: employee.observations
-      }])
-      .select()
-      .single();
+    try {
+      console.log('🔄 Criando novo funcionário:', employee);
+      const { data, error } = await supabase
+        .from('employees')
+        .insert([{
+          name: employee.name,
+          position: employee.position,
+          is_seller: employee.isSeller,
+          salary: employee.salary,
+          payment_day: employee.paymentDay,
+          next_payment_date: employee.nextPaymentDate,
+          is_active: employee.isActive,
+          hire_date: employee.hireDate,
+          observations: employee.observations
+        }])
+        .select()
+        .single();
 
-    if (error) throw error;
-    
-    return {
-      id: data.id,
-      name: data.name,
-      position: data.position,
-      isSeller: data.is_seller,
-      salary: data.salary,
-      paymentDay: data.payment_day,
-      nextPaymentDate: data.next_payment_date,
-      isActive: data.is_active,
-      hireDate: data.hire_date,
-      observations: data.observations,
-      createdAt: data.created_at
-    };
+      if (error) {
+        console.error('❌ Erro ao criar funcionário:', error);
+        throw error;
+      }
+      
+      const newEmployee = {
+        id: data.id,
+        name: data.name,
+        position: data.position,
+        isSeller: data.is_seller,
+        salary: Number(data.salary),
+        paymentDay: data.payment_day,
+        nextPaymentDate: data.next_payment_date,
+        isActive: data.is_active,
+        hireDate: data.hire_date,
+        observations: data.observations,
+        createdAt: data.created_at
+      };
+      
+      console.log('✅ Funcionário criado com sucesso:', newEmployee.id);
+      return newEmployee;
+    } catch (error) {
+      console.error('❌ Erro no employeesService.create:', error);
+      throw error;
+    }
   },
 
   async update(employee: Employee): Promise<Employee> {
-    const { data, error } = await supabase
-      .from('employees')
-      .update({
-        name: employee.name,
-        position: employee.position,
-        is_seller: employee.isSeller,
-        salary: employee.salary,
-        payment_day: employee.paymentDay,
-        next_payment_date: employee.nextPaymentDate,
-        is_active: employee.isActive,
-        hire_date: employee.hireDate,
-        observations: employee.observations,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', employee.id)
-      .select()
-      .single();
+    try {
+      console.log('🔄 Atualizando funcionário:', employee.id);
+      const { data, error } = await supabase
+        .from('employees')
+        .update({
+          name: employee.name,
+          position: employee.position,
+          is_seller: employee.isSeller,
+          salary: employee.salary,
+          payment_day: employee.paymentDay,
+          next_payment_date: employee.nextPaymentDate,
+          is_active: employee.isActive,
+          hire_date: employee.hireDate,
+          observations: employee.observations,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', employee.id)
+        .select()
+        .single();
 
-    if (error) throw error;
-    
-    return {
-      id: data.id,
-      name: data.name,
-      position: data.position,
-      isSeller: data.is_seller,
-      salary: data.salary,
-      paymentDay: data.payment_day,
-      nextPaymentDate: data.next_payment_date,
-      isActive: data.is_active,
-      hireDate: data.hire_date,
-      observations: data.observations,
-      createdAt: data.created_at
-    };
+      if (error) {
+        console.error('❌ Erro ao atualizar funcionário:', error);
+        throw error;
+      }
+      
+      const updatedEmployee = {
+        id: data.id,
+        name: data.name,
+        position: data.position,
+        isSeller: data.is_seller,
+        salary: Number(data.salary),
+        paymentDay: data.payment_day,
+        nextPaymentDate: data.next_payment_date,
+        isActive: data.is_active,
+        hireDate: data.hire_date,
+        observations: data.observations,
+        createdAt: data.created_at
+      };
+      
+      console.log('✅ Funcionário atualizado com sucesso:', updatedEmployee.id);
+      return updatedEmployee;
+    } catch (error) {
+      console.error('❌ Erro no employeesService.update:', error);
+      throw error;
+    }
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('employees')
-      .delete()
-      .eq('id', id);
+    try {
+      console.log('🔄 Excluindo funcionário:', id);
+      const { error } = await supabase
+        .from('employees')
+        .delete()
+        .eq('id', id);
 
-    if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao excluir funcionário:', error);
+        throw error;
+      }
+      
+      console.log('✅ Funcionário excluído com sucesso:', id);
+    } catch (error) {
+      console.error('❌ Erro no employeesService.delete:', error);
+      throw error;
+    }
   }
 };
 
 // Database operations for Checks
 export const checksService = {
   async getAll(): Promise<Check[]> {
-    const { data, error } = await supabase
-      .from('checks')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    return data?.map(item => ({
-      id: item.id,
-      saleId: item.sale_id,
-      debtId: item.debt_id,
-      client: item.client,
-      value: item.value,
-      dueDate: item.due_date,
-      status: item.status,
-      isOwnCheck: item.is_own_check,
-      observations: item.observations,
-      usedFor: item.used_for,
-      installmentNumber: item.installment_number,
-      totalInstallments: item.total_installments,
-      frontImage: item.front_image,
-      backImage: item.back_image,
-      selectedAvailableChecks: item.selected_available_checks,
-      usedInDebt: item.used_in_debt,
-      discountDate: item.discount_date,
-      createdAt: item.created_at
-    })) || [];
+    try {
+      console.log('🔄 Buscando todos os cheques...');
+      const { data, error } = await supabase
+        .from('checks')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar cheques:', error);
+        throw error;
+      }
+      
+      const checks = (data || []).map(item => ({
+        id: item.id,
+        saleId: item.sale_id,
+        debtId: item.debt_id,
+        client: item.client,
+        value: Number(item.value),
+        dueDate: item.due_date,
+        status: item.status,
+        isOwnCheck: item.is_own_check,
+        observations: item.observations,
+        usedFor: item.used_for,
+        installmentNumber: item.installment_number,
+        totalInstallments: item.total_installments,
+        frontImage: item.front_image,
+        backImage: item.back_image,
+        selectedAvailableChecks: item.selected_available_checks || [],
+        usedInDebt: item.used_in_debt,
+        discountDate: item.discount_date,
+        createdAt: item.created_at
+      }));
+      
+      console.log('✅ Cheques carregados:', checks.length);
+      return checks;
+    } catch (error) {
+      console.error('❌ Erro no checksService.getAll:', error);
+      throw error;
+    }
   },
 
   async create(check: Omit<Check, 'id' | 'createdAt'>): Promise<Check> {
-    const { data, error } = await supabase
-      .from('checks')
-      .insert([{
-        sale_id: check.saleId,
-        debt_id: check.debtId,
-        client: check.client,
-        value: check.value,
-        due_date: check.dueDate,
-        status: check.status,
-        is_own_check: check.isOwnCheck,
-        observations: check.observations,
-        used_for: check.usedFor,
-        installment_number: check.installmentNumber,
-        total_installments: check.totalInstallments,
-        front_image: check.frontImage,
-        back_image: check.backImage,
-        selected_available_checks: check.selectedAvailableChecks,
-        used_in_debt: check.usedInDebt,
-        discount_date: check.discountDate
-      }])
-      .select()
-      .single();
+    try {
+      console.log('🔄 Criando novo cheque:', check);
+      const { data, error } = await supabase
+        .from('checks')
+        .insert([{
+          sale_id: check.saleId,
+          debt_id: check.debtId,
+          client: check.client,
+          value: check.value,
+          due_date: check.dueDate,
+          status: check.status,
+          is_own_check: check.isOwnCheck,
+          observations: check.observations,
+          used_for: check.usedFor,
+          installment_number: check.installmentNumber,
+          total_installments: check.totalInstallments,
+          front_image: check.frontImage,
+          back_image: check.backImage,
+          selected_available_checks: check.selectedAvailableChecks,
+          used_in_debt: check.usedInDebt,
+          discount_date: check.discountDate
+        }])
+        .select()
+        .single();
 
-    if (error) throw error;
-    
-    return {
-      id: data.id,
-      saleId: data.sale_id,
-      debtId: data.debt_id,
-      client: data.client,
-      value: data.value,
-      dueDate: data.due_date,
-      status: data.status,
-      isOwnCheck: data.is_own_check,
-      observations: data.observations,
-      usedFor: data.used_for,
-      installmentNumber: data.installment_number,
-      totalInstallments: data.total_installments,
-      frontImage: data.front_image,
-      backImage: data.back_image,
-      selectedAvailableChecks: data.selected_available_checks,
-      usedInDebt: data.used_in_debt,
-      discountDate: data.discount_date,
-      createdAt: data.created_at
-    };
+      if (error) {
+        console.error('❌ Erro ao criar cheque:', error);
+        throw error;
+      }
+      
+      const newCheck = {
+        id: data.id,
+        saleId: data.sale_id,
+        debtId: data.debt_id,
+        client: data.client,
+        value: Number(data.value),
+        dueDate: data.due_date,
+        status: data.status,
+        isOwnCheck: data.is_own_check,
+        observations: data.observations,
+        usedFor: data.used_for,
+        installmentNumber: data.installment_number,
+        totalInstallments: data.total_installments,
+        frontImage: data.front_image,
+        backImage: data.back_image,
+        selectedAvailableChecks: data.selected_available_checks,
+        usedInDebt: data.used_in_debt,
+        discountDate: data.discount_date,
+        createdAt: data.created_at
+      };
+      
+      console.log('✅ Cheque criado com sucesso:', newCheck.id);
+      return newCheck;
+    } catch (error) {
+      console.error('❌ Erro no checksService.create:', error);
+      throw error;
+    }
   },
 
   async update(check: Check): Promise<Check> {
-    const { data, error } = await supabase
-      .from('checks')
-      .update({
-        sale_id: check.saleId,
-        debt_id: check.debtId,
-        client: check.client,
-        value: check.value,
-        due_date: check.dueDate,
-        status: check.status,
-        is_own_check: check.isOwnCheck,
-        observations: check.observations,
-        used_for: check.usedFor,
-        installment_number: check.installmentNumber,
-        total_installments: check.totalInstallments,
-        front_image: check.frontImage,
-        back_image: check.backImage,
-        selected_available_checks: check.selectedAvailableChecks,
-        used_in_debt: check.usedInDebt,
-        discount_date: check.discountDate,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', check.id)
-      .select()
-      .single();
+    try {
+      console.log('🔄 Atualizando cheque:', check.id);
+      const { data, error } = await supabase
+        .from('checks')
+        .update({
+          sale_id: check.saleId,
+          debt_id: check.debtId,
+          client: check.client,
+          value: check.value,
+          due_date: check.dueDate,
+          status: check.status,
+          is_own_check: check.isOwnCheck,
+          observations: check.observations,
+          used_for: check.usedFor,
+          installment_number: check.installmentNumber,
+          total_installments: check.totalInstallments,
+          front_image: check.frontImage,
+          back_image: check.backImage,
+          selected_available_checks: check.selectedAvailableChecks,
+          used_in_debt: check.usedInDebt,
+          discount_date: check.discountDate,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', check.id)
+        .select()
+        .single();
 
-    if (error) throw error;
-    
-    return {
-      id: data.id,
-      saleId: data.sale_id,
-      debtId: data.debt_id,
-      client: data.client,
-      value: data.value,
-      dueDate: data.due_date,
-      status: data.status,
-      isOwnCheck: data.is_own_check,
-      observations: data.observations,
-      usedFor: data.used_for,
-      installmentNumber: data.installment_number,
-      totalInstallments: data.total_installments,
-      frontImage: data.front_image,
-      backImage: data.back_image,
-      selectedAvailableChecks: data.selected_available_checks,
-      usedInDebt: data.used_in_debt,
-      discountDate: data.discount_date,
-      createdAt: data.created_at
-    };
+      if (error) {
+        console.error('❌ Erro ao atualizar cheque:', error);
+        throw error;
+      }
+      
+      const updatedCheck = {
+        id: data.id,
+        saleId: data.sale_id,
+        debtId: data.debt_id,
+        client: data.client,
+        value: Number(data.value),
+        dueDate: data.due_date,
+        status: data.status,
+        isOwnCheck: data.is_own_check,
+        observations: data.observations,
+        usedFor: data.used_for,
+        installmentNumber: data.installment_number,
+        totalInstallments: data.total_installments,
+        frontImage: data.front_image,
+        backImage: data.back_image,
+        selectedAvailableChecks: data.selected_available_checks,
+        usedInDebt: data.used_in_debt,
+        discountDate: data.discount_date,
+        createdAt: data.created_at
+      };
+      
+      console.log('✅ Cheque atualizado com sucesso:', updatedCheck.id);
+      return updatedCheck;
+    } catch (error) {
+      console.error('❌ Erro no checksService.update:', error);
+      throw error;
+    }
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('checks')
-      .delete()
-      .eq('id', id);
+    try {
+      console.log('🔄 Excluindo cheque:', id);
+      const { error } = await supabase
+        .from('checks')
+        .delete()
+        .eq('id', id);
 
-    if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao excluir cheque:', error);
+        throw error;
+      }
+      
+      console.log('✅ Cheque excluído com sucesso:', id);
+    } catch (error) {
+      console.error('❌ Erro no checksService.delete:', error);
+      throw error;
+    }
   }
 };
 
 // Database operations for Boletos
 export const boletosService = {
   async getAll(): Promise<Boleto[]> {
-    const { data, error } = await supabase
-      .from('boletos')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    return data?.map(item => ({
-      id: item.id,
-      saleId: item.sale_id,
-      client: item.client,
-      value: item.value,
-      dueDate: item.due_date,
-      status: item.status,
-      installmentNumber: item.installment_number,
-      totalInstallments: item.total_installments,
-      boletoFile: item.boleto_file,
-      observations: item.observations,
-      createdAt: item.created_at
-    })) || [];
+    try {
+      console.log('🔄 Buscando todos os boletos...');
+      const { data, error } = await supabase
+        .from('boletos')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar boletos:', error);
+        throw error;
+      }
+      
+      const boletos = (data || []).map(item => ({
+        id: item.id,
+        saleId: item.sale_id,
+        client: item.client,
+        value: Number(item.value),
+        dueDate: item.due_date,
+        status: item.status,
+        installmentNumber: item.installment_number,
+        totalInstallments: item.total_installments,
+        boletoFile: item.boleto_file,
+        observations: item.observations,
+        createdAt: item.created_at
+      }));
+      
+      console.log('✅ Boletos carregados:', boletos.length);
+      return boletos;
+    } catch (error) {
+      console.error('❌ Erro no boletosService.getAll:', error);
+      throw error;
+    }
   },
 
   async create(boleto: Omit<Boleto, 'id' | 'createdAt'>): Promise<Boleto> {
-    const { data, error } = await supabase
-      .from('boletos')
-      .insert([{
-        sale_id: boleto.saleId,
-        client: boleto.client,
-        value: boleto.value,
-        due_date: boleto.dueDate,
-        status: boleto.status,
-        installment_number: boleto.installmentNumber,
-        total_installments: boleto.totalInstallments,
-        boleto_file: boleto.boletoFile,
-        observations: boleto.observations
-      }])
-      .select()
-      .single();
+    try {
+      console.log('🔄 Criando novo boleto:', boleto);
+      const { data, error } = await supabase
+        .from('boletos')
+        .insert([{
+          sale_id: boleto.saleId,
+          client: boleto.client,
+          value: boleto.value,
+          due_date: boleto.dueDate,
+          status: boleto.status,
+          installment_number: boleto.installmentNumber,
+          total_installments: boleto.totalInstallments,
+          boleto_file: boleto.boletoFile,
+          observations: boleto.observations
+        }])
+        .select()
+        .single();
 
-    if (error) throw error;
-    
-    return {
-      id: data.id,
-      saleId: data.sale_id,
-      client: data.client,
-      value: data.value,
-      dueDate: data.due_date,
-      status: data.status,
-      installmentNumber: data.installment_number,
-      totalInstallments: data.total_installments,
-      boletoFile: data.boleto_file,
-      observations: data.observations,
-      createdAt: data.created_at
-    };
+      if (error) {
+        console.error('❌ Erro ao criar boleto:', error);
+        throw error;
+      }
+      
+      const newBoleto = {
+        id: data.id,
+        saleId: data.sale_id,
+        client: data.client,
+        value: Number(data.value),
+        dueDate: data.due_date,
+        status: data.status,
+        installmentNumber: data.installment_number,
+        totalInstallments: data.total_installments,
+        boletoFile: data.boleto_file,
+        observations: data.observations,
+        createdAt: data.created_at
+      };
+      
+      console.log('✅ Boleto criado com sucesso:', newBoleto.id);
+      return newBoleto;
+    } catch (error) {
+      console.error('❌ Erro no boletosService.create:', error);
+      throw error;
+    }
   },
 
   async update(boleto: Boleto): Promise<Boleto> {
-    const { data, error } = await supabase
-      .from('boletos')
-      .update({
-        sale_id: boleto.saleId,
-        client: boleto.client,
-        value: boleto.value,
-        due_date: boleto.dueDate,
-        status: boleto.status,
-        installment_number: boleto.installmentNumber,
-        total_installments: boleto.totalInstallments,
-        boleto_file: boleto.boletoFile,
-        observations: boleto.observations,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', boleto.id)
-      .select()
-      .single();
+    try {
+      console.log('🔄 Atualizando boleto:', boleto.id);
+      const { data, error } = await supabase
+        .from('boletos')
+        .update({
+          sale_id: boleto.saleId,
+          client: boleto.client,
+          value: boleto.value,
+          due_date: boleto.dueDate,
+          status: boleto.status,
+          installment_number: boleto.installmentNumber,
+          total_installments: boleto.totalInstallments,
+          boleto_file: boleto.boletoFile,
+          observations: boleto.observations,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', boleto.id)
+        .select()
+        .single();
 
-    if (error) throw error;
-    
-    return {
-      id: data.id,
-      saleId: data.sale_id,
-      client: data.client,
-      value: data.value,
-      dueDate: data.due_date,
-      status: data.status,
-      installmentNumber: data.installment_number,
-      totalInstallments: data.total_installments,
-      boletoFile: data.boleto_file,
-      observations: data.observations,
-      createdAt: data.created_at
-    };
+      if (error) {
+        console.error('❌ Erro ao atualizar boleto:', error);
+        throw error;
+      }
+      
+      const updatedBoleto = {
+        id: data.id,
+        saleId: data.sale_id,
+        client: data.client,
+        value: Number(data.value),
+        dueDate: data.due_date,
+        status: data.status,
+        installmentNumber: data.installment_number,
+        totalInstallments: data.total_installments,
+        boletoFile: data.boleto_file,
+        observations: data.observations,
+        createdAt: data.created_at
+      };
+      
+      console.log('✅ Boleto atualizado com sucesso:', updatedBoleto.id);
+      return updatedBoleto;
+    } catch (error) {
+      console.error('❌ Erro no boletosService.update:', error);
+      throw error;
+    }
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('boletos')
-      .delete()
-      .eq('id', id);
+    try {
+      console.log('🔄 Excluindo boleto:', id);
+      const { error } = await supabase
+        .from('boletos')
+        .delete()
+        .eq('id', id);
 
-    if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao excluir boleto:', error);
+        throw error;
+      }
+      
+      console.log('✅ Boleto excluído com sucesso:', id);
+    } catch (error) {
+      console.error('❌ Erro no boletosService.delete:', error);
+      throw error;
+    }
   }
 };
 

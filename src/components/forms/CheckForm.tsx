@@ -22,10 +22,13 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
     isOwnCheck: check?.isOwnCheck || false,
     observations: check?.observations || '',
     usedFor: check?.usedFor || '',
+    installmentNumber: check?.installmentNumber || 1,
+    totalInstallments: check?.totalInstallments || 1,
     frontImage: check?.frontImage || '',
     backImage: check?.backImage || '',
     selectedAvailableChecks: check?.selectedAvailableChecks || [],
-    useOwnCheck: false
+    usedInDebt: check?.usedInDebt || '',
+    discountDate: check?.discountDate || ''
   });
 
   // Get available checks that are not already used
@@ -74,20 +77,20 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold">
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+      <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
+        <div className="p-8">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-3xl font-bold text-slate-900">
               {check ? 'Editar Cheque' : 'Adicionar Cheque'}
             </h2>
-            <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
+            <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-all">
               <X className="w-6 h-6" />
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="form-group md:col-span-2">
                 <label className="form-label">Venda Associada (Opcional)</label>
                 <select
@@ -104,8 +107,8 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
                   ))}
                 </select>
                 {formData.saleId && (
-                  <div className="mt-2 p-3 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-blue-700">
+                  <div className="mt-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                    <p className="text-sm text-blue-700 font-medium">
                       ✓ Dados da venda carregados automaticamente
                     </p>
                   </div>
@@ -162,6 +165,40 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
                 </select>
               </div>
 
+              <div className="form-group">
+                <label className="form-label">Número da Parcela</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.installmentNumber}
+                  onChange={(e) => setFormData(prev => ({ ...prev, installmentNumber: parseInt(e.target.value) || 1 }))}
+                  className="input-field"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Total de Parcelas</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.totalInstallments}
+                  onChange={(e) => setFormData(prev => ({ ...prev, totalInstallments: parseInt(e.target.value) || 1 }))}
+                  className="input-field"
+                />
+              </div>
+
+              <div className="form-group md:col-span-2">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.isOwnCheck}
+                    onChange={(e) => setFormData(prev => ({ ...prev, isOwnCheck: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="form-label mb-0">Cheque Próprio</span>
+                </label>
+              </div>
+
               <div className="form-group md:col-span-2">
                 <label className="form-label">Utilizado em</label>
                 <input
@@ -208,7 +245,7 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
               </div>
             </div>
 
-            <div className="flex justify-end gap-4">
+            <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
               <button type="button" onClick={onCancel} className="btn-secondary">
                 Cancelar
               </button>

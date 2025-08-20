@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Eye, Upload, Calendar, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Eye, Upload, Calendar, Trash2, ChevronDown, ChevronRight, FileText } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Check } from '../types';
 import { CheckForm } from './forms/CheckForm';
 import { getCheckImageUrl } from '../lib/supabase';
 
 export function Checks() {
-  const { state, dispatch } = useApp();
+  const { state, createCheck, updateCheck, deleteCheck } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCheck, setEditingCheck] = useState<Check | null>(null);
   const [viewingCheck, setViewingCheck] = useState<Check | null>(null);
@@ -35,29 +35,11 @@ export function Checks() {
   }));
 
   const handleAddCheck = (check: Omit<Check, 'id' | 'createdAt'>) => {
-    const newCheck: Check = {
-      ...check,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
-    };
-    
-    dispatch({ type: 'ADD_CHECK', payload: newCheck });
-    
-    if (check.selectedAvailableChecks && check.selectedAvailableChecks.length > 0) {
-      check.selectedAvailableChecks.forEach(checkId => {
-        const checkToUpdate = state.checks.find(c => c.id === checkId);
-        if (checkToUpdate) {
-          const updatedCheck = {
-            ...checkToUpdate,
-            observations: `${checkToUpdate.observations ? checkToUpdate.observations + '\n' : ''}Usado para pagamento de dívida: ${check.client} - ${check.usedFor || 'Pagamento'}`,
-            usedFor: `${checkToUpdate.usedFor ? checkToUpdate.usedFor + ' | ' : ''}Usado para pagamento de dívida`
-          };
-          dispatch({ type: 'UPDATE_CHECK', payload: updatedCheck });
-        }
-      });
-    }
-    
-    setIsFormOpen(false);
+    createCheck(check).then(() => {
+      setIsFormOpen(false);
+    }).catch(error => {
+      alert('Erro ao criar cheque: ' + error.message);
+    });
   };
 
   const handleEditCheck = (check: Omit<Check, 'id' | 'createdAt'>) => {
@@ -67,29 +49,19 @@ export function Checks() {
         id: editingCheck.id,
         createdAt: editingCheck.createdAt
       };
-      dispatch({ type: 'UPDATE_CHECK', payload: updatedCheck });
-      
-      if (check.selectedAvailableChecks && check.selectedAvailableChecks.length > 0) {
-        check.selectedAvailableChecks.forEach(checkId => {
-          const checkToUpdate = state.checks.find(c => c.id === checkId);
-          if (checkToUpdate && checkId !== editingCheck.id) {
-            const updatedAvailableCheck = {
-              ...checkToUpdate,
-              observations: `${checkToUpdate.observations ? checkToUpdate.observations + '\n' : ''}Usado para pagamento de dívida: ${check.client} - ${check.usedFor || 'Pagamento'}`,
-              usedFor: `${checkToUpdate.usedFor ? checkToUpdate.usedFor + ' | ' : ''}Usado para pagamento de dívida`
-            };
-            dispatch({ type: 'UPDATE_CHECK', payload: updatedAvailableCheck });
-          }
-        });
-      }
-      
-      setEditingCheck(null);
+      updateCheck(updatedCheck).then(() => {
+        setEditingCheck(null);
+      }).catch(error => {
+        alert('Erro ao atualizar cheque: ' + error.message);
+      });
     }
   };
 
   const handleDeleteCheck = (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir este cheque?')) {
-      dispatch({ type: 'DELETE_CHECK', payload: id });
+    if (window.confirm('Tem certeza que deseja excluir este cheque? Esta ação não pode ser desfeita.')) {
+      deleteCheck(id).catch(error => {
+        alert('Erro ao excluir cheque: ' + error.message);
+      });
     }
   };
 
@@ -97,15 +69,9 @@ export function Checks() {
     const check = state.checks.find(c => c.id === checkId);
     if (check) {
       const updatedCheck = { ...check, status };
-      dispatch({ type: 'UPDATE_CHECK', payload: updatedCheck });
-      
-      if (check.saleId) {
-        const sale = state.sales.find(s => s.id === check.saleId);
-        if (sale) {
-          const updatedSale = { ...sale };
-          dispatch({ type: 'UPDATE_SALE', payload: updatedSale });
-        }
-      }
+      updateCheck(updatedCheck).catch(error => {
+        alert('Erro ao atualizar status: ' + error.message);
+      });
     }
   };
 
@@ -131,10 +97,10 @@ export function Checks() {
 
   const getStatusColor = (status: Check['status']) => {
     switch (status) {
-      case 'compensado': return 'bg-emerald-100 text-emerald-700';
-      case 'devolvido': return 'bg-red-100 text-red-700';
-      case 'reapresentado': return 'bg-yellow-100 text-yellow-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'compensado': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case 'devolvido': return 'bg-red-100 text-red-800 border-red-200';
+      case 'reapresentado': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -146,8 +112,6 @@ export function Checks() {
       default: return 'Pendente';
     }
   };
-
-  const canEdit = true;
 
   return (
     <div className="space-y-8">
@@ -163,24 +127,26 @@ export function Checks() {
         </div>
         <button
           onClick={() => setIsFormOpen(true)}
-          className="btn-primary flex items-center gap-2"
+          className="btn-primary flex items-center gap-2 modern-shadow-xl hover:modern-shadow-lg"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-5 h-5" />
           Adicionar Cheque
         </button>
       </div>
 
       {/* Summary Cards */}
       {(dueToday.length > 0 || overdue.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {dueToday.length > 0 && (
-            <div className="card bg-blue-50 border-blue-200">
-              <div className="flex items-center gap-3">
-                <Calendar className="w-8 h-8 text-blue-600" />
+            <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-blue-600 modern-shadow-lg">
+                  <Calendar className="w-8 h-8 text-white" />
+                </div>
                 <div>
-                  <h3 className="font-medium text-blue-900">Vencimentos Hoje</h3>
-                  <p className="text-blue-700">{dueToday.length} cheque(s)</p>
-                  <p className="text-sm text-blue-600">
+                  <h3 className="font-bold text-blue-900 text-lg">Vencimentos Hoje</h3>
+                  <p className="text-blue-700 font-medium">{dueToday.length} cheque(s)</p>
+                  <p className="text-sm text-blue-600 font-semibold">
                     Total: R$ {dueToday.reduce((sum, check) => sum + check.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -189,13 +155,15 @@ export function Checks() {
           )}
 
           {overdue.length > 0 && (
-            <div className="card bg-red-50 border-red-200">
-              <div className="flex items-center gap-3">
-                <Calendar className="w-8 h-8 text-red-600" />
+            <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 modern-shadow-xl">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-red-600 modern-shadow-lg">
+                  <Calendar className="w-8 h-8 text-white" />
+                </div>
                 <div>
-                  <h3 className="font-medium text-red-900">Vencidos</h3>
-                  <p className="text-red-700">{overdue.length} cheque(s)</p>
-                  <p className="text-sm text-red-600">
+                  <h3 className="font-bold text-red-900 text-lg">Cheques Vencidos</h3>
+                  <p className="text-red-700 font-medium">{overdue.length} cheque(s)</p>
+                  <p className="text-sm text-red-600 font-semibold">
                     Total: R$ {overdue.reduce((sum, check) => sum + check.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -292,14 +260,14 @@ export function Checks() {
                                 </td>
                                 <td className="py-3 px-4 text-sm">
                                   <div className="flex items-center gap-2">
-                                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(check.status)}`}>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(check.status)}`}>
                                       {getStatusLabel(check.status)}
                                     </span>
                                     {check.status === 'pendente' && (
                                       <select
                                         value={check.status}
                                         onChange={(e) => updateCheckStatus(check.id, e.target.value as Check['status'])}
-                                        className="text-xs border rounded px-1 py-0.5"
+                                        className="text-xs border rounded-lg px-2 py-1 bg-white modern-shadow"
                                       >
                                         <option value="pendente">Pendente</option>
                                         <option value="compensado">Compensado</option>
@@ -323,7 +291,7 @@ export function Checks() {
                                   <div className="flex items-center gap-2">
                                     <button
                                       onClick={() => setViewingCheck(check)}
-                                      className="text-blue-600 hover:text-blue-800"
+                                      className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-modern"
                                       title="Visualizar"
                                     >
                                       <Eye className="w-4 h-4" />
@@ -349,6 +317,13 @@ export function Checks() {
                           </tbody>
                         </table>
                       </div>
+                      
+                      {sale.observations && (
+                        <div className="mt-4 p-4 bg-slate-50 rounded-xl">
+                          <h5 className="font-medium text-slate-900 mb-2">Observações da Venda</h5>
+                          <p className="text-sm text-slate-600">{sale.observations}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -356,14 +331,12 @@ export function Checks() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">Nenhuma venda com cheques registrada ainda.</p>
-            <button
-              onClick={() => setIsFormOpen(true)}
-              className="btn-primary"
-            >
-              Adicionar primeiro cheque
-            </button>
+          <div className="text-center py-16">
+            <Calendar className="w-20 h-20 mx-auto mb-6 text-slate-300" />
+            <p className="text-slate-500 mb-4 text-xl font-medium">Nenhuma venda com cheques ainda.</p>
+            <p className="text-slate-400 text-sm mb-6">
+              Os cheques são criados automaticamente quando você registra vendas com pagamento em cheque.
+            </p>
           </div>
         )}
       </div>
@@ -470,42 +443,56 @@ export function Checks() {
 
       {/* View Check Modal */}
       {viewingCheck && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h2 className="text-xl font-bold mb-4">Detalhes do Cheque</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 modern-shadow-xl">
+                    <Calendar className="w-8 h-8 text-white" />
+                  </div>
+                  <h2 className="text-3xl font-bold text-slate-900">Detalhes do Cheque</h2>
+                </div>
+                <button
+                  onClick={() => setViewingCheck(null)}
+                  className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>
                   <label className="form-label">Cliente</label>
-                  <p className="text-sm text-gray-900">{viewingCheck.client}</p>
+                  <p className="text-sm text-slate-900 font-medium">{viewingCheck.client}</p>
                 </div>
                 <div>
                   <label className="form-label">Valor</label>
-                  <p className="text-sm text-gray-900">
+                  <p className="text-sm text-slate-900 font-bold text-emerald-600">
                     R$ {viewingCheck.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    {viewingCheck.installmentNumber && viewingCheck.totalInstallments && (
-                      <span className="text-xs text-gray-500 block">
-                        Parcela {viewingCheck.installmentNumber} de {viewingCheck.totalInstallments}
-                      </span>
-                    )}
                   </p>
                 </div>
                 <div>
                   <label className="form-label">Vencimento</label>
-                  <p className="text-sm text-gray-900">
+                  <p className="text-sm text-slate-900 font-medium">
                     {new Date(viewingCheck.dueDate).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
                 <div>
                   <label className="form-label">Status</label>
-                  <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(viewingCheck.status)}`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(viewingCheck.status)}`}>
                     {getStatusLabel(viewingCheck.status)}
                   </span>
                 </div>
                 <div>
+                  <label className="form-label">Parcela</label>
+                  <p className="text-sm text-slate-900 font-medium">
+                    {viewingCheck.installmentNumber} de {viewingCheck.totalInstallments}
+                  </p>
+                </div>
+                <div>
                   <label className="form-label">Tipo</label>
-                  <span className={`px-2 py-1 rounded-full text-xs ${
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                     viewingCheck.isOwnCheck ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'
                   }`}>
                     {viewingCheck.isOwnCheck ? 'Cheque Próprio' : 'Cheque de Terceiros'}
@@ -513,23 +500,23 @@ export function Checks() {
                 </div>
                 <div>
                   <label className="form-label">Utilizado em</label>
-                  <p className="text-sm text-gray-900">{viewingCheck.usedFor || 'Não especificado'}</p>
+                  <p className="text-sm text-slate-900">{viewingCheck.usedFor || 'Não especificado'}</p>
                 </div>
               </div>
 
               {viewingCheck.observations && (
-                <div className="mb-6">
+                <div className="mb-8">
                   <label className="form-label">Observações</label>
-                  <p className="text-sm text-gray-900 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-slate-900 p-4 bg-slate-50 rounded-xl border">
                     {viewingCheck.observations}
                   </p>
                 </div>
               )}
 
               {viewingCheck.usedInDebt && (
-                <div className="mb-6">
+                <div className="mb-8">
                   <label className="form-label">Usado em Dívida</label>
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
                     <p className="text-blue-800 font-medium">
                       ✓ Este cheque foi usado para pagamento de dívida
                     </p>
@@ -546,12 +533,12 @@ export function Checks() {
               )}
 
               {(viewingCheck.frontImage || viewingCheck.backImage) && (
-                <div className="mb-6">
-                  <h3 className="font-medium text-gray-900 mb-3">Imagens do Cheque</h3>
+                <div className="mb-8">
+                  <h3 className="font-medium text-slate-900 mb-4">Imagens do Cheque</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {viewingCheck.frontImage && (
                       <div>
-                        <p className="text-sm text-gray-600 mb-2">Frente</p>
+                        <p className="text-sm text-slate-600 mb-2">Frente</p>
                         <div className="relative group">
                           <img
                             src={getCheckImageUrl(viewingCheck.frontImage)}
@@ -577,7 +564,7 @@ export function Checks() {
                     )}
                     {viewingCheck.backImage && (
                       <div>
-                        <p className="text-sm text-gray-600 mb-2">Verso</p>
+                        <p className="text-sm text-slate-600 mb-2">Verso</p>
                         <div className="relative group">
                           <img
                             src={getCheckImageUrl(viewingCheck.backImage)}
