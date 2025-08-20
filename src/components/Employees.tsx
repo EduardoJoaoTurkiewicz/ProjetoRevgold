@@ -362,14 +362,14 @@ export function Employees() {
                           </button>
                           <button
                             onClick={() => setViewingPayrollEmployee(employee)}
-                            className="text-purple-600 hover:text-purple-800 p-1 rounded"
+                            className="text-green-600 hover:text-green-800 p-1 rounded"
                             title="Ver Folha de Pagamento"
                           >
                             <TrendingUp className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => setAdvanceEmployee(employee)}
-                            className="text-orange-600 hover:text-orange-800 p-1 rounded"
+                            className="text-green-600 hover:text-green-800 p-1 rounded"
                             title="Adiantamento"
                           >
                             <CreditCard className="w-4 h-4" />
@@ -392,14 +392,14 @@ export function Employees() {
                               </button>
                               <button
                                 onClick={() => setPaymentEmployee(employee)}
-                                className="text-indigo-600 hover:text-indigo-800 p-1 rounded"
+                                className="text-green-600 hover:text-green-800 p-1 rounded"
                                 title="Registrar Pagamento"
                               >
                                 <DollarSign className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleDeleteEmployee(employee.id)}
-                                className="text-red-600 hover:text-red-800 p-1 rounded"
+                                className="text-green-700 hover:text-green-900 p-1 rounded"
                                 title="Excluir"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -616,7 +616,7 @@ export function Employees() {
                       </div>
                       <div className="text-center p-6 bg-blue-50 rounded-2xl border border-blue-200">
                         <h4 className="font-bold text-blue-900 mb-2">Comissões</h4>
-                        <p className="text-2xl font-black text-blue-700">
+                        <p className="text-2xl font-black text-green-700">
                           R$ {payroll.totalPendingCommissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                         <p className="text-xs text-blue-600 mt-1">
@@ -625,13 +625,13 @@ export function Employees() {
                       </div>
                       <div className="text-center p-6 bg-purple-50 rounded-2xl border border-purple-200">
                         <h4 className="font-bold text-purple-900 mb-2">Horas Extras</h4>
-                        <p className="text-2xl font-black text-purple-700">
+                        <p className="text-2xl font-black text-green-700">
                           R$ {payroll.totalOvertimes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                       </div>
                       <div className="text-center p-6 bg-red-50 rounded-2xl border border-red-200">
                         <h4 className="font-bold text-red-900 mb-2">Adiantamentos</h4>
-                        <p className="text-2xl font-black text-red-700">
+                        <p className="text-2xl font-black text-green-700">
                           - R$ {payroll.totalAdvances.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                       </div>
@@ -658,17 +658,17 @@ export function Employees() {
                             {payroll.allPendingCommissions.map(commission => {
                               const sale = state.sales.find(s => s.id === commission.saleId);
                               return (
-                                <div key={commission.id} className="p-3 bg-blue-50 rounded-xl">
-                                  <p className="font-semibold text-blue-900">
+                                <div key={commission.id} className="p-3 bg-green-50 rounded-xl">
+                                  <p className="font-semibold text-green-900">
                                     {sale ? sale.client : 'Venda não encontrada'}
                                   </p>
-                                  <p className="text-sm text-blue-700">
+                                  <p className="text-sm text-green-700">
                                     Venda: R$ {commission.saleValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                   </p>
-                                  <p className="text-sm font-bold text-blue-800">
+                                  <p className="text-sm font-bold text-green-800">
                                     Comissão: R$ {commission.commissionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({commission.commissionRate}%)
                                   </p>
-                                  <p className="text-xs text-blue-600">
+                                  <p className="text-xs text-green-600">
                                     {new Date(commission.date).toLocaleDateString('pt-BR')}
                                   </p>
                                 </div>
@@ -684,15 +684,15 @@ export function Employees() {
                           <h4 className="font-bold text-slate-900 mb-4">Horas Extras</h4>
                           <div className="space-y-3">
                             {payroll.pendingOvertimes.map(overtime => (
-                              <div key={overtime.id} className="p-3 bg-purple-50 rounded-xl">
-                                <p className="font-semibold text-purple-900">{overtime.description}</p>
-                                <p className="text-sm text-purple-700">
+                              <div key={overtime.id} className="p-3 bg-green-50 rounded-xl">
+                                <p className="font-semibold text-green-900">{overtime.description}</p>
+                                <p className="text-sm text-green-700">
                                   {overtime.hours}h × R$ {overtime.hourlyRate.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </p>
-                                <p className="text-sm font-bold text-purple-800">
+                                <p className="text-sm font-bold text-green-800">
                                   Total: R$ {overtime.totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </p>
-                                <p className="text-xs text-purple-600">
+                                <p className="text-xs text-green-600">
                                   {new Date(overtime.date).toLocaleDateString('pt-BR')}
                                 </p>
                               </div>
@@ -707,15 +707,15 @@ export function Employees() {
                           <h4 className="font-bold text-slate-900 mb-4">Adiantamentos</h4>
                           <div className="space-y-3">
                             {payroll.pendingAdvances.map(advance => (
-                              <div key={advance.id} className="p-3 bg-red-50 rounded-xl">
-                                <p className="font-semibold text-red-900">{advance.description}</p>
-                                <p className="text-sm text-red-700">
+                              <div key={advance.id} className="p-3 bg-green-50 rounded-xl">
+                                <p className="font-semibold text-green-900">{advance.description}</p>
+                                <p className="text-sm text-green-700">
                                   Método: {advance.paymentMethod.replace('_', ' ')}
                                 </p>
-                                <p className="text-sm font-bold text-red-800">
+                                <p className="text-sm font-bold text-green-800">
                                   Valor: R$ {advance.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </p>
-                                <p className="text-xs text-red-600">
+                                <p className="text-xs text-green-600">
                                   {new Date(advance.date).toLocaleDateString('pt-BR')}
                                 </p>
                               </div>
