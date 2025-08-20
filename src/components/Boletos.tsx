@@ -147,7 +147,7 @@ export function Boletos() {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 modern-shadow-xl">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-xl">
             <Receipt className="w-8 h-8 text-white" />
           </div>
           <div>
@@ -170,13 +170,13 @@ export function Boletos() {
           {dueToday.length > 0 && (
             <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-blue-600 modern-shadow-lg">
+                <div className="p-3 rounded-xl bg-green-600 modern-shadow-lg">
                   <Calendar className="w-8 h-8 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-blue-900 text-lg">Vencimentos Hoje</h3>
-                  <p className="text-blue-700 font-medium">{dueToday.length} boleto(s)</p>
-                  <p className="text-sm text-blue-600 font-semibold">
+                  <h3 className="font-bold text-green-900 text-lg">Vencimentos Hoje</h3>
+                  <p className="text-green-700 font-medium">{dueToday.length} boleto(s)</p>
+                  <p className="text-sm text-green-600 font-semibold">
                     Total: R$ {dueToday.reduce((sum, boleto) => sum + boleto.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -185,15 +185,15 @@ export function Boletos() {
           )}
 
           {overdue.length > 0 && (
-            <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 modern-shadow-xl">
+            <div className="card bg-gradient-to-br from-green-50 to-green-100 border-green-200 modern-shadow-xl">
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-red-600 modern-shadow-lg">
+                <div className="p-3 rounded-xl bg-green-600 modern-shadow-lg">
                   <AlertTriangle className="w-8 h-8 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-red-900 text-lg">Boletos Vencidos</h3>
-                  <p className="text-red-700 font-medium">{overdue.length} boleto(s)</p>
-                  <p className="text-sm text-red-600 font-semibold">
+                  <h3 className="font-bold text-green-900 text-lg">Boletos Vencidos</h3>
+                  <p className="text-green-700 font-medium">{overdue.length} boleto(s)</p>
+                  <p className="text-sm text-green-600 font-semibold">
                     Total: R$ {overdue.reduce((sum, boleto) => sum + boleto.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -220,7 +220,7 @@ export function Boletos() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <button className="p-2 rounded-lg bg-blue-600 text-white modern-shadow">
+                      <button className="p-2 rounded-lg bg-green-600 text-white modern-shadow">
                         {expandedSales.has(sale.id) ? 
                           <ChevronDown className="w-5 h-5" /> : 
                           <ChevronRight className="w-5 h-5" />
@@ -279,8 +279,8 @@ export function Boletos() {
                                 </td>
                                 <td className="py-3 px-4 text-sm">
                                   <span className={
-                                    boleto.dueDate === today ? 'text-blue-600 font-bold' :
-                                    boleto.dueDate < today ? 'text-red-600 font-bold' :
+                                    boleto.dueDate === today ? 'text-green-600 font-bold' :
+                                    boleto.dueDate < today ? 'text-green-600 font-bold' :
                                     'text-slate-900 font-medium'
                                   }>
                                     {new Date(boleto.dueDate).toLocaleDateString('pt-BR')}
@@ -323,7 +323,7 @@ export function Boletos() {
                                   <div className="flex items-center gap-2">
                                     <button
                                       onClick={() => setViewingBoleto(boleto)}
-                                      className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-modern"
+                                      className="text-green-600 hover:text-green-800 p-2 rounded-lg hover:bg-green-50 transition-modern"
                                       title="Visualizar"
                                     >
                                       <Eye className="w-4 h-4" />
@@ -337,7 +337,7 @@ export function Boletos() {
                                     </button>
                                     <button
                                       onClick={() => handleDeleteBoleto(boleto.id)}
-                                      className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-modern"
+                                      className="text-green-700 hover:text-green-900 p-2 rounded-lg hover:bg-green-100 transition-modern"
                                       title="Excluir"
                                     >
                                       <Trash2 className="w-4 h-4" />
@@ -390,7 +390,7 @@ export function Boletos() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <button className="p-2 rounded-lg bg-orange-600 text-white modern-shadow">
+                      <button className="p-2 rounded-lg bg-green-600 text-white modern-shadow">
                         {expandedDebts.has(debt.id) ? 
                           <ChevronDown className="w-5 h-5" /> : 
                           <ChevronRight className="w-5 h-5" />
@@ -467,7 +467,7 @@ export function Boletos() {
           <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
             <div className="p-8">
               <div className="flex items-center gap-4 mb-8">
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 modern-shadow-xl">
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-xl">
                   <Receipt className="w-8 h-8 text-white" />
                 </div>
                 <h2 className="text-3xl font-bold text-slate-900">Detalhes do Boleto</h2>
@@ -524,7 +524,7 @@ export function Boletos() {
               <div className="flex justify-end">
                 <button
                   onClick={() => setViewingBoleto(null)}
-                  className="btn-secondary"
+                  className="btn-success"
                 >
                   Fechar
                 </button>
@@ -540,7 +540,7 @@ export function Boletos() {
           <div className="bg-white rounded-3xl max-w-md w-full modern-shadow-xl">
             <div className="p-8">
               <div className="flex items-center gap-4 mb-8">
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 modern-shadow-xl">
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 modern-shadow-xl">
                   <Upload className="w-8 h-8 text-white" />
                 </div>
                 <h2 className="text-2xl font-bold text-slate-900">Anexar Boleto</h2>
@@ -554,7 +554,8 @@ export function Boletos() {
                 </p>
                 
                 <div className="border-2 border-dashed border-amber-300 rounded-2xl p-8 text-center hover:border-amber-400 transition-colors bg-gradient-to-br from-amber-50 to-orange-50 relative overflow-hidden">
-                  <Upload className="w-16 h-16 mx-auto text-amber-500 mb-4" />
+                <div className="border-2 border-dashed border-green-300 rounded-2xl p-8 text-center hover:border-green-400 transition-colors bg-gradient-to-br from-green-50 to-emerald-50 relative overflow-hidden">
+                  <Upload className="w-16 h-16 mx-auto text-green-500 mb-4" />
                   <p className="text-sm text-slate-700 mb-2 font-bold">
                     Clique para selecionar o arquivo do boleto
                   </p>
@@ -578,7 +579,7 @@ export function Boletos() {
               <div className="flex justify-end gap-4">
                 <button
                   onClick={() => setUploadingBoleto(null)}
-                  className="btn-secondary"
+                  className="btn-success"
                 >
                   Cancelar
                 </button>

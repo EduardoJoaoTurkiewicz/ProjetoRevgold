@@ -117,7 +117,7 @@ export function Checks() {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 shadow-xl floating-animation">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 shadow-xl floating-animation">
             <Calendar className="w-8 h-8 text-white" />
           </div>
           <div>
@@ -138,15 +138,15 @@ export function Checks() {
       {(dueToday.length > 0 || overdue.length > 0) && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {dueToday.length > 0 && (
-            <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
+            <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl">
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-blue-600 modern-shadow-lg">
+                <div className="p-3 rounded-xl bg-green-600 modern-shadow-lg">
                   <Calendar className="w-8 h-8 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-blue-900 text-lg">Vencimentos Hoje</h3>
-                  <p className="text-blue-700 font-medium">{dueToday.length} cheque(s)</p>
-                  <p className="text-sm text-blue-600 font-semibold">
+                  <h3 className="font-bold text-green-900 text-lg">Vencimentos Hoje</h3>
+                  <p className="text-green-700 font-medium">{dueToday.length} cheque(s)</p>
+                  <p className="text-sm text-green-600 font-semibold">
                     Total: R$ {dueToday.reduce((sum, check) => sum + check.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -155,15 +155,15 @@ export function Checks() {
           )}
 
           {overdue.length > 0 && (
-            <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 modern-shadow-xl">
+            <div className="card bg-gradient-to-br from-green-50 to-green-100 border-green-200 modern-shadow-xl">
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-red-600 modern-shadow-lg">
+                <div className="p-3 rounded-xl bg-green-600 modern-shadow-lg">
                   <Calendar className="w-8 h-8 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-red-900 text-lg">Cheques Vencidos</h3>
-                  <p className="text-red-700 font-medium">{overdue.length} cheque(s)</p>
-                  <p className="text-sm text-red-600 font-semibold">
+                  <h3 className="font-bold text-green-900 text-lg">Cheques Vencidos</h3>
+                  <p className="text-green-700 font-medium">{overdue.length} cheque(s)</p>
+                  <p className="text-sm text-green-600 font-semibold">
                     Total: R$ {overdue.reduce((sum, check) => sum + check.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -190,7 +190,7 @@ export function Checks() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <button className="p-2 rounded-lg bg-blue-600 text-white modern-shadow">
+                      <button className="p-2 rounded-lg bg-green-600 text-white modern-shadow">
                         {expandedSales.has(sale.id) ? 
                           <ChevronDown className="w-5 h-5" /> : 
                           <ChevronRight className="w-5 h-5" />
@@ -251,8 +251,8 @@ export function Checks() {
                                 </td>
                                 <td className="py-3 px-4 text-sm">
                                   <span className={
-                                    check.dueDate === today ? 'text-blue-600 font-medium' :
-                                    check.dueDate < today ? 'text-red-600 font-medium' :
+                                    check.dueDate === today ? 'text-green-600 font-medium' :
+                                    check.dueDate < today ? 'text-green-600 font-medium' :
                                     'text-gray-900'
                                   }>
                                     {new Date(check.dueDate).toLocaleDateString('pt-BR')}
@@ -291,7 +291,7 @@ export function Checks() {
                                   <div className="flex items-center gap-2">
                                     <button
                                       onClick={() => setViewingCheck(check)}
-                                      className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-modern"
+                                      className="text-green-600 hover:text-green-800 p-2 rounded-lg hover:bg-green-50 transition-modern"
                                       title="Visualizar"
                                     >
                                       <Eye className="w-4 h-4" />
@@ -305,7 +305,7 @@ export function Checks() {
                                     </button>
                                     <button
                                       onClick={() => handleDeleteCheck(check.id)}
-                                      className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-modern"
+                                      className="text-green-700 hover:text-green-900 p-2 rounded-lg hover:bg-green-100 transition-modern"
                                       title="Excluir"
                                     >
                                       <Trash2 className="w-4 h-4" />
@@ -358,7 +358,7 @@ export function Checks() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <button className="p-2 rounded-lg bg-orange-600 text-white modern-shadow">
+                      <button className="p-2 rounded-lg bg-green-600 text-white modern-shadow">
                         {expandedDebts.has(debt.id) ? 
                           <ChevronDown className="w-5 h-5" /> : 
                           <ChevronRight className="w-5 h-5" />
@@ -448,7 +448,7 @@ export function Checks() {
             <div className="p-8">
               <div className="flex justify-between items-center mb-8">
                 <div className="flex items-center gap-4">
-                  <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 modern-shadow-xl">
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-xl">
                     <Calendar className="w-8 h-8 text-white" />
                   </div>
                   <h2 className="text-3xl font-bold text-slate-900">Detalhes do Cheque</h2>
@@ -595,7 +595,7 @@ export function Checks() {
               <div className="flex justify-end">
                 <button
                   onClick={() => setViewingCheck(null)}
-                  className="btn-secondary"
+                  className="btn-success"
                 >
                   Fechar
                 </button>
