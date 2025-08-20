@@ -17,7 +17,8 @@ import {
   Activity,
   PieChart,
   ArrowUpCircle,
-  ArrowDownCircle
+  ArrowDownCircle,
+  Database
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, AreaChart, Area, RadialBarChart, RadialBar } from 'recharts';
