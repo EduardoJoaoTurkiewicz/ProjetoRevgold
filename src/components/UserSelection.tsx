@@ -1,6 +1,7 @@
 import React from 'react';
 import { User, ChevronRight, Zap, Sparkles, Building2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 const USERS = [
   { 
@@ -83,6 +84,7 @@ const UserAvatar = () => (
 
 export function UserSelection() {
   const { dispatch } = useApp();
+  const supabaseConfigured = isSupabaseConfigured();
   
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -92,6 +94,10 @@ export function UserSelection() {
   };
 
   const handleUserSelect = (user: typeof USERS[0]) => {
+    if (!supabaseConfigured) {
+      alert('⚠️ Supabase não está configurado!\n\nPara usar o sistema:\n1. Configure o arquivo .env com suas credenciais do Supabase\n2. Reinicie o servidor\n\nSem isso, os dados não serão salvos.');
+    }
+    
     dispatch({ 
       type: 'SET_USER', 
       payload: { 
@@ -130,6 +136,33 @@ export function UserSelection() {
       <div className="w-full max-w-6xl">
         {/* Header Section */}
         <div className="text-center mb-20 revgold-animate-fade-in">
+          {!supabaseConfigured && (
+            <div className="mb-12 p-8 bg-gradient-to-r from-red-100 to-red-200 border-2 border-red-300 rounded-3xl shadow-2xl">
+              <div className="flex items-center justify-center gap-4 mb-4">
+                <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center">
+                  <Zap className="w-8 h-8 text-white" />
+                </div>
+                <div className="text-left">
+                  <h3 className="text-2xl font-black text-red-800">⚠️ Configuração Necessária</h3>
+                  <p className="text-red-700 font-bold">Supabase não está configurado</p>
+                </div>
+              </div>
+              <div className="text-red-800 space-y-2 text-left max-w-2xl mx-auto">
+                <p className="font-bold text-lg mb-4">Para usar o sistema, você precisa:</p>
+                <ol className="list-decimal list-inside space-y-2 font-semibold">
+                  <li>Acessar <a href="https://supabase.com" target="_blank" className="text-blue-600 underline">supabase.com</a> e criar uma conta</li>
+                  <li>Criar um novo projeto no Supabase</li>
+                  <li>Ir em Settings → API e copiar suas credenciais</li>
+                  <li>Configurar o arquivo .env com suas credenciais reais</li>
+                  <li>Reiniciar o servidor de desenvolvimento</li>
+                </ol>
+                <p className="text-red-700 font-bold mt-4 text-center">
+                  ⚠️ Sem isso, NENHUM DADO será salvo no banco!
+                </p>
+              </div>
+            </div>
+          )}
+          
           <div className="inline-flex items-center justify-center mb-12 relative">
             <div className="w-48 h-48 bg-gradient-to-br from-green-600 to-emerald-700 rounded-full flex items-center justify-center shadow-2xl revgold-hover-lift revgold-animate-floating relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full"></div>
@@ -230,14 +263,20 @@ export function UserSelection() {
             <div className="bg-white/10 backdrop-blur-xl border border-green-300/30 rounded-3xl p-10 max-w-2xl mx-auto shadow-2xl">
               <div className="flex items-center justify-center space-x-8 mb-8">
                 <div className="w-20 h-20 bg-gradient-to-br from-green-600 to-emerald-700 rounded-3xl flex items-center justify-center shadow-xl revgold-animate-floating">
-                  <Zap className="w-10 h-10 text-white" />
+                  {supabaseConfigured ? (
+                    <Zap className="w-10 h-10 text-white" />
+                  ) : (
+                    <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">!</span>
+                    </div>
+                  )}
                 </div>
                 <div className="text-left">
                   <p className="text-3xl font-black text-white mb-3">
                     Sistema RevGold
                   </p>
                   <p className="text-base text-green-200 font-bold uppercase tracking-wider">
-                    Gestão Empresarial Profissional
+                    {supabaseConfigured ? 'Gestão Empresarial Profissional' : 'Configure o Supabase'}
                   </p>
                 </div>
               </div>
@@ -247,8 +286,14 @@ export function UserSelection() {
               </p>
               
               <div className="flex items-center justify-center space-x-4">
-                <div className="w-4 h-4 bg-green-400 rounded-full revgold-animate-pulse-glow shadow-lg"></div>
-                <span className="text-base text-green-300 font-bold uppercase tracking-wide">Sistema Online</span>
+                <div className={`w-4 h-4 rounded-full shadow-lg ${
+                  supabaseConfigured ? 'bg-green-400 revgold-animate-pulse-glow' : 'bg-red-400 animate-pulse'
+                }`}></div>
+                <span className={`text-base font-bold uppercase tracking-wide ${
+                  supabaseConfigured ? 'text-green-300' : 'text-red-300'
+                }`}>
+                  {supabaseConfigured ? 'Sistema Online' : 'Configuração Necessária'}
+                </span>
                 <Sparkles className="w-5 h-5 text-green-400 revgold-animate-floating" />
               </div>
             </div>

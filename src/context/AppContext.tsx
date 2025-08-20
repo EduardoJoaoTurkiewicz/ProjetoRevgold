@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { User, Sale, Debt, Check, Installment, Product, Employee, EmployeePayment, EmployeeAdvance, EmployeeOvertime, EmployeeCommission, Boleto } from '../types';
-import { supabase, salesService, debtsService, employeesService, checksService, boletosService } from '../lib/supabase';
+import { supabase, salesService, debtsService, employeesService, checksService, boletosService, isSupabaseConfigured, ensureAuthenticated, testSupabaseConnection } from '../lib/supabase';
 
 interface AppState {
   user: User | null;
@@ -297,6 +297,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'SET_LOADING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: null });
     
+    // Verificar configuração do Supabase
+    if (!isSupabaseConfigured()) {
+      dispatch({ type: 'SET_ERROR', payload: 'Supabase não está configurado. Configure o arquivo .env com suas credenciais reais.' });
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return;
+    }
+
+    // Testar conexão
+    const connectionOk = await testSupabaseConnection();
+    if (!connectionOk) {
+      dispatch({ type: 'SET_ERROR', payload: 'Não foi possível conectar ao Supabase. Verifique suas credenciais e conexão com a internet.' });
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return;
+    }
+
+    // Garantir autenticação
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      dispatch({ type: 'SET_ERROR', payload: 'Não foi possível autenticar. Verifique suas credenciais do Supabase.' });
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return;
+    }
+    
     try {
       console.log('🔄 Carregando dados do Supabase...');
       
@@ -324,7 +347,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
     } catch (error) {
       console.error('❌ Erro ao carregar dados do Supabase:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao carregar dados do banco. Verifique sua conexão com o Supabase.' });
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      dispatch({ type: 'SET_ERROR', payload: `Erro ao carregar dados: ${errorMessage}` });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
@@ -587,58 +611,72 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Load data on mount and set up real-time subscriptions
   useEffect(() => {
-    loadAllData();
+    // Carregar dados apenas se Supabase estiver configurado
+    if (isSupabaseConfigured()) {
+      loadAllData();
+    } else {
+      dispatch({ type: 'SET_ERROR', payload: 'Configure o Supabase no arquivo .env para usar o sistema.' });
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
 
-    // Set up real-time subscriptions for all tables
-    const salesSubscription = supabase
-      .channel('sales-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, () => {
-        console.log('🔄 Mudança detectada na tabela sales, recarregando...');
-        salesService.getAll().then(sales => dispatch({ type: 'SET_SALES', payload: sales }));
-      })
-      .subscribe();
+    // Set up real-time subscriptions apenas se configurado
+    let salesSubscription: any;
+    let debtsSubscription: any;
+    let employeesSubscription: any;
+    let checksSubscription: any;
+    let boletosSubscription: any;
 
-    const debtsSubscription = supabase
-      .channel('debts-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'debts' }, () => {
-        console.log('🔄 Mudança detectada na tabela debts, recarregando...');
-        debtsService.getAll().then(debts => dispatch({ type: 'SET_DEBTS', payload: debts }));
-      })
-      .subscribe();
+    if (isSupabaseConfigured()) {
+      salesSubscription = supabase
+        .channel('sales-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, () => {
+          console.log('🔄 Mudança detectada na tabela sales, recarregando...');
+          salesService.getAll().then(sales => dispatch({ type: 'SET_SALES', payload: sales })).catch(console.error);
+        })
+        .subscribe();
 
-    const employeesSubscription = supabase
-      .channel('employees-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, () => {
-        console.log('🔄 Mudança detectada na tabela employees, recarregando...');
-        employeesService.getAll().then(employees => dispatch({ type: 'SET_EMPLOYEES', payload: employees }));
-      })
-      .subscribe();
+      debtsSubscription = supabase
+        .channel('debts-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'debts' }, () => {
+          console.log('🔄 Mudança detectada na tabela debts, recarregando...');
+          debtsService.getAll().then(debts => dispatch({ type: 'SET_DEBTS', payload: debts })).catch(console.error);
+        })
+        .subscribe();
 
-    const checksSubscription = supabase
-      .channel('checks-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'checks' }, () => {
-        console.log('🔄 Mudança detectada na tabela checks, recarregando...');
-        checksService.getAll().then(checks => dispatch({ type: 'SET_CHECKS', payload: checks }));
-      })
-      .subscribe();
+      employeesSubscription = supabase
+        .channel('employees-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, () => {
+          console.log('🔄 Mudança detectada na tabela employees, recarregando...');
+          employeesService.getAll().then(employees => dispatch({ type: 'SET_EMPLOYEES', payload: employees })).catch(console.error);
+        })
+        .subscribe();
 
-    const boletosSubscription = supabase
-      .channel('boletos-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'boletos' }, () => {
-        console.log('🔄 Mudança detectada na tabela boletos, recarregando...');
-        boletosService.getAll().then(boletos => dispatch({ type: 'SET_BOLETOS', payload: boletos }));
-      })
-      .subscribe();
+      checksSubscription = supabase
+        .channel('checks-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'checks' }, () => {
+          console.log('🔄 Mudança detectada na tabela checks, recarregando...');
+          checksService.getAll().then(checks => dispatch({ type: 'SET_CHECKS', payload: checks })).catch(console.error);
+        })
+        .subscribe();
+
+      boletosSubscription = supabase
+        .channel('boletos-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'boletos' }, () => {
+          console.log('🔄 Mudança detectada na tabela boletos, recarregando...');
+          boletosService.getAll().then(boletos => dispatch({ type: 'SET_BOLETOS', payload: boletos })).catch(console.error);
+        })
+        .subscribe();
+    }
 
     // Cleanup subscriptions on unmount
     return () => {
-      salesSubscription.unsubscribe();
-      debtsSubscription.unsubscribe();
-      employeesSubscription.unsubscribe();
-      checksSubscription.unsubscribe();
-      boletosSubscription.unsubscribe();
+      if (salesSubscription) salesSubscription.unsubscribe();
+      if (debtsSubscription) debtsSubscription.unsubscribe();
+      if (employeesSubscription) employeesSubscription.unsubscribe();
+      if (checksSubscription) checksSubscription.unsubscribe();
+      if (boletosSubscription) boletosSubscription.unsubscribe();
     };
-  }, []);
+  }, [state.employees.length]); // Dependency para recarregar quando necessário
 
   return (
     <AppContext.Provider value={{ 

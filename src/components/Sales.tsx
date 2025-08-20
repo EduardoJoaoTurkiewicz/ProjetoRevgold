@@ -168,28 +168,28 @@ export function Sales() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => setViewingObservations(sale)}
-                          className="p-2 rounded-lg text-purple-600 hover:text-purple-800 hover:bg-purple-50 transition-all duration-300 modern-shadow"
+                          className="p-2 rounded-lg text-green-600 hover:text-green-800 hover:bg-green-50 transition-all duration-300 modern-shadow"
                           title="Ver Todas as Informações"
                         >
                           <FileText className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => setViewingSale(sale)}
-                          className="p-2 rounded-lg text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition-all duration-300 modern-shadow"
+                          className="p-2 rounded-lg text-green-600 hover:text-green-800 hover:bg-green-50 transition-all duration-300 modern-shadow"
                           title="Visualizar Detalhes"
                         >
                           <Eye className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => setEditingSale(sale)}
-                          className="p-2 rounded-lg text-green-600 hover:text-green-800 hover:bg-green-50 transition-all duration-300 modern-shadow"
+                          className="p-2 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition-all duration-300 modern-shadow"
                           title="Editar Venda"
                         >
                           <Edit className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => handleDeleteSale(sale.id)}
-                          className="p-2 rounded-lg text-red-600 hover:text-red-800 hover:bg-red-50 transition-all duration-300 modern-shadow"
+                          className="p-2 rounded-lg text-green-700 hover:text-green-900 hover:bg-green-100 transition-all duration-300 modern-shadow"
                           title="Excluir Venda"
                         >
                           <Trash2 className="w-5 h-5" />
@@ -362,7 +362,7 @@ export function Sales() {
             <div className="p-8">
               <div className="flex justify-between items-center mb-8">
                 <div className="flex items-center gap-4">
-                  <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-600 to-violet-700 modern-shadow-xl">
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-xl">
                     <FileText className="w-8 h-8 text-white" />
                   </div>
                   <h2 className="text-3xl font-bold text-slate-900">Todas as Informações da Venda</h2>
@@ -377,19 +377,19 @@ export function Sales() {
 
               <div className="space-y-8">
                 {/* Basic Information */}
-                <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
-                  <h3 className="text-xl font-bold text-blue-900 mb-4">Informações Básicas</h3>
+                <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
+                  <h3 className="text-xl font-bold text-green-900 mb-4">Informações Básicas</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <p><strong className="text-blue-800">ID da Venda:</strong> <span className="text-blue-700 font-mono">{viewingObservations.id}</span></p>
-                    <p><strong className="text-blue-800">Data:</strong> <span className="text-blue-700">{new Date(viewingObservations.date).toLocaleDateString('pt-BR')}</span></p>
-                    <p><strong className="text-blue-800">Cliente:</strong> <span className="text-blue-700 font-bold">{viewingObservations.client}</span></p>
-                    <p><strong className="text-blue-800">Valor Total:</strong> <span className="text-blue-700 font-bold">R$ {viewingObservations.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p>
-                    <p><strong className="text-blue-800">Valor Recebido:</strong> <span className="text-green-600 font-bold">R$ {viewingObservations.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p>
-                    <p><strong className="text-blue-800">Valor Pendente:</strong> <span className="text-orange-600 font-bold">R$ {viewingObservations.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p>
-                    <p><strong className="text-blue-800">Status:</strong> <span className="text-blue-700 font-bold capitalize">{viewingObservations.status}</span></p>
-                    <p><strong className="text-blue-800">Data de Criação:</strong> <span className="text-blue-700">{new Date(viewingObservations.createdAt).toLocaleString('pt-BR')}</span></p>
+                    <p><strong className="text-green-800">ID da Venda:</strong> <span className="text-green-700 font-mono">{viewingObservations.id}</span></p>
+                    <p><strong className="text-green-800">Data:</strong> <span className="text-green-700">{new Date(viewingObservations.date).toLocaleDateString('pt-BR')}</span></p>
+                    <p><strong className="text-green-800">Cliente:</strong> <span className="text-green-700 font-bold">{viewingObservations.client}</span></p>
+                    <p><strong className="text-green-800">Valor Total:</strong> <span className="text-green-700 font-bold">R$ {viewingObservations.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p>
+                    <p><strong className="text-green-800">Valor Recebido:</strong> <span className="text-emerald-600 font-bold">R$ {viewingObservations.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p>
+                    <p><strong className="text-green-800">Valor Pendente:</strong> <span className="text-orange-600 font-bold">R$ {viewingObservations.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p>
+                    <p><strong className="text-green-800">Status:</strong> <span className="text-green-700 font-bold capitalize">{viewingObservations.status}</span></p>
+                    <p><strong className="text-green-800">Data de Criação:</strong> <span className="text-green-700">{new Date(viewingObservations.createdAt).toLocaleString('pt-BR')}</span></p>
                     {viewingObservations.deliveryDate && (
-                      <p><strong className="text-blue-800">Data de Entrega:</strong> <span className="text-blue-700">{new Date(viewingObservations.deliveryDate).toLocaleDateString('pt-BR')}</span></p>
+                      <p><strong className="text-green-800">Data de Entrega:</strong> <span className="text-green-700">{new Date(viewingObservations.deliveryDate).toLocaleDateString('pt-BR')}</span></p>
                     )}
                   </div>
                 </div>
@@ -421,29 +421,29 @@ export function Sales() {
                 )}
 
                 {/* Products */}
-                <div className="p-6 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-2xl border border-yellow-200">
-                  <h3 className="text-xl font-bold text-yellow-900 mb-4">Produtos</h3>
-                  <p className="text-yellow-800 font-semibold">
+                <div className="p-6 bg-gradient-to-r from-green-100 to-emerald-100 rounded-2xl border border-green-300">
+                  <h3 className="text-xl font-bold text-green-900 mb-4">Produtos</h3>
+                  <p className="text-green-800 font-semibold">
                     {typeof viewingObservations.products === 'string' ? viewingObservations.products : 'Produtos vendidos'}
                   </p>
                 </div>
 
                 {/* Payment Methods */}
-                <div className="p-6 bg-gradient-to-r from-emerald-50 to-green-50 rounded-2xl border border-emerald-200">
-                  <h3 className="text-xl font-bold text-emerald-900 mb-4">Métodos de Pagamento</h3>
+                <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
+                  <h3 className="text-xl font-bold text-green-900 mb-4">Métodos de Pagamento</h3>
                   <div className="space-y-4">
                     {viewingObservations.paymentMethods.map((method, index) => (
-                      <div key={index} className="p-4 bg-white rounded-xl border border-emerald-100 shadow-sm">
+                      <div key={index} className="p-4 bg-white rounded-xl border border-green-100 shadow-sm">
                         <div className="flex justify-between items-center mb-2">
-                          <span className="font-bold text-emerald-800 capitalize text-lg">
+                          <span className="font-bold text-green-800 capitalize text-lg">
                             {method.type.replace('_', ' ')}
                           </span>
-                          <span className="font-black text-emerald-600 text-xl">
+                          <span className="font-black text-green-600 text-xl">
                             R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </span>
                         </div>
                         {method.installments && method.installments > 1 && (
-                          <div className="text-sm text-emerald-600 font-semibold space-y-1">
+                          <div className="text-sm text-green-600 font-semibold space-y-1">
                             <p>Parcelas: {method.installments}x de R$ {method.installmentValue?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                             {method.installmentInterval && <p>Intervalo: {method.installmentInterval} dias</p>}
                             {method.firstInstallmentDate && <p>Primeira parcela: {new Date(method.firstInstallmentDate).toLocaleDateString('pt-BR')}</p>}
@@ -492,7 +492,7 @@ export function Sales() {
               <div className="flex justify-end gap-4">
                 <button
                   onClick={() => setViewingObservations(null)}
-                  className="btn-secondary"
+                  className="btn-success"
                 >
                   Fechar
                 </button>

@@ -4,36 +4,127 @@ import { Sale, Debt, Check, Boleto, Employee, EmployeePayment, EmployeeAdvance, 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Only show warnings if we're trying to use default/placeholder values
-if (!supabaseUrl || !supabaseAnonKey || 
-    supabaseUrl === 'https://your-project-id.supabase.co' || 
-    supabaseAnonKey === 'your-anon-key-here') {
-  console.warn('⚠️ Supabase não está configurado. Configure o arquivo .env para usar o banco de dados.');
-}
-
-// Use placeholder values to prevent initialization errors when not configured
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co', 
-  supabaseAnonKey || 'placeholder-key'
-);
-
-// Check if Supabase is configured
+// Sistema robusto de verificação de configuração
 export const isSupabaseConfigured = () => {
-  const isConfigured = Boolean(supabaseUrl && supabaseAnonKey && 
-    supabaseUrl !== 'https://your-project.supabase.co' && 
-    supabaseAnonKey !== 'your-anon-key');
+  const isConfigured = Boolean(
+    supabaseUrl && 
+    supabaseAnonKey && 
+    supabaseUrl !== 'https://your-project-id.supabase.co' && 
+    supabaseAnonKey !== 'your-anon-key-here' &&
+    supabaseUrl.includes('supabase.co') &&
+    supabaseAnonKey.length > 50
+  );
   
   if (!isConfigured) {
-    console.warn('⚠️ Supabase não está configurado corretamente. Verifique as variáveis de ambiente.');
+    console.warn('⚠️ SUPABASE NÃO CONFIGURADO - Configure o arquivo .env com suas credenciais reais do Supabase');
+  } else {
+    console.log('✅ Supabase configurado corretamente');
   }
   
   return isConfigured;
 };
 
+// Criar cliente Supabase com configuração robusta
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co', 
+  supabaseAnonKey || 'placeholder-key',
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10
+      }
+    }
+  }
+);
+
+// Sistema de autenticação automática
+export const ensureAuthenticated = async (): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    console.warn('❌ Supabase não configurado - dados não serão salvos');
+    return false;
+  }
+
+  try {
+    // Verificar se já está autenticado
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session) {
+      console.log('✅ Usuário já autenticado:', session.user.email);
+      return true;
+    }
+
+    // Tentar fazer login automático com usuário padrão
+    console.log('🔄 Fazendo login automático...');
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: 'admin@revgold.com',
+      password: 'revgold123'
+    });
+
+    if (error) {
+      console.error('❌ Erro no login automático:', error.message);
+      
+      // Se o usuário não existe, tentar criar
+      if (error.message.includes('Invalid login credentials')) {
+        console.log('🔄 Tentando criar usuário padrão...');
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: 'admin@revgold.com',
+          password: 'revgold123'
+        });
+
+        if (signUpError) {
+          console.error('❌ Erro ao criar usuário:', signUpError.message);
+          return false;
+        }
+
+        console.log('✅ Usuário criado e autenticado:', signUpData.user?.email);
+        return true;
+      }
+      
+      return false;
+    }
+
+    console.log('✅ Login automático realizado:', data.user.email);
+    return true;
+    
+  } catch (error) {
+    console.error('❌ Erro na autenticação:', error);
+    return false;
+  }
+};
+
+// Wrapper para operações do banco com retry e autenticação
+const withAuth = async <T>(operation: () => Promise<T>): Promise<T> => {
+  if (!isSupabaseConfigured()) {
+    throw new Error('Supabase não está configurado. Configure o arquivo .env com suas credenciais.');
+  }
+
+  const isAuth = await ensureAuthenticated();
+  if (!isAuth) {
+    throw new Error('Não foi possível autenticar. Verifique suas credenciais do Supabase.');
+  }
+
+  try {
+    return await operation();
+  } catch (error: any) {
+    // Retry uma vez em caso de erro de rede
+    if (error.message?.includes('fetch') || error.message?.includes('network')) {
+      console.log('🔄 Tentando novamente após erro de rede...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return await operation();
+    }
+    throw error;
+  }
+};
+
 // Database operations for Sales
 export const salesService = {
   async getAll(): Promise<Sale[]> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Buscando todas as vendas...');
       const { data, error } = await supabase
         .from('sales')
@@ -42,7 +133,7 @@ export const salesService = {
       
       if (error) {
         console.error('❌ Erro ao buscar vendas:', error);
-        throw error;
+        throw new Error(`Erro ao buscar vendas: ${error.message}`);
       }
       
       const sales = (data || []).map(item => ({
@@ -51,28 +142,26 @@ export const salesService = {
         deliveryDate: item.delivery_date,
         client: item.client,
         sellerId: item.seller_id,
-        products: item.products,
-        observations: item.observations,
-        totalValue: Number(item.total_value),
+        customCommissionRate: item.custom_commission_rate || 5,
+        products: item.products || 'Produtos vendidos',
+        observations: item.observations || '',
+        totalValue: Number(item.total_value) || 0,
         paymentMethods: item.payment_methods || [],
-        receivedAmount: Number(item.received_amount),
-        pendingAmount: Number(item.pending_amount),
-        status: item.status,
-        paymentDescription: item.payment_description,
-        paymentObservations: item.payment_observations,
+        receivedAmount: Number(item.received_amount) || 0,
+        pendingAmount: Number(item.pending_amount) || 0,
+        status: item.status || 'pendente',
+        paymentDescription: item.payment_description || '',
+        paymentObservations: item.payment_observations || '',
         createdAt: item.created_at
       }));
       
       console.log('✅ Vendas carregadas:', sales.length);
       return sales;
-    } catch (error) {
-      console.error('❌ Erro no salesService.getAll:', error);
-      throw error;
-    }
+    });
   },
 
   async create(sale: Omit<Sale, 'id' | 'createdAt'>): Promise<Sale> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Criando nova venda:', sale);
       const { data, error } = await supabase
         .from('sales')
@@ -81,22 +170,23 @@ export const salesService = {
           delivery_date: sale.deliveryDate,
           client: sale.client,
           seller_id: sale.sellerId,
-          products: sale.products,
-          observations: sale.observations,
+          custom_commission_rate: sale.customCommissionRate || 5,
+          products: sale.products || 'Produtos vendidos',
+          observations: sale.observations || '',
           total_value: sale.totalValue,
           payment_methods: sale.paymentMethods,
           received_amount: sale.receivedAmount,
           pending_amount: sale.pendingAmount,
           status: sale.status,
-          payment_description: sale.paymentDescription,
-          payment_observations: sale.paymentObservations
+          payment_description: sale.paymentDescription || '',
+          payment_observations: sale.paymentObservations || ''
         }])
         .select()
         .single();
 
       if (error) {
         console.error('❌ Erro ao criar venda:', error);
-        throw error;
+        throw new Error(`Erro ao criar venda: ${error.message}`);
       }
       
       const newSale = {
@@ -105,28 +195,26 @@ export const salesService = {
         deliveryDate: data.delivery_date,
         client: data.client,
         sellerId: data.seller_id,
-        products: data.products,
-        observations: data.observations,
+        customCommissionRate: data.custom_commission_rate || 5,
+        products: data.products || 'Produtos vendidos',
+        observations: data.observations || '',
         totalValue: Number(data.total_value),
         paymentMethods: data.payment_methods,
         receivedAmount: Number(data.received_amount),
         pendingAmount: Number(data.pending_amount),
         status: data.status,
-        paymentDescription: data.payment_description,
-        paymentObservations: data.payment_observations,
+        paymentDescription: data.payment_description || '',
+        paymentObservations: data.payment_observations || '',
         createdAt: data.created_at
       };
       
       console.log('✅ Venda criada com sucesso:', newSale.id);
       return newSale;
-    } catch (error) {
-      console.error('❌ Erro no salesService.create:', error);
-      throw error;
-    }
+    });
   },
 
   async update(sale: Sale): Promise<Sale> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Atualizando venda:', sale.id);
       const { data, error } = await supabase
         .from('sales')
@@ -135,15 +223,16 @@ export const salesService = {
           delivery_date: sale.deliveryDate,
           client: sale.client,
           seller_id: sale.sellerId,
-          products: sale.products,
-          observations: sale.observations,
+          custom_commission_rate: sale.customCommissionRate || 5,
+          products: sale.products || 'Produtos vendidos',
+          observations: sale.observations || '',
           total_value: sale.totalValue,
           payment_methods: sale.paymentMethods,
           received_amount: sale.receivedAmount,
           pending_amount: sale.pendingAmount,
           status: sale.status,
-          payment_description: sale.paymentDescription,
-          payment_observations: sale.paymentObservations,
+          payment_description: sale.paymentDescription || '',
+          payment_observations: sale.paymentObservations || '',
           updated_at: new Date().toISOString()
         })
         .eq('id', sale.id)
@@ -152,7 +241,7 @@ export const salesService = {
 
       if (error) {
         console.error('❌ Erro ao atualizar venda:', error);
-        throw error;
+        throw new Error(`Erro ao atualizar venda: ${error.message}`);
       }
       
       const updatedSale = {
@@ -161,28 +250,26 @@ export const salesService = {
         deliveryDate: data.delivery_date,
         client: data.client,
         sellerId: data.seller_id,
-        products: data.products,
-        observations: data.observations,
+        customCommissionRate: data.custom_commission_rate || 5,
+        products: data.products || 'Produtos vendidos',
+        observations: data.observations || '',
         totalValue: Number(data.total_value),
         paymentMethods: data.payment_methods,
         receivedAmount: Number(data.received_amount),
         pendingAmount: Number(data.pending_amount),
         status: data.status,
-        paymentDescription: data.payment_description,
-        paymentObservations: data.payment_observations,
+        paymentDescription: data.payment_description || '',
+        paymentObservations: data.payment_observations || '',
         createdAt: data.created_at
       };
       
       console.log('✅ Venda atualizada com sucesso:', updatedSale.id);
       return updatedSale;
-    } catch (error) {
-      console.error('❌ Erro no salesService.update:', error);
-      throw error;
-    }
+    });
   },
 
   async delete(id: string): Promise<void> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Excluindo venda:', id);
       const { error } = await supabase
         .from('sales')
@@ -191,21 +278,18 @@ export const salesService = {
 
       if (error) {
         console.error('❌ Erro ao excluir venda:', error);
-        throw error;
+        throw new Error(`Erro ao excluir venda: ${error.message}`);
       }
       
       console.log('✅ Venda excluída com sucesso:', id);
-    } catch (error) {
-      console.error('❌ Erro no salesService.delete:', error);
-      throw error;
-    }
+    });
   }
 };
 
 // Database operations for Debts
 export const debtsService = {
   async getAll(): Promise<Debt[]> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Buscando todas as dívidas...');
       const { data, error } = await supabase
         .from('debts')
@@ -214,100 +298,94 @@ export const debtsService = {
       
       if (error) {
         console.error('❌ Erro ao buscar dívidas:', error);
-        throw error;
+        throw new Error(`Erro ao buscar dívidas: ${error.message}`);
       }
       
       const debts = (data || []).map(item => ({
         id: item.id,
         date: item.date,
-        description: item.description,
-        company: item.company,
-        totalValue: Number(item.total_value),
+        description: item.description || '',
+        company: item.company || '',
+        totalValue: Number(item.total_value) || 0,
         paymentMethods: item.payment_methods || [],
-        isPaid: item.is_paid,
-        paidAmount: Number(item.paid_amount),
-        pendingAmount: Number(item.pending_amount),
+        isPaid: item.is_paid || false,
+        paidAmount: Number(item.paid_amount) || 0,
+        pendingAmount: Number(item.pending_amount) || 0,
         checksUsed: item.checks_used || [],
-        paymentDescription: item.payment_description,
-        debtPaymentDescription: item.debt_payment_description,
+        paymentDescription: item.payment_description || '',
+        debtPaymentDescription: item.debt_payment_description || '',
         createdAt: item.created_at
       }));
       
       console.log('✅ Dívidas carregadas:', debts.length);
       return debts;
-    } catch (error) {
-      console.error('❌ Erro no debtsService.getAll:', error);
-      throw error;
-    }
+    });
   },
 
   async create(debt: Omit<Debt, 'id' | 'createdAt'>): Promise<Debt> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Criando nova dívida:', debt);
       const { data, error } = await supabase
         .from('debts')
         .insert([{
           date: debt.date,
-          description: debt.description,
-          company: debt.company,
+          description: debt.description || '',
+          company: debt.company || '',
           total_value: debt.totalValue,
           payment_methods: debt.paymentMethods,
           is_paid: debt.isPaid,
           paid_amount: debt.paidAmount,
           pending_amount: debt.pendingAmount,
           checks_used: debt.checksUsed,
-          payment_description: debt.paymentDescription,
-          debt_payment_description: debt.debtPaymentDescription
+          payment_description: debt.paymentDescription || '',
+          debt_payment_description: debt.debtPaymentDescription || ''
         }])
         .select()
         .single();
 
       if (error) {
         console.error('❌ Erro ao criar dívida:', error);
-        throw error;
+        throw new Error(`Erro ao criar dívida: ${error.message}`);
       }
       
       const newDebt = {
         id: data.id,
         date: data.date,
-        description: data.description,
-        company: data.company,
+        description: data.description || '',
+        company: data.company || '',
         totalValue: Number(data.total_value),
         paymentMethods: data.payment_methods,
         isPaid: data.is_paid,
         paidAmount: Number(data.paid_amount),
         pendingAmount: Number(data.pending_amount),
         checksUsed: data.checks_used,
-        paymentDescription: data.payment_description,
-        debtPaymentDescription: data.debt_payment_description,
+        paymentDescription: data.payment_description || '',
+        debtPaymentDescription: data.debt_payment_description || '',
         createdAt: data.created_at
       };
       
       console.log('✅ Dívida criada com sucesso:', newDebt.id);
       return newDebt;
-    } catch (error) {
-      console.error('❌ Erro no debtsService.create:', error);
-      throw error;
-    }
+    });
   },
 
   async update(debt: Debt): Promise<Debt> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Atualizando dívida:', debt.id);
       const { data, error } = await supabase
         .from('debts')
         .update({
           date: debt.date,
-          description: debt.description,
-          company: debt.company,
+          description: debt.description || '',
+          company: debt.company || '',
           total_value: debt.totalValue,
           payment_methods: debt.paymentMethods,
           is_paid: debt.isPaid,
           paid_amount: debt.paidAmount,
           pending_amount: debt.pendingAmount,
           checks_used: debt.checksUsed,
-          payment_description: debt.paymentDescription,
-          debt_payment_description: debt.debtPaymentDescription,
+          payment_description: debt.paymentDescription || '',
+          debt_payment_description: debt.debtPaymentDescription || '',
           updated_at: new Date().toISOString()
         })
         .eq('id', debt.id)
@@ -316,35 +394,32 @@ export const debtsService = {
 
       if (error) {
         console.error('❌ Erro ao atualizar dívida:', error);
-        throw error;
+        throw new Error(`Erro ao atualizar dívida: ${error.message}`);
       }
       
       const updatedDebt = {
         id: data.id,
         date: data.date,
-        description: data.description,
-        company: data.company,
+        description: data.description || '',
+        company: data.company || '',
         totalValue: Number(data.total_value),
         paymentMethods: data.payment_methods,
         isPaid: data.is_paid,
         paidAmount: Number(data.paid_amount),
         pendingAmount: Number(data.pending_amount),
         checksUsed: data.checks_used,
-        paymentDescription: data.payment_description,
-        debtPaymentDescription: data.debt_payment_description,
+        paymentDescription: data.payment_description || '',
+        debtPaymentDescription: data.debt_payment_description || '',
         createdAt: data.created_at
       };
       
       console.log('✅ Dívida atualizada com sucesso:', updatedDebt.id);
       return updatedDebt;
-    } catch (error) {
-      console.error('❌ Erro no debtsService.update:', error);
-      throw error;
-    }
+    });
   },
 
   async delete(id: string): Promise<void> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Excluindo dívida:', id);
       const { error } = await supabase
         .from('debts')
@@ -353,21 +428,18 @@ export const debtsService = {
 
       if (error) {
         console.error('❌ Erro ao excluir dívida:', error);
-        throw error;
+        throw new Error(`Erro ao excluir dívida: ${error.message}`);
       }
       
       console.log('✅ Dívida excluída com sucesso:', id);
-    } catch (error) {
-      console.error('❌ Erro no debtsService.delete:', error);
-      throw error;
-    }
+    });
   }
 };
 
 // Database operations for Employees
 export const employeesService = {
   async getAll(): Promise<Employee[]> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Buscando todos os funcionários...');
       const { data, error } = await supabase
         .from('employees')
@@ -376,33 +448,30 @@ export const employeesService = {
       
       if (error) {
         console.error('❌ Erro ao buscar funcionários:', error);
-        throw error;
+        throw new Error(`Erro ao buscar funcionários: ${error.message}`);
       }
       
       const employees = (data || []).map(item => ({
         id: item.id,
-        name: item.name,
-        position: item.position,
-        isSeller: item.is_seller,
-        salary: Number(item.salary),
-        paymentDay: item.payment_day,
+        name: item.name || '',
+        position: item.position || '',
+        isSeller: item.is_seller || false,
+        salary: Number(item.salary) || 0,
+        paymentDay: item.payment_day || 5,
         nextPaymentDate: item.next_payment_date,
-        isActive: item.is_active,
+        isActive: item.is_active ?? true,
         hireDate: item.hire_date,
-        observations: item.observations,
+        observations: item.observations || '',
         createdAt: item.created_at
       }));
       
       console.log('✅ Funcionários carregados:', employees.length);
       return employees;
-    } catch (error) {
-      console.error('❌ Erro no employeesService.getAll:', error);
-      throw error;
-    }
+    });
   },
 
   async create(employee: Omit<Employee, 'id' | 'createdAt'>): Promise<Employee> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Criando novo funcionário:', employee);
       const { data, error } = await supabase
         .from('employees')
@@ -415,14 +484,14 @@ export const employeesService = {
           next_payment_date: employee.nextPaymentDate,
           is_active: employee.isActive,
           hire_date: employee.hireDate,
-          observations: employee.observations
+          observations: employee.observations || ''
         }])
         .select()
         .single();
 
       if (error) {
         console.error('❌ Erro ao criar funcionário:', error);
-        throw error;
+        throw new Error(`Erro ao criar funcionário: ${error.message}`);
       }
       
       const newEmployee = {
@@ -435,20 +504,17 @@ export const employeesService = {
         nextPaymentDate: data.next_payment_date,
         isActive: data.is_active,
         hireDate: data.hire_date,
-        observations: data.observations,
+        observations: data.observations || '',
         createdAt: data.created_at
       };
       
       console.log('✅ Funcionário criado com sucesso:', newEmployee.id);
       return newEmployee;
-    } catch (error) {
-      console.error('❌ Erro no employeesService.create:', error);
-      throw error;
-    }
+    });
   },
 
   async update(employee: Employee): Promise<Employee> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Atualizando funcionário:', employee.id);
       const { data, error } = await supabase
         .from('employees')
@@ -461,7 +527,7 @@ export const employeesService = {
           next_payment_date: employee.nextPaymentDate,
           is_active: employee.isActive,
           hire_date: employee.hireDate,
-          observations: employee.observations,
+          observations: employee.observations || '',
           updated_at: new Date().toISOString()
         })
         .eq('id', employee.id)
@@ -470,7 +536,7 @@ export const employeesService = {
 
       if (error) {
         console.error('❌ Erro ao atualizar funcionário:', error);
-        throw error;
+        throw new Error(`Erro ao atualizar funcionário: ${error.message}`);
       }
       
       const updatedEmployee = {
@@ -483,20 +549,17 @@ export const employeesService = {
         nextPaymentDate: data.next_payment_date,
         isActive: data.is_active,
         hireDate: data.hire_date,
-        observations: data.observations,
+        observations: data.observations || '',
         createdAt: data.created_at
       };
       
       console.log('✅ Funcionário atualizado com sucesso:', updatedEmployee.id);
       return updatedEmployee;
-    } catch (error) {
-      console.error('❌ Erro no employeesService.update:', error);
-      throw error;
-    }
+    });
   },
 
   async delete(id: string): Promise<void> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Excluindo funcionário:', id);
       const { error } = await supabase
         .from('employees')
@@ -505,21 +568,18 @@ export const employeesService = {
 
       if (error) {
         console.error('❌ Erro ao excluir funcionário:', error);
-        throw error;
+        throw new Error(`Erro ao excluir funcionário: ${error.message}`);
       }
       
       console.log('✅ Funcionário excluído com sucesso:', id);
-    } catch (error) {
-      console.error('❌ Erro no employeesService.delete:', error);
-      throw error;
-    }
+    });
   }
 };
 
 // Database operations for Checks
 export const checksService = {
   async getAll(): Promise<Check[]> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Buscando todos os cheques...');
       const { data, error } = await supabase
         .from('checks')
@@ -528,24 +588,24 @@ export const checksService = {
       
       if (error) {
         console.error('❌ Erro ao buscar cheques:', error);
-        throw error;
+        throw new Error(`Erro ao buscar cheques: ${error.message}`);
       }
       
       const checks = (data || []).map(item => ({
         id: item.id,
         saleId: item.sale_id,
         debtId: item.debt_id,
-        client: item.client,
-        value: Number(item.value),
+        client: item.client || '',
+        value: Number(item.value) || 0,
         dueDate: item.due_date,
-        status: item.status,
-        isOwnCheck: item.is_own_check,
-        observations: item.observations,
-        usedFor: item.used_for,
+        status: item.status || 'pendente',
+        isOwnCheck: item.is_own_check || false,
+        observations: item.observations || '',
+        usedFor: item.used_for || '',
         installmentNumber: item.installment_number,
         totalInstallments: item.total_installments,
-        frontImage: item.front_image,
-        backImage: item.back_image,
+        frontImage: item.front_image || '',
+        backImage: item.back_image || '',
         selectedAvailableChecks: item.selected_available_checks || [],
         usedInDebt: item.used_in_debt,
         discountDate: item.discount_date,
@@ -554,14 +614,11 @@ export const checksService = {
       
       console.log('✅ Cheques carregados:', checks.length);
       return checks;
-    } catch (error) {
-      console.error('❌ Erro no checksService.getAll:', error);
-      throw error;
-    }
+    });
   },
 
   async create(check: Omit<Check, 'id' | 'createdAt'>): Promise<Check> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Criando novo cheque:', check);
       const { data, error } = await supabase
         .from('checks')
@@ -573,12 +630,12 @@ export const checksService = {
           due_date: check.dueDate,
           status: check.status,
           is_own_check: check.isOwnCheck,
-          observations: check.observations,
-          used_for: check.usedFor,
+          observations: check.observations || '',
+          used_for: check.usedFor || '',
           installment_number: check.installmentNumber,
           total_installments: check.totalInstallments,
-          front_image: check.frontImage,
-          back_image: check.backImage,
+          front_image: check.frontImage || '',
+          back_image: check.backImage || '',
           selected_available_checks: check.selectedAvailableChecks,
           used_in_debt: check.usedInDebt,
           discount_date: check.discountDate
@@ -588,7 +645,7 @@ export const checksService = {
 
       if (error) {
         console.error('❌ Erro ao criar cheque:', error);
-        throw error;
+        throw new Error(`Erro ao criar cheque: ${error.message}`);
       }
       
       const newCheck = {
@@ -600,12 +657,12 @@ export const checksService = {
         dueDate: data.due_date,
         status: data.status,
         isOwnCheck: data.is_own_check,
-        observations: data.observations,
-        usedFor: data.used_for,
+        observations: data.observations || '',
+        usedFor: data.used_for || '',
         installmentNumber: data.installment_number,
         totalInstallments: data.total_installments,
-        frontImage: data.front_image,
-        backImage: data.back_image,
+        frontImage: data.front_image || '',
+        backImage: data.back_image || '',
         selectedAvailableChecks: data.selected_available_checks,
         usedInDebt: data.used_in_debt,
         discountDate: data.discount_date,
@@ -614,14 +671,11 @@ export const checksService = {
       
       console.log('✅ Cheque criado com sucesso:', newCheck.id);
       return newCheck;
-    } catch (error) {
-      console.error('❌ Erro no checksService.create:', error);
-      throw error;
-    }
+    });
   },
 
   async update(check: Check): Promise<Check> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Atualizando cheque:', check.id);
       const { data, error } = await supabase
         .from('checks')
@@ -633,12 +687,12 @@ export const checksService = {
           due_date: check.dueDate,
           status: check.status,
           is_own_check: check.isOwnCheck,
-          observations: check.observations,
-          used_for: check.usedFor,
+          observations: check.observations || '',
+          used_for: check.usedFor || '',
           installment_number: check.installmentNumber,
           total_installments: check.totalInstallments,
-          front_image: check.frontImage,
-          back_image: check.backImage,
+          front_image: check.frontImage || '',
+          back_image: check.backImage || '',
           selected_available_checks: check.selectedAvailableChecks,
           used_in_debt: check.usedInDebt,
           discount_date: check.discountDate,
@@ -650,7 +704,7 @@ export const checksService = {
 
       if (error) {
         console.error('❌ Erro ao atualizar cheque:', error);
-        throw error;
+        throw new Error(`Erro ao atualizar cheque: ${error.message}`);
       }
       
       const updatedCheck = {
@@ -662,12 +716,12 @@ export const checksService = {
         dueDate: data.due_date,
         status: data.status,
         isOwnCheck: data.is_own_check,
-        observations: data.observations,
-        usedFor: data.used_for,
+        observations: data.observations || '',
+        usedFor: data.used_for || '',
         installmentNumber: data.installment_number,
         totalInstallments: data.total_installments,
-        frontImage: data.front_image,
-        backImage: data.back_image,
+        frontImage: data.front_image || '',
+        backImage: data.back_image || '',
         selectedAvailableChecks: data.selected_available_checks,
         usedInDebt: data.used_in_debt,
         discountDate: data.discount_date,
@@ -676,14 +730,11 @@ export const checksService = {
       
       console.log('✅ Cheque atualizado com sucesso:', updatedCheck.id);
       return updatedCheck;
-    } catch (error) {
-      console.error('❌ Erro no checksService.update:', error);
-      throw error;
-    }
+    });
   },
 
   async delete(id: string): Promise<void> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Excluindo cheque:', id);
       const { error } = await supabase
         .from('checks')
@@ -692,21 +743,18 @@ export const checksService = {
 
       if (error) {
         console.error('❌ Erro ao excluir cheque:', error);
-        throw error;
+        throw new Error(`Erro ao excluir cheque: ${error.message}`);
       }
       
       console.log('✅ Cheque excluído com sucesso:', id);
-    } catch (error) {
-      console.error('❌ Erro no checksService.delete:', error);
-      throw error;
-    }
+    });
   }
 };
 
 // Database operations for Boletos
 export const boletosService = {
   async getAll(): Promise<Boleto[]> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Buscando todos os boletos...');
       const { data, error } = await supabase
         .from('boletos')
@@ -715,33 +763,30 @@ export const boletosService = {
       
       if (error) {
         console.error('❌ Erro ao buscar boletos:', error);
-        throw error;
+        throw new Error(`Erro ao buscar boletos: ${error.message}`);
       }
       
       const boletos = (data || []).map(item => ({
         id: item.id,
         saleId: item.sale_id,
-        client: item.client,
-        value: Number(item.value),
+        client: item.client || '',
+        value: Number(item.value) || 0,
         dueDate: item.due_date,
-        status: item.status,
-        installmentNumber: item.installment_number,
-        totalInstallments: item.total_installments,
-        boletoFile: item.boleto_file,
-        observations: item.observations,
+        status: item.status || 'pendente',
+        installmentNumber: item.installment_number || 1,
+        totalInstallments: item.total_installments || 1,
+        boletoFile: item.boleto_file || '',
+        observations: item.observations || '',
         createdAt: item.created_at
       }));
       
       console.log('✅ Boletos carregados:', boletos.length);
       return boletos;
-    } catch (error) {
-      console.error('❌ Erro no boletosService.getAll:', error);
-      throw error;
-    }
+    });
   },
 
   async create(boleto: Omit<Boleto, 'id' | 'createdAt'>): Promise<Boleto> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Criando novo boleto:', boleto);
       const { data, error } = await supabase
         .from('boletos')
@@ -753,15 +798,15 @@ export const boletosService = {
           status: boleto.status,
           installment_number: boleto.installmentNumber,
           total_installments: boleto.totalInstallments,
-          boleto_file: boleto.boletoFile,
-          observations: boleto.observations
+          boleto_file: boleto.boletoFile || '',
+          observations: boleto.observations || ''
         }])
         .select()
         .single();
 
       if (error) {
         console.error('❌ Erro ao criar boleto:', error);
-        throw error;
+        throw new Error(`Erro ao criar boleto: ${error.message}`);
       }
       
       const newBoleto = {
@@ -773,21 +818,18 @@ export const boletosService = {
         status: data.status,
         installmentNumber: data.installment_number,
         totalInstallments: data.total_installments,
-        boletoFile: data.boleto_file,
-        observations: data.observations,
+        boletoFile: data.boleto_file || '',
+        observations: data.observations || '',
         createdAt: data.created_at
       };
       
       console.log('✅ Boleto criado com sucesso:', newBoleto.id);
       return newBoleto;
-    } catch (error) {
-      console.error('❌ Erro no boletosService.create:', error);
-      throw error;
-    }
+    });
   },
 
   async update(boleto: Boleto): Promise<Boleto> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Atualizando boleto:', boleto.id);
       const { data, error } = await supabase
         .from('boletos')
@@ -799,8 +841,8 @@ export const boletosService = {
           status: boleto.status,
           installment_number: boleto.installmentNumber,
           total_installments: boleto.totalInstallments,
-          boleto_file: boleto.boletoFile,
-          observations: boleto.observations,
+          boleto_file: boleto.boletoFile || '',
+          observations: boleto.observations || '',
           updated_at: new Date().toISOString()
         })
         .eq('id', boleto.id)
@@ -809,7 +851,7 @@ export const boletosService = {
 
       if (error) {
         console.error('❌ Erro ao atualizar boleto:', error);
-        throw error;
+        throw new Error(`Erro ao atualizar boleto: ${error.message}`);
       }
       
       const updatedBoleto = {
@@ -821,21 +863,18 @@ export const boletosService = {
         status: data.status,
         installmentNumber: data.installment_number,
         totalInstallments: data.total_installments,
-        boletoFile: data.boleto_file,
-        observations: data.observations,
+        boletoFile: data.boleto_file || '',
+        observations: data.observations || '',
         createdAt: data.created_at
       };
       
       console.log('✅ Boleto atualizado com sucesso:', updatedBoleto.id);
       return updatedBoleto;
-    } catch (error) {
-      console.error('❌ Erro no boletosService.update:', error);
-      throw error;
-    }
+    });
   },
 
   async delete(id: string): Promise<void> {
-    try {
+    return withAuth(async () => {
       console.log('🔄 Excluindo boleto:', id);
       const { error } = await supabase
         .from('boletos')
@@ -844,21 +883,23 @@ export const boletosService = {
 
       if (error) {
         console.error('❌ Erro ao excluir boleto:', error);
-        throw error;
+        throw new Error(`Erro ao excluir boleto: ${error.message}`);
       }
       
       console.log('✅ Boleto excluído com sucesso:', id);
-    } catch (error) {
-      console.error('❌ Erro no boletosService.delete:', error);
-      throw error;
-    }
+    });
   }
 };
 
 // Upload de imagem para o bucket de cheques
 export const uploadCheckImage = async (file: File, checkId: string, imageType: 'front' | 'back'): Promise<string> => {
-  if (!supabase) {
+  if (!isSupabaseConfigured()) {
     throw new Error('Supabase não está configurado. Configure as variáveis de ambiente para usar upload de imagens.');
+  }
+
+  const isAuth = await ensureAuthenticated();
+  if (!isAuth) {
+    throw new Error('Não foi possível autenticar para fazer upload.');
   }
 
   try {
@@ -928,8 +969,13 @@ export const uploadCheckImage = async (file: File, checkId: string, imageType: '
 
 // Deletar imagem do bucket
 export const deleteCheckImage = async (imagePath: string): Promise<void> => {
-  if (!supabase) {
+  if (!isSupabaseConfigured()) {
     throw new Error('Supabase não está configurado.');
+  }
+
+  const isAuth = await ensureAuthenticated();
+  if (!isAuth) {
+    throw new Error('Não foi possível autenticar para deletar imagem.');
   }
 
   try {
@@ -979,7 +1025,7 @@ export const getCheckImageUrl = (imagePath: string): string => {
     return '';
   }
   
-  if (!supabase) {
+  if (!isSupabaseConfigured()) {
     console.warn('Supabase não configurado, retornando string vazia para imagem');
     return '';
   }
@@ -1012,5 +1058,28 @@ export const getCheckImageUrl = (imagePath: string): string => {
   } catch (error) {
     console.error('Erro ao gerar URL da imagem:', error);
     return '';
+  }
+};
+
+// Função para testar conexão com Supabase
+export const testSupabaseConnection = async (): Promise<boolean> => {
+  if (!isSupabaseConfigured()) {
+    return false;
+  }
+
+  try {
+    console.log('🔄 Testando conexão com Supabase...');
+    const { data, error } = await supabase.from('users').select('count').limit(1);
+    
+    if (error) {
+      console.error('❌ Erro na conexão:', error);
+      return false;
+    }
+    
+    console.log('✅ Conexão com Supabase funcionando');
+    return true;
+  } catch (error) {
+    console.error('❌ Erro ao testar conexão:', error);
+    return false;
   }
 };

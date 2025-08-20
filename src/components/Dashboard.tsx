@@ -401,15 +401,15 @@ const Dashboard: React.FC = () => {
   return (
     <div className="space-y-8">
       {state.isLoading && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
               <Clock className="w-6 h-6 text-white animate-spin" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-blue-800">Carregando Sistema...</h3>
-              <p className="text-blue-700">
-                Carregando dados do sistema local...
+              <h3 className="text-lg font-bold text-green-800">Carregando Sistema...</h3>
+              <p className="text-green-700">
+                Carregando dados do Supabase...
               </p>
             </div>
           </div>
@@ -417,14 +417,27 @@ const Dashboard: React.FC = () => {
       )}
       
       {state.error && (
-        <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-2xl p-6">
+        <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-2xl p-6 mb-8">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center">
               <AlertTriangle className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-red-800">Aviso do Sistema</h3>
+              <h3 className="text-lg font-bold text-red-800">Erro de Conexão</h3>
               <p className="text-red-700">{state.error}</p>
+              {state.error.includes('Configure') && (
+                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                  <h4 className="font-bold text-yellow-800 mb-2">Como configurar o Supabase:</h4>
+                  <ol className="text-sm text-yellow-700 space-y-1 list-decimal list-inside">
+                    <li>Acesse <a href="https://supabase.com" target="_blank" className="text-blue-600 underline">supabase.com</a> e faça login</li>
+                    <li>Crie um novo projeto ou selecione um existente</li>
+                    <li>Vá em Settings → API</li>
+                    <li>Copie a Project URL e a anon/public key</li>
+                    <li>Cole essas informações no arquivo .env do projeto</li>
+                    <li>Reinicie o servidor de desenvolvimento</li>
+                  </ol>
+                </div>
+              )}
             </div>
           </div>
         </div>
