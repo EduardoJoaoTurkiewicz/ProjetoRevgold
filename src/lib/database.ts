@@ -295,11 +295,14 @@ const convertToDatabase = {
 export const database = {
   // Sales
   async getSales(): Promise<Sale[]> {
-    if (!isSupabaseConfigured()) return [];
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - retornando array vazio para vendas');
+      return [];
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para buscar vendas');
+      console.log('⚠️ Modo local ativo - retornando array vazio para vendas');
       return [];
     }
     
@@ -324,11 +327,14 @@ export const database = {
   },
 
   async createSale(sale: Omit<Sale, 'id' | 'createdAt'>): Promise<Sale | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - venda não será salva no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para criar venda');
+      console.log('⚠️ Modo local ativo - venda não será salva no banco');
       return null;
     }
     
@@ -356,11 +362,14 @@ export const database = {
   },
 
   async updateSale(sale: Sale): Promise<Sale | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - venda não será atualizada no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para atualizar venda');
+      console.log('⚠️ Modo local ativo - venda não será atualizada no banco');
       return null;
     }
     
@@ -389,11 +398,14 @@ export const database = {
   },
 
   async deleteSale(id: string): Promise<boolean> {
-    if (!isSupabaseConfigured()) return false;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - venda não será deletada do banco');
+      return false;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para deletar venda');
+      console.log('⚠️ Modo local ativo - venda não será deletada do banco');
       return false;
     }
     
@@ -418,11 +430,14 @@ export const database = {
 
   // Debts
   async getDebts(): Promise<Debt[]> {
-    if (!isSupabaseConfigured()) return [];
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - retornando array vazio para dívidas');
+      return [];
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para buscar dívidas');
+      console.log('⚠️ Modo local ativo - retornando array vazio para dívidas');
       return [];
     }
     
@@ -447,11 +462,14 @@ export const database = {
   },
 
   async createDebt(debt: Omit<Debt, 'id' | 'createdAt'>): Promise<Debt | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - dívida não será salva no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para criar dívida');
+      console.log('⚠️ Modo local ativo - dívida não será salva no banco');
       return null;
     }
     
@@ -479,11 +497,14 @@ export const database = {
   },
 
   async updateDebt(debt: Debt): Promise<Debt | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - dívida não será atualizada no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para atualizar dívida');
+      console.log('⚠️ Modo local ativo - dívida não será atualizada no banco');
       return null;
     }
     
@@ -512,11 +533,14 @@ export const database = {
   },
 
   async deleteDebt(id: string): Promise<boolean> {
-    if (!isSupabaseConfigured()) return false;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - dívida não será deletada do banco');
+      return false;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para deletar dívida');
+      console.log('⚠️ Modo local ativo - dívida não será deletada do banco');
       return false;
     }
     
@@ -541,11 +565,14 @@ export const database = {
 
   // Checks
   async getChecks(): Promise<Check[]> {
-    if (!isSupabaseConfigured()) return [];
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - retornando array vazio para cheques');
+      return [];
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para buscar cheques');
+      console.log('⚠️ Modo local ativo - retornando array vazio para cheques');
       return [];
     }
     
@@ -570,11 +597,14 @@ export const database = {
   },
 
   async createCheck(check: Omit<Check, 'id' | 'createdAt'>): Promise<Check | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - cheque não será salvo no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para criar cheque');
+      console.log('⚠️ Modo local ativo - cheque não será salvo no banco');
       return null;
     }
     
@@ -602,11 +632,14 @@ export const database = {
   },
 
   async updateCheck(check: Check): Promise<Check | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - cheque não será atualizado no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para atualizar cheque');
+      console.log('⚠️ Modo local ativo - cheque não será atualizado no banco');
       return null;
     }
     
@@ -635,11 +668,14 @@ export const database = {
   },
 
   async deleteCheck(id: string): Promise<boolean> {
-    if (!isSupabaseConfigured()) return false;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - cheque não será deletado do banco');
+      return false;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para deletar cheque');
+      console.log('⚠️ Modo local ativo - cheque não será deletado do banco');
       return false;
     }
     
@@ -664,11 +700,14 @@ export const database = {
 
   // Boletos
   async getBoletos(): Promise<Boleto[]> {
-    if (!isSupabaseConfigured()) return [];
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - retornando array vazio para boletos');
+      return [];
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para buscar boletos');
+      console.log('⚠️ Modo local ativo - retornando array vazio para boletos');
       return [];
     }
     
@@ -693,11 +732,14 @@ export const database = {
   },
 
   async createBoleto(boleto: Omit<Boleto, 'id' | 'createdAt'>): Promise<Boleto | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - boleto não será salvo no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para criar boleto');
+      console.log('⚠️ Modo local ativo - boleto não será salvo no banco');
       return null;
     }
     
@@ -725,11 +767,14 @@ export const database = {
   },
 
   async updateBoleto(boleto: Boleto): Promise<Boleto | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - boleto não será atualizado no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para atualizar boleto');
+      console.log('⚠️ Modo local ativo - boleto não será atualizado no banco');
       return null;
     }
     
@@ -758,11 +803,14 @@ export const database = {
   },
 
   async deleteBoleto(id: string): Promise<boolean> {
-    if (!isSupabaseConfigured()) return false;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - boleto não será deletado do banco');
+      return false;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para deletar boleto');
+      console.log('⚠️ Modo local ativo - boleto não será deletado do banco');
       return false;
     }
     
@@ -787,11 +835,14 @@ export const database = {
 
   // Employees
   async getEmployees(): Promise<Employee[]> {
-    if (!isSupabaseConfigured()) return [];
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - retornando array vazio para funcionários');
+      return [];
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para buscar funcionários');
+      console.log('⚠️ Modo local ativo - retornando array vazio para funcionários');
       return [];
     }
     
@@ -816,11 +867,14 @@ export const database = {
   },
 
   async createEmployee(employee: Omit<Employee, 'id' | 'createdAt'>): Promise<Employee | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - funcionário não será salvo no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para criar funcionário');
+      console.log('⚠️ Modo local ativo - funcionário não será salvo no banco');
       return null;
     }
     
@@ -848,11 +902,14 @@ export const database = {
   },
 
   async updateEmployee(employee: Employee): Promise<Employee | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - funcionário não será atualizado no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para atualizar funcionário');
+      console.log('⚠️ Modo local ativo - funcionário não será atualizado no banco');
       return null;
     }
     
@@ -881,11 +938,14 @@ export const database = {
   },
 
   async deleteEmployee(id: string): Promise<boolean> {
-    if (!isSupabaseConfigured()) return false;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - funcionário não será deletado do banco');
+      return false;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para deletar funcionário');
+      console.log('⚠️ Modo local ativo - funcionário não será deletado do banco');
       return false;
     }
     
@@ -910,11 +970,14 @@ export const database = {
 
   // Employee Payments
   async getEmployeePayments(): Promise<EmployeePayment[]> {
-    if (!isSupabaseConfigured()) return [];
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - retornando array vazio para pagamentos');
+      return [];
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para buscar pagamentos');
+      console.log('⚠️ Modo local ativo - retornando array vazio para pagamentos');
       return [];
     }
     
@@ -939,11 +1002,14 @@ export const database = {
   },
 
   async createEmployeePayment(payment: Omit<EmployeePayment, 'id' | 'createdAt'>): Promise<EmployeePayment | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - pagamento não será salvo no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para criar pagamento');
+      console.log('⚠️ Modo local ativo - pagamento não será salvo no banco');
       return null;
     }
     
@@ -972,11 +1038,14 @@ export const database = {
 
   // Employee Advances
   async getEmployeeAdvances(): Promise<EmployeeAdvance[]> {
-    if (!isSupabaseConfigured()) return [];
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - retornando array vazio para adiantamentos');
+      return [];
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para buscar adiantamentos');
+      console.log('⚠️ Modo local ativo - retornando array vazio para adiantamentos');
       return [];
     }
     
@@ -1001,11 +1070,14 @@ export const database = {
   },
 
   async createEmployeeAdvance(advance: Omit<EmployeeAdvance, 'id' | 'createdAt'>): Promise<EmployeeAdvance | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - adiantamento não será salvo no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para criar adiantamento');
+      console.log('⚠️ Modo local ativo - adiantamento não será salvo no banco');
       return null;
     }
     
@@ -1033,11 +1105,14 @@ export const database = {
   },
 
   async updateEmployeeAdvance(advance: EmployeeAdvance): Promise<EmployeeAdvance | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - adiantamento não será atualizado no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para atualizar adiantamento');
+      console.log('⚠️ Modo local ativo - adiantamento não será atualizado no banco');
       return null;
     }
     
@@ -1067,11 +1142,14 @@ export const database = {
 
   // Employee Overtimes
   async getEmployeeOvertimes(): Promise<EmployeeOvertime[]> {
-    if (!isSupabaseConfigured()) return [];
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - retornando array vazio para horas extras');
+      return [];
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para buscar horas extras');
+      console.log('⚠️ Modo local ativo - retornando array vazio para horas extras');
       return [];
     }
     
@@ -1096,11 +1174,14 @@ export const database = {
   },
 
   async createEmployeeOvertime(overtime: Omit<EmployeeOvertime, 'id' | 'createdAt'>): Promise<EmployeeOvertime | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - horas extras não serão salvas no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para criar horas extras');
+      console.log('⚠️ Modo local ativo - horas extras não serão salvas no banco');
       return null;
     }
     
@@ -1128,11 +1209,14 @@ export const database = {
   },
 
   async updateEmployeeOvertime(overtime: EmployeeOvertime): Promise<EmployeeOvertime | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - horas extras não serão atualizadas no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para atualizar horas extras');
+      console.log('⚠️ Modo local ativo - horas extras não serão atualizadas no banco');
       return null;
     }
     
@@ -1162,11 +1246,14 @@ export const database = {
 
   // Employee Commissions
   async getEmployeeCommissions(): Promise<EmployeeCommission[]> {
-    if (!isSupabaseConfigured()) return [];
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - retornando array vazio para comissões');
+      return [];
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para buscar comissões');
+      console.log('⚠️ Modo local ativo - retornando array vazio para comissões');
       return [];
     }
     
@@ -1191,11 +1278,14 @@ export const database = {
   },
 
   async createEmployeeCommission(commission: Omit<EmployeeCommission, 'id' | 'createdAt'>): Promise<EmployeeCommission | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - comissão não será salva no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para criar comissão');
+      console.log('⚠️ Modo local ativo - comissão não será salva no banco');
       return null;
     }
     
@@ -1223,11 +1313,14 @@ export const database = {
   },
 
   async updateEmployeeCommission(commission: EmployeeCommission): Promise<EmployeeCommission | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - comissão não será atualizada no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para atualizar comissão');
+      console.log('⚠️ Modo local ativo - comissão não será atualizada no banco');
       return null;
     }
     
@@ -1257,11 +1350,14 @@ export const database = {
 
   // Installments
   async getInstallments(): Promise<Installment[]> {
-    if (!isSupabaseConfigured()) return [];
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - retornando array vazio para parcelas');
+      return [];
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para buscar parcelas');
+      console.log('⚠️ Modo local ativo - retornando array vazio para parcelas');
       return [];
     }
     
@@ -1286,11 +1382,14 @@ export const database = {
   },
 
   async createInstallment(installment: Omit<Installment, 'id'>): Promise<Installment | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - parcela não será salva no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para criar parcela');
+      console.log('⚠️ Modo local ativo - parcela não será salva no banco');
       return null;
     }
     
@@ -1318,11 +1417,14 @@ export const database = {
   },
 
   async updateInstallment(installment: Installment): Promise<Installment | null> {
-    if (!isSupabaseConfigured()) return null;
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - parcela não será atualizada no banco');
+      return null;
+    }
     
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para atualizar parcela');
+      console.log('⚠️ Modo local ativo - parcela não será atualizada no banco');
       return null;
     }
     
@@ -1380,7 +1482,7 @@ export const database = {
 
     const isAuth = await ensureAuthenticated();
     if (!isAuth) {
-      console.error('❌ Usuário não autenticado para sincronizar dados');
+      console.log('⚠️ Modo local ativo - não é possível sincronizar dados');
       return {
         sales: [],
         debts: [],

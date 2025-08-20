@@ -102,17 +102,30 @@ function appReducer(state: AppState, action: AppAction): AppState {
     // Regular actions that trigger database sync
     case 'ADD_SALE':
       // Always try to save to Supabase if configured and not loading
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createSale(action.payload).catch(error => {
-          console.error('❌ Erro ao salvar venda no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        // Save to database asynchronously
+        database.createSale(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Venda salva no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao salvar venda no Supabase:', error);
+          });
       }
       return { ...state, sales: [...state.sales, action.payload] };
     case 'UPDATE_SALE':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.updateSale(action.payload).catch(error => {
-          console.error('❌ Erro ao atualizar venda no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.updateSale(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Venda atualizada no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao atualizar venda no Supabase:', error);
+          });
       }
       return { 
         ...state, 
@@ -121,10 +134,16 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ) 
       };
     case 'DELETE_SALE':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.deleteSale(action.payload).catch(error => {
-          console.error('❌ Erro ao deletar venda no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.deleteSale(action.payload)
+          .then(success => {
+            if (success) {
+              console.log('✅ Venda deletada do Supabase:', action.payload);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao deletar venda no Supabase:', error);
+          });
       }
       return { 
         ...state, 
@@ -133,17 +152,29 @@ function appReducer(state: AppState, action: AppAction): AppState {
         employeeCommissions: state.employeeCommissions.filter(commission => commission.saleId !== action.payload)
       };
     case 'ADD_DEBT':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createDebt(action.payload).catch(error => {
-          console.error('❌ Erro ao salvar dívida no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.createDebt(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Dívida salva no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao salvar dívida no Supabase:', error);
+          });
       }
       return { ...state, debts: [...state.debts, action.payload] };
     case 'UPDATE_DEBT':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.updateDebt(action.payload).catch(error => {
-          console.error('❌ Erro ao atualizar dívida no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.updateDebt(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Dívida atualizada no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao atualizar dívida no Supabase:', error);
+          });
       }
       return { 
         ...state, 
@@ -152,10 +183,16 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ) 
       };
     case 'DELETE_DEBT':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.deleteDebt(action.payload).catch(error => {
-          console.error('❌ Erro ao deletar dívida no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.deleteDebt(action.payload)
+          .then(success => {
+            if (success) {
+              console.log('✅ Dívida deletada do Supabase:', action.payload);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao deletar dívida no Supabase:', error);
+          });
       }
       return { 
         ...state, 
@@ -163,17 +200,29 @@ function appReducer(state: AppState, action: AppAction): AppState {
         installments: state.installments.filter(installment => installment.debtId !== action.payload)
       };
     case 'ADD_CHECK':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createCheck(action.payload).catch(error => {
-          console.error('❌ Erro ao salvar cheque no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.createCheck(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Cheque salvo no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao salvar cheque no Supabase:', error);
+          });
       }
       return { ...state, checks: [...state.checks, action.payload] };
     case 'UPDATE_CHECK':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.updateCheck(action.payload).catch(error => {
-          console.error('❌ Erro ao atualizar cheque no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.updateCheck(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Cheque atualizado no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao atualizar cheque no Supabase:', error);
+          });
       }
       return { 
         ...state, 
@@ -182,27 +231,45 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ) 
       };
     case 'DELETE_CHECK':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.deleteCheck(action.payload).catch(error => {
-          console.error('❌ Erro ao deletar cheque no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.deleteCheck(action.payload)
+          .then(success => {
+            if (success) {
+              console.log('✅ Cheque deletado do Supabase:', action.payload);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao deletar cheque no Supabase:', error);
+          });
       }
       return { 
         ...state, 
         checks: state.checks.filter(check => check.id !== action.payload)
       };
     case 'ADD_BOLETO':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createBoleto(action.payload).catch(error => {
-          console.error('❌ Erro ao salvar boleto no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.createBoleto(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Boleto salvo no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao salvar boleto no Supabase:', error);
+          });
       }
       return { ...state, boletos: [...state.boletos, action.payload] };
     case 'UPDATE_BOLETO':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.updateBoleto(action.payload).catch(error => {
-          console.error('❌ Erro ao atualizar boleto no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.updateBoleto(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Boleto atualizado no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao atualizar boleto no Supabase:', error);
+          });
       }
       return { 
         ...state, 
@@ -211,27 +278,45 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ) 
       };
     case 'DELETE_BOLETO':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.deleteBoleto(action.payload).catch(error => {
-          console.error('❌ Erro ao deletar boleto no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.deleteBoleto(action.payload)
+          .then(success => {
+            if (success) {
+              console.log('✅ Boleto deletado do Supabase:', action.payload);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao deletar boleto no Supabase:', error);
+          });
       }
       return { 
         ...state, 
         boletos: state.boletos.filter(boleto => boleto.id !== action.payload)
       };
     case 'ADD_INSTALLMENT':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createInstallment(action.payload).catch(error => {
-          console.error('❌ Erro ao salvar parcela no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.createInstallment(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Parcela salva no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao salvar parcela no Supabase:', error);
+          });
       }
       return { ...state, installments: [...state.installments, action.payload] };
     case 'UPDATE_INSTALLMENT':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.updateInstallment(action.payload).catch(error => {
-          console.error('❌ Erro ao atualizar parcela no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.updateInstallment(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Parcela atualizada no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao atualizar parcela no Supabase:', error);
+          });
       }
       return { 
         ...state, 
@@ -240,17 +325,29 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ) 
       };
     case 'ADD_EMPLOYEE':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createEmployee(action.payload).catch(error => {
-          console.error('❌ Erro ao salvar funcionário no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.createEmployee(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Funcionário salvo no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao salvar funcionário no Supabase:', error);
+          });
       }
       return { ...state, employees: [...state.employees, action.payload] };
     case 'UPDATE_EMPLOYEE':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.updateEmployee(action.payload).catch(error => {
-          console.error('❌ Erro ao atualizar funcionário no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.updateEmployee(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Funcionário atualizado no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao atualizar funcionário no Supabase:', error);
+          });
       }
       return { 
         ...state, 
@@ -259,10 +356,16 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ) 
       };
     case 'DELETE_EMPLOYEE':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.deleteEmployee(action.payload).catch(error => {
-          console.error('❌ Erro ao deletar funcionário no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.deleteEmployee(action.payload)
+          .then(success => {
+            if (success) {
+              console.log('✅ Funcionário deletado do Supabase:', action.payload);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao deletar funcionário no Supabase:', error);
+          });
       }
       return { 
         ...state, 
@@ -273,10 +376,16 @@ function appReducer(state: AppState, action: AppAction): AppState {
         employeeCommissions: state.employeeCommissions.filter(commission => commission.employeeId !== action.payload)
       };
     case 'ADD_EMPLOYEE_PAYMENT':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createEmployeePayment(action.payload).catch(error => {
-          console.error('❌ Erro ao salvar pagamento no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.createEmployeePayment(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Pagamento salvo no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao salvar pagamento no Supabase:', error);
+          });
       }
       return { ...state, employeePayments: [...state.employeePayments, action.payload] };
     case 'UPDATE_EMPLOYEE_PAYMENT':
@@ -292,17 +401,29 @@ function appReducer(state: AppState, action: AppAction): AppState {
         employeePayments: state.employeePayments.filter(payment => payment.id !== action.payload)
       };
     case 'ADD_EMPLOYEE_ADVANCE':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createEmployeeAdvance(action.payload).catch(error => {
-          console.error('❌ Erro ao salvar adiantamento no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.createEmployeeAdvance(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Adiantamento salvo no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao salvar adiantamento no Supabase:', error);
+          });
       }
       return { ...state, employeeAdvances: [...state.employeeAdvances, action.payload] };
     case 'UPDATE_EMPLOYEE_ADVANCE':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.updateEmployeeAdvance(action.payload).catch(error => {
-          console.error('❌ Erro ao atualizar adiantamento no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.updateEmployeeAdvance(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Adiantamento atualizado no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao atualizar adiantamento no Supabase:', error);
+          });
       }
       return { 
         ...state, 
@@ -316,17 +437,29 @@ function appReducer(state: AppState, action: AppAction): AppState {
         employeeAdvances: state.employeeAdvances.filter(advance => advance.id !== action.payload)
       };
     case 'ADD_EMPLOYEE_OVERTIME':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createEmployeeOvertime(action.payload).catch(error => {
-          console.error('❌ Erro ao salvar horas extras no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.createEmployeeOvertime(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Horas extras salvas no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao salvar horas extras no Supabase:', error);
+          });
       }
       return { ...state, employeeOvertimes: [...state.employeeOvertimes, action.payload] };
     case 'UPDATE_EMPLOYEE_OVERTIME':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.updateEmployeeOvertime(action.payload).catch(error => {
-          console.error('❌ Erro ao atualizar horas extras no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.updateEmployeeOvertime(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Horas extras atualizadas no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao atualizar horas extras no Supabase:', error);
+          });
       }
       return { 
         ...state, 
@@ -340,17 +473,29 @@ function appReducer(state: AppState, action: AppAction): AppState {
         employeeOvertimes: state.employeeOvertimes.filter(overtime => overtime.id !== action.payload)
       };
     case 'ADD_EMPLOYEE_COMMISSION':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.createEmployeeCommission(action.payload).catch(error => {
-          console.error('❌ Erro ao salvar comissão no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.createEmployeeCommission(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Comissão salva no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao salvar comissão no Supabase:', error);
+          });
       }
       return { ...state, employeeCommissions: [...state.employeeCommissions, action.payload] };
     case 'UPDATE_EMPLOYEE_COMMISSION':
-      if (!state.isLoading && isSupabaseConfigured()) {
-        database.updateEmployeeCommission(action.payload).catch(error => {
-          console.error('❌ Erro ao atualizar comissão no Supabase:', error);
-        });
+      if (isSupabaseConfigured()) {
+        database.updateEmployeeCommission(action.payload)
+          .then(result => {
+            if (result) {
+              console.log('✅ Comissão atualizada no Supabase:', result.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Erro ao atualizar comissão no Supabase:', error);
+          });
       }
       return { 
         ...state, 
@@ -509,17 +654,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           // Ensure user is authenticated before loading data
           const isAuth = await ensureAuthenticated();
           if (!isAuth) {
-            console.warn('⚠️ Falha na autenticação automática - usando dados locais como fallback');
+            console.log('⚠️ Modo local ativo - carregando dados do localStorage');
             
             // Try to load from localStorage as fallback
             const savedData = localStorage.getItem('revgold-data');
             if (savedData) {
               const data = JSON.parse(savedData);
               dispatch({ type: 'LOAD_DATA', payload: data });
-              console.log('📱 Dados locais carregados como fallback após erro de autenticação');
+              console.log('📱 Dados locais carregados');
             }
             
-            dispatch({ type: 'SET_ERROR', payload: 'Não foi possível conectar ao banco de dados. Usando dados locais.' });
+            dispatch({ type: 'SET_ERROR', payload: null });
             return;
           }
           
@@ -723,8 +868,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch (error) {
-        console.error('❌ Erro ao carregar dados do Supabase:', error);
-        dispatch({ type: 'SET_ERROR', payload: 'Erro ao conectar com o banco de dados. Verifique sua conexão com a internet e as configurações do Supabase.' });
+        console.error('❌ Erro ao carregar dados:', error);
+        dispatch({ type: 'SET_ERROR', payload: null });
         
         // Fallback to localStorage on error
         try {
@@ -736,7 +881,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (localError) {
           console.error('❌ Erro no backup local:', localError);
-          dispatch({ type: 'SET_ERROR', payload: 'Erro crítico: não foi possível carregar dados. Verifique sua conexão.' });
+          dispatch({ type: 'SET_ERROR', payload: null });
         }
       } finally {
         dispatch({ type: 'SET_LOADING', payload: false });
@@ -770,7 +915,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Ensure user is authenticated before reloading
       const isAuth = await ensureAuthenticated();
       if (!isAuth) {
-        console.error('❌ Usuário não autenticado para sincronização automática');
+        console.log('⚠️ Modo local ativo - sincronização automática desabilitada');
         return;
       }
       

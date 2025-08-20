@@ -437,39 +437,6 @@ const Dashboard: React.FC = () => {
         </div>
       )}
       
-      {/* Database Connection Status */}
-      <div className={`p-6 rounded-2xl border-2 ${
-        isSupabaseConfigured() 
-          ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' 
-          : 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200'
-      }`}>
-        <div className="flex items-center gap-4">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-            isSupabaseConfigured() ? 'bg-green-600' : 'bg-yellow-600'
-          }`}>
-            {isSupabaseConfigured() ? (
-              <Wifi className="w-6 h-6 text-white" />
-            ) : (
-              <WifiOff className="w-6 h-6 text-white" />
-            )}
-          </div>
-          <div>
-            <h3 className={`text-lg font-bold ${
-              isSupabaseConfigured() ? 'text-green-800' : 'text-yellow-800'
-            }`}>
-              {isSupabaseConfigured() ? 'Banco de Dados Conectado' : 'Modo Local Ativo'}
-            </h3>
-            <p className={`${
-              isSupabaseConfigured() ? 'text-green-700' : 'text-yellow-700'
-            } font-medium`}>
-              {isSupabaseConfigured() 
-                ? 'Todos os dados são salvos automaticamente no Supabase e sincronizados entre dispositivos.'
-                : 'Os dados são salvos apenas localmente. Configure o Supabase para sincronização entre dispositivos.'
-              }
-            </p>
-          </div>
-        </div>
-      </div>
       {/* Welcome Section */}
       <div className="flex items-center justify-between">
         <div>

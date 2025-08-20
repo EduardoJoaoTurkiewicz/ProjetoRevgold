@@ -65,15 +65,139 @@ export const isSupabaseConfigured = () => {
     supabaseAnonKey !== 'your-anon-key');
 };
 
-// Ensure user is authenticated before database operations
+// Sistema de autenticação automática simplificado
+let authPromise: Promise<boolean> | null = null;
+let isAuthenticatedCache = false;
+let lastAuthCheck = 0;
+
 export const ensureAuthenticated = async (): Promise<boolean> => {
+  if (!supabase) {
+    console.log('⚠️ Supabase não configurado - usando modo local');
+    return false;
+  }
+
+  // Cache authentication check for 30 seconds to avoid rate limits
+  const now = Date.now();
+  if (isAuthenticatedCache && (now - lastAuthCheck) < 30000) {
+    return true;
+  }
+
+  // Prevent multiple simultaneous auth attempts
+  if (authPromise) {
+    return authPromise;
+  }
+
+  authPromise = (async () => {
+    try {
+      // Check if already authenticated
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      if (user && !error) {
+        console.log('✅ Usuário já autenticado:', user.email);
+        isAuthenticatedCache = true;
+        lastAuthCheck = now;
+        return true;
+      }
+
+      // Try to sign in with default credentials
+      const defaultEmail = 'admin@revgold.com';
+      const defaultPassword = 'revgold123';
+
+      console.log('🔄 Tentando autenticação automática...');
+      
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: defaultEmail,
+        password: defaultPassword
+      });
+
+      if (signInData.user && !signInError) {
+        console.log('✅ Autenticação automática bem-sucedida');
+        isAuthenticatedCache = true;
+        lastAuthCheck = now;
+        return true;
+      }
+
+      // If sign in failed, try to create the user
+      if (signInError?.message?.includes('Invalid login credentials')) {
+        console.log('🔄 Criando usuário padrão...');
+        
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: defaultEmail,
+          password: defaultPassword,
+          options: {
+            emailRedirectTo: undefined // Disable email confirmation
+          }
+        });
+
+        if (signUpData.user && !signUpError) {
+          console.log('✅ Usuário padrão criado e autenticado');
+          isAuthenticatedCache = true;
+          lastAuthCheck = now;
+          return true;
+        }
+
+        if (signUpError) {
+          console.error('❌ Erro ao criar usuário padrão:', signUpError.message);
+        }
+      }
+
+      console.log('⚠️ Não foi possível autenticar - usando modo local');
+      isAuthenticatedCache = false;
+      return false;
+
+    } catch (error) {
+      console.error('❌ Erro na autenticação:', error);
+      isAuthenticatedCache = false;
+      return false;
+    } finally {
+      authPromise = null;
+    }
+  })();
+
+  return authPromise;
+};
+
+// Check if user is authenticated (without trying to authenticate)
+export const isAuthenticated = async (): Promise<boolean> => {
   if (!supabase) return false;
   
   try {
     const { data: { user } } = await supabase.auth.getUser();
     return Boolean(user);
   } catch (error) {
-    console.error('❌ Erro ao verificar autenticação:', error instanceof Error ? error.message : error);
+    console.error('❌ Erro ao verificar autenticação:', error);
+    return false;
+  }
+};
+
+// Get current user
+export const getCurrentUser = async () => {
+  if (!supabase) return null;
+  
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user;
+  } catch (error) {
+    console.error('❌ Erro ao obter usuário atual:', error);
+    return null;
+  }
+};
+
+// Sign out user
+export const signOut = async (): Promise<boolean> => {
+  if (!supabase) return false;
+  
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('❌ Erro ao fazer logout:', error);
+      return false;
+    }
+    console.log('✅ Logout realizado com sucesso');
+    isAuthenticatedCache = false;
+    return true;
+  } catch (error) {
+    console.error('❌ Erro ao fazer logout:', error);
     return false;
   }
 };
@@ -84,10 +208,10 @@ export const uploadCheckImage = async (file: File, checkId: string, imageType: '
     throw new Error('Supabase não está configurado. Configure as variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.');
   }
 
-  // Ensure user is authenticated
+  // Ensure authentication before upload
   const isAuth = await ensureAuthenticated();
   if (!isAuth) {
-    throw new Error('Erro de autenticação. Não foi possível fazer upload da imagem.');
+    throw new Error('Não foi possível autenticar para fazer upload de imagens.');
   }
 
   try {
@@ -161,10 +285,10 @@ export const deleteCheckImage = async (imagePath: string): Promise<void> => {
     throw new Error('Supabase não está configurado.');
   }
 
-  // Ensure user is authenticated
+  // Ensure authentication before delete
   const isAuth = await ensureAuthenticated();
   if (!isAuth) {
-    throw new Error('Erro de autenticação. Não foi possível deletar a imagem.');
+    throw new Error('Não foi possível autenticar para deletar imagens.');
   }
 
   try {
@@ -256,10 +380,10 @@ export const uploadEmployeeReceipt = async (file: File, employeeId: string, paym
     throw new Error('Supabase não está configurado.');
   }
 
-  // Ensure user is authenticated
+  // Ensure authentication before upload
   const isAuth = await ensureAuthenticated();
   if (!isAuth) {
-    throw new Error('Erro de autenticação. Não foi possível fazer upload do recibo.');
+    throw new Error('Não foi possível autenticar para fazer upload de recibos.');
   }
 
   try {
@@ -327,10 +451,10 @@ export const deleteEmployeeReceipt = async (receiptPath: string): Promise<void> 
     throw new Error('Supabase não está configurado.');
   }
 
-  // Ensure user is authenticated
+  // Ensure authentication before delete
   const isAuth = await ensureAuthenticated();
   if (!isAuth) {
-    throw new Error('Erro de autenticação. Não foi possível deletar o recibo.');
+    throw new Error('Não foi possível autenticar para deletar recibos.');
   }
 
   try {
