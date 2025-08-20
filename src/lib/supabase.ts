@@ -13,12 +13,60 @@ const initializeSupabaseClient = () => {
     try {
       supabase = createClient(supabaseUrl, supabaseAnonKey);
       console.log('✅ Supabase conectado automaticamente');
+      
+      // Auto-authenticate user
+      authenticateUser();
     } catch (error) {
       console.error('❌ Erro ao conectar ao Supabase:', error);
       supabase = null;
     }
   } else {
     console.warn('⚠️ Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env');
+  }
+};
+
+// Auto-authenticate user for database access
+const authenticateUser = async () => {
+  if (!supabase) return;
+  
+  try {
+    // Check if user is already authenticated
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      // Create a default user for the system
+      const { data, error } = await supabase.auth.signUp({
+        email: 'admin@revgold.com',
+        password: 'revgold123456',
+        options: {
+          data: {
+            username: 'Sistema RevGold'
+          }
+        }
+      });
+      
+      if (error && error.message.includes('already registered')) {
+        // User already exists, sign in
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: 'admin@revgold.com',
+          password: 'revgold123456'
+        });
+        
+        if (signInError) {
+          console.error('❌ Erro ao fazer login:', signInError);
+        } else {
+          console.log('✅ Login automático realizado com sucesso');
+        }
+      } else if (error) {
+        console.error('❌ Erro ao criar usuário:', error);
+      } else {
+        console.log('✅ Usuário criado e autenticado automaticamente');
+      }
+    } else {
+      console.log('✅ Usuário já autenticado:', user.email);
+    }
+  } catch (error) {
+    console.error('❌ Erro na autenticação automática:', error);
   }
 };
 
@@ -65,10 +113,43 @@ export const isSupabaseConfigured = () => {
     supabaseAnonKey !== 'your-anon-key');
 };
 
+// Ensure user is authenticated before database operations
+export const ensureAuthenticated = async (): Promise<boolean> => {
+  if (!supabase) return false;
+  
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      // Try to authenticate
+      const { error } = await supabase.auth.signInWithPassword({
+        email: 'admin@revgold.com',
+        password: 'revgold123456'
+      });
+      
+      if (error) {
+        console.error('❌ Erro na autenticação:', error);
+        return false;
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Erro ao verificar autenticação:', error);
+    return false;
+  }
+};
+
 // Upload de imagem para o bucket de cheques
 export const uploadCheckImage = async (file: File, checkId: string, imageType: 'front' | 'back'): Promise<string> => {
   if (!supabase) {
     throw new Error('Supabase não está configurado. Configure as variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.');
+  }
+
+  // Ensure user is authenticated
+  const isAuth = await ensureAuthenticated();
+  if (!isAuth) {
+    throw new Error('Erro de autenticação. Não foi possível fazer upload da imagem.');
   }
 
   try {
@@ -140,6 +221,12 @@ export const uploadCheckImage = async (file: File, checkId: string, imageType: '
 export const deleteCheckImage = async (imagePath: string): Promise<void> => {
   if (!supabase) {
     throw new Error('Supabase não está configurado.');
+  }
+
+  // Ensure user is authenticated
+  const isAuth = await ensureAuthenticated();
+  if (!isAuth) {
+    throw new Error('Erro de autenticação. Não foi possível deletar a imagem.');
   }
 
   try {
@@ -231,6 +318,12 @@ export const uploadEmployeeReceipt = async (file: File, employeeId: string, paym
     throw new Error('Supabase não está configurado.');
   }
 
+  // Ensure user is authenticated
+  const isAuth = await ensureAuthenticated();
+  if (!isAuth) {
+    throw new Error('Erro de autenticação. Não foi possível fazer upload do recibo.');
+  }
+
   try {
     // Validar arquivo
     if (!file || file.size === 0) {
@@ -294,6 +387,12 @@ export const uploadEmployeeReceipt = async (file: File, employeeId: string, paym
 export const deleteEmployeeReceipt = async (receiptPath: string): Promise<void> => {
   if (!supabase) {
     throw new Error('Supabase não está configurado.');
+  }
+
+  // Ensure user is authenticated
+  const isAuth = await ensureAuthenticated();
+  if (!isAuth) {
+    throw new Error('Erro de autenticação. Não foi possível deletar o recibo.');
   }
 
   try {

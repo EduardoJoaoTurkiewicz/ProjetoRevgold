@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from './supabase';
+import { supabase, isSupabaseConfigured, ensureAuthenticated } from './supabase';
 import { 
   Sale, 
   Debt, 
@@ -20,17 +20,17 @@ const convertFromDatabase = {
     deliveryDate: dbSale.delivery_date,
     client: dbSale.client,
     sellerId: dbSale.seller_id,
-    customCommissionRate: parseFloat(dbSale.custom_commission_rate || 0),
-    products: dbSale.products || '',
-    observations: dbSale.observations,
+    customCommissionRate: parseFloat(dbSale.custom_commission_rate || 5),
+    products: dbSale.products || 'Produtos vendidos',
+    observations: dbSale.observations || '',
     totalValue: parseFloat(dbSale.total_value || 0),
     paymentMethods: dbSale.payment_methods || [],
     receivedAmount: parseFloat(dbSale.received_amount || 0),
     pendingAmount: parseFloat(dbSale.pending_amount || 0),
-    status: dbSale.status,
-    paymentDescription: dbSale.payment_description,
-    paymentObservations: dbSale.payment_observations,
-    createdAt: dbSale.created_at
+    status: dbSale.status || 'pendente',
+    paymentDescription: dbSale.payment_description || '',
+    paymentObservations: dbSale.payment_observations || '',
+    createdAt: dbSale.created_at || new Date().toISOString()
   }),
 
   debt: (dbDebt: any): Debt => ({
@@ -40,13 +40,13 @@ const convertFromDatabase = {
     company: dbDebt.company,
     totalValue: parseFloat(dbDebt.total_value || 0),
     paymentMethods: dbDebt.payment_methods || [],
-    isPaid: dbDebt.is_paid,
+    isPaid: dbDebt.is_paid || false,
     paidAmount: parseFloat(dbDebt.paid_amount || 0),
     pendingAmount: parseFloat(dbDebt.pending_amount || 0),
     checksUsed: dbDebt.checks_used || [],
-    paymentDescription: dbDebt.payment_description,
-    debtPaymentDescription: dbDebt.debt_payment_description,
-    createdAt: dbDebt.created_at
+    paymentDescription: dbDebt.payment_description || '',
+    debtPaymentDescription: dbDebt.debt_payment_description || '',
+    createdAt: dbDebt.created_at || new Date().toISOString()
   }),
 
   check: (dbCheck: any): Check => ({
@@ -56,18 +56,18 @@ const convertFromDatabase = {
     client: dbCheck.client,
     value: parseFloat(dbCheck.value || 0),
     dueDate: dbCheck.due_date,
-    status: dbCheck.status,
-    isOwnCheck: dbCheck.is_own_check,
-    observations: dbCheck.observations,
-    usedFor: dbCheck.used_for,
+    status: dbCheck.status || 'pendente',
+    isOwnCheck: dbCheck.is_own_check || false,
+    observations: dbCheck.observations || '',
+    usedFor: dbCheck.used_for || '',
     installmentNumber: dbCheck.installment_number,
     totalInstallments: dbCheck.total_installments,
-    frontImage: dbCheck.front_image,
-    backImage: dbCheck.back_image,
+    frontImage: dbCheck.front_image || '',
+    backImage: dbCheck.back_image || '',
     selectedAvailableChecks: dbCheck.selected_available_checks || [],
     usedInDebt: dbCheck.used_in_debt,
     discountDate: dbCheck.discount_date,
-    createdAt: dbCheck.created_at
+    createdAt: dbCheck.created_at || new Date().toISOString()
   }),
 
   boleto: (dbBoleto: any): Boleto => ({
@@ -76,26 +76,26 @@ const convertFromDatabase = {
     client: dbBoleto.client,
     value: parseFloat(dbBoleto.value || 0),
     dueDate: dbBoleto.due_date,
-    status: dbBoleto.status,
-    installmentNumber: dbBoleto.installment_number,
-    totalInstallments: dbBoleto.total_installments,
-    boletoFile: dbBoleto.boleto_file,
-    observations: dbBoleto.observations,
-    createdAt: dbBoleto.created_at
+    status: dbBoleto.status || 'pendente',
+    installmentNumber: dbBoleto.installment_number || 1,
+    totalInstallments: dbBoleto.total_installments || 1,
+    boletoFile: dbBoleto.boleto_file || '',
+    observations: dbBoleto.observations || '',
+    createdAt: dbBoleto.created_at || new Date().toISOString()
   }),
 
   employee: (dbEmployee: any): Employee => ({
     id: dbEmployee.id.toString(),
     name: dbEmployee.name,
     position: dbEmployee.position,
-    isSeller: dbEmployee.is_seller,
+    isSeller: dbEmployee.is_seller || false,
     salary: parseFloat(dbEmployee.salary || 0),
-    paymentDay: dbEmployee.payment_day,
+    paymentDay: dbEmployee.payment_day || 5,
     nextPaymentDate: dbEmployee.next_payment_date,
-    isActive: dbEmployee.is_active,
+    isActive: dbEmployee.is_active !== false,
     hireDate: dbEmployee.hire_date,
-    observations: dbEmployee.observations,
-    createdAt: dbEmployee.created_at
+    observations: dbEmployee.observations || '',
+    createdAt: dbEmployee.created_at || new Date().toISOString()
   }),
 
   employeePayment: (dbPayment: any): EmployeePayment => ({
@@ -103,10 +103,10 @@ const convertFromDatabase = {
     employeeId: dbPayment.employee_id,
     amount: parseFloat(dbPayment.amount || 0),
     paymentDate: dbPayment.payment_date,
-    isPaid: dbPayment.is_paid,
-    receipt: dbPayment.receipt,
-    observations: dbPayment.observations,
-    createdAt: dbPayment.created_at
+    isPaid: dbPayment.is_paid !== false,
+    receipt: dbPayment.receipt || '',
+    observations: dbPayment.observations || '',
+    createdAt: dbPayment.created_at || new Date().toISOString()
   }),
 
   employeeAdvance: (dbAdvance: any): EmployeeAdvance => ({
@@ -114,10 +114,10 @@ const convertFromDatabase = {
     employeeId: dbAdvance.employee_id,
     amount: parseFloat(dbAdvance.amount || 0),
     date: dbAdvance.date,
-    description: dbAdvance.description,
-    paymentMethod: dbAdvance.payment_method,
-    status: dbAdvance.status,
-    createdAt: dbAdvance.created_at
+    description: dbAdvance.description || '',
+    paymentMethod: dbAdvance.payment_method || 'dinheiro',
+    status: dbAdvance.status || 'pendente',
+    createdAt: dbAdvance.created_at || new Date().toISOString()
   }),
 
   employeeOvertime: (dbOvertime: any): EmployeeOvertime => ({
@@ -128,8 +128,8 @@ const convertFromDatabase = {
     totalAmount: parseFloat(dbOvertime.total_amount || 0),
     date: dbOvertime.date,
     description: dbOvertime.description,
-    status: dbOvertime.status,
-    createdAt: dbOvertime.created_at
+    status: dbOvertime.status || 'pendente',
+    createdAt: dbOvertime.created_at || new Date().toISOString()
   }),
 
   employeeCommission: (dbCommission: any): EmployeeCommission => ({
@@ -140,8 +140,8 @@ const convertFromDatabase = {
     commissionRate: parseFloat(dbCommission.commission_rate || 5),
     commissionAmount: parseFloat(dbCommission.commission_amount || 0),
     date: dbCommission.date,
-    status: dbCommission.status,
-    createdAt: dbCommission.created_at
+    status: dbCommission.status || 'pendente',
+    createdAt: dbCommission.created_at || new Date().toISOString()
   }),
 
   installment: (dbInstallment: any): Installment => ({
@@ -150,7 +150,7 @@ const convertFromDatabase = {
     debtId: dbInstallment.debt_id,
     amount: parseFloat(dbInstallment.amount || 0),
     dueDate: dbInstallment.due_date,
-    isPaid: dbInstallment.is_paid,
+    isPaid: dbInstallment.is_paid || false,
     type: dbInstallment.type,
     description: dbInstallment.description
   })
@@ -159,25 +159,25 @@ const convertFromDatabase = {
 // Função para converter dados da aplicação para o formato do banco
 const convertToDatabase = {
   sale: (sale: Sale | Omit<Sale, 'id' | 'createdAt'>) => ({
-    id: 'id' in sale ? sale.id : undefined, // Allow manual ID setting for migration
+    id: 'id' in sale ? sale.id : undefined,
     date: sale.date,
-    delivery_date: sale.deliveryDate,
+    delivery_date: sale.deliveryDate || null,
     client: sale.client,
-    seller_id: sale.sellerId,
-    custom_commission_rate: sale.customCommissionRate,
-    products: sale.products,
-    observations: sale.observations,
+    seller_id: sale.sellerId || null,
+    custom_commission_rate: sale.customCommissionRate || 5,
+    products: sale.products || 'Produtos vendidos',
+    observations: sale.observations || '',
     total_value: sale.totalValue,
     payment_methods: sale.paymentMethods,
     received_amount: sale.receivedAmount,
     pending_amount: sale.pendingAmount,
     status: sale.status,
-    payment_description: sale.paymentDescription,
-    payment_observations: sale.paymentObservations
+    payment_description: sale.paymentDescription || '',
+    payment_observations: sale.paymentObservations || ''
   }),
 
   debt: (debt: Debt | Omit<Debt, 'id' | 'createdAt'>) => ({
-    id: 'id' in debt ? debt.id : undefined, // Allow manual ID setting for migration
+    id: 'id' in debt ? debt.id : undefined,
     date: debt.date,
     description: debt.description,
     company: debt.company,
@@ -186,79 +186,79 @@ const convertToDatabase = {
     is_paid: debt.isPaid,
     paid_amount: debt.paidAmount,
     pending_amount: debt.pendingAmount,
-    checks_used: debt.checksUsed,
-    payment_description: debt.paymentDescription,
-    debt_payment_description: debt.debtPaymentDescription
+    checks_used: debt.checksUsed || [],
+    payment_description: debt.paymentDescription || '',
+    debt_payment_description: debt.debtPaymentDescription || ''
   }),
 
   check: (check: Check | Omit<Check, 'id' | 'createdAt'>) => ({
-    id: 'id' in check ? check.id : undefined, // Allow manual ID setting for migration
-    sale_id: check.saleId,
-    debt_id: check.debtId,
+    id: 'id' in check ? check.id : undefined,
+    sale_id: check.saleId || null,
+    debt_id: check.debtId || null,
     client: check.client,
     value: check.value,
     due_date: check.dueDate,
     status: check.status,
     is_own_check: check.isOwnCheck,
-    observations: check.observations,
-    used_for: check.usedFor,
-    installment_number: check.installmentNumber,
-    total_installments: check.totalInstallments,
-    front_image: check.frontImage,
-    back_image: check.backImage,
-    selected_available_checks: check.selectedAvailableChecks,
-    used_in_debt: check.usedInDebt,
-    discount_date: check.discountDate
+    observations: check.observations || '',
+    used_for: check.usedFor || '',
+    installment_number: check.installmentNumber || null,
+    total_installments: check.totalInstallments || null,
+    front_image: check.frontImage || '',
+    back_image: check.backImage || '',
+    selected_available_checks: check.selectedAvailableChecks || [],
+    used_in_debt: check.usedInDebt || null,
+    discount_date: check.discountDate || null
   }),
 
   boleto: (boleto: Boleto | Omit<Boleto, 'id' | 'createdAt'>) => ({
-    id: 'id' in boleto ? boleto.id : undefined, // Allow manual ID setting for migration
-    sale_id: boleto.saleId,
+    id: 'id' in boleto ? boleto.id : undefined,
+    sale_id: boleto.saleId || null,
     client: boleto.client,
     value: boleto.value,
     due_date: boleto.dueDate,
     status: boleto.status,
     installment_number: boleto.installmentNumber,
     total_installments: boleto.totalInstallments,
-    boleto_file: boleto.boletoFile,
-    observations: boleto.observations
+    boleto_file: boleto.boletoFile || '',
+    observations: boleto.observations || ''
   }),
 
   employee: (employee: Employee | Omit<Employee, 'id' | 'createdAt'>) => ({
-    id: 'id' in employee ? employee.id : undefined, // Allow manual ID setting for migration
+    id: 'id' in employee ? employee.id : undefined,
     name: employee.name,
     position: employee.position,
     is_seller: employee.isSeller,
     salary: employee.salary,
     payment_day: employee.paymentDay,
-    next_payment_date: employee.nextPaymentDate,
+    next_payment_date: employee.nextPaymentDate || null,
     is_active: employee.isActive,
     hire_date: employee.hireDate,
-    observations: employee.observations
+    observations: employee.observations || ''
   }),
 
   employeePayment: (payment: EmployeePayment | Omit<EmployeePayment, 'id' | 'createdAt'>) => ({
-    id: 'id' in payment ? payment.id : undefined, // Allow manual ID setting for migration
+    id: 'id' in payment ? payment.id : undefined,
     employee_id: payment.employeeId,
     amount: payment.amount,
     payment_date: payment.paymentDate,
     is_paid: payment.isPaid,
-    receipt: payment.receipt,
-    observations: payment.observations
+    receipt: payment.receipt || '',
+    observations: payment.observations || ''
   }),
 
   employeeAdvance: (advance: EmployeeAdvance | Omit<EmployeeAdvance, 'id' | 'createdAt'>) => ({
-    id: 'id' in advance ? advance.id : undefined, // Allow manual ID setting for migration
+    id: 'id' in advance ? advance.id : undefined,
     employee_id: advance.employeeId,
     amount: advance.amount,
     date: advance.date,
-    description: advance.description,
+    description: advance.description || '',
     payment_method: advance.paymentMethod,
     status: advance.status
   }),
 
   employeeOvertime: (overtime: EmployeeOvertime | Omit<EmployeeOvertime, 'id' | 'createdAt'>) => ({
-    id: 'id' in overtime ? overtime.id : undefined, // Allow manual ID setting for migration
+    id: 'id' in overtime ? overtime.id : undefined,
     employee_id: overtime.employeeId,
     hours: overtime.hours,
     hourly_rate: overtime.hourlyRate,
@@ -269,7 +269,7 @@ const convertToDatabase = {
   }),
 
   employeeCommission: (commission: EmployeeCommission | Omit<EmployeeCommission, 'id' | 'createdAt'>) => ({
-    id: 'id' in commission ? commission.id : undefined, // Allow manual ID setting for migration
+    id: 'id' in commission ? commission.id : undefined,
     employee_id: commission.employeeId,
     sale_id: commission.saleId,
     sale_value: commission.saleValue,
@@ -280,9 +280,9 @@ const convertToDatabase = {
   }),
 
   installment: (installment: Installment | Omit<Installment, 'id'>) => ({
-    id: 'id' in installment ? installment.id : undefined, // Allow manual ID setting for migration
-    sale_id: installment.saleId,
-    debt_id: installment.debtId,
+    id: 'id' in installment ? installment.id : undefined,
+    sale_id: installment.saleId || null,
+    debt_id: installment.debtId || null,
     amount: installment.amount,
     due_date: installment.dueDate,
     is_paid: installment.isPaid,
@@ -297,18 +297,26 @@ export const database = {
   async getSales(): Promise<Sale[]> {
     if (!isSupabaseConfigured()) return [];
     
-    try {
-    const { data, error } = await supabase!
-      .from('sales')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) {
-      console.error('❌ Erro ao buscar vendas:', error);
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para buscar vendas');
       return [];
     }
     
-    return data?.map(convertFromDatabase.sale) || [];
+    try {
+      const { data, error } = await supabase!
+        .from('sales')
+        .select('*')
+        .order('date', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar vendas:', error);
+        return [];
+      }
+      
+      const sales = data?.map(convertFromDatabase.sale) || [];
+      console.log(`✅ ${sales.length} vendas carregadas do Supabase`);
+      return sales;
     } catch (error) {
       console.error('❌ Erro de conexão ao buscar vendas:', error);
       return [];
@@ -318,13 +326,15 @@ export const database = {
   async createSale(sale: Omit<Sale, 'id' | 'createdAt'>): Promise<Sale | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para criar venda');
+      return null;
+    }
+    
     try {
       const saleData = convertToDatabase.sale(sale);
-      
-      // Garantir que o ID seja gerado pelo banco se não fornecido
-      if (saleData.id) {
-        delete saleData.id;
-      }
+      delete saleData.id; // Let database generate ID
       
       const { data, error } = await supabase!
         .from('sales')
@@ -348,8 +358,15 @@ export const database = {
   async updateSale(sale: Sale): Promise<Sale | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para atualizar venda');
+      return null;
+    }
+    
     try {
       const saleData = convertToDatabase.sale(sale);
+      delete saleData.id; // Don't update ID
       
       const { data, error } = await supabase!
         .from('sales')
@@ -374,6 +391,12 @@ export const database = {
   async deleteSale(id: string): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para deletar venda');
+      return false;
+    }
+    
     try {
       const { error } = await supabase!
         .from('sales')
@@ -397,18 +420,26 @@ export const database = {
   async getDebts(): Promise<Debt[]> {
     if (!isSupabaseConfigured()) return [];
     
-    try {
-    const { data, error } = await supabase!
-      .from('debts')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) {
-      console.error('Erro ao buscar dívidas:', error);
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para buscar dívidas');
       return [];
     }
     
-    return data?.map(convertFromDatabase.debt) || [];
+    try {
+      const { data, error } = await supabase!
+        .from('debts')
+        .select('*')
+        .order('date', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar dívidas:', error);
+        return [];
+      }
+      
+      const debts = data?.map(convertFromDatabase.debt) || [];
+      console.log(`✅ ${debts.length} dívidas carregadas do Supabase`);
+      return debts;
     } catch (error) {
       console.error('❌ Erro de conexão ao buscar dívidas:', error);
       return [];
@@ -418,13 +449,15 @@ export const database = {
   async createDebt(debt: Omit<Debt, 'id' | 'createdAt'>): Promise<Debt | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para criar dívida');
+      return null;
+    }
+    
     try {
       const debtData = convertToDatabase.debt(debt);
-      
-      // Garantir que o ID seja gerado pelo banco se não fornecido
-      if (debtData.id) {
-        delete debtData.id;
-      }
+      delete debtData.id; // Let database generate ID
       
       const { data, error } = await supabase!
         .from('debts')
@@ -448,8 +481,15 @@ export const database = {
   async updateDebt(debt: Debt): Promise<Debt | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para atualizar dívida');
+      return null;
+    }
+    
     try {
       const debtData = convertToDatabase.debt(debt);
+      delete debtData.id; // Don't update ID
       
       const { data, error } = await supabase!
         .from('debts')
@@ -474,6 +514,12 @@ export const database = {
   async deleteDebt(id: string): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para deletar dívida');
+      return false;
+    }
+    
     try {
       const { error } = await supabase!
         .from('debts')
@@ -497,18 +543,26 @@ export const database = {
   async getChecks(): Promise<Check[]> {
     if (!isSupabaseConfigured()) return [];
     
-    try {
-    const { data, error } = await supabase!
-      .from('checks')
-      .select('*')
-      .order('due_date', { ascending: true });
-    
-    if (error) {
-      console.error('Erro ao buscar cheques:', error);
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para buscar cheques');
       return [];
     }
     
-    return data?.map(convertFromDatabase.check) || [];
+    try {
+      const { data, error } = await supabase!
+        .from('checks')
+        .select('*')
+        .order('due_date', { ascending: true });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar cheques:', error);
+        return [];
+      }
+      
+      const checks = data?.map(convertFromDatabase.check) || [];
+      console.log(`✅ ${checks.length} cheques carregados do Supabase`);
+      return checks;
     } catch (error) {
       console.error('❌ Erro de conexão ao buscar cheques:', error);
       return [];
@@ -518,13 +572,15 @@ export const database = {
   async createCheck(check: Omit<Check, 'id' | 'createdAt'>): Promise<Check | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para criar cheque');
+      return null;
+    }
+    
     try {
       const checkData = convertToDatabase.check(check);
-      
-      // Garantir que o ID seja gerado pelo banco se não fornecido
-      if (checkData.id) {
-        delete checkData.id;
-      }
+      delete checkData.id; // Let database generate ID
       
       const { data, error } = await supabase!
         .from('checks')
@@ -548,8 +604,15 @@ export const database = {
   async updateCheck(check: Check): Promise<Check | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para atualizar cheque');
+      return null;
+    }
+    
     try {
       const checkData = convertToDatabase.check(check);
+      delete checkData.id; // Don't update ID
       
       const { data, error } = await supabase!
         .from('checks')
@@ -574,6 +637,12 @@ export const database = {
   async deleteCheck(id: string): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para deletar cheque');
+      return false;
+    }
+    
     try {
       const { error } = await supabase!
         .from('checks')
@@ -597,18 +666,26 @@ export const database = {
   async getBoletos(): Promise<Boleto[]> {
     if (!isSupabaseConfigured()) return [];
     
-    try {
-    const { data, error } = await supabase!
-      .from('boletos')
-      .select('*')
-      .order('due_date', { ascending: true });
-    
-    if (error) {
-      console.error('Erro ao buscar boletos:', error);
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para buscar boletos');
       return [];
     }
     
-    return data?.map(convertFromDatabase.boleto) || [];
+    try {
+      const { data, error } = await supabase!
+        .from('boletos')
+        .select('*')
+        .order('due_date', { ascending: true });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar boletos:', error);
+        return [];
+      }
+      
+      const boletos = data?.map(convertFromDatabase.boleto) || [];
+      console.log(`✅ ${boletos.length} boletos carregados do Supabase`);
+      return boletos;
     } catch (error) {
       console.error('❌ Erro de conexão ao buscar boletos:', error);
       return [];
@@ -618,13 +695,15 @@ export const database = {
   async createBoleto(boleto: Omit<Boleto, 'id' | 'createdAt'>): Promise<Boleto | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para criar boleto');
+      return null;
+    }
+    
     try {
       const boletoData = convertToDatabase.boleto(boleto);
-      
-      // Garantir que o ID seja gerado pelo banco se não fornecido
-      if (boletoData.id) {
-        delete boletoData.id;
-      }
+      delete boletoData.id; // Let database generate ID
       
       const { data, error } = await supabase!
         .from('boletos')
@@ -648,8 +727,15 @@ export const database = {
   async updateBoleto(boleto: Boleto): Promise<Boleto | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para atualizar boleto');
+      return null;
+    }
+    
     try {
       const boletoData = convertToDatabase.boleto(boleto);
+      delete boletoData.id; // Don't update ID
       
       const { data, error } = await supabase!
         .from('boletos')
@@ -674,6 +760,12 @@ export const database = {
   async deleteBoleto(id: string): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para deletar boleto');
+      return false;
+    }
+    
     try {
       const { error } = await supabase!
         .from('boletos')
@@ -697,18 +789,26 @@ export const database = {
   async getEmployees(): Promise<Employee[]> {
     if (!isSupabaseConfigured()) return [];
     
-    try {
-    const { data, error } = await supabase!
-      .from('employees')
-      .select('*')
-      .order('name', { ascending: true });
-    
-    if (error) {
-      console.error('Erro ao buscar funcionários:', error);
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para buscar funcionários');
       return [];
     }
     
-    return data?.map(convertFromDatabase.employee) || [];
+    try {
+      const { data, error } = await supabase!
+        .from('employees')
+        .select('*')
+        .order('name', { ascending: true });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar funcionários:', error);
+        return [];
+      }
+      
+      const employees = data?.map(convertFromDatabase.employee) || [];
+      console.log(`✅ ${employees.length} funcionários carregados do Supabase`);
+      return employees;
     } catch (error) {
       console.error('❌ Erro de conexão ao buscar funcionários:', error);
       return [];
@@ -718,13 +818,15 @@ export const database = {
   async createEmployee(employee: Omit<Employee, 'id' | 'createdAt'>): Promise<Employee | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para criar funcionário');
+      return null;
+    }
+    
     try {
       const employeeData = convertToDatabase.employee(employee);
-      
-      // Garantir que o ID seja gerado pelo banco se não fornecido
-      if (employeeData.id) {
-        delete employeeData.id;
-      }
+      delete employeeData.id; // Let database generate ID
       
       const { data, error } = await supabase!
         .from('employees')
@@ -748,8 +850,15 @@ export const database = {
   async updateEmployee(employee: Employee): Promise<Employee | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para atualizar funcionário');
+      return null;
+    }
+    
     try {
       const employeeData = convertToDatabase.employee(employee);
+      delete employeeData.id; // Don't update ID
       
       const { data, error } = await supabase!
         .from('employees')
@@ -774,6 +883,12 @@ export const database = {
   async deleteEmployee(id: string): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para deletar funcionário');
+      return false;
+    }
+    
     try {
       const { error } = await supabase!
         .from('employees')
@@ -797,18 +912,26 @@ export const database = {
   async getEmployeePayments(): Promise<EmployeePayment[]> {
     if (!isSupabaseConfigured()) return [];
     
-    try {
-    const { data, error } = await supabase!
-      .from('employee_payments')
-      .select('*')
-      .order('payment_date', { ascending: false });
-    
-    if (error) {
-      console.error('Erro ao buscar pagamentos:', error);
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para buscar pagamentos');
       return [];
     }
     
-    return data?.map(convertFromDatabase.employeePayment) || [];
+    try {
+      const { data, error } = await supabase!
+        .from('employee_payments')
+        .select('*')
+        .order('payment_date', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar pagamentos:', error);
+        return [];
+      }
+      
+      const payments = data?.map(convertFromDatabase.employeePayment) || [];
+      console.log(`✅ ${payments.length} pagamentos carregados do Supabase`);
+      return payments;
     } catch (error) {
       console.error('❌ Erro de conexão ao buscar pagamentos:', error);
       return [];
@@ -818,13 +941,15 @@ export const database = {
   async createEmployeePayment(payment: Omit<EmployeePayment, 'id' | 'createdAt'>): Promise<EmployeePayment | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para criar pagamento');
+      return null;
+    }
+    
     try {
       const paymentData = convertToDatabase.employeePayment(payment);
-      
-      // Garantir que o ID seja gerado pelo banco se não fornecido
-      if (paymentData.id) {
-        delete paymentData.id;
-      }
+      delete paymentData.id; // Let database generate ID
       
       const { data, error } = await supabase!
         .from('employee_payments')
@@ -849,18 +974,26 @@ export const database = {
   async getEmployeeAdvances(): Promise<EmployeeAdvance[]> {
     if (!isSupabaseConfigured()) return [];
     
-    try {
-    const { data, error } = await supabase!
-      .from('employee_advances')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) {
-      console.error('Erro ao buscar adiantamentos:', error);
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para buscar adiantamentos');
       return [];
     }
     
-    return data?.map(convertFromDatabase.employeeAdvance) || [];
+    try {
+      const { data, error } = await supabase!
+        .from('employee_advances')
+        .select('*')
+        .order('date', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar adiantamentos:', error);
+        return [];
+      }
+      
+      const advances = data?.map(convertFromDatabase.employeeAdvance) || [];
+      console.log(`✅ ${advances.length} adiantamentos carregados do Supabase`);
+      return advances;
     } catch (error) {
       console.error('❌ Erro de conexão ao buscar adiantamentos:', error);
       return [];
@@ -870,13 +1003,15 @@ export const database = {
   async createEmployeeAdvance(advance: Omit<EmployeeAdvance, 'id' | 'createdAt'>): Promise<EmployeeAdvance | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para criar adiantamento');
+      return null;
+    }
+    
     try {
       const advanceData = convertToDatabase.employeeAdvance(advance);
-      
-      // Garantir que o ID seja gerado pelo banco se não fornecido
-      if (advanceData.id) {
-        delete advanceData.id;
-      }
+      delete advanceData.id; // Let database generate ID
       
       const { data, error } = await supabase!
         .from('employee_advances')
@@ -900,8 +1035,15 @@ export const database = {
   async updateEmployeeAdvance(advance: EmployeeAdvance): Promise<EmployeeAdvance | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para atualizar adiantamento');
+      return null;
+    }
+    
     try {
       const advanceData = convertToDatabase.employeeAdvance(advance);
+      delete advanceData.id; // Don't update ID
       
       const { data, error } = await supabase!
         .from('employee_advances')
@@ -927,18 +1069,26 @@ export const database = {
   async getEmployeeOvertimes(): Promise<EmployeeOvertime[]> {
     if (!isSupabaseConfigured()) return [];
     
-    try {
-    const { data, error } = await supabase!
-      .from('employee_overtimes')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) {
-      console.error('Erro ao buscar horas extras:', error);
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para buscar horas extras');
       return [];
     }
     
-    return data?.map(convertFromDatabase.employeeOvertime) || [];
+    try {
+      const { data, error } = await supabase!
+        .from('employee_overtimes')
+        .select('*')
+        .order('date', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar horas extras:', error);
+        return [];
+      }
+      
+      const overtimes = data?.map(convertFromDatabase.employeeOvertime) || [];
+      console.log(`✅ ${overtimes.length} horas extras carregadas do Supabase`);
+      return overtimes;
     } catch (error) {
       console.error('❌ Erro de conexão ao buscar horas extras:', error);
       return [];
@@ -948,13 +1098,15 @@ export const database = {
   async createEmployeeOvertime(overtime: Omit<EmployeeOvertime, 'id' | 'createdAt'>): Promise<EmployeeOvertime | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para criar horas extras');
+      return null;
+    }
+    
     try {
       const overtimeData = convertToDatabase.employeeOvertime(overtime);
-      
-      // Garantir que o ID seja gerado pelo banco se não fornecido
-      if (overtimeData.id) {
-        delete overtimeData.id;
-      }
+      delete overtimeData.id; // Let database generate ID
       
       const { data, error } = await supabase!
         .from('employee_overtimes')
@@ -978,8 +1130,15 @@ export const database = {
   async updateEmployeeOvertime(overtime: EmployeeOvertime): Promise<EmployeeOvertime | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para atualizar horas extras');
+      return null;
+    }
+    
     try {
       const overtimeData = convertToDatabase.employeeOvertime(overtime);
+      delete overtimeData.id; // Don't update ID
       
       const { data, error } = await supabase!
         .from('employee_overtimes')
@@ -1005,18 +1164,26 @@ export const database = {
   async getEmployeeCommissions(): Promise<EmployeeCommission[]> {
     if (!isSupabaseConfigured()) return [];
     
-    try {
-    const { data, error } = await supabase!
-      .from('employee_commissions')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) {
-      console.error('Erro ao buscar comissões:', error);
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para buscar comissões');
       return [];
     }
     
-    return data?.map(convertFromDatabase.employeeCommission) || [];
+    try {
+      const { data, error } = await supabase!
+        .from('employee_commissions')
+        .select('*')
+        .order('date', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar comissões:', error);
+        return [];
+      }
+      
+      const commissions = data?.map(convertFromDatabase.employeeCommission) || [];
+      console.log(`✅ ${commissions.length} comissões carregadas do Supabase`);
+      return commissions;
     } catch (error) {
       console.error('❌ Erro de conexão ao buscar comissões:', error);
       return [];
@@ -1026,13 +1193,15 @@ export const database = {
   async createEmployeeCommission(commission: Omit<EmployeeCommission, 'id' | 'createdAt'>): Promise<EmployeeCommission | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para criar comissão');
+      return null;
+    }
+    
     try {
       const commissionData = convertToDatabase.employeeCommission(commission);
-      
-      // Garantir que o ID seja gerado pelo banco se não fornecido
-      if (commissionData.id) {
-        delete commissionData.id;
-      }
+      delete commissionData.id; // Let database generate ID
       
       const { data, error } = await supabase!
         .from('employee_commissions')
@@ -1056,8 +1225,15 @@ export const database = {
   async updateEmployeeCommission(commission: EmployeeCommission): Promise<EmployeeCommission | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para atualizar comissão');
+      return null;
+    }
+    
     try {
       const commissionData = convertToDatabase.employeeCommission(commission);
+      delete commissionData.id; // Don't update ID
       
       const { data, error } = await supabase!
         .from('employee_commissions')
@@ -1083,18 +1259,26 @@ export const database = {
   async getInstallments(): Promise<Installment[]> {
     if (!isSupabaseConfigured()) return [];
     
-    try {
-    const { data, error } = await supabase!
-      .from('installments')
-      .select('*')
-      .order('due_date', { ascending: true });
-    
-    if (error) {
-      console.error('Erro ao buscar parcelas:', error);
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para buscar parcelas');
       return [];
     }
     
-    return data?.map(convertFromDatabase.installment) || [];
+    try {
+      const { data, error } = await supabase!
+        .from('installments')
+        .select('*')
+        .order('due_date', { ascending: true });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar parcelas:', error);
+        return [];
+      }
+      
+      const installments = data?.map(convertFromDatabase.installment) || [];
+      console.log(`✅ ${installments.length} parcelas carregadas do Supabase`);
+      return installments;
     } catch (error) {
       console.error('❌ Erro de conexão ao buscar parcelas:', error);
       return [];
@@ -1104,13 +1288,15 @@ export const database = {
   async createInstallment(installment: Omit<Installment, 'id'>): Promise<Installment | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para criar parcela');
+      return null;
+    }
+    
     try {
       const installmentData = convertToDatabase.installment(installment);
-      
-      // Garantir que o ID seja gerado pelo banco se não fornecido
-      if (installmentData.id) {
-        delete installmentData.id;
-      }
+      delete installmentData.id; // Let database generate ID
       
       const { data, error } = await supabase!
         .from('installments')
@@ -1134,8 +1320,15 @@ export const database = {
   async updateInstallment(installment: Installment): Promise<Installment | null> {
     if (!isSupabaseConfigured()) return null;
     
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para atualizar parcela');
+      return null;
+    }
+    
     try {
       const installmentData = convertToDatabase.installment(installment);
+      delete installmentData.id; // Don't update ID
       
       const { data, error } = await supabase!
         .from('installments')
@@ -1171,6 +1364,23 @@ export const database = {
     installments: Installment[];
   }> {
     if (!isSupabaseConfigured()) {
+      return {
+        sales: [],
+        debts: [],
+        checks: [],
+        boletos: [],
+        employees: [],
+        employeePayments: [],
+        employeeAdvances: [],
+        employeeOvertimes: [],
+        employeeCommissions: [],
+        installments: []
+      };
+    }
+
+    const isAuth = await ensureAuthenticated();
+    if (!isAuth) {
+      console.error('❌ Usuário não autenticado para sincronizar dados');
       return {
         sales: [],
         debts: [],
@@ -1224,6 +1434,7 @@ export const database = {
         employeeCommissions: employeeCommissions.length,
         installments: installments.length
       });
+      
       return {
         sales,
         debts,

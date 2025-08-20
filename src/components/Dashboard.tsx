@@ -22,7 +22,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, AreaChart, Area, RadialBarChart, RadialBar } from 'recharts';
 import { isSupabaseConfigured } from '../lib/supabase';
-import { Database } from 'lucide-react';
+import { Database, Wifi, WifiOff } from 'lucide-react';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
 
@@ -410,7 +410,9 @@ const Dashboard: React.FC = () => {
             </div>
             <div>
               <h3 className="text-lg font-bold text-blue-800">Carregando Sistema...</h3>
-              <p className="text-blue-700">Conectando ao banco de dados e carregando informações.</p>
+              <p className="text-blue-700">
+                {isSupabaseConfigured() ? 'Conectando ao Supabase e carregando dados...' : 'Carregando dados locais...'}
+              </p>
             </div>
           </div>
         </div>
@@ -425,10 +427,49 @@ const Dashboard: React.FC = () => {
             <div>
               <h3 className="text-lg font-bold text-red-800">Aviso do Sistema</h3>
               <p className="text-red-700">{state.error}</p>
+              {!isSupabaseConfigured() && (
+                <p className="text-red-600 text-sm mt-2 font-medium">
+                  💡 Configure o Supabase para salvar dados permanentemente no banco de dados.
+                </p>
+              )}
             </div>
           </div>
         </div>
       )}
+      
+      {/* Database Connection Status */}
+      <div className={`p-6 rounded-2xl border-2 ${
+        isSupabaseConfigured() 
+          ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' 
+          : 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200'
+      }`}>
+        <div className="flex items-center gap-4">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+            isSupabaseConfigured() ? 'bg-green-600' : 'bg-yellow-600'
+          }`}>
+            {isSupabaseConfigured() ? (
+              <Wifi className="w-6 h-6 text-white" />
+            ) : (
+              <WifiOff className="w-6 h-6 text-white" />
+            )}
+          </div>
+          <div>
+            <h3 className={`text-lg font-bold ${
+              isSupabaseConfigured() ? 'text-green-800' : 'text-yellow-800'
+            }`}>
+              {isSupabaseConfigured() ? 'Banco de Dados Conectado' : 'Modo Local Ativo'}
+            </h3>
+            <p className={`${
+              isSupabaseConfigured() ? 'text-green-700' : 'text-yellow-700'
+            } font-medium`}>
+              {isSupabaseConfigured() 
+                ? 'Todos os dados são salvos automaticamente no Supabase e sincronizados entre dispositivos.'
+                : 'Os dados são salvos apenas localmente. Configure o Supabase para sincronização entre dispositivos.'
+              }
+            </p>
+          </div>
+        </div>
+      </div>
       {/* Welcome Section */}
       <div className="flex items-center justify-between">
         <div>
