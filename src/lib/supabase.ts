@@ -13,9 +13,6 @@ const initializeSupabaseClient = () => {
     try {
       supabase = createClient(supabaseUrl, supabaseAnonKey);
       console.log('✅ Supabase conectado automaticamente');
-      
-      // Auto-authenticate user
-      authenticateUser();
     } catch (error) {
       console.error('❌ Erro ao conectar ao Supabase:', error);
       supabase = null;
@@ -25,7 +22,7 @@ const initializeSupabaseClient = () => {
   }
 };
 
-// Auto-authenticate user for database access
+// Check authentication status
 const authenticateUser = async () => {
   if (!supabase) return;
   
@@ -33,35 +30,8 @@ const authenticateUser = async () => {
     // Check if user is already authenticated
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) {
-      // Try to sign in first
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: 'admin@revgold.com',
-        password: 'revgold123456'
-      });
-      
-      if (signInError) {
-        // If sign in fails, try to create the user
-        const { data, error } = await supabase.auth.signUp({
-          email: 'admin@revgold.com',
-          password: 'revgold123456',
-          options: {
-            data: {
-              username: 'Sistema RevGold'
-            },
-            emailRedirectTo: undefined // Disable email confirmation redirect
-          }
-        });
-        
-        if (error) {
-          // If error is about email not confirmed, try to sign in anyway
-          if (error.message.includes('email_not_confirmed') || error.message.includes('Email not confirmed')) {
-            console.log('⚠️ Email não confirmado, mas tentando fazer login mesmo assim...');
-            
-            // Try signing in despite email not being confirmed
-            const { error: forceSignInError } = await supabase.auth.signInWithPassword({
-              email: 'admin@revgold.com',
-              password: 'revgold123456'
+    if (user) {
+      console.log('✅ Usuário já autenticado:', user.email);
             });
             
             if (forceSignInError && !forceSignInError.message.includes('email_not_confirmed')) {
@@ -79,10 +49,10 @@ const authenticateUser = async () => {
         console.log('✅ Login automático realizado com sucesso');
       }
     } else {
-      console.log('✅ Usuário já autenticado:', user.email);
+      console.log('ℹ️ Nenhum usuário autenticado');
     }
   } catch (error) {
-    console.error('❌ Erro na autenticação automática:', error);
+    console.error('❌ Erro ao verificar autenticação:', error);
   }
 };
 
@@ -146,21 +116,7 @@ export const ensureAuthenticated = async (): Promise<boolean> => {
       if (error) {
         // If it's just an email confirmation error, we can still proceed
         if (error.message.includes('email_not_confirmed') || error.message.includes('Email not confirmed')) {
-          console.log('⚠️ Email não confirmado, mas prosseguindo com autenticação...');
-          // Check if we actually got a user despite the error
-          const { data: { user: retryUser } } = await supabase.auth.getUser();
-          if (retryUser) {
-            console.log('✅ Usuário autenticado apesar do aviso de email');
-            return true;
-          }
-        }
-        
-        console.error('❌ Erro na autenticação:', error.message);
-        return false;
-      }
-    }
-    
-    return true;
+    return Boolean(user);
   } catch (error) {
     console.error('❌ Erro ao verificar autenticação:', error instanceof Error ? error.message : error);
     return false;
