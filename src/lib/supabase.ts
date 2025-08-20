@@ -99,48 +99,6 @@ export const ensureAuthenticated = async (): Promise<boolean> => {
         return true;
       }
 
-      // Try to sign in with default credentials
-      const defaultEmail = 'admin@revgold.com';
-      const defaultPassword = 'revgold123';
-
-      console.log('🔄 Tentando autenticação automática...');
-      
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: defaultEmail,
-        password: defaultPassword
-      });
-
-      if (signInData.user && !signInError) {
-        console.log('✅ Autenticação automática bem-sucedida');
-        isAuthenticatedCache = true;
-        lastAuthCheck = now;
-        return true;
-      }
-
-      // If sign in failed, try to create the user
-      if (signInError?.message?.includes('Invalid login credentials')) {
-        console.log('🔄 Criando usuário padrão...');
-        
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: defaultEmail,
-          password: defaultPassword,
-          options: {
-            emailRedirectTo: undefined // Disable email confirmation
-          }
-        });
-
-        if (signUpData.user && !signUpError) {
-          console.log('✅ Usuário padrão criado e autenticado');
-          isAuthenticatedCache = true;
-          lastAuthCheck = now;
-          return true;
-        }
-
-        if (signUpError) {
-          console.error('❌ Erro ao criar usuário padrão:', signUpError.message);
-        }
-      }
-
       console.log('⚠️ Não foi possível autenticar - usando modo local');
       isAuthenticatedCache = false;
       return false;
