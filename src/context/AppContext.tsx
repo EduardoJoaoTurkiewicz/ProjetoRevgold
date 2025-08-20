@@ -509,7 +509,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           // Ensure user is authenticated before loading data
           const isAuth = await ensureAuthenticated();
           if (!isAuth) {
-            throw new Error('Falha na autenticação automática');
+            console.warn('⚠️ Falha na autenticação automática - usando dados locais como fallback');
+            
+            // Try to load from localStorage as fallback
+            const savedData = localStorage.getItem('revgold-data');
+            if (savedData) {
+              const data = JSON.parse(savedData);
+              dispatch({ type: 'LOAD_DATA', payload: data });
+              console.log('📱 Dados locais carregados como fallback após erro de autenticação');
+            }
+            
+            dispatch({ type: 'SET_ERROR', payload: 'Não foi possível conectar ao banco de dados. Usando dados locais.' });
+            return;
           }
           
           console.log('🔄 Usuário autenticado - carregando TODOS os dados automaticamente...');
