@@ -220,21 +220,19 @@ export function Sales() {
 
       {/* Sale Form Modal */}
       {(isFormOpen || editingSale) && (
-        <div className="relative z-[60]">
-          <SaleForm
-            sale={editingSale}
-            onSubmit={editingSale ? handleEditSale : handleAddSale}
-            onCancel={() => {
-              setIsFormOpen(false);
-              setEditingSale(null);
-            }}
-          />
-        </div>
+        <SaleForm
+          sale={editingSale}
+          onSubmit={editingSale ? handleEditSale : handleAddSale}
+          onCancel={() => {
+            setIsFormOpen(false);
+            setEditingSale(null);
+          }}
+        />
       )}
 
       {/* View Sale Modal */}
       {viewingSale && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[70] backdrop-blur-sm">
           <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
             <div className="p-8">
               <div className="flex justify-between items-center mb-8">
@@ -359,7 +357,7 @@ export function Sales() {
 
       {/* Observations Modal */}
       {viewingObservations && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[70] backdrop-blur-sm">
           <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
             <div className="p-8">
               <div className="flex justify-between items-center mb-8">

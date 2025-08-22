@@ -147,14 +147,14 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   }, [formData.totalValue]);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[90] backdrop-blur-sm modal-overlay">
+      <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
+        <div className="p-8">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold">
+            <h2 className="text-3xl font-bold text-slate-900">
               {sale ? 'Editar Venda' : 'Nova Venda'}
             </h2>
-            <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
+            <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-all">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -423,39 +423,33 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
             </div>
 
             {/* Summary */}
-            <div className="relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-slate-400/20 to-gray-500/20 blur-2xl"></div>
-              <div className="relative p-6 bg-gradient-to-r from-slate-50 to-gray-100 rounded-2xl border-2 border-slate-300 shadow-xl"
-                   style={{ 
-                     boxShadow: '0 20px 40px -12px rgba(71, 85, 105, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.5)' 
-                   }}>
-                <h3 className="text-xl font-black text-slate-800 mb-4 bg-gradient-to-r from-slate-700 to-gray-600 bg-clip-text text-transparent">
+            <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border-2 border-green-200 modern-shadow-xl">
+                <h3 className="text-xl font-black text-green-800 mb-4">
                   Resumo da Venda
                 </h3>
                 <div className="grid grid-cols-3 gap-6">
                   <div className="text-center">
-                    <span className="text-slate-600 font-semibold block mb-1">Total:</span>
-                    <p className="text-2xl font-black text-slate-800">
+                    <span className="text-green-600 font-semibold block mb-1">Total:</span>
+                    <p className="text-2xl font-black text-green-800">
                       R$ {formData.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div className="text-center">
-                    <span className="text-slate-600 font-semibold block mb-1">Recebido:</span>
+                    <span className="text-green-600 font-semibold block mb-1">Recebido:</span>
                     <p className="text-2xl font-black text-green-600">
                       R$ {calculateAmounts().receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div className="text-center">
-                    <span className="text-slate-600 font-semibold block mb-1">Pendente:</span>
+                    <span className="text-green-600 font-semibold block mb-1">Pendente:</span>
                     <p className="text-2xl font-black text-orange-600">
                       R$ {calculateAmounts().pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
-              </div>
             </div>
 
-            <div className="flex justify-end gap-4">
+            <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
               <button
                 type="button"
                 onClick={onCancel}
@@ -465,7 +459,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
               </button>
               <button
                 type="submit"
-                className="btn-primary"
+                className="btn-primary group"
               >
                 {sale ? 'Atualizar Venda' : 'Criar Venda'}
               </button>

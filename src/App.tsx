@@ -87,9 +87,9 @@ function AppContent() {
   };
 
   return (
-    <div className="relative z-10">
+    <div className="relative z-20">
       <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
-        <div className="relative z-20">
+        <div className="relative z-10">
           {renderPage()}
         </div>
       </Layout>
@@ -99,7 +99,7 @@ function AppContent() {
 
 function App() {
   return (
-    <div className="relative z-0">
+    <div className="relative z-0 min-h-screen">
       <AppProvider>
         <AppContent />
       </AppProvider>
