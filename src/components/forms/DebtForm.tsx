@@ -94,18 +94,46 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
   const hasCheckPayment = formData.paymentMethods.some(method => method.type === 'cheque');
   
   const calculateAmounts = () => {
-    // Calcular valor pago baseado nos cheques selecionados
+    // Calcular valor pago baseado nos métodos de pagamento e cheques selecionados
+    let totalPaid = 0;
+    
+    // Calcular valor pago pelos métodos de pagamento
+    formData.paymentMethods.forEach(method => {
+      // Métodos que são pagos instantaneamente
+      if (['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(method.type)) {
+        totalPaid += method.amount;
+      }
+      // Métodos que são parciais (não pagos instantaneamente)
+      else if (['cartao_credito', 'cheque', 'boleto'].includes(method.type)) {
+        // Para estes métodos, não adicionar ao valor pago imediatamente
+        // Eles serão considerados como pendentes até serem efetivamente pagos
+      }
+    });
+    
+    // Adicionar valor dos cheques selecionados (se houver)
     const checksValue = formData.checksUsed.reduce((sum, checkId) => {
       const check = state.checks.find(c => c.id === checkId);
       return sum + (check ? check.value : 0);
     }, 0);
     
-    const totalPaid = formData.isPaid ? formData.totalValue : checksValue;
+    totalPaid += checksValue;
+    
     const pending = formData.totalValue - totalPaid;
+    
+    // Determinar status automaticamente
+    let status: 'pago' | 'pendente' | 'parcial';
+    if (pending <= 0) {
+      status = 'pago';
+    } else if (totalPaid > 0) {
+      status = 'parcial';
+    } else {
+      status = 'pendente';
+    }
     
     return {
       paidAmount: totalPaid,
-      pendingAmount: Math.max(0, pending)
+      pendingAmount: Math.max(0, pending),
+      isPaid: status === 'pago'
     };
   };
 
@@ -121,7 +149,7 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[100] backdrop-blur-sm modal-overlay">
       <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
@@ -181,18 +209,6 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
                   placeholder="Nome da empresa ou fornecedor que vai ser pago"
                   required
                 />
-              </div>
-
-              <div className="form-group md:col-span-2">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.isPaid}
-                    onChange={(e) => setFormData(prev => ({ ...prev, isPaid: e.target.checked }))}
-                    className="rounded"
-                  />
-                  <span className="form-label mb-0">Dívida foi paga</span>
-                </label>
               </div>
             </div>
 
@@ -449,25 +465,37 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
             )}
 
             {/* Summary */}
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="font-medium mb-2">Resumo</h3>
-              <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="p-6 bg-gradient-to-r from-red-50 to-rose-50 rounded-2xl border-2 border-red-200 modern-shadow-xl">
+              <h3 className="text-xl font-black text-red-800 mb-4">Resumo da Dívida</h3>
+              <div className="grid grid-cols-3 gap-6">
                 <div>
-                  <span className="text-gray-600">Total:</span>
-                  <p className="font-medium">R$ {formData.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  <span className="text-red-600 font-semibold block mb-1">Total:</span>
+                  <p className="text-2xl font-black text-red-800">
+                    R$ {formData.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
                 </div>
                 <div>
-                  <span className="text-gray-600">Pago:</span>
-                  <p className="font-medium text-green-600">
+                  <span className="text-red-600 font-semibold block mb-1">Pago:</span>
+                  <p className="text-2xl font-black text-green-600">
                     R$ {calculateAmounts().paidAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div>
-                  <span className="text-gray-600">Pendente:</span>
-                  <p className="font-medium text-red-600">
+                  <span className="text-red-600 font-semibold block mb-1">Pendente:</span>
+                  <p className="text-2xl font-black text-orange-600">
                     R$ {calculateAmounts().pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
+              </div>
+              <div className="mt-4 text-center">
+                <span className={`px-4 py-2 rounded-full text-sm font-bold border ${
+                  calculateAmounts().isPaid ? 'bg-green-100 text-green-800 border-green-200' :
+                  calculateAmounts().paidAmount > 0 ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                  'bg-red-100 text-red-800 border-red-200'
+                }`}>
+                  Status: {calculateAmounts().isPaid ? 'Pago' : 
+                          calculateAmounts().paidAmount > 0 ? 'Parcial' : 'Pendente'}
+                </span>
               </div>
             </div>
 

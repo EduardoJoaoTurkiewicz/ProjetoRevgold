@@ -197,12 +197,12 @@ header, .revgold-header {
 
 /* Modais específicos do sistema */
 .fixed.inset-0 {
-  z-index: 80 !important;
+  z-index: 90 !important;
 }
 
 /* Modais de formulário têm prioridade máxima */
 .fixed.inset-0[class*="backdrop-blur"] {
-  z-index: 90 !important;
+  z-index: 100 !important;
 }
 
 /* Garantir que conteúdo principal tenha z-index baixo */
@@ -223,7 +223,7 @@ body {
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
-  z-index: 90 !important;
+  z-index: 100 !important;
 }
 
 /* Prevenir elementos flutuantes de interferir */

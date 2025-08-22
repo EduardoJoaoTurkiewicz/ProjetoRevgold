@@ -147,7 +147,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   }, [formData.totalValue]);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[90] backdrop-blur-sm modal-overlay">
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[100] backdrop-blur-sm modal-overlay">
       <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
         <div className="p-8">
           <div className="flex justify-between items-center mb-6">
