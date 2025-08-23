@@ -49,7 +49,14 @@ export const ensureAuthenticated = async (): Promise<boolean> => {
 // Wrapper para operações do banco com retry e autenticação
 const withAuth = async <T>(operation: () => Promise<T>): Promise<T> => {
   if (!isSupabaseConfigured()) {
-    throw new Error('Supabase não está configurado. Configure o arquivo .env com suas credenciais.');
+    console.warn('⚠️ Supabase não configurado, operação cancelada');
+    throw new Error('Supabase não está configurado. Configure o arquivo .env com suas credenciais reais do Supabase.');
+  }
+
+  // Testar conexão antes de executar operação
+  const connectionOk = await testSupabaseConnection();
+  if (!connectionOk) {
+    throw new Error('Não foi possível conectar ao Supabase. Verifique suas credenciais e conexão.');
   }
 
   const isAuth = await ensureAuthenticated();
@@ -58,14 +65,28 @@ const withAuth = async <T>(operation: () => Promise<T>): Promise<T> => {
   }
 
   try {
+    console.log('🔄 Executando operação no banco...');
     return await operation();
   } catch (error: any) {
+    console.error('❌ Erro na operação do banco:', error);
+    
     // Retry uma vez em caso de erro de rede
     if (error.message?.includes('fetch') || error.message?.includes('network')) {
       console.log('🔄 Tentando novamente após erro de rede...');
       await new Promise(resolve => setTimeout(resolve, 1000));
       return await operation();
     }
+    
+    // Log detalhado do erro para debug
+    if (error.details || error.hint || error.code) {
+      console.error('Detalhes do erro Supabase:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+    }
+    
     throw error;
   }
 };
@@ -82,7 +103,10 @@ export const salesService = {
       
       if (error) {
         console.error('❌ Erro ao buscar vendas:', error);
-        throw new Error(`Erro ao buscar vendas: ${error.message}`);
+        console.error('Detalhes do erro:', error);
+        // Retornar array vazio em caso de erro para não quebrar a aplicação
+        console.warn('⚠️ Retornando array vazio devido ao erro');
+        return [];
       }
       
       const sales = (data || []).map(item => ({
@@ -247,7 +271,10 @@ export const debtsService = {
       
       if (error) {
         console.error('❌ Erro ao buscar dívidas:', error);
-        throw new Error(`Erro ao buscar dívidas: ${error.message}`);
+        console.error('Detalhes do erro:', error);
+        // Retornar array vazio em caso de erro para não quebrar a aplicação
+        console.warn('⚠️ Retornando array vazio devido ao erro');
+        return [];
       }
       
       const debts = (data || []).map(item => ({
@@ -397,7 +424,10 @@ export const employeesService = {
       
       if (error) {
         console.error('❌ Erro ao buscar funcionários:', error);
-        throw new Error(`Erro ao buscar funcionários: ${error.message}`);
+        console.error('Detalhes do erro:', error);
+        // Retornar array vazio em caso de erro para não quebrar a aplicação
+        console.warn('⚠️ Retornando array vazio devido ao erro');
+        return [];
       }
       
       const employees = (data || []).map(item => ({
@@ -537,7 +567,10 @@ export const checksService = {
       
       if (error) {
         console.error('❌ Erro ao buscar cheques:', error);
-        throw new Error(`Erro ao buscar cheques: ${error.message}`);
+        console.error('Detalhes do erro:', error);
+        // Retornar array vazio em caso de erro para não quebrar a aplicação
+        console.warn('⚠️ Retornando array vazio devido ao erro');
+        return [];
       }
       
       const checks = (data || []).map(item => ({
@@ -712,7 +745,10 @@ export const boletosService = {
       
       if (error) {
         console.error('❌ Erro ao buscar boletos:', error);
-        throw new Error(`Erro ao buscar boletos: ${error.message}`);
+        console.error('Detalhes do erro:', error);
+        // Retornar array vazio em caso de erro para não quebrar a aplicação
+        console.warn('⚠️ Retornando array vazio devido ao erro');
+        return [];
       }
       
       const boletos = (data || []).map(item => ({
@@ -1013,19 +1049,32 @@ export const getCheckImageUrl = (imagePath: string): string => {
 // Função para testar conexão com Supabase
 export const testSupabaseConnection = async (): Promise<boolean> => {
   if (!isSupabaseConfigured()) {
+    console.warn('⚠️ Supabase não configurado');
     return false;
   }
 
   try {
     console.log('🔄 Testando conexão com Supabase...');
-    const { data, error } = await supabase.from('sales').select('count').limit(1);
+    
+    // Teste mais simples - apenas verificar se consegue fazer uma query básica
+    const { data, error } = await supabase
+      .from('sales')
+      .select('id')
+      .limit(1);
     
     if (error) {
       console.error('❌ Erro na conexão:', error);
+      console.error('Detalhes do erro:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       return false;
     }
     
     console.log('✅ Conexão com Supabase funcionando');
+    console.log('Dados de teste:', data);
     return true;
   } catch (error) {
     console.error('❌ Erro ao testar conexão:', error);

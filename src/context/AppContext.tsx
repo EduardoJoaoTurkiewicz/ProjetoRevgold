@@ -67,6 +67,10 @@ type AppAction =
   | { type: 'ADD_EMPLOYEE_COMMISSION'; payload: EmployeeCommission }
   | { type: 'UPDATE_EMPLOYEE_COMMISSION'; payload: EmployeeCommission }
   | { type: 'DELETE_EMPLOYEE_COMMISSION'; payload: string }
+  | { type: 'SET_EMPLOYEE_PAYMENTS'; payload: EmployeePayment[] }
+  | { type: 'SET_EMPLOYEE_ADVANCES'; payload: EmployeeAdvance[] }
+  | { type: 'SET_EMPLOYEE_OVERTIMES'; payload: EmployeeOvertime[] }
+  | { type: 'SET_EMPLOYEE_COMMISSIONS'; payload: EmployeeCommission[] }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null };
 
@@ -274,6 +278,18 @@ function appReducer(state: AppState, action: AppAction): AppState {
         employeeCommissions: state.employeeCommissions.filter(commission => commission.id !== action.payload)
       };
       
+    case 'SET_EMPLOYEE_PAYMENTS':
+      return { ...state, employeePayments: action.payload };
+      
+    case 'SET_EMPLOYEE_ADVANCES':
+      return { ...state, employeeAdvances: action.payload };
+      
+    case 'SET_EMPLOYEE_OVERTIMES':
+      return { ...state, employeeOvertimes: action.payload };
+      
+    case 'SET_EMPLOYEE_COMMISSIONS':
+      return { ...state, employeeCommissions: action.payload };
+      
     case 'SET_CASH_FLOW':
       return { ...state, cashFlow: action.payload };
       
@@ -335,6 +351,139 @@ const AppContext = createContext<{
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
+  // Carregar comissões de funcionários
+  const loadEmployeeCommissions = async () => {
+    if (!isSupabaseConfigured()) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('employee_commissions')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar comissões:', error);
+        return;
+      }
+      
+      const commissions = (data || []).map(item => ({
+        id: item.id,
+        employeeId: item.employee_id,
+        saleId: item.sale_id,
+        saleValue: Number(item.sale_value) || 0,
+        commissionRate: Number(item.commission_rate) || 5,
+        commissionAmount: Number(item.commission_amount) || 0,
+        date: item.date,
+        status: item.status || 'pendente',
+        createdAt: item.created_at
+      }));
+      
+      dispatch({ type: 'SET_EMPLOYEE_COMMISSIONS', payload: commissions });
+      console.log('✅ Comissões carregadas:', commissions.length);
+    } catch (error) {
+      console.error('❌ Erro ao carregar comissões:', error);
+    }
+  };
+
+  // Carregar pagamentos de funcionários
+  const loadEmployeePayments = async () => {
+    if (!isSupabaseConfigured()) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('employee_payments')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar pagamentos:', error);
+        return;
+      }
+      
+      const payments = (data || []).map(item => ({
+        id: item.id,
+        employeeId: item.employee_id,
+        amount: Number(item.amount) || 0,
+        paymentDate: item.payment_date,
+        isPaid: item.is_paid || false,
+        receipt: item.receipt || '',
+        observations: item.observations || '',
+        createdAt: item.created_at
+      }));
+      
+      dispatch({ type: 'SET_EMPLOYEE_PAYMENTS', payload: payments });
+      console.log('✅ Pagamentos carregados:', payments.length);
+    } catch (error) {
+      console.error('❌ Erro ao carregar pagamentos:', error);
+    }
+  };
+
+  // Carregar adiantamentos de funcionários
+  const loadEmployeeAdvances = async () => {
+    if (!isSupabaseConfigured()) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('employee_advances')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar adiantamentos:', error);
+        return;
+      }
+      
+      const advances = (data || []).map(item => ({
+        id: item.id,
+        employeeId: item.employee_id,
+        amount: Number(item.amount) || 0,
+        date: item.date,
+        description: item.description || '',
+        paymentMethod: item.payment_method || 'dinheiro',
+        status: item.status || 'pendente',
+        createdAt: item.created_at
+      }));
+      
+      dispatch({ type: 'SET_EMPLOYEE_ADVANCES', payload: advances });
+      console.log('✅ Adiantamentos carregados:', advances.length);
+    } catch (error) {
+      console.error('❌ Erro ao carregar adiantamentos:', error);
+    }
+  };
+
+  // Carregar horas extras de funcionários
+  const loadEmployeeOvertimes = async () => {
+    if (!isSupabaseConfigured()) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('employee_overtimes')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar horas extras:', error);
+        return;
+      }
+      
+      const overtimes = (data || []).map(item => ({
+        id: item.id,
+        employeeId: item.employee_id,
+        hours: Number(item.hours) || 0,
+        hourlyRate: Number(item.hourly_rate) || 0,
+        totalAmount: Number(item.total_amount) || 0,
+        date: item.date,
+        description: item.description || '',
+        status: item.status || 'pendente',
+        createdAt: item.created_at
+      }));
+      
+      dispatch({ type: 'SET_EMPLOYEE_OVERTIMES', payload: overtimes });
+      console.log('✅ Horas extras carregadas:', overtimes.length);
+    } catch (error) {
+      console.error('❌ Erro ao carregar horas extras:', error);
+    }
+  };
   // Load all data from Supabase
   const loadAllData = async () => {
     dispatch({ type: 'SET_LOADING', payload: true });
@@ -366,7 +515,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('🔄 Carregando dados do Supabase...');
       
-      const [sales, debts, employees, checks, boletos] = await Promise.all([
+      const [sales, debts, employees, checks, boletos] = await Promise.allSettled([
         salesService.getAll(),
         debtsService.getAll(),
         employeesService.getAll(),
@@ -374,18 +523,51 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         boletosService.getAll()
       ]);
       
-      dispatch({ type: 'SET_SALES', payload: sales });
-      dispatch({ type: 'SET_DEBTS', payload: debts });
-      dispatch({ type: 'SET_EMPLOYEES', payload: employees });
-      dispatch({ type: 'SET_CHECKS', payload: checks });
-      dispatch({ type: 'SET_BOLETOS', payload: boletos });
+      // Processar resultados de forma segura
+      if (sales.status === 'fulfilled') {
+        dispatch({ type: 'SET_SALES', payload: sales.value });
+      } else {
+        console.error('❌ Erro ao carregar vendas:', sales.reason);
+      }
+      
+      if (debts.status === 'fulfilled') {
+        dispatch({ type: 'SET_DEBTS', payload: debts.value });
+      } else {
+        console.error('❌ Erro ao carregar dívidas:', debts.reason);
+      }
+      
+      if (employees.status === 'fulfilled') {
+        dispatch({ type: 'SET_EMPLOYEES', payload: employees.value });
+      } else {
+        console.error('❌ Erro ao carregar funcionários:', employees.reason);
+      }
+      
+      if (checks.status === 'fulfilled') {
+        dispatch({ type: 'SET_CHECKS', payload: checks.value });
+      } else {
+        console.error('❌ Erro ao carregar cheques:', checks.reason);
+      }
+      
+      if (boletos.status === 'fulfilled') {
+        dispatch({ type: 'SET_BOLETOS', payload: boletos.value });
+      } else {
+        console.error('❌ Erro ao carregar boletos:', boletos.reason);
+      }
+      
+      // Carregar dados adicionais
+      await Promise.allSettled([
+        loadEmployeeCommissions(),
+        loadEmployeePayments(),
+        loadEmployeeAdvances(),
+        loadEmployeeOvertimes()
+      ]);
       
       console.log('✅ Dados carregados do Supabase:', {
-        sales: sales.length,
-        debts: debts.length,
-        employees: employees.length,
-        checks: checks.length,
-        boletos: boletos.length
+        sales: sales.status === 'fulfilled' ? sales.value.length : 0,
+        debts: debts.status === 'fulfilled' ? debts.value.length : 0,
+        employees: employees.status === 'fulfilled' ? employees.value.length : 0,
+        checks: checks.status === 'fulfilled' ? checks.value.length : 0,
+        boletos: boletos.status === 'fulfilled' ? boletos.value.length : 0
       });
       
     } catch (error) {
@@ -403,6 +585,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'SET_LOADING', payload: true });
       const sale = await salesService.create(saleData);
       dispatch({ type: 'ADD_SALE', payload: sale });
+      
+      // Criar comissão automaticamente se vendedor foi selecionado
+      if (sale.sellerId) {
+        const seller = state.employees.find(e => e.id === sale.sellerId);
+        if (seller && seller.isSeller) {
+          try {
+            const commissionRate = saleData.customCommissionRate || 5;
+            const commissionAmount = (sale.totalValue * commissionRate) / 100;
+            
+            const commissionData = {
+              employee_id: sale.sellerId,
+              sale_id: sale.id,
+              sale_value: sale.totalValue,
+              commission_rate: commissionRate,
+              commission_amount: commissionAmount,
+              date: sale.date,
+              status: 'pendente'
+            };
+            
+            const { data: commissionResult, error: commissionError } = await supabase
+              .from('employee_commissions')
+              .insert([commissionData])
+              .select()
+              .single();
+            
+            if (commissionError) {
+              console.error('❌ Erro ao criar comissão:', commissionError);
+            } else {
+              const newCommission = {
+                id: commissionResult.id,
+                employeeId: commissionResult.employee_id,
+                saleId: commissionResult.sale_id,
+                saleValue: Number(commissionResult.sale_value),
+                commissionRate: Number(commissionResult.commission_rate),
+                commissionAmount: Number(commissionResult.commission_amount),
+                date: commissionResult.date,
+                status: commissionResult.status,
+                createdAt: commissionResult.created_at
+              };
+              
+              dispatch({ type: 'ADD_EMPLOYEE_COMMISSION', payload: newCommission });
+              console.log('✅ Comissão criada automaticamente:', newCommission.id);
+            }
+          } catch (error) {
+            console.error('❌ Erro ao processar comissão:', error);
+          }
+        }
+      }
       
       // Criar cheques automaticamente se houver pagamento em cheque
       const hasCheckPayment = sale.paymentMethods.some(method => method.type === 'cheque');
@@ -426,23 +656,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (sale.sellerId) {
         const seller = state.employees.find(e => e.id === sale.sellerId);
         if (seller && seller.isSeller) {
-          const commissionRate = saleData.customCommissionRate || 5;
-          const commissionAmount = (sale.totalValue * commissionRate) / 100;
-          
-          // TODO: Create commission in database
-          const commission = {
-            id: `commission-${Date.now()}`,
-            employeeId: sale.sellerId,
-            saleId: sale.id,
-            saleValue: sale.totalValue,
-            commissionRate,
-            commissionAmount,
-            date: sale.date,
-            status: 'pendente' as const,
-            createdAt: new Date().toISOString()
-          };
-          
-          dispatch({ type: 'ADD_EMPLOYEE_COMMISSION', payload: commission });
+          // Comissão já foi criada acima
+          console.log('✅ Comissão processada para vendedor:', seller.name);
         }
       }
       
@@ -764,6 +979,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Load data on mount and set up real-time subscriptions
   useEffect(() => {
+    console.log('🔄 Inicializando AppContext...');
+    
     // Inicializar saldo de caixa padrão se não existir
     if (!state.cashBalance && !state.isLoading) {
       const defaultCashBalance = {
@@ -780,8 +997,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     // Carregar dados apenas se Supabase estiver configurado
     if (isSupabaseConfigured()) {
+      console.log('✅ Supabase configurado, carregando dados...');
       loadAllData();
     } else {
+      console.warn('⚠️ Supabase não configurado, usando modo offline');
       dispatch({ type: 'SET_ERROR', payload: 'Configure o Supabase no arquivo .env para usar o sistema.' });
       dispatch({ type: 'SET_LOADING', payload: false });
     }
@@ -796,41 +1015,56 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured()) {
       salesSubscription = supabase
         .channel('sales-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, () => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, (payload) => {
           console.log('🔄 Mudança detectada na tabela sales, recarregando...');
+          console.log('Payload:', payload);
           salesService.getAll().then(sales => dispatch({ type: 'SET_SALES', payload: sales })).catch(console.error);
         })
         .subscribe();
 
       debtsSubscription = supabase
         .channel('debts-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'debts' }, () => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'debts' }, (payload) => {
           console.log('🔄 Mudança detectada na tabela debts, recarregando...');
+          console.log('Payload:', payload);
           debtsService.getAll().then(debts => dispatch({ type: 'SET_DEBTS', payload: debts })).catch(console.error);
         })
         .subscribe();
 
       employeesSubscription = supabase
         .channel('employees-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, () => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, (payload) => {
           console.log('🔄 Mudança detectada na tabela employees, recarregando...');
+          console.log('Payload:', payload);
           employeesService.getAll().then(employees => dispatch({ type: 'SET_EMPLOYEES', payload: employees })).catch(console.error);
         })
         .subscribe();
 
       checksSubscription = supabase
         .channel('checks-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'checks' }, () => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'checks' }, (payload) => {
           console.log('🔄 Mudança detectada na tabela checks, recarregando...');
+          console.log('Payload:', payload);
           checksService.getAll().then(checks => dispatch({ type: 'SET_CHECKS', payload: checks })).catch(console.error);
         })
         .subscribe();
 
       boletosSubscription = supabase
         .channel('boletos-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'boletos' }, () => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'boletos' }, (payload) => {
           console.log('🔄 Mudança detectada na tabela boletos, recarregando...');
+          console.log('Payload:', payload);
           boletosService.getAll().then(boletos => dispatch({ type: 'SET_BOLETOS', payload: boletos })).catch(console.error);
+        })
+        .subscribe();
+      
+      // Subscription para comissões
+      const commissionsSubscription = supabase
+        .channel('commissions-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'employee_commissions' }, (payload) => {
+          console.log('🔄 Mudança detectada na tabela employee_commissions, recarregando...');
+          console.log('Payload:', payload);
+          loadEmployeeCommissions();
         })
         .subscribe();
     }
@@ -843,7 +1077,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (checksSubscription) checksSubscription.unsubscribe();
       if (boletosSubscription) boletosSubscription.unsubscribe();
     };
-  }, [state.employees.length]); // Dependency para recarregar quando necessário
+  }, []); // Executar apenas uma vez na inicialização
 
   return (
     <AppContext.Provider value={{ 
