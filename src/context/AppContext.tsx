@@ -477,7 +477,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         supabase.from('employee_payments').select('*').order('payment_date', { ascending: false }),
         supabase.from('employee_advances').select('*').order('date', { ascending: false }),
         supabase.from('employee_overtimes').select('*').order('date', { ascending: false }),
-        supabase.from('cash_balances').select('*').limit(1).single(),
+        supabase.from('cash_balances').select('*').limit(1).maybeSingle(),
         supabase.from('cash_transactions').select('*').order('date', { ascending: false }),
       ]);
 
