@@ -1,7 +1,6 @@
 import React from 'react';
 import { User, ChevronRight, Zap, Sparkles, Building2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { isSupabaseConfigured } from '../lib/supabase';
 
 const USERS = [
   { 
@@ -83,8 +82,8 @@ const UserAvatar = () => (
 );
 
 export function UserSelection() {
-  const { dispatch } = useApp();
-  const supabaseConfigured = isSupabaseConfigured();
+  const { dispatch, isSupabaseConfigured } = useApp();
+  const supabaseConfigured = isSupabaseConfigured;
   
   const getGreeting = () => {
     const hour = new Date().getHours();

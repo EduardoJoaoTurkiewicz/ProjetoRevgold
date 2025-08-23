@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, Image as ImageIcon, Loader2, AlertCircle } from 'lucide-react';
-import { uploadCheckImage, deleteCheckImage, getCheckImageUrl, isSupabaseConfigured } from '../lib/supabase';
+import { uploadCheckImage, deleteCheckImage, getCheckImageUrl } from '../lib/supabase';
+import { useApp } from '../context/AppContext';
 
 interface ImageUploadProps {
   checkId: string;
@@ -25,6 +26,7 @@ export function ImageUpload({
     currentImage ? getCheckImageUrl(currentImage) : null
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { isSupabaseConfigured } = useApp();
 
   const validateFile = (file: File): string | null => {
     // Validar tipo de arquivo
