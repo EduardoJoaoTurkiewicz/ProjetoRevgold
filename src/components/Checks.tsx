@@ -263,7 +263,7 @@ export function Checks() {
                                     <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(check.status)}`}>
                                       {getStatusLabel(check.status)}
                                     </span>
-                                    {check.status === 'pendente' && (
+                                    {(check.status === 'pendente' || check.status === 'reapresentado') && (
                                       <select
                                         value={check.status}
                                         onChange={(e) => updateCheckStatus(check.id, e.target.value as Check['status'])}

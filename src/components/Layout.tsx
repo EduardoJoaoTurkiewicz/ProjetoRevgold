@@ -26,6 +26,8 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
     { id: 'debts', label: 'Dívidas', icon: CreditCard, color: 'from-red-600 to-rose-700' },
     { id: 'checks', label: 'Cheques', icon: FileText, color: 'from-yellow-600 to-amber-700' },
     { id: 'boletos', label: 'Boletos', icon: Receipt, color: 'from-cyan-600 to-blue-700' },
+    { id: 'cash', label: 'Caixa', icon: DollarSign, color: 'from-green-600 to-emerald-700' },
+    { id: 'reports', label: 'Relatórios', icon: TrendingUp, color: 'from-indigo-600 to-purple-700' },
     { id: 'agenda', label: 'Agenda', icon: Calendar, color: 'from-indigo-600 to-purple-700' },
   ];
 

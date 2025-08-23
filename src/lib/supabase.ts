@@ -1018,7 +1018,7 @@ export const testSupabaseConnection = async (): Promise<boolean> => {
 
   try {
     console.log('🔄 Testando conexão com Supabase...');
-    const { data, error } = await supabase.from('users').select('count').limit(1);
+    const { data, error } = await supabase.from('sales').select('count').limit(1);
     
     if (error) {
       console.error('❌ Erro na conexão:', error);

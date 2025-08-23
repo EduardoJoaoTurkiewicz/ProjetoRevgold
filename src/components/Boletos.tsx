@@ -291,7 +291,7 @@ export function Boletos() {
                                     <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(boleto.status)}`}>
                                       {getStatusLabel(boleto.status)}
                                     </span>
-                                    {boleto.status === 'pendente' && (
+                                    {(boleto.status === 'pendente' || boleto.status === 'vencido') && (
                                       <select
                                         value={boleto.status}
                                         onChange={(e) => updateBoletoStatus(boleto.id, e.target.value as Boleto['status'])}
@@ -299,6 +299,7 @@ export function Boletos() {
                                       >
                                         <option value="pendente">Pendente</option>
                                         <option value="compensado">Compensado</option>
+                                        <option value="vencido">Vencido</option>
                                         <option value="cancelado">Cancelado</option>
                                         <option value="nao_pago">Não Pago</option>
                                       </select>

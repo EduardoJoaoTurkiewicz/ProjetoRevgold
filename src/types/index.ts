@@ -12,6 +12,9 @@ export interface PaymentMethod {
   installmentInterval?: number;
   startDate?: string;
   firstInstallmentDate?: string;
+  isOwnCheck?: boolean;
+  isThirdPartyCheck?: boolean;
+  thirdPartyDetails?: ThirdPartyCheckDetails[];
 }
 
 export interface Sale {
