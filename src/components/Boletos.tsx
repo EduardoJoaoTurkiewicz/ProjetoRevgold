@@ -5,8 +5,10 @@ import { Plus, FileText, Calendar, DollarSign } from 'lucide-react';
 import { Boleto } from '../types';
 
 export function Boletos() {
-  const { user, boletos, createBoleto, updateBoleto } = useApp();
+  const { state, createBoleto, updateBoleto } = useApp();
   const [showForm, setShowForm] = useState(false);
+
+  const boletos = state.boletos || [];
 
   const handleAddBoleto = async (boletoData: Omit<Boleto, 'id' | 'created_at' | 'updated_at'>) => {
     try {
@@ -22,8 +24,9 @@ export function Boletos() {
     if (!boleto) return;
 
     const newStatus = boleto.status === 'pendente' ? 'compensado' : 'pendente';
+    const updatedBoleto = { ...boleto, status: newStatus };
     try {
-      await updateBoleto(id, { status: newStatus });
+      await updateBoleto(updatedBoleto);
     } catch (error) {
       console.error('Error updating boleto status:', error);
     }
