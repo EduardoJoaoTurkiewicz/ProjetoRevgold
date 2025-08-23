@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { User, Sale, Debt, Check, Installment, Product, Employee, EmployeePayment, EmployeeAdvance, EmployeeOvertime, EmployeeCommission, Boleto } from '../types';
+import { User, Sale, Debt, Check, Installment, Product, Employee, EmployeePayment, EmployeeAdvance, EmployeeOvertime, EmployeeCommission, Boleto, CashFlow, CashBalance, ThirdPartyCheck } from '../types';
 import { supabase, salesService, debtsService, employeesService, checksService, boletosService, isSupabaseConfigured, ensureAuthenticated, testSupabaseConnection } from '../lib/supabase';
 
 interface AppState {
@@ -14,6 +14,9 @@ interface AppState {
   employeeAdvances: EmployeeAdvance[];
   employeeOvertimes: EmployeeOvertime[];
   employeeCommissions: EmployeeCommission[];
+  cashFlow: CashFlow[];
+  cashBalance: CashBalance | null;
+  thirdPartyChecks: ThirdPartyCheck[];
   isLoading: boolean;
   error: string | null;
 }
@@ -40,6 +43,12 @@ type AppAction =
   | { type: 'ADD_EMPLOYEE'; payload: Employee }
   | { type: 'UPDATE_EMPLOYEE'; payload: Employee }
   | { type: 'DELETE_EMPLOYEE'; payload: string }
+  | { type: 'SET_CASH_FLOW'; payload: CashFlow[] }
+  | { type: 'ADD_CASH_FLOW'; payload: CashFlow }
+  | { type: 'SET_CASH_BALANCE'; payload: CashBalance }
+  | { type: 'UPDATE_CASH_BALANCE'; payload: CashBalance }
+  | { type: 'SET_THIRD_PARTY_CHECKS'; payload: ThirdPartyCheck[] }
+  | { type: 'ADD_THIRD_PARTY_CHECK'; payload: ThirdPartyCheck }
   | { type: 'ADD_INSTALLMENT'; payload: Installment }
   | { type: 'UPDATE_INSTALLMENT'; payload: Installment }
   | { type: 'ADD_EMPLOYEE_PAYMENT'; payload: EmployeePayment }
@@ -69,6 +78,9 @@ const initialState: AppState = {
   employeeAdvances: [],
   employeeOvertimes: [],
   employeeCommissions: [],
+  cashFlow: [],
+  cashBalance: null,
+  thirdPartyChecks: [],
   isLoading: false,
   error: null
 };
@@ -256,6 +268,24 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state, 
         employeeCommissions: state.employeeCommissions.filter(commission => commission.id !== action.payload)
       };
+      
+    case 'SET_CASH_FLOW':
+      return { ...state, cashFlow: action.payload };
+      
+    case 'ADD_CASH_FLOW':
+      return { ...state, cashFlow: [...state.cashFlow, action.payload] };
+      
+    case 'SET_CASH_BALANCE':
+      return { ...state, cashBalance: action.payload };
+      
+    case 'UPDATE_CASH_BALANCE':
+      return { ...state, cashBalance: action.payload };
+      
+    case 'SET_THIRD_PARTY_CHECKS':
+      return { ...state, thirdPartyChecks: action.payload };
+      
+    case 'ADD_THIRD_PARTY_CHECK':
+      return { ...state, thirdPartyChecks: [...state.thirdPartyChecks, action.payload] };
       
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };

@@ -151,7 +151,7 @@ export interface EmployeeCommission {
 }
 export interface Boleto {
   id: string;
-  saleId: string;
+  saleId?: string;
   client: string;
   value: number;
   dueDate: string;
@@ -161,4 +161,35 @@ export interface Boleto {
   boletoFile?: string; // Base64 or file path
   observations?: string;
   createdAt: string;
+}
+
+export interface CashFlow {
+  id: string;
+  date: string;
+  type: 'entrada' | 'saida';
+  amount: number;
+  description: string;
+  category: 'venda' | 'divida' | 'adiantamento' | 'salario' | 'comissao' | 'outro';
+  relatedId?: string; // ID da venda, dívida, etc.
+  createdAt: string;
+}
+
+export interface CashBalance {
+  id: string;
+  currentBalance: number;
+  lastUpdated: string;
+  initialBalance: number;
+  initialDate: string;
+}
+
+export interface ThirdPartyCheck {
+  id: string;
+  checkId: string;
+  bank: string;
+  agency: string;
+  account: string;
+  checkNumber: string;
+  issuer: string; // Quem emitiu o cheque
+  cpfCnpj: string;
+  observations?: string;
 }
