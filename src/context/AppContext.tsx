@@ -1095,7 +1095,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase
       .from('boletos')
       .insert([{
-        sale_id: boleto.saleId,
+        sale_id: boleto.saleId || null,
         client: boleto.client,
         value: boleto.value,
         due_date: boleto.dueDate,
@@ -1132,7 +1132,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase
       .from('boletos')
       .update({
-        sale_id: boleto.saleId,
+        sale_id: boleto.saleId || null,
         client: boleto.client,
         value: boleto.value,
         due_date: boleto.dueDate,
