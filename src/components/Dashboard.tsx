@@ -472,6 +472,21 @@ const Dashboard: React.FC = () => {
 
       {/* Key Metrics - Today's Data */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="card bg-gradient-to-br from-blue-100 to-indigo-100 border-blue-300 modern-shadow-xl group hover:scale-105 transition-transform duration-300">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-blue-700 modern-shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <DollarSign className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-blue-900 text-lg">Valor em Caixa</h3>
+              <p className="text-3xl font-black text-blue-800">
+                R$ {(state.cashBalance?.currentBalance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-blue-700 font-semibold">Saldo atual</p>
+            </div>
+          </div>
+        </div>
+
         <div className="card bg-gradient-to-br from-green-100 to-emerald-100 border-green-300 modern-shadow-xl group hover:scale-105 transition-transform duration-300">
           <div className="flex items-center gap-4">
             <div className="p-4 rounded-2xl bg-green-700 modern-shadow-lg group-hover:scale-110 transition-transform duration-300">

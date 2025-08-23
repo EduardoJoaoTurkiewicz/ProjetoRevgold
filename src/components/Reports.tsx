@@ -1,86 +1,153 @@
 import React, { useState, useMemo } from 'react';
-import { BarChart3, TrendingUp, DollarSign, Users, Calendar, FileText, Download, Filter, Eye, X, CreditCard } from 'lucide-react';
+import { FileText, Calendar, Download, Filter, DollarSign, TrendingUp, TrendingDown, BarChart3, PieChart, Users, CreditCard, Receipt, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
 
 export function Reports() {
   const { state } = useApp();
-  const [selectedPeriod, setSelectedPeriod] = useState('month');
-  const [selectedReport, setSelectedReport] = useState('overview');
-  const [showFilters, setShowFilters] = useState(false);
-  const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0]
+  const [startDate, setStartDate] = useState(() => {
+    const date = new Date();
+    date.setDate(1); // Primeiro dia do mês
+    return date.toISOString().split('T')[0];
   });
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
-  // Filter data based on date range
-  const filteredSales = useMemo(() => {
-    return state.sales.filter(sale => {
-      const saleDate = new Date(sale.date);
-      const startDate = new Date(dateRange.start);
-      const endDate = new Date(dateRange.end);
-      return saleDate >= startDate && saleDate <= endDate;
-    });
-  }, [state.sales, dateRange]);
-
-  const filteredDebts = useMemo(() => {
-    return state.debts.filter(debt => {
-      const debtDate = new Date(debt.date);
-      const startDate = new Date(dateRange.start);
-      const endDate = new Date(dateRange.end);
-      return debtDate >= startDate && debtDate <= endDate;
-    });
-  }, [state.debts, dateRange]);
-
-  // Calculate metrics
-  const metrics = useMemo(() => {
-    const totalSales = filteredSales.reduce((sum, sale) => sum + sale.totalValue, 0);
-    const totalReceived = filteredSales.reduce((sum, sale) => sum + sale.receivedAmount, 0);
-    const totalPending = filteredSales.reduce((sum, sale) => sum + sale.pendingAmount, 0);
-    const totalDebts = filteredDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
-    const totalDebtsPaid = filteredDebts.reduce((sum, debt) => sum + debt.paidAmount, 0);
-    const totalDebtsUnpaid = filteredDebts.reduce((sum, debt) => sum + debt.pendingAmount, 0);
+  // Filtrar dados por período
+  const filteredData = useMemo(() => {
+    const sales = state.sales.filter(sale => 
+      sale.date >= startDate && sale.date <= endDate
+    );
     
-    const netProfit = totalReceived - totalDebtsPaid;
-    const profitMargin = totalReceived > 0 ? (netProfit / totalReceived) * 100 : 0;
+    const debts = state.debts.filter(debt => 
+      debt.date >= startDate && debt.date <= endDate
+    );
+    
+    const receivables = [];
+    const payables = [];
+    
+    // Calcular recebimentos do período
+    state.checks.forEach(check => {
+      if (check.dueDate >= startDate && check.dueDate <= endDate) {
+        receivables.push({
+          id: check.id,
+          type: 'cheque',
+          client: check.client,
+          amount: check.value,
+          dueDate: check.dueDate,
+          status: check.status,
+          description: `Cheque - Parcela ${check.installmentNumber}/${check.totalInstallments}`,
+          saleId: check.saleId
+        });
+      }
+    });
+    
+    state.boletos.forEach(boleto => {
+      if (boleto.dueDate >= startDate && boleto.dueDate <= endDate) {
+        receivables.push({
+          id: boleto.id,
+          type: 'boleto',
+          client: boleto.client,
+          amount: boleto.value,
+          dueDate: boleto.dueDate,
+          status: boleto.status,
+          description: `Boleto - Parcela ${boleto.installmentNumber}/${boleto.totalInstallments}`,
+          saleId: boleto.saleId
+        });
+      }
+    });
+    
+    // Calcular pagamentos do período
+    state.debts.forEach(debt => {
+      debt.paymentMethods.forEach(method => {
+        if (method.installments && method.installments > 1) {
+          for (let i = 0; i < method.installments; i++) {
+            const dueDate = new Date(method.startDate || debt.date);
+            dueDate.setDate(dueDate.getDate() + (i * (method.installmentInterval || 30)));
+            const dueDateStr = dueDate.toISOString().split('T')[0];
+            
+            if (dueDateStr >= startDate && dueDateStr <= endDate) {
+              payables.push({
+                id: `${debt.id}-${i}`,
+                type: method.type,
+                company: debt.company,
+                amount: method.installmentValue || 0,
+                dueDate: dueDateStr,
+                description: `${debt.description} - Parcela ${i + 1}/${method.installments}`,
+                debtId: debt.id
+              });
+            }
+          }
+        } else if (debt.date >= startDate && debt.date <= endDate) {
+          payables.push({
+            id: debt.id,
+            type: method.type,
+            company: debt.company,
+            amount: method.amount,
+            dueDate: debt.date,
+            description: debt.description,
+            debtId: debt.id
+          });
+        }
+      });
+    });
+    
+    return { sales, debts, receivables, payables };
+  }, [state, startDate, endDate]);
 
+  // Calcular totais
+  const totals = useMemo(() => {
+    const totalSales = filteredData.sales.reduce((sum, sale) => sum + sale.totalValue, 0);
+    const totalReceived = filteredData.sales.reduce((sum, sale) => sum + sale.receivedAmount, 0);
+    const totalPendingSales = filteredData.sales.reduce((sum, sale) => sum + sale.pendingAmount, 0);
+    
+    const totalDebts = filteredData.debts.reduce((sum, debt) => sum + debt.totalValue, 0);
+    const totalPaidDebts = filteredData.debts.reduce((sum, debt) => sum + debt.paidAmount, 0);
+    const totalPendingDebts = filteredData.debts.reduce((sum, debt) => sum + debt.pendingAmount, 0);
+    
+    const totalReceivables = filteredData.receivables.reduce((sum, item) => sum + item.amount, 0);
+    const totalPayables = filteredData.payables.reduce((sum, item) => sum + item.amount, 0);
+    
+    const cashBalance = state.cashBalance?.currentBalance || 0;
+    const netProfit = totalReceived - totalPaidDebts;
+    const profitMargin = totalReceived > 0 ? (netProfit / totalReceived) * 100 : 0;
+    
     return {
       totalSales,
       totalReceived,
-      totalPending,
+      totalPendingSales,
       totalDebts,
-      totalDebtsPaid,
-      totalDebtsUnpaid,
+      totalPaidDebts,
+      totalPendingDebts,
+      totalReceivables,
+      totalPayables,
+      cashBalance,
       netProfit,
-      profitMargin,
-      salesCount: filteredSales.length,
-      debtsCount: filteredDebts.length
+      profitMargin
     };
-  }, [filteredSales, filteredDebts]);
+  }, [filteredData, state.cashBalance]);
 
-  // Sales by month data
-  const salesByMonth = useMemo(() => {
-    const monthlyData = {};
-    filteredSales.forEach(sale => {
-      const month = new Date(sale.date).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
-      if (!monthlyData[month]) {
-        monthlyData[month] = { month, vendas: 0, recebido: 0, pendente: 0 };
+  // Dados para gráficos
+  const salesByDay = useMemo(() => {
+    const dailyData = {};
+    filteredData.sales.forEach(sale => {
+      const day = new Date(sale.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      if (!dailyData[day]) {
+        dailyData[day] = { day, vendas: 0, recebido: 0 };
       }
-      monthlyData[month].vendas += sale.totalValue;
-      monthlyData[month].recebido += sale.receivedAmount;
-      monthlyData[month].pendente += sale.pendingAmount;
+      dailyData[day].vendas += sale.totalValue;
+      dailyData[day].recebido += sale.receivedAmount;
     });
-    return Object.values(monthlyData);
-  }, [filteredSales]);
+    return Object.values(dailyData);
+  }, [filteredData.sales]);
 
-  // Payment methods distribution
   const paymentMethodsData = useMemo(() => {
     const methods = {};
-    filteredSales.forEach(sale => {
+    filteredData.sales.forEach(sale => {
       sale.paymentMethods.forEach(method => {
         const methodName = method.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
         if (!methods[methodName]) {
@@ -90,178 +157,467 @@ export function Reports() {
       });
     });
     return Object.entries(methods).map(([name, value]) => ({ name, value }));
-  }, [filteredSales]);
-
-  // Top clients
-  const topClients = useMemo(() => {
-    const clients = {};
-    filteredSales.forEach(sale => {
-      if (!clients[sale.client]) {
-        clients[sale.client] = { name: sale.client, total: 0, count: 0 };
-      }
-      clients[sale.client].total += sale.totalValue;
-      clients[sale.client].count += 1;
-    });
-    return Object.values(clients)
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 10);
-  }, [filteredSales]);
-
-  // Employee performance (if employees exist)
-  const employeePerformance = useMemo(() => {
-    const performance = {};
-    filteredSales.forEach(sale => {
-      if (sale.sellerId) {
-        const employee = state.employees.find(emp => emp.id === sale.sellerId);
-        const employeeName = employee ? employee.name : 'Funcionário não encontrado';
-        if (!performance[employeeName]) {
-          performance[employeeName] = { name: employeeName, sales: 0, total: 0 };
-        }
-        performance[employeeName].sales += 1;
-        performance[employeeName].total += sale.totalValue;
-      }
-    });
-    return Object.values(performance).sort((a, b) => b.total - a.total);
-  }, [filteredSales, state.employees]);
+  }, [filteredData.sales]);
 
   const generatePDF = async () => {
-    const element = document.getElementById('reports-content');
-    if (!element) return;
-
+    setIsGeneratingPDF(true);
+    
     try {
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      
+      // Header
+      pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Relatório Financeiro - RevGold', pageWidth / 2, 20, { align: 'center' });
+      
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Período: ${new Date(startDate).toLocaleDateString('pt-BR')} a ${new Date(endDate).toLocaleDateString('pt-BR')}`, pageWidth / 2, 30, { align: 'center' });
+      pdf.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, 40, { align: 'center' });
+      
+      let yPosition = 60;
+      
+      // Resumo Executivo
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Resumo Executivo', 20, yPosition);
+      yPosition += 15;
+      
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      
+      const summaryData = [
+        ['Total de Vendas:', `R$ ${totals.totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
+        ['Valor Recebido:', `R$ ${totals.totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
+        ['Valor Pendente (Vendas):', `R$ ${totals.totalPendingSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
+        ['Total de Dívidas:', `R$ ${totals.totalDebts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
+        ['Valor Pago (Dívidas):', `R$ ${totals.totalPaidDebts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
+        ['Lucro Líquido:', `R$ ${totals.netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
+        ['Margem de Lucro:', `${totals.profitMargin.toFixed(2)}%`],
+        ['Saldo em Caixa:', `R$ ${totals.cashBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`]
+      ];
+      
+      summaryData.forEach(([label, value]) => {
+        pdf.text(label, 25, yPosition);
+        pdf.text(value, 120, yPosition);
+        yPosition += 8;
       });
       
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210;
-      const pageHeight = 295;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+      yPosition += 10;
+      
+      // Vendas do Período
+      if (filteredData.sales.length > 0) {
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Vendas do Período', 20, yPosition);
+        yPosition += 10;
+        
+        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'normal');
+        
+        filteredData.sales.forEach((sale, index) => {
+          if (yPosition > pageHeight - 40) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+          
+          pdf.text(`${index + 1}. ${sale.client}`, 25, yPosition);
+          pdf.text(`${new Date(sale.date).toLocaleDateString('pt-BR')}`, 80, yPosition);
+          pdf.text(`R$ ${sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 120, yPosition);
+          pdf.text(sale.status.toUpperCase(), 160, yPosition);
+          yPosition += 6;
+        });
+        
+        yPosition += 10;
       }
-
-      pdf.save(`relatorio-revgold-${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      // Salvar PDF
+      pdf.save(`relatorio-financeiro-${startDate}-${endDate}.pdf`);
+      
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
       alert('Erro ao gerar PDF. Tente novamente.');
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
-  const renderOverviewReport = () => (
+  return (
     <div className="space-y-8">
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-green-600 modern-shadow-lg">
-              <DollarSign className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-green-900 text-lg">Vendas Totais</h3>
-              <p className="text-2xl font-black text-green-700">
-                R$ {metrics.totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-green-600 font-semibold">{metrics.salesCount} vendas</p>
-            </div>
-          </div>
+      <div className="flex items-center gap-4">
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 modern-shadow-xl">
+          <FileText className="w-8 h-8 text-white" />
         </div>
-
-        <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-blue-600 modern-shadow-lg">
-              <TrendingUp className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-blue-900 text-lg">Recebido</h3>
-              <p className="text-2xl font-black text-blue-700">
-                R$ {metrics.totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-blue-600 font-semibold">
-                {((metrics.totalReceived / metrics.totalSales) * 100 || 0).toFixed(1)}% do total
-              </p>
-            </div>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Relatórios Financeiros</h1>
+          <p className="text-slate-600 text-lg">Análise completa e exportação de dados</p>
         </div>
+      </div>
 
-        <div className="card bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200 modern-shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-orange-600 modern-shadow-lg">
-              <Calendar className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-orange-900 text-lg">Pendente</h3>
-              <p className="text-2xl font-black text-orange-700">
-                R$ {metrics.totalPending.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-orange-600 font-semibold">A receber</p>
-            </div>
-          </div>
+      {/* Filtros */}
+      <div className="card modern-shadow-xl">
+        <div className="flex items-center gap-4 mb-6">
+          <Filter className="w-6 h-6 text-blue-600" />
+          <h3 className="text-xl font-bold text-slate-900">Filtros de Período</h3>
         </div>
-
-        <div className="card bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200 modern-shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-purple-600 modern-shadow-lg">
-              <BarChart3 className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-purple-900 text-lg">Lucro Líquido</h3>
-              <p className={`text-2xl font-black ${metrics.netProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                R$ {metrics.netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-purple-600 font-semibold">
-                {metrics.profitMargin.toFixed(1)}% margem
-              </p>
-            </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="form-group">
+            <label className="form-label">Data Inicial</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="input-field"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label className="form-label">Data Final</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="input-field"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label className="form-label">Ações</label>
+            <button
+              onClick={generatePDF}
+              disabled={isGeneratingPDF}
+              className="btn-primary w-full flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              {isGeneratingPDF ? 'Gerando PDF...' : 'Exportar PDF'}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Charts */}
+      {/* Resumo Executivo */}
+      <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="p-3 rounded-xl bg-blue-600">
+            <BarChart3 className="w-6 h-6 text-white" />
+          </div>
+          <h3 className="text-xl font-bold text-blue-900">Resumo Executivo</h3>
+          <span className="text-blue-600 font-semibold">
+            {new Date(startDate).toLocaleDateString('pt-BR')} - {new Date(endDate).toLocaleDateString('pt-BR')}
+          </span>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="text-center p-4 bg-green-100 rounded-xl">
+            <h4 className="font-bold text-green-900 mb-2">Vendas</h4>
+            <p className="text-2xl font-black text-green-700">
+              R$ {totals.totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </p>
+            <p className="text-sm text-green-600">{filteredData.sales.length} vendas</p>
+          </div>
+          
+          <div className="text-center p-4 bg-emerald-100 rounded-xl">
+            <h4 className="font-bold text-emerald-900 mb-2">Recebido</h4>
+            <p className="text-2xl font-black text-emerald-700">
+              R$ {totals.totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </p>
+            <p className="text-sm text-emerald-600">Efetivamente recebido</p>
+          </div>
+          
+          <div className="text-center p-4 bg-red-100 rounded-xl">
+            <h4 className="font-bold text-red-900 mb-2">Dívidas</h4>
+            <p className="text-2xl font-black text-red-700">
+              R$ {totals.totalDebts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </p>
+            <p className="text-sm text-red-600">{filteredData.debts.length} dívidas</p>
+          </div>
+          
+          <div className="text-center p-4 bg-purple-100 rounded-xl">
+            <h4 className="font-bold text-purple-900 mb-2">Lucro Líquido</h4>
+            <p className={`text-2xl font-black ${totals.netProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+              R$ {totals.netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </p>
+            <p className="text-sm text-purple-600">{totals.profitMargin.toFixed(1)}% margem</p>
+          </div>
+        </div>
+        
+        <div className="mt-6 p-4 bg-blue-100 rounded-xl text-center">
+          <h4 className="font-bold text-blue-900 mb-2">Saldo Atual em Caixa</h4>
+          <p className="text-3xl font-black text-blue-700">
+            R$ {totals.cashBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </p>
+        </div>
+      </div>
+
+      {/* Vendas e Dívidas do Período */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Sales Trend */}
+        {/* Vendas */}
         <div className="card modern-shadow-xl">
           <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-green-600 modern-shadow-lg">
+            <div className="p-3 rounded-xl bg-green-600">
               <TrendingUp className="w-6 h-6 text-white" />
             </div>
-            <h3 className="text-xl font-bold text-slate-900">Evolução das Vendas</h3>
+            <h3 className="text-xl font-bold text-green-900">Vendas do Período</h3>
+          </div>
+          
+          {filteredData.sales.length > 0 ? (
+            <div className="space-y-4 max-h-96 overflow-y-auto modern-scrollbar">
+              {filteredData.sales.map(sale => (
+                <div key={sale.id} className="p-4 bg-green-50 rounded-xl border border-green-200">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h4 className="font-bold text-green-900">{sale.client}</h4>
+                      <p className="text-sm text-green-700">
+                        {new Date(sale.date).toLocaleDateString('pt-BR')}
+                        {sale.deliveryDate && ` • Entrega: ${new Date(sale.deliveryDate).toLocaleDateString('pt-BR')}`}
+                      </p>
+                      {sale.sellerId && (
+                        <p className="text-sm text-green-600">
+                          Vendedor: {state.employees.find(e => e.id === sale.sellerId)?.name || 'N/A'}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-black text-green-600">
+                        R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                        sale.status === 'pago' ? 'bg-green-200 text-green-800' :
+                        sale.status === 'parcial' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {sale.status.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-sm text-green-600">
+                    <p>Recebido: R$ {sale.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    <p>Pendente: R$ {sale.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                </div>
+              ))}
+              
+              <div className="p-4 bg-green-200 rounded-xl border-2 border-green-300">
+                <div className="text-center">
+                  <h4 className="font-bold text-green-900 mb-2">Total de Vendas</h4>
+                  <p className="text-3xl font-black text-green-700">
+                    R$ {totals.totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-sm text-green-600">{filteredData.sales.length} vendas realizadas</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <TrendingUp className="w-16 h-16 mx-auto mb-4 text-green-300" />
+              <p className="text-green-600">Nenhuma venda no período selecionado</p>
+            </div>
+          )}
+        </div>
+
+        {/* Dívidas */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-red-600">
+              <TrendingDown className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-red-900">Dívidas do Período</h3>
+          </div>
+          
+          {filteredData.debts.length > 0 ? (
+            <div className="space-y-4 max-h-96 overflow-y-auto modern-scrollbar">
+              {filteredData.debts.map(debt => (
+                <div key={debt.id} className="p-4 bg-red-50 rounded-xl border border-red-200">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h4 className="font-bold text-red-900">{debt.company}</h4>
+                      <p className="text-sm text-red-700">
+                        {new Date(debt.date).toLocaleDateString('pt-BR')}
+                      </p>
+                      <p className="text-sm text-red-600">{debt.description}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-black text-red-600">
+                        R$ {debt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                        debt.isPaid ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'
+                      }`}>
+                        {debt.isPaid ? 'PAGO' : 'PENDENTE'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-sm text-red-600">
+                    <p>Pago: R$ {debt.paidAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    <p>Pendente: R$ {debt.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                </div>
+              ))}
+              
+              <div className="p-4 bg-red-200 rounded-xl border-2 border-red-300">
+                <div className="text-center">
+                  <h4 className="font-bold text-red-900 mb-2">Total de Dívidas</h4>
+                  <p className="text-3xl font-black text-red-700">
+                    R$ {totals.totalDebts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-sm text-red-600">{filteredData.debts.length} dívidas registradas</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <TrendingDown className="w-16 h-16 mx-auto mb-4 text-red-300" />
+              <p className="text-red-600">Nenhuma dívida no período selecionado</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Valores a Receber e a Pagar */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* A Receber */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-green-600">
+              <ArrowUpCircle className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-green-900">Valores a Receber</h3>
+          </div>
+          
+          {filteredData.receivables.length > 0 ? (
+            <div className="space-y-4 max-h-96 overflow-y-auto modern-scrollbar">
+              {filteredData.receivables.map(item => (
+                <div key={item.id} className="p-4 bg-green-50 rounded-xl border border-green-200">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-bold text-green-900">{item.client}</h4>
+                      <p className="text-sm text-green-700">{item.description}</p>
+                      <p className="text-sm text-green-600">
+                        Vencimento: {new Date(item.dueDate).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-black text-green-600">
+                        R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                        item.status === 'compensado' ? 'bg-green-200 text-green-800' :
+                        item.status === 'pendente' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {item.type.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              <div className="p-4 bg-green-200 rounded-xl border-2 border-green-300">
+                <div className="text-center">
+                  <h4 className="font-bold text-green-900 mb-2">Total a Receber</h4>
+                  <p className="text-3xl font-black text-green-700">
+                    R$ {totals.totalReceivables.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-sm text-green-600">{filteredData.receivables.length} recebimentos</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <ArrowUpCircle className="w-16 h-16 mx-auto mb-4 text-green-300" />
+              <p className="text-green-600">Nenhum valor a receber no período</p>
+            </div>
+          )}
+        </div>
+
+        {/* A Pagar */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-red-600">
+              <ArrowDownCircle className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-red-900">Valores a Pagar</h3>
+          </div>
+          
+          {filteredData.payables.length > 0 ? (
+            <div className="space-y-4 max-h-96 overflow-y-auto modern-scrollbar">
+              {filteredData.payables.map(item => (
+                <div key={item.id} className="p-4 bg-red-50 rounded-xl border border-red-200">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-bold text-red-900">{item.company}</h4>
+                      <p className="text-sm text-red-700">{item.description}</p>
+                      <p className="text-sm text-red-600">
+                        Vencimento: {new Date(item.dueDate).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-black text-red-600">
+                        R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-200 text-red-800">
+                        {item.type.replace('_', ' ').toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              <div className="p-4 bg-red-200 rounded-xl border-2 border-red-300">
+                <div className="text-center">
+                  <h4 className="font-bold text-red-900 mb-2">Total a Pagar</h4>
+                  <p className="text-3xl font-black text-red-700">
+                    R$ {totals.totalPayables.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-sm text-red-600">{filteredData.payables.length} pagamentos</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <ArrowDownCircle className="w-16 h-16 mx-auto mb-4 text-red-300" />
+              <p className="text-red-600">Nenhum valor a pagar no período</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Vendas por Dia */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-blue-600">
+              <BarChart3 className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Vendas por Dia</h3>
           </div>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={salesByMonth}>
+            <BarChart data={salesByDay}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
+              <XAxis dataKey="day" />
               <YAxis />
               <Tooltip formatter={(value) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
               <Legend />
-              <Line type="monotone" dataKey="vendas" stroke="#10b981" strokeWidth={3} name="Vendas" />
-              <Line type="monotone" dataKey="recebido" stroke="#3b82f6" strokeWidth={3} name="Recebido" />
-            </LineChart>
+              <Bar dataKey="vendas" fill="#10b981" name="Vendas" />
+              <Bar dataKey="recebido" fill="#059669" name="Recebido" />
+            </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Payment Methods */}
+        {/* Métodos de Pagamento */}
         <div className="card modern-shadow-xl">
           <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-blue-600 modern-shadow-lg">
-              <BarChart3 className="w-6 h-6 text-white" />
+            <div className="p-3 rounded-xl bg-purple-600">
+              <PieChart className="w-6 h-6 text-white" />
             </div>
             <h3 className="text-xl font-bold text-slate-900">Métodos de Pagamento</h3>
           </div>
           <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
+            <RechartsPieChart>
               <Pie
                 data={paymentMethodsData}
                 cx="50%"
@@ -277,800 +633,80 @@ export function Reports() {
                 ))}
               </Pie>
               <Tooltip formatter={(value) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
-            </PieChart>
+            </RechartsPieChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Top Clients */}
+      {/* Informações Logísticas */}
       <div className="card modern-shadow-xl">
         <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 rounded-xl bg-purple-600 modern-shadow-lg">
-            <Users className="w-6 h-6 text-white" />
+          <div className="p-3 rounded-xl bg-orange-600">
+            <Clock className="w-6 h-6 text-white" />
           </div>
-          <h3 className="text-xl font-bold text-slate-900">Top 10 Clientes</h3>
+          <h3 className="text-xl font-bold text-orange-900">Informações Logísticas</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead>
-              <tr className="border-b border-slate-200">
-                <th className="text-left py-3 px-4 font-semibold text-slate-700">Cliente</th>
-                <th className="text-left py-3 px-4 font-semibold text-slate-700">Vendas</th>
-                <th className="text-left py-3 px-4 font-semibold text-slate-700">Total</th>
-                <th className="text-left py-3 px-4 font-semibold text-slate-700">Ticket Médio</th>
-              </tr>
-            </thead>
-            <tbody>
-              {topClients.map((client, index) => (
-                <tr key={client.name} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="py-3 px-4 text-sm font-semibold text-slate-900">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                        {index + 1}
-                      </div>
-                      {client.name}
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-sm text-slate-700 font-medium">{client.count}</td>
-                  <td className="py-3 px-4 text-sm font-bold text-green-600">
-                    R$ {client.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="py-3 px-4 text-sm font-bold text-blue-600">
-                    R$ {(client.total / client.count).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </td>
-                </tr>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Clientes em Dívida */}
+          <div className="p-6 bg-orange-50 rounded-xl border border-orange-200">
+            <h4 className="font-bold text-orange-900 mb-4">Clientes em Dívida</h4>
+            <div className="space-y-2">
+              {state.sales.filter(sale => sale.pendingAmount > 0).map(sale => (
+                <div key={sale.id} className="flex justify-between text-sm">
+                  <span className="text-orange-700">{sale.client}</span>
+                  <span className="font-bold text-orange-600">
+                    R$ {sale.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Employee Performance */}
-      {employeePerformance.length > 0 && (
-        <div className="card modern-shadow-xl">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-indigo-600 modern-shadow-lg">
-              <Users className="w-6 h-6 text-white" />
+              {state.sales.filter(sale => sale.pendingAmount > 0).length === 0 && (
+                <p className="text-orange-600 text-center">Nenhum cliente em dívida</p>
+              )}
             </div>
-            <h3 className="text-xl font-bold text-slate-900">Performance dos Vendedores</h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Vendedor</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Vendas</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Total Vendido</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Ticket Médio</th>
-                </tr>
-              </thead>
-              <tbody>
-                {employeePerformance.map((employee, index) => (
-                  <tr key={employee.name} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="py-3 px-4 text-sm font-semibold text-slate-900">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                          {index + 1}
-                        </div>
-                        {employee.name}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-sm text-slate-700 font-medium">{employee.sales}</td>
-                    <td className="py-3 px-4 text-sm font-bold text-green-600">
-                      R$ {employee.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-3 px-4 text-sm font-bold text-blue-600">
-                      R$ {(employee.total / employee.sales).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                  </tr>
+
+          {/* Entregas Programadas */}
+          <div className="p-6 bg-blue-50 rounded-xl border border-blue-200">
+            <h4 className="font-bold text-blue-900 mb-4">Entregas Programadas</h4>
+            <div className="space-y-2">
+              {state.sales.filter(sale => sale.deliveryDate && sale.deliveryDate >= today).map(sale => (
+                <div key={sale.id} className="text-sm">
+                  <p className="text-blue-700 font-medium">{sale.client}</p>
+                  <p className="text-blue-600">
+                    {new Date(sale.deliveryDate!).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+              ))}
+              {state.sales.filter(sale => sale.deliveryDate && sale.deliveryDate >= today).length === 0 && (
+                <p className="text-blue-600 text-center">Nenhuma entrega programada</p>
+              )}
+            </div>
+          </div>
+
+          {/* Vencimentos Próximos */}
+          <div className="p-6 bg-yellow-50 rounded-xl border border-yellow-200">
+            <h4 className="font-bold text-yellow-900 mb-4">Vencimentos Próximos (7 dias)</h4>
+            <div className="space-y-2">
+              {[...state.checks, ...state.boletos]
+                .filter(item => {
+                  const dueDate = new Date(item.dueDate);
+                  const today = new Date();
+                  const diffDays = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                  return diffDays <= 7 && diffDays >= 0 && item.status === 'pendente';
+                })
+                .map(item => (
+                  <div key={item.id} className="text-sm">
+                    <p className="text-yellow-700 font-medium">{item.client}</p>
+                    <p className="text-yellow-600">
+                      {new Date(item.dueDate).toLocaleDateString('pt-BR')} - 
+                      R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderSalesReport = () => (
-    <div className="space-y-8">
-      <div className="card modern-shadow-xl">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 rounded-xl bg-green-600 modern-shadow-lg">
-            <DollarSign className="w-6 h-6 text-white" />
-          </div>
-          <h3 className="text-xl font-bold text-slate-900">Relatório Detalhado de Vendas</h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead>
-              <tr className="border-b border-slate-200">
-                <th className="text-left py-3 px-4 font-semibold text-slate-700">Data</th>
-                <th className="text-left py-3 px-4 font-semibold text-slate-700">Cliente</th>
-                <th className="text-left py-3 px-4 font-semibold text-slate-700">Produtos</th>
-                <th className="text-left py-3 px-4 font-semibold text-slate-700">Total</th>
-                <th className="text-left py-3 px-4 font-semibold text-slate-700">Recebido</th>
-                <th className="text-left py-3 px-4 font-semibold text-slate-700">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSales.map(sale => (
-                <tr key={sale.id} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="py-3 px-4 text-sm text-slate-700">
-                    {new Date(sale.date).toLocaleDateString('pt-BR')}
-                  </td>
-                  <td className="py-3 px-4 text-sm font-semibold text-slate-900">{sale.client}</td>
-                  <td className="py-3 px-4 text-sm text-slate-700">
-                    {Array.isArray(sale.products) 
-                      ? sale.products.map(p => `${p.quantity}x ${p.name}`).join(', ')
-                      : sale.products}
-                  </td>
-                  <td className="py-3 px-4 text-sm font-bold text-green-600">
-                    R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="py-3 px-4 text-sm font-bold text-blue-600">
-                    R$ {sale.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="py-3 px-4 text-sm">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                      sale.status === 'pago' ? 'bg-green-100 text-green-800' :
-                      sale.status === 'parcial' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {sale.status === 'pago' ? 'Pago' :
-                       sale.status === 'parcial' ? 'Parcial' : 'Pendente'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderFinancialReport = () => (
-    <div className="space-y-8">
-      {/* Financial Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4 modern-shadow-lg">
-              <TrendingUp className="w-8 h-8 text-white" />
-            </div>
-            <h3 className="font-bold text-green-900 text-lg mb-2">Receitas</h3>
-            <p className="text-3xl font-black text-green-700">
-              R$ {metrics.totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-          </div>
-        </div>
-
-        <div className="card bg-gradient-to-br from-red-50 to-rose-50 border-red-200 modern-shadow-xl">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4 modern-shadow-lg">
-              <DollarSign className="w-8 h-8 text-white" />
-            </div>
-            <h3 className="font-bold text-red-900 text-lg mb-2">Despesas</h3>
-            <p className="text-3xl font-black text-red-700">
-              R$ {metrics.totalDebtsPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-          </div>
-        </div>
-
-        <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
-          <div className="text-center">
-            <div className={`w-16 h-16 ${metrics.netProfit >= 0 ? 'bg-green-600' : 'bg-red-600'} rounded-full flex items-center justify-center mx-auto mb-4 modern-shadow-lg`}>
-              <BarChart3 className="w-8 h-8 text-white" />
-            </div>
-            <h3 className="font-bold text-slate-900 text-lg mb-2">Resultado</h3>
-            <p className={`text-3xl font-black ${metrics.netProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-              R$ {metrics.netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Detailed Financial Data */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Revenue Breakdown */}
-        <div className="card modern-shadow-xl">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-green-600 modern-shadow-lg">
-              <TrendingUp className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900">Detalhamento das Receitas</h3>
-          </div>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center p-4 bg-green-50 rounded-xl">
-              <span className="font-semibold text-green-800">Vendas Totais</span>
-              <span className="font-bold text-green-700">
-                R$ {metrics.totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-            <div className="flex justify-between items-center p-4 bg-blue-50 rounded-xl">
-              <span className="font-semibold text-blue-800">Recebido</span>
-              <span className="font-bold text-blue-700">
-                R$ {metrics.totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-            <div className="flex justify-between items-center p-4 bg-orange-50 rounded-xl">
-              <span className="font-semibold text-orange-800">A Receber</span>
-              <span className="font-bold text-orange-700">
-                R$ {metrics.totalPending.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </span>
             </div>
           </div>
         </div>
-
-        {/* Expenses Breakdown */}
-        <div className="card modern-shadow-xl">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-red-600 modern-shadow-lg">
-              <DollarSign className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900">Detalhamento das Despesas</h3>
-          </div>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center p-4 bg-red-50 rounded-xl">
-              <span className="font-semibold text-red-800">Dívidas Totais</span>
-              <span className="font-bold text-red-700">
-                R$ {metrics.totalDebts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-            <div className="flex justify-between items-center p-4 bg-green-50 rounded-xl">
-              <span className="font-semibold text-green-800">Pagas</span>
-              <span className="font-bold text-green-700">
-                R$ {metrics.totalDebtsPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-            <div className="flex justify-between items-center p-4 bg-orange-50 rounded-xl">
-              <span className="font-semibold text-orange-800">Pendentes</span>
-              <span className="font-bold text-orange-700">
-                R$ {metrics.totalDebtsUnpaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderReceivablesReport = () => {
-    // Get all pending receivables (sales with pending amounts)
-    const receivables = [];
-    
-    filteredSales.forEach(sale => {
-      if (sale.pendingAmount > 0) {
-        // Check for pending checks
-        const saleChecks = state.checks.filter(check => 
-          check.saleId === sale.id && check.status === 'pendente'
-        );
-        
-        // Check for pending boletos
-        const saleBoletos = state.boletos.filter(boleto => 
-          boleto.saleId === sale.id && boleto.status === 'pendente'
-        );
-        
-        // Check for pending installments
-        const today = new Date().toISOString().split('T')[0];
-        const pendingInstallments = [];
-        
-        sale.paymentMethods.forEach(method => {
-          if (method.installments && method.installments > 1) {
-            for (let i = 1; i < method.installments; i++) { // Skip first installment (already received)
-              const dueDate = new Date(method.firstInstallmentDate || method.startDate || sale.date);
-              dueDate.setDate(dueDate.getDate() + (i * (method.installmentInterval || 30)));
-              const dueDateStr = dueDate.toISOString().split('T')[0];
-              
-              if (dueDateStr >= today && method.type !== 'cheque' && method.type !== 'boleto') {
-                pendingInstallments.push({
-                  installment: i + 1,
-                  totalInstallments: method.installments,
-                  amount: method.installmentValue || 0,
-                  dueDate: dueDateStr,
-                  type: method.type,
-                  isOverdue: dueDateStr < today
-                });
-              }
-            }
-          }
-        });
-        
-        receivables.push({
-          sale,
-          checks: saleChecks,
-          boletos: saleBoletos,
-          installments: pendingInstallments,
-          totalPending: sale.pendingAmount
-        });
-      }
-    });
-    
-    const totalReceivables = receivables.reduce((sum, item) => sum + item.totalPending, 0);
-    
-    return (
-      <div className="space-y-8">
-        <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-blue-600 modern-shadow-lg">
-              <Users className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-xl font-bold text-blue-900">Clientes em Dívida - Relatório Detalhado</h3>
-          </div>
-          
-          <div className="mb-6 p-6 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-2xl border border-blue-300">
-            <div className="flex justify-between items-center">
-              <div>
-                <h4 className="text-2xl font-bold text-blue-900">Total a Receber</h4>
-                <p className="text-blue-700 font-semibold">{receivables.length} cliente(s) com pendências</p>
-              </div>
-              <p className="text-4xl font-black text-blue-700">
-                R$ {totalReceivables.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-          </div>
-          
-          {receivables.length > 0 ? (
-            <div className="space-y-6">
-              {receivables.map((item, index) => {
-                const today = new Date().toISOString().split('T')[0];
-                const hasOverdueItems = [
-                  ...item.checks.filter(c => c.dueDate < today),
-                  ...item.boletos.filter(b => b.dueDate < today),
-                  ...item.installments.filter(i => i.isOverdue)
-                ].length > 0;
-                
-                return (
-                  <div key={index} className={`p-6 rounded-2xl border-2 ${
-                    hasOverdueItems ? 'bg-red-50 border-red-200' : 'bg-white border-blue-200'
-                  }`}>
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h4 className="text-xl font-bold text-slate-900">{item.sale.client}</h4>
-                        <p className="text-slate-600">
-                          Venda realizada em: {new Date(item.sale.date).toLocaleDateString('pt-BR')}
-                        </p>
-                        {item.sale.deliveryDate && (
-                          <p className="text-slate-600">
-                            Data de entrega: {new Date(item.sale.deliveryDate).toLocaleDateString('pt-BR')}
-                          </p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-blue-600">
-                          R$ {item.totalPending.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
-                        <p className="text-sm text-slate-600">
-                          Total da venda: R$ {item.sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="mb-4">
-                      <h5 className="font-semibold text-slate-800 mb-2">Produtos Vendidos:</h5>
-                      <p className="text-slate-600">
-                        {Array.isArray(item.sale.products) 
-                          ? item.sale.products.map(p => `${p.quantity}x ${p.name}`).join(', ')
-                          : item.sale.products}
-                      </p>
-                    </div>
-                    
-                    {/* Pending Checks */}
-                    {item.checks.length > 0 && (
-                      <div className="mb-4">
-                        <h5 className="font-semibold text-slate-800 mb-2">Cheques Pendentes:</h5>
-                        <div className="space-y-2">
-                          {item.checks.map(check => (
-                            <div key={check.id} className={`p-3 rounded-lg ${
-                              check.dueDate < today ? 'bg-red-100 border border-red-200' : 'bg-yellow-100 border border-yellow-200'
-                            }`}>
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <span className="font-medium">
-                                    R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                  </span>
-                                  {check.installmentNumber && (
-                                    <span className="text-sm text-slate-600 ml-2">
-                                      (Parcela {check.installmentNumber}/{check.totalInstallments})
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-right">
-                                  <p className={`text-sm font-medium ${
-                                    check.dueDate < today ? 'text-red-600' : 'text-slate-600'
-                                  }`}>
-                                    Vencimento: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
-                                  </p>
-                                  {check.dueDate < today && (
-                                    <span className="text-xs text-red-600 font-bold">VENCIDO</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Pending Boletos */}
-                    {item.boletos.length > 0 && (
-                      <div className="mb-4">
-                        <h5 className="font-semibold text-slate-800 mb-2">Boletos Pendentes:</h5>
-                        <div className="space-y-2">
-                          {item.boletos.map(boleto => (
-                            <div key={boleto.id} className={`p-3 rounded-lg ${
-                              boleto.dueDate < today ? 'bg-red-100 border border-red-200' : 'bg-blue-100 border border-blue-200'
-                            }`}>
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <span className="font-medium">
-                                    R$ {boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                  </span>
-                                  <span className="text-sm text-slate-600 ml-2">
-                                    (Parcela {boleto.installmentNumber}/{boleto.totalInstallments})
-                                  </span>
-                                </div>
-                                <div className="text-right">
-                                  <p className={`text-sm font-medium ${
-                                    boleto.dueDate < today ? 'text-red-600' : 'text-slate-600'
-                                  }`}>
-                                    Vencimento: {new Date(boleto.dueDate).toLocaleDateString('pt-BR')}
-                                  </p>
-                                  {boleto.dueDate < today && (
-                                    <span className="text-xs text-red-600 font-bold">VENCIDO</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Other Pending Installments */}
-                    {item.installments.length > 0 && (
-                      <div className="mb-4">
-                        <h5 className="font-semibold text-slate-800 mb-2">Outras Parcelas Pendentes:</h5>
-                        <div className="space-y-2">
-                          {item.installments.map((installment, idx) => (
-                            <div key={idx} className={`p-3 rounded-lg ${
-                              installment.isOverdue ? 'bg-red-100 border border-red-200' : 'bg-purple-100 border border-purple-200'
-                            }`}>
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <span className="font-medium">
-                                    R$ {installment.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                  </span>
-                                  <span className="text-sm text-slate-600 ml-2">
-                                    ({installment.type.replace('_', ' ')} - Parcela {installment.installment}/{installment.totalInstallments})
-                                  </span>
-                                </div>
-                                <div className="text-right">
-                                  <p className={`text-sm font-medium ${
-                                    installment.isOverdue ? 'text-red-600' : 'text-slate-600'
-                                  }`}>
-                                    Vencimento: {new Date(installment.dueDate).toLocaleDateString('pt-BR')}
-                                  </p>
-                                  {installment.isOverdue && (
-                                    <span className="text-xs text-red-600 font-bold">VENCIDO</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {item.sale.observations && (
-                      <div className="mt-4 p-3 bg-slate-50 rounded-lg">
-                        <h5 className="font-semibold text-slate-800 mb-1">Observações:</h5>
-                        <p className="text-sm text-slate-600">{item.sale.observations}</p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <Users className="w-16 h-16 mx-auto mb-4 text-blue-300" />
-              <p className="text-blue-600 font-medium">Nenhum cliente com dívidas pendentes no período selecionado</p>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const renderPayablesReport = () => {
-    // Get all unpaid debts
-    const payables = [];
-    
-    filteredDebts.forEach(debt => {
-      if (!debt.isPaid && debt.pendingAmount > 0) {
-        const today = new Date().toISOString().split('T')[0];
-        const pendingInstallments = [];
-        
-        debt.paymentMethods.forEach(method => {
-          if (method.installments && method.installments > 1) {
-            for (let i = 0; i < method.installments; i++) {
-              const dueDate = new Date(method.startDate || debt.date);
-              dueDate.setDate(dueDate.getDate() + (i * (method.installmentInterval || 30)));
-              const dueDateStr = dueDate.toISOString().split('T')[0];
-              
-              if (dueDateStr >= today) {
-                pendingInstallments.push({
-                  installment: i + 1,
-                  totalInstallments: method.installments,
-                  amount: method.installmentValue || 0,
-                  dueDate: dueDateStr,
-                  type: method.type,
-                  isOverdue: dueDateStr < today
-                });
-              }
-            }
-          } else {
-            // Single payment
-            pendingInstallments.push({
-              installment: 1,
-              totalInstallments: 1,
-              amount: method.amount,
-              dueDate: debt.date,
-              type: method.type,
-              isOverdue: debt.date < today
-            });
-          }
-        });
-        
-        payables.push({
-          debt,
-          installments: pendingInstallments,
-          totalPending: debt.pendingAmount
-        });
-      }
-    });
-    
-    const totalPayables = payables.reduce((sum, item) => sum + item.totalPending, 0);
-    
-    return (
-      <div className="space-y-8">
-        <div className="card bg-gradient-to-br from-orange-50 to-red-50 border-orange-200 modern-shadow-xl">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-orange-600 modern-shadow-lg">
-              <CreditCard className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-xl font-bold text-orange-900">Dívidas da Empresa - Relatório Detalhado</h3>
-          </div>
-          
-          <div className="mb-6 p-6 bg-gradient-to-r from-orange-100 to-red-100 rounded-2xl border border-orange-300">
-            <div className="flex justify-between items-center">
-              <div>
-                <h4 className="text-2xl font-bold text-orange-900">Total a Pagar</h4>
-                <p className="text-orange-700 font-semibold">{payables.length} dívida(s) pendente(s)</p>
-              </div>
-              <p className="text-4xl font-black text-orange-700">
-                R$ {totalPayables.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-          </div>
-          
-          {payables.length > 0 ? (
-            <div className="space-y-6">
-              {payables.map((item, index) => {
-                const today = new Date().toISOString().split('T')[0];
-                const hasOverdueItems = item.installments.filter(i => i.isOverdue).length > 0;
-                
-                return (
-                  <div key={index} className={`p-6 rounded-2xl border-2 ${
-                    hasOverdueItems ? 'bg-red-50 border-red-200' : 'bg-white border-orange-200'
-                  }`}>
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h4 className="text-xl font-bold text-slate-900">{item.debt.company}</h4>
-                        <p className="text-slate-600">
-                          Dívida criada em: {new Date(item.debt.date).toLocaleDateString('pt-BR')}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-orange-600">
-                          R$ {item.totalPending.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
-                        <p className="text-sm text-slate-600">
-                          Total da dívida: R$ {item.debt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="mb-4">
-                      <h5 className="font-semibold text-slate-800 mb-2">Descrição da Dívida:</h5>
-                      <p className="text-slate-600">{item.debt.description}</p>
-                    </div>
-                    
-                    {/* Payment Schedule */}
-                    <div className="mb-4">
-                      <h5 className="font-semibold text-slate-800 mb-2">Cronograma de Pagamentos:</h5>
-                      <div className="space-y-2">
-                        {item.installments.map((installment, idx) => (
-                          <div key={idx} className={`p-3 rounded-lg ${
-                            installment.isOverdue ? 'bg-red-100 border border-red-200' : 
-                            installment.dueDate === today ? 'bg-yellow-100 border border-yellow-200' :
-                            'bg-orange-100 border border-orange-200'
-                          }`}>
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <span className="font-medium">
-                                  R$ {installment.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </span>
-                                <span className="text-sm text-slate-600 ml-2">
-                                  ({installment.type.replace('_', ' ')} - Parcela {installment.installment}/{installment.totalInstallments})
-                                </span>
-                              </div>
-                              <div className="text-right">
-                                <p className={`text-sm font-medium ${
-                                  installment.isOverdue ? 'text-red-600' : 
-                                  installment.dueDate === today ? 'text-yellow-600' :
-                                  'text-slate-600'
-                                }`}>
-                                  {installment.dueDate === today ? 'Vence HOJE' :
-                                   installment.isOverdue ? 'VENCIDO' :
-                                   `Vencimento: ${new Date(installment.dueDate).toLocaleDateString('pt-BR')}`}
-                                </p>
-                                {installment.isOverdue && (
-                                  <span className="text-xs text-red-600 font-bold">
-                                    {Math.ceil((new Date().getTime() - new Date(installment.dueDate).getTime()) / (1000 * 60 * 60 * 24))} dias em atraso
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    {/* Used Checks */}
-                    {item.debt.checksUsed && item.debt.checksUsed.length > 0 && (
-                      <div className="mb-4">
-                        <h5 className="font-semibold text-slate-800 mb-2">Cheques Utilizados:</h5>
-                        <div className="space-y-2">
-                          {item.debt.checksUsed.map(checkId => {
-                            const check = state.checks.find(c => c.id === checkId);
-                            return check ? (
-                              <div key={checkId} className="p-3 bg-blue-100 rounded-lg border border-blue-200">
-                                <div className="flex justify-between items-center">
-                                  <div>
-                                    <span className="font-medium">{check.client}</span>
-                                    <span className="text-sm text-slate-600 ml-2">
-                                      R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </span>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-sm text-slate-600">
-                                      Status: {check.status === 'compensado' ? 'Compensado ✓' : check.status}
-                                    </p>
-                                    <p className="text-xs text-slate-500">
-                                      Vencimento: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            ) : null;
-                          })}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {item.debt.paymentDescription && (
-                      <div className="mt-4 p-3 bg-slate-50 rounded-lg">
-                        <h5 className="font-semibold text-slate-800 mb-1">Descrição do Pagamento:</h5>
-                        <p className="text-sm text-slate-600">{item.debt.paymentDescription}</p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <CreditCard className="w-16 h-16 mx-auto mb-4 text-orange-300" />
-              <p className="text-orange-600 font-medium">Nenhuma dívida pendente no período selecionado</p>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 modern-shadow-xl">
-            <BarChart3 className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Relatórios e Análises</h1>
-            <p className="text-slate-600 text-lg">Insights detalhados do seu negócio</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="btn-secondary flex items-center gap-2"
-          >
-            <Filter className="w-5 h-5" />
-            Filtros
-          </button>
-          <button
-            onClick={generatePDF}
-            className="btn-primary flex items-center gap-2 modern-shadow-xl hover:modern-shadow-lg"
-          >
-            <Download className="w-5 h-5" />
-            Exportar PDF
-          </button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      {showFilters && (
-        <div className="card bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-bold text-blue-900">Filtros de Relatório</h3>
-            <button
-              onClick={() => setShowFilters(false)}
-              className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-100 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <label className="form-label text-blue-800">Data Inicial</label>
-              <input
-                type="date"
-                value={dateRange.start}
-                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                className="input-field border-blue-200 focus:border-blue-400"
-              />
-            </div>
-            <div>
-              <label className="form-label text-blue-800">Data Final</label>
-              <input
-                type="date"
-                value={dateRange.end}
-                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                className="input-field border-blue-200 focus:border-blue-400"
-              />
-            </div>
-            <div>
-              <label className="form-label text-blue-800">Tipo de Relatório</label>
-              <select
-                value={selectedReport}
-                onChange={(e) => setSelectedReport(e.target.value)}
-                className="input-field border-blue-200 focus:border-blue-400"
-              >
-                <option value="overview">Visão Geral</option>
-                <option value="sales">Vendas Detalhadas</option>
-                <option value="financial">Financeiro</option>
-                <option value="receivables">Clientes em Dívida</option>
-                <option value="payables">Dívidas da Empresa</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Report Content */}
-      <div id="reports-content">
-        {selectedReport === 'overview' && renderOverviewReport()}
-        {selectedReport === 'sales' && renderSalesReport()}
-        {selectedReport === 'financial' && renderFinancialReport()}
-        {selectedReport === 'receivables' && renderReceivablesReport()}
-        {selectedReport === 'payables' && renderPayablesReport()}
       </div>
     </div>
   );

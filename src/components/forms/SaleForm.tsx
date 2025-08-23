@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { X, Plus, Trash2, Info } from 'lucide-react';
 import { Sale, PaymentMethod } from '../../types';
+import { ThirdPartyCheckDetails } from '../../types';
 import { useApp } from '../../context/AppContext';
 
 interface SaleFormProps {
@@ -34,7 +35,8 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     totalValue: sale?.totalValue || 0,
     paymentMethods: sale?.paymentMethods || [{ type: 'dinheiro' as const, amount: 0 }],
     paymentDescription: sale?.paymentDescription || '',
-    paymentObservations: sale?.paymentObservations || ''
+    paymentObservations: sale?.paymentObservations || '',
+    thirdPartyChecks: [] as ThirdPartyCheckDetails[]
   });
 
   // Filtrar apenas vendedores ativos
@@ -76,12 +78,44 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
             delete updatedMethod.installmentInterval;
             delete updatedMethod.startDate;
             delete updatedMethod.firstInstallmentDate;
+            delete updatedMethod.isThirdPartyCheck;
           }
           
           return updatedMethod;
         }
         return method;
       })
+    }));
+  };
+
+  const addThirdPartyCheck = () => {
+    setFormData(prev => ({
+      ...prev,
+      thirdPartyChecks: [...prev.thirdPartyChecks, {
+        bank: '',
+        agency: '',
+        account: '',
+        checkNumber: '',
+        issuer: '',
+        cpfCnpj: '',
+        observations: ''
+      }]
+    }));
+  };
+
+  const updateThirdPartyCheck = (index: number, field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      thirdPartyChecks: prev.thirdPartyChecks.map((check, i) => 
+        i === index ? { ...check, [field]: value } : check
+      )
+    }));
+  };
+
+  const removeThirdPartyCheck = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      thirdPartyChecks: prev.thirdPartyChecks.filter((_, i) => i !== index)
     }));
   };
 
@@ -415,6 +449,163 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                             </div>
                           )}
                         </>
+                      )}
+
+                      {method.type === 'cheque' && (
+                        <>
+                          <div className="md:col-span-2">
+                            <label className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={method.isThirdPartyCheck || false}
+                                onChange={(e) => updatePaymentMethod(index, 'isThirdPartyCheck', e.target.checked)}
+                                className="rounded"
+                              />
+                              <span className="form-label mb-0">Cheques de Terceiros</span>
+                            </label>
+                            <p className="text-xs text-blue-600 mt-1">
+                              Marque se os cheques são de terceiros (será necessário preencher dados de cada cheque)
+                            </p>
+                          </div>
+                          
+                          {method.isThirdPartyCheck && method.installments && method.installments > 1 && (
+                            <div className="md:col-span-2">
+                              <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                                <div className="flex items-center gap-2 mb-4">
+                                  <Info className="w-5 h-5 text-blue-600" />
+                                  <h4 className="font-bold text-blue-900">
+                                    Dados dos Cheques de Terceiros ({method.installments} cheques)
+                                  </h4>
+                                  <button
+                                    type="button"
+                                    onClick={addThirdPartyCheck}
+                                    className="btn-secondary text-xs py-1 px-2"
+                                  >
+                                    Adicionar Cheque
+                                  </button>
+                                </div>
+                                
+                                {formData.thirdPartyChecks.length < (method.installments || 1) && (
+                                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                    <p className="text-sm text-yellow-700 font-medium">
+                                      ⚠️ Você precisa adicionar {(method.installments || 1) - formData.thirdPartyChecks.length} cheque(s) de terceiros
+                                    </p>
+                                  </div>
+                                )}
+                                
+                                <div className="space-y-4">
+                                  {formData.thirdPartyChecks.map((check, checkIndex) => (
+                                    <div key={checkIndex} className="p-4 bg-white rounded-lg border border-blue-100">
+                                      <div className="flex justify-between items-center mb-3">
+                                        <h5 className="font-bold text-blue-900">Cheque {checkIndex + 1}</h5>
+                                        <button
+                                          type="button"
+                                          onClick={() => removeThirdPartyCheck(checkIndex)}
+                                          className="text-red-600 hover:text-red-800"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                      
+                                      <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                          <label className="text-xs font-medium text-blue-700">Banco *</label>
+                                          <input
+                                            type="text"
+                                            value={check.bank}
+                                            onChange={(e) => updateThirdPartyCheck(checkIndex, 'bank', e.target.value)}
+                                            className="input-field text-sm"
+                                            placeholder="Nome do banco"
+                                            required
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="text-xs font-medium text-blue-700">Agência *</label>
+                                          <input
+                                            type="text"
+                                            value={check.agency}
+                                            onChange={(e) => updateThirdPartyCheck(checkIndex, 'agency', e.target.value)}
+                                            className="input-field text-sm"
+                                            placeholder="0000"
+                                            required
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="text-xs font-medium text-blue-700">Conta *</label>
+                                          <input
+                                            type="text"
+                                            value={check.account}
+                                            onChange={(e) => updateThirdPartyCheck(checkIndex, 'account', e.target.value)}
+                                            className="input-field text-sm"
+                                            placeholder="00000-0"
+                                            required
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="text-xs font-medium text-blue-700">Nº do Cheque *</label>
+                                          <input
+                                            type="text"
+                                            value={check.checkNumber}
+                                            onChange={(e) => updateThirdPartyCheck(checkIndex, 'checkNumber', e.target.value)}
+                                            className="input-field text-sm"
+                                            placeholder="000000"
+                                            required
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="text-xs font-medium text-blue-700">Emissor *</label>
+                                          <input
+                                            type="text"
+                                            value={check.issuer}
+                                            onChange={(e) => updateThirdPartyCheck(checkIndex, 'issuer', e.target.value)}
+                                            className="input-field text-sm"
+                                            placeholder="Nome do emissor"
+                                            required
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="text-xs font-medium text-blue-700">CPF/CNPJ *</label>
+                                          <input
+                                            type="text"
+                                            value={check.cpfCnpj}
+                                            onChange={(e) => updateThirdPartyCheck(checkIndex, 'cpfCnpj', e.target.value)}
+                                            className="input-field text-sm"
+                                            placeholder="000.000.000-00"
+                                            required
+                                          />
+                                        </div>
+                                        <div className="col-span-2">
+                                          <label className="text-xs font-medium text-blue-700">Observações</label>
+                                          <input
+                                            type="text"
+                                            value={check.observations || ''}
+                                            onChange={(e) => updateThirdPartyCheck(checkIndex, 'observations', e.target.value)}
+                                            className="input-field text-sm"
+                                            placeholder="Observações sobre o cheque"
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {method.type === 'cheque' && !method.isThirdPartyCheck && (
+                        <div className="md:col-span-2">
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={method.isOwnCheck || false}
+                              onChange={(e) => updatePaymentMethod(index, 'isOwnCheck', e.target.checked)}
+                              className="rounded"
+                            />
+                            <span className="form-label mb-0">Cheque Próprio</span>
+                          </label>
+                        </div>
                       )}
                     </div>
                   </div>

@@ -193,3 +193,25 @@ export interface ThirdPartyCheck {
   cpfCnpj: string;
   observations?: string;
 }
+
+export interface ThirdPartyCheckDetails {
+  bank: string;
+  agency: string;
+  account: string;
+  checkNumber: string;
+  issuer: string;
+  cpfCnpj: string;
+  observations?: string;
+}
+
+export interface CashTransaction {
+  id: string;
+  date: string;
+  type: 'entrada' | 'saida';
+  amount: number;
+  description: string;
+  category: 'venda' | 'divida' | 'adiantamento' | 'salario' | 'comissao' | 'cheque' | 'boleto' | 'outro';
+  relatedId?: string;
+  paymentMethod?: string;
+  createdAt: string;
+}

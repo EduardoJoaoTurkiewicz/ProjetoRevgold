@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { User, Sale, Debt, Check, Installment, Product, Employee, EmployeePayment, EmployeeAdvance, EmployeeOvertime, EmployeeCommission, Boleto, CashFlow, CashBalance, ThirdPartyCheck } from '../types';
+import { User, Sale, Debt, Check, Installment, Product, Employee, EmployeePayment, EmployeeAdvance, EmployeeOvertime, EmployeeCommission, Boleto, CashFlow, CashBalance, ThirdPartyCheck, CashTransaction } from '../types';
 import { supabase, salesService, debtsService, employeesService, checksService, boletosService, isSupabaseConfigured, ensureAuthenticated, testSupabaseConnection } from '../lib/supabase';
+import { AutomationService } from '../lib/automationService';
 
 interface AppState {
   user: User | null;
@@ -17,6 +18,7 @@ interface AppState {
   cashFlow: CashFlow[];
   cashBalance: CashBalance | null;
   thirdPartyChecks: ThirdPartyCheck[];
+  cashTransactions: CashTransaction[];
   isLoading: boolean;
   error: string | null;
 }
@@ -49,6 +51,8 @@ type AppAction =
   | { type: 'UPDATE_CASH_BALANCE'; payload: CashBalance }
   | { type: 'SET_THIRD_PARTY_CHECKS'; payload: ThirdPartyCheck[] }
   | { type: 'ADD_THIRD_PARTY_CHECK'; payload: ThirdPartyCheck }
+  | { type: 'SET_CASH_TRANSACTIONS'; payload: CashTransaction[] }
+  | { type: 'ADD_CASH_TRANSACTION'; payload: CashTransaction }
   | { type: 'ADD_INSTALLMENT'; payload: Installment }
   | { type: 'UPDATE_INSTALLMENT'; payload: Installment }
   | { type: 'ADD_EMPLOYEE_PAYMENT'; payload: EmployeePayment }
@@ -81,6 +85,7 @@ const initialState: AppState = {
   cashFlow: [],
   cashBalance: null,
   thirdPartyChecks: [],
+  cashTransactions: [],
   isLoading: false,
   error: null
 };
@@ -287,6 +292,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'ADD_THIRD_PARTY_CHECK':
       return { ...state, thirdPartyChecks: [...state.thirdPartyChecks, action.payload] };
       
+    case 'SET_CASH_TRANSACTIONS':
+      return { ...state, cashTransactions: action.payload };
+      
+    case 'ADD_CASH_TRANSACTION':
+      return { ...state, cashTransactions: [...state.cashTransactions, action.payload] };
+      
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
       
@@ -317,6 +328,8 @@ const AppContext = createContext<{
   createBoleto: (boleto: Omit<Boleto, 'id' | 'createdAt'>) => Promise<void>;
   updateBoleto: (boleto: Boleto) => Promise<void>;
   deleteBoleto: (id: string) => Promise<void>;
+  initializeCashBalance: (initialBalance: number) => Promise<void>;
+  updateCashBalance: (amount: number, type: 'entrada' | 'saida', description: string, category: string) => Promise<void>;
 } | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -391,6 +404,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const sale = await salesService.create(saleData);
       dispatch({ type: 'ADD_SALE', payload: sale });
       
+      // Criar cheques automaticamente se houver pagamento em cheque
+      const hasCheckPayment = sale.paymentMethods.some(method => method.type === 'cheque');
+      if (hasCheckPayment) {
+        await AutomationService.createChecksForSale(sale);
+        // Recarregar cheques
+        const checks = await checksService.getAll();
+        dispatch({ type: 'SET_CHECKS', payload: checks });
+      }
+      
+      // Criar boletos automaticamente se houver pagamento em boleto
+      const hasBoletoPayment = sale.paymentMethods.some(method => method.type === 'boleto');
+      if (hasBoletoPayment) {
+        await AutomationService.createBoletosForSale(sale);
+        // Recarregar boletos
+        const boletos = await boletosService.getAll();
+        dispatch({ type: 'SET_BOLETOS', payload: boletos });
+      }
+      
       // Create commission if seller is assigned
       if (sale.sellerId) {
         const seller = state.employees.find(e => e.id === sale.sellerId);
@@ -430,6 +461,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'SET_LOADING', payload: true });
       const updatedSale = await salesService.update(sale);
       dispatch({ type: 'UPDATE_SALE', payload: updatedSale });
+      
+      // Atualizar cheques e boletos automaticamente
+      const hasCheckPayment = sale.paymentMethods.some(method => method.type === 'cheque');
+      if (hasCheckPayment) {
+        await AutomationService.updateChecksForSale(sale, state.checks);
+        const checks = await checksService.getAll();
+        dispatch({ type: 'SET_CHECKS', payload: checks });
+      }
+      
+      const hasBoletoPayment = sale.paymentMethods.some(method => method.type === 'boleto');
+      if (hasBoletoPayment) {
+        await AutomationService.updateBoletosForSale(sale, state.boletos);
+        const boletos = await boletosService.getAll();
+        dispatch({ type: 'SET_BOLETOS', payload: boletos });
+      }
+      
       console.log('✅ Venda atualizada no Supabase:', sale.id);
     } catch (error) {
       console.error('❌ Erro ao atualizar venda:', error);
@@ -639,6 +686,61 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Cash operations
+  const initializeCashBalance = async (initialBalance: number) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      const cashBalance = {
+        id: 'main-cash-balance',
+        currentBalance: initialBalance,
+        lastUpdated: new Date().toISOString(),
+        initialBalance: initialBalance,
+        initialDate: new Date().toISOString().split('T')[0]
+      };
+      
+      // TODO: Save to database
+      dispatch({ type: 'SET_CASH_BALANCE', payload: cashBalance });
+      
+      console.log('✅ Saldo inicial do caixa definido:', initialBalance);
+    } catch (error) {
+      console.error('❌ Erro ao inicializar saldo do caixa:', error);
+      throw error;
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
+
+  const updateCashBalance = async (amount: number, type: 'entrada' | 'saida', description: string, category: string) => {
+    try {
+      const currentBalance = state.cashBalance?.currentBalance || 0;
+      const newBalance = type === 'entrada' ? currentBalance + amount : currentBalance - amount;
+      
+      const updatedCashBalance = {
+        ...state.cashBalance!,
+        currentBalance: newBalance,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      const transaction: CashTransaction = {
+        id: `transaction-${Date.now()}`,
+        date: new Date().toISOString().split('T')[0],
+        type,
+        amount,
+        description,
+        category: category as any,
+        createdAt: new Date().toISOString()
+      };
+      
+      dispatch({ type: 'UPDATE_CASH_BALANCE', payload: updatedCashBalance });
+      dispatch({ type: 'ADD_CASH_TRANSACTION', payload: transaction });
+      
+      console.log('✅ Saldo do caixa atualizado:', newBalance);
+    } catch (error) {
+      console.error('❌ Erro ao atualizar saldo do caixa:', error);
+      throw error;
+    }
+  };
+
   // Load data on mount and set up real-time subscriptions
   useEffect(() => {
     // Carregar dados apenas se Supabase estiver configurado
@@ -727,7 +829,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       deleteCheck,
       createBoleto,
       updateBoleto,
-      deleteBoleto
+      deleteBoleto,
+      initializeCashBalance,
+      updateCashBalance
     }}>
       {children}
     </AppContext.Provider>
