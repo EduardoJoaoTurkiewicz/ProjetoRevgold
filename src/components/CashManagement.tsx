@@ -54,14 +54,47 @@ export function CashManagement() {
     // Boletos pagos no dia
     state.boletos.forEach(boleto => {
       if (boleto.dueDate === selectedDate && boleto.status === 'compensado') {
+        // Calcular valor líquido (valor final menos custos de cartório)
+        const finalAmount = boleto.finalAmount || boleto.value;
+        const notaryCosts = boleto.notaryCosts || 0;
+        const netReceived = finalAmount - notaryCosts;
+        
         transactions.push({
           id: `boleto-${boleto.id}`,
           type: 'entrada' as const,
-          amount: boleto.value,
-          description: `Boleto pago - ${boleto.client}`,
+          amount: netReceived,
+          description: `Boleto pago - ${boleto.client}${boleto.overdueAction ? ` (${boleto.overdueAction})` : ''}`,
           category: 'boleto',
           time: new Date().toLocaleTimeString('pt-BR'),
           relatedId: boleto.id
+        });
+        
+        // Se houve custos de cartório, adicionar como saída separada
+        if (notaryCosts > 0) {
+          transactions.push({
+            id: `boleto-costs-${boleto.id}`,
+            type: 'saida' as const,
+            amount: notaryCosts,
+            description: `Custos de cartório - Boleto ${boleto.client}`,
+            category: 'outro',
+            time: new Date().toLocaleTimeString('pt-BR'),
+            relatedId: boleto.id
+          });
+        }
+      }
+    });
+
+    // Tarifas PIX do dia
+    state.pixFees.forEach(pixFee => {
+      if (pixFee.date === selectedDate) {
+        transactions.push({
+          id: `pix-fee-${pixFee.id}`,
+          type: 'saida' as const,
+          amount: pixFee.amount,
+          description: `Tarifa PIX - ${pixFee.bank}: ${pixFee.description}`,
+          category: 'outro',
+          time: new Date().toLocaleTimeString('pt-BR'),
+          relatedId: pixFee.id
         });
       }
     });
@@ -131,7 +164,16 @@ export function CashManagement() {
       // Boletos pagos
       state.boletos.forEach(boleto => {
         if (boleto.dueDate === dateStr && boleto.status === 'compensado') {
-          entrada += boleto.value;
+          // Calcular valor líquido (valor final menos custos de cartório)
+          const finalAmount = boleto.finalAmount || boleto.value;
+          const notaryCosts = boleto.notaryCosts || 0;
+          const netReceived = finalAmount - notaryCosts;
+          entrada += netReceived;
+          
+          // Custos de cartório são saídas
+          if (notaryCosts > 0) {
+            saida += notaryCosts;
+          }
         }
       });
       
@@ -143,6 +185,13 @@ export function CashManagement() {
               saida += method.amount;
             }
           });
+        }
+      });
+      
+      // Tarifas PIX do dia
+      state.pixFees.forEach(pixFee => {
+        if (pixFee.date === dateStr) {
+          saida += pixFee.amount;
         }
       });
       

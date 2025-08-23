@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Sale, Debt, Check, Boleto, Employee, EmployeePayment, EmployeeAdvance, EmployeeOvertime, EmployeeCommission, Installment, User } from '../types';
+import { Sale, Debt, Check, Boleto, Employee, EmployeePayment, EmployeeAdvance, EmployeeOvertime, EmployeeCommission, Installment, User, PixFee } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -896,6 +896,137 @@ export const boletosService = {
       }
       
       console.log('✅ Boleto excluído com sucesso:', id);
+    });
+  }
+};
+
+// Database operations for PIX Fees
+export const pixFeesService = {
+  async getAll(): Promise<PixFee[]> {
+    return withAuth(async () => {
+      console.log('🔄 Buscando todas as tarifas PIX...');
+      const { data, error } = await supabase
+        .from('pix_fees')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Erro ao buscar tarifas PIX:', error);
+        console.error('Detalhes do erro:', error);
+        // Retornar array vazio em caso de erro para não quebrar a aplicação
+        console.warn('⚠️ Retornando array vazio devido ao erro');
+        return [];
+      }
+      
+      const pixFees = (data || []).map(item => ({
+        id: item.id,
+        date: item.date,
+        amount: Number(item.amount) || 0,
+        description: item.description || '',
+        bank: item.bank || '',
+        transactionType: item.transaction_type || 'pix_out',
+        relatedTransactionId: item.related_transaction_id,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
+      }));
+      
+      console.log('✅ Tarifas PIX carregadas:', pixFees.length);
+      return pixFees;
+    });
+  },
+
+  async create(pixFee: Omit<PixFee, 'id' | 'createdAt'>): Promise<PixFee> {
+    return withAuth(async () => {
+      console.log('🔄 Criando nova tarifa PIX:', pixFee);
+      const { data, error } = await supabase
+        .from('pix_fees')
+        .insert([{
+          date: pixFee.date,
+          amount: pixFee.amount,
+          description: pixFee.description,
+          bank: pixFee.bank,
+          transaction_type: pixFee.transactionType,
+          related_transaction_id: pixFee.relatedTransactionId
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Erro ao criar tarifa PIX:', error);
+        throw new Error(`Erro ao criar tarifa PIX: ${error.message}`);
+      }
+      
+      const newPixFee = {
+        id: data.id,
+        date: data.date,
+        amount: Number(data.amount),
+        description: data.description,
+        bank: data.bank,
+        transactionType: data.transaction_type,
+        relatedTransactionId: data.related_transaction_id,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      };
+      
+      console.log('✅ Tarifa PIX criada com sucesso:', newPixFee.id);
+      return newPixFee;
+    });
+  },
+
+  async update(pixFee: PixFee): Promise<PixFee> {
+    return withAuth(async () => {
+      console.log('🔄 Atualizando tarifa PIX:', pixFee.id);
+      const { data, error } = await supabase
+        .from('pix_fees')
+        .update({
+          date: pixFee.date,
+          amount: pixFee.amount,
+          description: pixFee.description,
+          bank: pixFee.bank,
+          transaction_type: pixFee.transactionType,
+          related_transaction_id: pixFee.relatedTransactionId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', pixFee.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Erro ao atualizar tarifa PIX:', error);
+        throw new Error(`Erro ao atualizar tarifa PIX: ${error.message}`);
+      }
+      
+      const updatedPixFee = {
+        id: data.id,
+        date: data.date,
+        amount: Number(data.amount),
+        description: data.description,
+        bank: data.bank,
+        transactionType: data.transaction_type,
+        relatedTransactionId: data.related_transaction_id,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      };
+      
+      console.log('✅ Tarifa PIX atualizada com sucesso:', updatedPixFee.id);
+      return updatedPixFee;
+    });
+  },
+
+  async delete(id: string): Promise<void> => {
+    return withAuth(async () => {
+      console.log('🔄 Excluindo tarifa PIX:', id);
+      const { error } = await supabase
+        .from('pix_fees')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('❌ Erro ao excluir tarifa PIX:', error);
+        throw new Error(`Erro ao excluir tarifa PIX: ${error.message}`);
+      }
+      
+      console.log('✅ Tarifa PIX excluída com sucesso:', id);
     });
   }
 };

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { User } from '../types';
+import { User, PixFee } from '../types';
 
 // Types
 interface Employee {
@@ -182,6 +182,18 @@ interface CashTransaction {
   updatedAt?: string;
 }
 
+interface PixFee {
+  id: string;
+  date: string;
+  amount: number;
+  description: string;
+  bank: string;
+  transactionType: 'pix_out' | 'pix_in' | 'ted' | 'doc' | 'other';
+  relatedTransactionId?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 interface AppState {
   user: User | null;
   employees: [],
@@ -195,6 +207,7 @@ interface AppState {
   employeeOvertimes: [],
   cashBalance: null,
   cashTransactions: [],
+  pixFees: [],
   isLoading: false,
   error: null,
 };
@@ -214,6 +227,7 @@ type AppAction =
   | { type: 'SET_EMPLOYEE_OVERTIMES'; payload: EmployeeOvertime[] }
   | { type: 'SET_CASH_BALANCE'; payload: CashBalance | null }
   | { type: 'SET_CASH_TRANSACTIONS'; payload: CashTransaction[] }
+  | { type: 'SET_PIX_FEES'; payload: PixFee[] }
   | { type: 'ADD_EMPLOYEE'; payload: Employee }
   | { type: 'UPDATE_EMPLOYEE'; payload: Employee }
   | { type: 'DELETE_EMPLOYEE'; payload: string }
@@ -244,7 +258,10 @@ type AppAction =
   | { type: 'UPDATE_CASH_BALANCE'; payload: CashBalance }
   | { type: 'ADD_CASH_TRANSACTION'; payload: CashTransaction }
   | { type: 'UPDATE_CASH_TRANSACTION'; payload: CashTransaction }
-  | { type: 'DELETE_CASH_TRANSACTION'; payload: string };
+  | { type: 'DELETE_CASH_TRANSACTION'; payload: string }
+  | { type: 'ADD_PIX_FEE'; payload: PixFee }
+  | { type: 'UPDATE_PIX_FEE'; payload: PixFee }
+  | { type: 'DELETE_PIX_FEE'; payload: string };
 
 const initialState: AppState = {
   user: null,
@@ -259,6 +276,7 @@ const initialState: AppState = {
   employeeOvertimes: [],
   cashBalance: null,
   cashTransactions: [],
+  pixFees: [],
   isLoading: false,
   error: null,
 }
@@ -295,6 +313,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, cashBalance: action.payload };
     case 'SET_CASH_TRANSACTIONS':
       return { ...state, cashTransactions: action.payload };
+    case 'SET_PIX_FEES':
+      return { ...state, pixFees: action.payload };
     case 'ADD_EMPLOYEE':
       return { ...state, employees: [...state.employees, action.payload] };
     case 'UPDATE_EMPLOYEE':
@@ -437,6 +457,20 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         cashTransactions: state.cashTransactions.filter(transaction => transaction.id !== action.payload),
       };
+    case 'ADD_PIX_FEE':
+      return { ...state, pixFees: [...state.pixFees, action.payload] };
+    case 'UPDATE_PIX_FEE':
+      return {
+        ...state,
+        pixFees: state.pixFees.map(pixFee =>
+          pixFee.id === action.payload.id ? action.payload : pixFee
+        ),
+      };
+    case 'DELETE_PIX_FEE':
+      return {
+        ...state,
+        pixFees: state.pixFees.filter(pixFee => pixFee.id !== action.payload),
+      };
     default:
       return state;
   }
@@ -481,6 +515,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         overtimesResult,
         cashBalanceResult,
         cashTransactionsResult,
+        pixFeesResult,
       ] = await Promise.all([
         supabase.from('employees').select('*').order('name'),
         supabase.from('sales').select('*').order('date', { ascending: false }),
@@ -493,6 +528,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         supabase.from('employee_overtimes').select('*').order('date', { ascending: false }),
         supabase.from('cash_balances').select('*').limit(1).maybeSingle(),
         supabase.from('cash_transactions').select('*').order('date', { ascending: false }),
+        supabase.from('pix_fees').select('*').order('date', { ascending: false }),
       ]);
 
       if (employeesResult.error) throw employeesResult.error;
@@ -505,6 +541,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (advancesResult.error) throw advancesResult.error;
       if (overtimesResult.error) throw overtimesResult.error;
       if (cashTransactionsResult.error) throw cashTransactionsResult.error;
+      if (pixFeesResult.error) throw pixFeesResult.error;
 
       // Transform data to match frontend types
       const employees = employeesResult.data.map(emp => ({
@@ -677,6 +714,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updatedAt: transaction.updated_at,
       }));
 
+      const pixFees = pixFeesResult.data.map(pixFee => ({
+        id: pixFee.id,
+        date: pixFee.date,
+        amount: parseFloat(pixFee.amount),
+        description: pixFee.description,
+        bank: pixFee.bank,
+        transactionType: pixFee.transaction_type,
+        relatedTransactionId: pixFee.related_transaction_id,
+        createdAt: pixFee.created_at,
+        updatedAt: pixFee.updated_at,
+      }));
+
       // Dispatch all data
       dispatch({ type: 'SET_EMPLOYEES', payload: employees });
       dispatch({ type: 'SET_SALES', payload: sales });
@@ -689,6 +738,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'SET_EMPLOYEE_OVERTIMES', payload: employeeOvertimes });
       dispatch({ type: 'SET_CASH_BALANCE', payload: finalCashBalance });
       dispatch({ type: 'SET_CASH_TRANSACTIONS', payload: cashTransactions });
+      dispatch({ type: 'SET_PIX_FEES', payload: pixFees });
 
     } catch (error) {
       console.error('Error loading data:', error);
@@ -1268,6 +1318,141 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'UPDATE_CASH_BALANCE', payload: updatedBalance });
   };
 
+  // CRUD operations for PIX fees
+  const createPixFee = async (pixFee: Omit<PixFee, 'id' | 'createdAt'>): Promise<PixFee> => {
+    const { data, error } = await supabase
+      .from('pix_fees')
+      .insert([{
+        date: pixFee.date,
+        amount: pixFee.amount,
+        description: pixFee.description,
+        bank: pixFee.bank,
+        transaction_type: pixFee.transactionType,
+        related_transaction_id: pixFee.relatedTransactionId
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newPixFee = {
+      id: data.id,
+      date: data.date,
+      amount: parseFloat(data.amount),
+      description: data.description,
+      bank: data.bank,
+      transactionType: data.transaction_type,
+      relatedTransactionId: data.related_transaction_id,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+
+    dispatch({ type: 'ADD_PIX_FEE', payload: newPixFee });
+    
+    // Criar transação de caixa para a tarifa PIX (saída)
+    await createCashTransaction({
+      date: pixFee.date,
+      type: 'saida',
+      amount: pixFee.amount,
+      description: `Tarifa PIX - ${pixFee.bank}: ${pixFee.description}`,
+      category: 'outro',
+      relatedId: newPixFee.id,
+      paymentMethod: 'pix'
+    });
+    
+    return newPixFee;
+  };
+
+  const updatePixFee = async (pixFee: PixFee): Promise<PixFee> => {
+    const { data, error } = await supabase
+      .from('pix_fees')
+      .update({
+        date: pixFee.date,
+        amount: pixFee.amount,
+        description: pixFee.description,
+        bank: pixFee.bank,
+        transaction_type: pixFee.transactionType,
+        related_transaction_id: pixFee.relatedTransactionId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', pixFee.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const updatedPixFee = {
+      id: data.id,
+      date: data.date,
+      amount: parseFloat(data.amount),
+      description: data.description,
+      bank: data.bank,
+      transactionType: data.transaction_type,
+      relatedTransactionId: data.related_transaction_id,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+
+    dispatch({ type: 'UPDATE_PIX_FEE', payload: updatedPixFee });
+    return updatedPixFee;
+  };
+
+  const deletePixFee = async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('pix_fees')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    dispatch({ type: 'DELETE_PIX_FEE', payload: id });
+  };
+
+  // Criar transação de caixa
+  const createCashTransaction = async (transaction: Omit<CashTransaction, 'id' | 'createdAt'>): Promise<void> => {
+    const { data, error } = await supabase
+      .from('cash_transactions')
+      .insert([{
+        date: transaction.date,
+        type: transaction.type,
+        amount: transaction.amount,
+        description: transaction.description,
+        category: transaction.category,
+        related_id: transaction.relatedId,
+        payment_method: transaction.paymentMethod
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newTransaction = {
+      id: data.id,
+      date: data.date,
+      type: data.type,
+      amount: parseFloat(data.amount),
+      description: data.description,
+      category: data.category,
+      relatedId: data.related_id,
+      paymentMethod: data.payment_method,
+      createdAt: data.created_at
+    };
+
+    dispatch({ type: 'ADD_CASH_TRANSACTION', payload: newTransaction });
+    
+    // Atualizar saldo do caixa
+    if (state.cashBalance) {
+      const newBalance = transaction.type === 'entrada' 
+        ? state.cashBalance.currentBalance + transaction.amount
+        : state.cashBalance.currentBalance - transaction.amount;
+      
+      await updateCashBalance({
+        ...state.cashBalance,
+        currentBalance: newBalance,
+        lastUpdated: new Date().toISOString()
+      });
+    }
+  };
+
   useEffect(() => {
     loadAllData();
   }, []);
@@ -1291,8 +1476,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     createBoleto,
     updateBoleto,
     deleteBoleto,
+    createPixFee,
+    updatePixFee,
+    deletePixFee,
     initializeCashBalance,
     updateCashBalance,
+    createCashTransaction,
     isSupabaseConfigured,
   };
 
@@ -1324,5 +1513,6 @@ export type {
   EmployeeOvertime,
   CashBalance,
   CashTransaction,
+  PixFee,
   AppState,
 };

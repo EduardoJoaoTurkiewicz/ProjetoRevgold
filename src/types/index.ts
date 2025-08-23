@@ -226,3 +226,15 @@ export interface CashTransaction {
   paymentMethod?: string;
   createdAt: string;
 }
+
+export interface PixFee {
+  id: string;
+  date: string;
+  amount: number;
+  description: string;
+  bank: string;
+  transactionType: 'pix_out' | 'pix_in' | 'ted' | 'doc' | 'other';
+  relatedTransactionId?: string;
+  createdAt: string;
+  updatedAt?: string;
+}

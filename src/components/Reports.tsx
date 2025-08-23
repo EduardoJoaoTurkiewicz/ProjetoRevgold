@@ -50,14 +50,19 @@ export function Reports() {
     
     state.boletos.forEach(boleto => {
       if (boleto.dueDate >= startDate && boleto.dueDate <= endDate) {
+        // Calcular valor líquido recebido
+        const finalAmount = boleto.finalAmount || boleto.value;
+        const notaryCosts = boleto.notaryCosts || 0;
+        const netReceived = finalAmount - notaryCosts;
+        
         receivables.push({
           id: boleto.id,
           type: 'boleto',
           client: boleto.client,
-          amount: boleto.value,
+          amount: netReceived,
           dueDate: boleto.dueDate,
           status: boleto.status,
-          description: `Boleto - Parcela ${boleto.installmentNumber}/${boleto.totalInstallments}`,
+          description: `Boleto - Parcela ${boleto.installmentNumber}/${boleto.totalInstallments}${boleto.overdueAction ? ` (${boleto.overdueAction})` : ''}`,
           saleId: boleto.saleId
         });
       }

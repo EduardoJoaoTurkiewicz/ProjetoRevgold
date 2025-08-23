@@ -66,7 +66,46 @@ export function Boletos() {
   const updateBoletoStatus = (boletoId: string, status: Boleto['status']) => {
     const boleto = state.boletos.find(b => b.id === boletoId);
     if (boleto) {
-      const updatedBoleto = { ...boleto, status };
+      let updatedBoleto = { ...boleto, status };
+      
+      // Se o boleto foi marcado como compensado, atualizar o caixa
+      if (status === 'compensado' && boleto.status !== 'compensado') {
+        // Calcular valor líquido recebido (valor final menos custos de cartório)
+        const finalAmount = boleto.finalAmount || boleto.value;
+        const notaryCosts = boleto.notaryCosts || 0;
+        const netReceived = finalAmount - notaryCosts;
+        
+        // Criar transação de entrada no caixa para o valor líquido
+        if (netReceived > 0) {
+          state.createCashTransaction({
+            date: new Date().toISOString().split('T')[0],
+            type: 'entrada',
+            amount: netReceived,
+            description: `Boleto pago - ${boleto.client}${boleto.overdueAction ? ` (${getOverdueActionLabel(boleto.overdueAction)})` : ''}`,
+            category: 'boleto',
+            relatedId: boleto.id,
+            paymentMethod: 'boleto'
+          }).catch(error => {
+            console.error('Erro ao criar transação de caixa para boleto:', error);
+          });
+        }
+        
+        // Se houve custos de cartório, criar transação de saída
+        if (notaryCosts > 0) {
+          state.createCashTransaction({
+            date: new Date().toISOString().split('T')[0],
+            type: 'saida',
+            amount: notaryCosts,
+            description: `Custos de cartório - Boleto ${boleto.client}`,
+            category: 'outro',
+            relatedId: boleto.id,
+            paymentMethod: 'outros'
+          }).catch(error => {
+            console.error('Erro ao criar transação de custos de cartório:', error);
+          });
+        }
+      }
+      
       updateBoleto(updatedBoleto).catch(error => {
         alert('Erro ao atualizar status: ' + error.message);
       });

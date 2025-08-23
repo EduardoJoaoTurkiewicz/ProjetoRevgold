@@ -43,7 +43,11 @@ export default function Dashboard() {
     // Boletos pagos hoje
     state.boletos.forEach(boleto => {
       if (boleto.dueDate === today && boleto.status === 'compensado') {
-        totalReceivedToday += boleto.value;
+        // Usar valor final menos custos de cartório
+        const finalAmount = boleto.finalAmount || boleto.value;
+        const notaryCosts = boleto.notaryCosts || 0;
+        const netReceived = finalAmount - notaryCosts;
+        totalReceivedToday += netReceived;
       }
     });
     
@@ -65,14 +69,40 @@ export default function Dashboard() {
     
     // Vendas totais e recebimentos totais
     const totalSales = state.sales.reduce((sum, sale) => sum + sale.totalValue, 0);
-    const totalReceived = state.sales.reduce((sum, sale) => sum + sale.receivedAmount, 0);
+    let totalReceived = state.sales.reduce((sum, sale) => sum + sale.receivedAmount, 0);
+    
+    // Adicionar boletos compensados ao valor recebido
+    state.boletos.forEach(boleto => {
+      if (boleto.status === 'compensado') {
+        const finalAmount = boleto.finalAmount || boleto.value;
+        const notaryCosts = boleto.notaryCosts || 0;
+        const netReceived = finalAmount - notaryCosts;
+        totalReceived += netReceived;
+      }
+    });
+    
     const totalPending = state.sales.reduce((sum, sale) => sum + sale.pendingAmount, 0);
     const salesThisMonth = state.sales.filter(sale => {
       const saleDate = new Date(sale.date);
       return saleDate.getMonth() === thisMonth && saleDate.getFullYear() === thisYear;
     });
     const monthlyRevenue = salesThisMonth.reduce((sum, sale) => sum + sale.totalValue, 0);
-    const monthlyReceived = salesThisMonth.reduce((sum, sale) => sum + sale.receivedAmount, 0);
+    let monthlyReceived = salesThisMonth.reduce((sum, sale) => sum + sale.receivedAmount, 0);
+    
+    // Adicionar boletos compensados do mês ao valor recebido
+    const monthlyBoletos = state.boletos.filter(boleto => {
+      const boletoDate = new Date(boleto.dueDate);
+      return boletoDate.getMonth() === thisMonth && 
+             boletoDate.getFullYear() === thisYear && 
+             boleto.status === 'compensado';
+    });
+    
+    monthlyBoletos.forEach(boleto => {
+      const finalAmount = boleto.finalAmount || boleto.value;
+      const notaryCosts = boleto.notaryCosts || 0;
+      const netReceived = finalAmount - notaryCosts;
+      monthlyReceived += netReceived;
+    });
 
     // Dívidas
     const totalDebts = state.debts.reduce((sum, debt) => sum + debt.totalValue, 0);

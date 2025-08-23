@@ -52,6 +52,7 @@ import { Sales } from './components/Sales';
 import { Debts } from './components/Debts';
 import { Checks } from './components/Checks';
 import { Boletos } from './components/Boletos';
+import { PixFees } from './components/PixFees';
 import { Reports } from './components/Reports';
 import { CashManagement } from './components/CashManagement';
 import { Agenda } from './components/Agenda';
@@ -76,6 +77,8 @@ function AppContent() {
         return <Checks />;
       case 'boletos':
         return <Boletos />;
+      case 'pix-fees':
+        return <PixFees />;
       case 'employees':
         return <Employees />;
       case 'cash':
