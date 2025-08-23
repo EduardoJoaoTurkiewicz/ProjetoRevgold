@@ -6,7 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4'];
 
 export default function Dashboard() {
-  const { state } = useApp();
+  const { state, loadAllData } = useApp();
 
   // Calcular métricas principais
   const metrics = useMemo(() => {
@@ -14,7 +14,56 @@ export default function Dashboard() {
     const thisMonth = new Date().getMonth();
     const thisYear = new Date().getFullYear();
 
-    // Vendas
+    // Vendas do dia
+    const salesToday = state.sales.filter(sale => sale.date === today);
+    const totalSalesToday = salesToday.reduce((sum, sale) => sum + sale.totalValue, 0);
+    
+    // Valor recebido hoje (incluindo cheques e boletos compensados hoje)
+    let totalReceivedToday = 0;
+    
+    // Vendas com pagamento instantâneo hoje
+    salesToday.forEach(sale => {
+      sale.paymentMethods.forEach(method => {
+        if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type)) {
+          totalReceivedToday += method.amount;
+        }
+        if (method.type === 'cartao_credito' && (!method.installments || method.installments === 1)) {
+          totalReceivedToday += method.amount;
+        }
+      });
+    });
+    
+    // Cheques compensados hoje
+    state.checks.forEach(check => {
+      if (check.dueDate === today && check.status === 'compensado') {
+        totalReceivedToday += check.value;
+      }
+    });
+    
+    // Boletos pagos hoje
+    state.boletos.forEach(boleto => {
+      if (boleto.dueDate === today && boleto.status === 'compensado') {
+        totalReceivedToday += boleto.value;
+      }
+    });
+    
+    // Dívidas do dia
+    const debtsToday = state.debts.filter(debt => debt.date === today);
+    const totalDebtsToday = debtsToday.reduce((sum, debt) => sum + debt.totalValue, 0);
+    
+    // Valor pago hoje
+    let totalPaidToday = 0;
+    
+    // Dívidas pagas hoje
+    debtsToday.forEach(debt => {
+      debt.paymentMethods.forEach(method => {
+        if (['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(method.type)) {
+          totalPaidToday += method.amount;
+        }
+      });
+    });
+    
+    // Vendas totais e recebimentos totais
     const totalSales = state.sales.reduce((sum, sale) => sum + sale.totalValue, 0);
     const totalReceived = state.sales.reduce((sum, sale) => sum + sale.receivedAmount, 0);
     const totalPending = state.sales.reduce((sum, sale) => sum + sale.pendingAmount, 0);
@@ -23,11 +72,20 @@ export default function Dashboard() {
       return saleDate.getMonth() === thisMonth && saleDate.getFullYear() === thisYear;
     });
     const monthlyRevenue = salesThisMonth.reduce((sum, sale) => sum + sale.totalValue, 0);
+    const monthlyReceived = salesThisMonth.reduce((sum, sale) => sum + sale.receivedAmount, 0);
 
     // Dívidas
     const totalDebts = state.debts.reduce((sum, debt) => sum + debt.totalValue, 0);
     const totalPaidDebts = state.debts.reduce((sum, debt) => sum + debt.paidAmount, 0);
     const totalPendingDebts = state.debts.reduce((sum, debt) => sum + debt.pendingAmount, 0);
+    
+    // Dívidas do mês
+    const debtsThisMonth = state.debts.filter(debt => {
+      const debtDate = new Date(debt.date);
+      return debtDate.getMonth() === thisMonth && debtDate.getFullYear() === thisYear;
+    });
+    const monthlyDebts = debtsThisMonth.reduce((sum, debt) => sum + debt.totalValue, 0);
+    const monthlyPaidDebts = debtsThisMonth.reduce((sum, debt) => sum + debt.paidAmount, 0);
 
     // Cheques
     const checksToday = state.checks.filter(check => check.dueDate === today);
@@ -55,15 +113,24 @@ export default function Dashboard() {
     // Caixa
     const cashBalance = state.cashBalance?.currentBalance || 0;
 
-    // Lucro líquido
-    const netProfit = totalReceived - totalPaidDebts;
-    const profitMargin = totalReceived > 0 ? (netProfit / totalReceived) * 100 : 0;
+    // Lucro líquido do mês
+    const monthlyNetProfit = monthlyReceived - monthlyPaidDebts;
+    const monthlyProfitMargin = monthlyReceived > 0 ? (monthlyNetProfit / monthlyReceived) * 100 : 0;
 
     return {
+      totalSalesToday,
+      totalReceivedToday,
+      totalDebtsToday,
+      totalPaidToday,
       totalSales,
       totalReceived,
       totalPending,
       monthlyRevenue,
+      monthlyReceived,
+      monthlyDebts,
+      monthlyPaidDebts,
+      monthlyNetProfit,
+      monthlyProfitMargin,
       totalDebts,
       totalPaidDebts,
       totalPendingDebts,
@@ -80,8 +147,8 @@ export default function Dashboard() {
       totalPendingCommissions,
       monthlyCommissions: monthlyCommissions.length,
       cashBalance,
-      netProfit,
-      profitMargin
+      netProfit: monthlyNetProfit,
+      profitMargin: monthlyProfitMargin
     };
   }, [state]);
 
@@ -633,7 +700,7 @@ export default function Dashboard() {
             <div>
               <p className="text-green-600 font-semibold">Faturamento</p>
               <p className="text-3xl font-black text-green-700">
-                R$ {metrics.monthlyReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {metrics.monthlyRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
             <div>
@@ -646,15 +713,15 @@ export default function Dashboard() {
               </p>
             </div>
             <div>
-              <p className="text-green-600 font-semibold">Dívidas Pagas</p>
-              <p className="text-3xl font-black text-green-700">
-                R$ {metrics.monthlyPaidDebts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <div>
               <p className="text-green-600 font-semibold">Comissões</p>
               <p className="text-3xl font-black text-green-700">
                 {metrics.monthlyCommissions}
+              </p>
+            </div>
+            <div>
+              <p className="text-green-600 font-semibold">Lucro</p>
+              <p className={`text-3xl font-black ${metrics.netProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                R$ {metrics.netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
           </div>

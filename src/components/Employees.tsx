@@ -7,7 +7,7 @@ import { EmployeeAdvanceForm } from './forms/EmployeeAdvanceForm';
 import { EmployeeOvertimeForm } from './forms/EmployeeOvertimeForm';
 
 export function Employees() {
-  const { state, createEmployee, updateEmployee, deleteEmployee } = useApp();
+  const { state, createEmployee, updateEmployee, deleteEmployee, loadAllData } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [viewingEmployee, setViewingEmployee] = useState<Employee | null>(null);
