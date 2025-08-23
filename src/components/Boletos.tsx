@@ -2,42 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { BoletoForm } from './forms/BoletoForm';
 import { Plus, FileText, Calendar, DollarSign } from 'lucide-react';
-
-interface Boleto {
-  id: string;
-  description: string;
-  amount: number;
-  dueDate: string;
-  status: 'pending' | 'paid';
-  createdAt: string;
-}
+import { Boleto } from '../types';
 
 export function Boletos() {
-  const { user } = useApp();
-  const [boletos, setBoletos] = useState<Boleto[]>([]);
+  const { user, boletos, createBoleto, updateBoleto } = useApp();
   const [showForm, setShowForm] = useState(false);
 
-  const handleAddBoleto = (boletoData: Omit<Boleto, 'id' | 'createdAt'>) => {
-    const newBoleto: Boleto = {
-      ...boletoData,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-    };
-    setBoletos([...boletos, newBoleto]);
-    setShowForm(false);
+  const handleAddBoleto = async (boletoData: Omit<Boleto, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      await createBoleto(boletoData);
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error creating boleto:', error);
+    }
   };
 
-  const toggleStatus = (id: string) => {
-    setBoletos(boletos.map(boleto => 
-      boleto.id === id 
-        ? { ...boleto, status: boleto.status === 'pending' ? 'paid' : 'pending' }
-        : boleto
-    ));
+  const toggleStatus = async (id: string) => {
+    const boleto = boletos.find(b => b.id === id);
+    if (!boleto) return;
+
+    const newStatus = boleto.status === 'pendente' ? 'compensado' : 'pendente';
+    try {
+      await updateBoleto(id, { status: newStatus });
+    } catch (error) {
+      console.error('Error updating boleto status:', error);
+    }
   };
 
   const totalPending = boletos
-    .filter(boleto => boleto.status === 'pending')
-    .reduce((sum, boleto) => sum + boleto.amount, 0);
+    .filter(boleto => boleto.status === 'pendente')
+    .reduce((sum, boleto) => sum + boleto.value, 0);
 
   return (
     <div className="space-y-6">
@@ -69,7 +63,7 @@ export function Boletos() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Pendentes</p>
               <p className="text-2xl font-bold text-gray-900">
-                {boletos.filter(b => b.status === 'pending').length}
+                {boletos.filter(b => b.status === 'pendente').length}
               </p>
             </div>
           </div>
@@ -104,7 +98,7 @@ export function Boletos() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Descrição
+                      Cliente
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Valor
@@ -124,33 +118,33 @@ export function Boletos() {
                   {boletos.map((boleto) => (
                     <tr key={boleto.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {boleto.description}
+                        {boleto.client}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        R$ {boleto.amount.toFixed(2)}
+                        R$ {boleto.value.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(boleto.dueDate).toLocaleDateString('pt-BR')}
+                        {new Date(boleto.due_date).toLocaleDateString('pt-BR')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          boleto.status === 'paid' 
+                          boleto.status === 'compensado' 
                             ? 'bg-green-100 text-green-800' 
                             : 'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {boleto.status === 'paid' ? 'Pago' : 'Pendente'}
+                          {boleto.status === 'compensado' ? 'Compensado' : 'Pendente'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
                           onClick={() => toggleStatus(boleto.id)}
                           className={`${
-                            boleto.status === 'paid' 
+                            boleto.status === 'compensado' 
                               ? 'text-yellow-600 hover:text-yellow-900' 
                               : 'text-green-600 hover:text-green-900'
                           }`}
                         >
-                          {boleto.status === 'paid' ? 'Marcar Pendente' : 'Marcar Pago'}
+                          {boleto.status === 'compensado' ? 'Marcar Pendente' : 'Marcar Compensado'}
                         </button>
                       </td>
                     </tr>
