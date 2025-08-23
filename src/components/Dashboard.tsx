@@ -34,22 +34,22 @@ const Dashboard: React.FC = () => {
   const todayStr = today.toISOString().split('T')[0];
   
   const metrics = useMemo(() => {
-    // Sales made today
+    // Vendas de hoje
     const todaySales = state.sales.filter(sale => sale.date === todayStr);
     const todayTotalSales = todaySales.reduce((sum, sale) => sum + sale.totalValue, 0);
     
-    // Amount actually received today (payments that were processed today)
+    // Valor efetivamente recebido hoje
     let todayReceived = 0;
     
-    // Check for payments received today from any sales
+    // Verificar pagamentos recebidos hoje de vendas
     state.sales.forEach(sale => {
       sale.paymentMethods.forEach(method => {
-        // For immediate payment methods (dinheiro, pix, cartao_debito)
+        // Para métodos de pagamento imediatos (dinheiro, pix, cartao_debito)
         if ((method.type === 'dinheiro' || method.type === 'pix' || method.type === 'cartao_debito') && sale.date === todayStr) {
           todayReceived += method.amount;
         }
         
-        // For installment payments, check if any installment is due today
+        // Para pagamentos parcelados, verificar se alguma parcela vence hoje
         if (method.installments && method.installments > 1) {
           for (let i = 0; i < method.installments; i++) {
             const dueDate = new Date(method.firstInstallmentDate || method.startDate || sale.date);
@@ -63,28 +63,50 @@ const Dashboard: React.FC = () => {
       });
     });
     
-    // Check for checks compensated today
+    // Verificar cheques compensados hoje
     state.checks.forEach(check => {
       if (check.status === 'compensado' && check.dueDate === todayStr) {
         todayReceived += check.value;
       }
     });
     
-    // Check for boletos paid today
+    // Verificar boletos pagos hoje
     state.boletos.forEach(boleto => {
       if (boleto.status === 'compensado' && boleto.dueDate === todayStr) {
         todayReceived += boleto.value;
       }
     });
     
-    // Debts created today
+    // Dívidas criadas hoje
     const todayDebts = state.debts.filter(debt => debt.date === todayStr);
     const todayTotalDebts = todayDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
     
-    // Amount paid today (debts paid today)
-    const todayPaid = todayDebts.reduce((sum, debt) => sum + debt.paidAmount, 0);
+    // Valor pago hoje (dívidas pagas hoje)
+    let todayPaid = 0;
+    
+    // Calcular pagamentos feitos hoje
+    state.debts.forEach(debt => {
+      debt.paymentMethods.forEach(method => {
+        // Para métodos de pagamento imediatos
+        if ((method.type === 'dinheiro' || method.type === 'pix' || method.type === 'cartao_debito') && debt.date === todayStr) {
+          todayPaid += method.amount;
+        }
+        
+        // Para pagamentos parcelados, verificar se alguma parcela vence hoje
+        if (method.installments && method.installments > 1) {
+          for (let i = 0; i < method.installments; i++) {
+            const dueDate = new Date(method.startDate || debt.date);
+            dueDate.setDate(dueDate.getDate() + (i * (method.installmentInterval || 30)));
+            
+            if (dueDate.toISOString().split('T')[0] === todayStr) {
+              todayPaid += method.installmentValue || 0;
+            }
+          }
+        }
+      });
+    });
 
-    // Overall metrics for context
+    // Métricas gerais para contexto
     const totalSales = state.sales.reduce((sum, sale) => sum + sale.totalValue, 0);
     const totalReceived = state.sales.reduce((sum, sale) => sum + sale.receivedAmount, 0);
     const totalPending = state.sales.reduce((sum, sale) => sum + sale.pendingAmount, 0);
@@ -94,7 +116,7 @@ const Dashboard: React.FC = () => {
     const netProfit = totalReceived - totalDebtsPaid;
     const profitMargin = totalReceived > 0 ? (netProfit / totalReceived) * 100 : 0;
 
-    // Overdue items
+    // Itens vencidos
     const overdueChecks = state.checks.filter(check => 
       check.dueDate < todayStr && check.status === 'pendente'
     );
@@ -102,12 +124,12 @@ const Dashboard: React.FC = () => {
       boleto.dueDate < todayStr && boleto.status === 'pendente'
     );
 
-    // Due today
+    // Vencimentos de hoje
     const dueTodayChecks = state.checks.filter(check => check.dueDate === todayStr);
     const dueTodayBoletos = state.boletos.filter(boleto => boleto.dueDate === todayStr);
 
     return {
-      // Today's metrics
+      // Métricas de hoje
       todayTotalSales,
       todayReceived,
       todayTotalDebts,
@@ -115,7 +137,7 @@ const Dashboard: React.FC = () => {
       todaySalesCount: todaySales.length,
       todayDebtsCount: todayDebts.length,
       
-      // Overall metrics
+      // Métricas gerais
       totalSales,
       totalReceived,
       totalPending,
