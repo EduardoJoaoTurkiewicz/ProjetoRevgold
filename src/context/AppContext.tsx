@@ -1,1122 +1,697 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { User, Sale, Debt, Check, Installment, Product, Employee, EmployeePayment, EmployeeAdvance, EmployeeOvertime, EmployeeCommission, Boleto, CashFlow, CashBalance, ThirdPartyCheck, CashTransaction } from '../types';
-import { supabase, salesService, debtsService, employeesService, checksService, boletosService, isSupabaseConfigured, ensureAuthenticated, testSupabaseConnection } from '../lib/supabase';
-import { AutomationService } from '../lib/automationService';
+import React, { useMemo, useState } from 'react';
+import { DollarSign, TrendingUp, TrendingDown, Users, Calendar, AlertTriangle, CheckCircle, Clock, CreditCard, Receipt, FileText, Star, Wallet, ArrowUpCircle, ArrowDownCircle, BarChart3 } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
-interface AppState {
-  user: User | null;
-  sales: Sale[];
-  debts: Debt[];
-  checks: Check[];
-  boletos: Boleto[];
-  installments: Installment[];
-  employees: Employee[];
-  employeePayments: EmployeePayment[];
-  employeeAdvances: EmployeeAdvance[];
-  employeeOvertimes: EmployeeOvertime[];
-  employeeCommissions: EmployeeCommission[];
-  cashFlow: CashFlow[];
-  cashBalance: CashBalance | null;
-  thirdPartyChecks: ThirdPartyCheck[];
-  cashTransactions: CashTransaction[];
-  isLoading: boolean;
-  error: string | null;
-}
+const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4'];
 
-type AppAction =
-  | { type: 'SET_USER'; payload: User | null }
-  | { type: 'SET_SALES'; payload: Sale[] }
-  | { type: 'ADD_SALE'; payload: Sale }
-  | { type: 'UPDATE_SALE'; payload: Sale }
-  | { type: 'DELETE_SALE'; payload: string }
-  | { type: 'SET_DEBTS'; payload: Debt[] }
-  | { type: 'ADD_DEBT'; payload: Debt }
-  | { type: 'UPDATE_DEBT'; payload: Debt }
-  | { type: 'DELETE_DEBT'; payload: string }
-  | { type: 'SET_CHECKS'; payload: Check[] }
-  | { type: 'ADD_CHECK'; payload: Check }
-  | { type: 'UPDATE_CHECK'; payload: Check }
-  | { type: 'DELETE_CHECK'; payload: string }
-  | { type: 'SET_BOLETOS'; payload: Boleto[] }
-  | { type: 'ADD_BOLETO'; payload: Boleto }
-  | { type: 'UPDATE_BOLETO'; payload: Boleto }
-  | { type: 'DELETE_BOLETO'; payload: string }
-  | { type: 'SET_EMPLOYEES'; payload: Employee[] }
-  | { type: 'ADD_EMPLOYEE'; payload: Employee }
-  | { type: 'UPDATE_EMPLOYEE'; payload: Employee }
-  | { type: 'DELETE_EMPLOYEE'; payload: string }
-  | { type: 'SET_CASH_FLOW'; payload: CashFlow[] }
-  | { type: 'ADD_CASH_FLOW'; payload: CashFlow }
-  | { type: 'SET_CASH_BALANCE'; payload: CashBalance }
-  | { type: 'UPDATE_CASH_BALANCE'; payload: CashBalance }
-  | { type: 'SET_THIRD_PARTY_CHECKS'; payload: ThirdPartyCheck[] }
-  | { type: 'ADD_THIRD_PARTY_CHECK'; payload: ThirdPartyCheck }
-  | { type: 'SET_CASH_TRANSACTIONS'; payload: CashTransaction[] }
-  | { type: 'ADD_CASH_TRANSACTION'; payload: CashTransaction }
-  | { type: 'ADD_INSTALLMENT'; payload: Installment }
-  | { type: 'UPDATE_INSTALLMENT'; payload: Installment }
-  | { type: 'ADD_EMPLOYEE_PAYMENT'; payload: EmployeePayment }
-  | { type: 'UPDATE_EMPLOYEE_PAYMENT'; payload: EmployeePayment }
-  | { type: 'DELETE_EMPLOYEE_PAYMENT'; payload: string }
-  | { type: 'ADD_EMPLOYEE_ADVANCE'; payload: EmployeeAdvance }
-  | { type: 'UPDATE_EMPLOYEE_ADVANCE'; payload: EmployeeAdvance }
-  | { type: 'DELETE_EMPLOYEE_ADVANCE'; payload: string }
-  | { type: 'ADD_EMPLOYEE_OVERTIME'; payload: EmployeeOvertime }
-  | { type: 'UPDATE_EMPLOYEE_OVERTIME'; payload: EmployeeOvertime }
-  | { type: 'DELETE_EMPLOYEE_OVERTIME'; payload: string }
-  | { type: 'ADD_EMPLOYEE_COMMISSION'; payload: EmployeeCommission }
-  | { type: 'UPDATE_EMPLOYEE_COMMISSION'; payload: EmployeeCommission }
-  | { type: 'DELETE_EMPLOYEE_COMMISSION'; payload: string }
-  | { type: 'SET_EMPLOYEE_PAYMENTS'; payload: EmployeePayment[] }
-  | { type: 'SET_EMPLOYEE_ADVANCES'; payload: EmployeeAdvance[] }
-  | { type: 'SET_EMPLOYEE_OVERTIMES'; payload: EmployeeOvertime[] }
-  | { type: 'SET_EMPLOYEE_COMMISSIONS'; payload: EmployeeCommission[] }
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null };
+export default function Dashboard() {
+  const { state } = useApp();
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-const initialState: AppState = {
-  user: null,
-  sales: [],
-  debts: [],
-  checks: [],
-  boletos: [],
-  installments: [],
-  employees: [],
-  employeePayments: [],
-  employeeAdvances: [],
-  employeeOvertimes: [],
-  employeeCommissions: [],
-  cashFlow: [],
-  cashBalance: null,
-  thirdPartyChecks: [],
-  cashTransactions: [],
-  isLoading: false,
-  error: null
-};
+  // Calcular métricas principais
+  const metrics = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const thisMonth = selectedMonth;
+    const thisYear = selectedYear;
 
-function appReducer(state: AppState, action: AppAction): AppState {
-  switch (action.type) {
-    case 'SET_USER':
-      return { ...state, user: action.payload };
-      
-    case 'SET_SALES':
-      return { ...state, sales: action.payload };
-      
-    case 'ADD_SALE':
-      return { ...state, sales: [...state.sales, action.payload] };
-      
-    case 'UPDATE_SALE':
-      return { 
-        ...state, 
-        sales: state.sales.map(sale => 
-          sale.id === action.payload.id ? action.payload : sale
-        ) 
-      };
-      
-    case 'DELETE_SALE':
-      return { 
-        ...state, 
-        sales: state.sales.filter(sale => sale.id !== action.payload)
-      };
-      
-    case 'SET_DEBTS':
-      return { ...state, debts: action.payload };
-      
-    case 'ADD_DEBT':
-      return { ...state, debts: [...state.debts, action.payload] };
-      
-    case 'UPDATE_DEBT':
-      return { 
-        ...state, 
-        debts: state.debts.map(debt => 
-          debt.id === action.payload.id ? action.payload : debt
-        ) 
-      };
-      
-    case 'DELETE_DEBT':
-      return { 
-        ...state, 
-        debts: state.debts.filter(debt => debt.id !== action.payload)
-      };
-      
-    case 'SET_CHECKS':
-      return { ...state, checks: action.payload };
-      
-    case 'ADD_CHECK':
-      return { ...state, checks: [...state.checks, action.payload] };
-      
-    case 'UPDATE_CHECK':
-      return { 
-        ...state, 
-        checks: state.checks.map(check => 
-          check.id === action.payload.id ? action.payload : check
-        ) 
-      };
-      
-    case 'DELETE_CHECK':
-      return { 
-        ...state, 
-        checks: state.checks.filter(check => check.id !== action.payload)
-      };
-      
-    case 'SET_BOLETOS':
-      return { ...state, boletos: action.payload };
-      
-    case 'ADD_BOLETO':
-      return { ...state, boletos: [...state.boletos, action.payload] };
-      
-    case 'UPDATE_BOLETO':
-      return { 
-        ...state, 
-        boletos: state.boletos.map(boleto => 
-          boleto.id === action.payload.id ? action.payload : boleto
-        ) 
-      };
-      
-    case 'DELETE_BOLETO':
-      return { 
-        ...state, 
-        boletos: state.boletos.filter(boleto => boleto.id !== action.payload)
-      };
-      
-    case 'SET_EMPLOYEES':
-      return { ...state, employees: action.payload };
-      
-    case 'ADD_EMPLOYEE':
-      return { ...state, employees: [...state.employees, action.payload] };
-      
-    case 'UPDATE_EMPLOYEE':
-      return { 
-        ...state, 
-        employees: state.employees.map(employee => 
-          employee.id === action.payload.id ? action.payload : employee
-        ) 
-      };
-      
-    case 'DELETE_EMPLOYEE':
-      return { 
-        ...state, 
-        employees: state.employees.filter(employee => employee.id !== action.payload)
-      };
-      
-    case 'ADD_INSTALLMENT':
-      return { ...state, installments: [...state.installments, action.payload] };
-      
-    case 'UPDATE_INSTALLMENT':
-      return { 
-        ...state, 
-        installments: state.installments.map(installment => 
-          installment.id === action.payload.id ? action.payload : installment
-        ) 
-      };
-      
-    case 'ADD_EMPLOYEE_PAYMENT':
-      return { ...state, employeePayments: [...state.employeePayments, action.payload] };
-      
-    case 'UPDATE_EMPLOYEE_PAYMENT':
-      return { 
-        ...state, 
-        employeePayments: state.employeePayments.map(payment => 
-          payment.id === action.payload.id ? action.payload : payment
-        ) 
-      };
-      
-    case 'DELETE_EMPLOYEE_PAYMENT':
-      return { 
-        ...state, 
-        employeePayments: state.employeePayments.filter(payment => payment.id !== action.payload)
-      };
-      
-    case 'ADD_EMPLOYEE_ADVANCE':
-      return { ...state, employeeAdvances: [...state.employeeAdvances, action.payload] };
-      
-    case 'UPDATE_EMPLOYEE_ADVANCE':
-      return { 
-        ...state, 
-        employeeAdvances: state.employeeAdvances.map(advance => 
-          advance.id === action.payload.id ? action.payload : advance
-        ) 
-      };
-      
-    case 'DELETE_EMPLOYEE_ADVANCE':
-      return { 
-        ...state, 
-        employeeAdvances: state.employeeAdvances.filter(advance => advance.id !== action.payload)
-      };
-      
-    case 'ADD_EMPLOYEE_OVERTIME':
-      return { ...state, employeeOvertimes: [...state.employeeOvertimes, action.payload] };
-      
-    case 'UPDATE_EMPLOYEE_OVERTIME':
-      return { 
-        ...state, 
-        employeeOvertimes: state.employeeOvertimes.map(overtime => 
-          overtime.id === action.payload.id ? action.payload : overtime
-        ) 
-      };
-      
-    case 'DELETE_EMPLOYEE_OVERTIME':
-      return { 
-        ...state, 
-        employeeOvertimes: state.employeeOvertimes.filter(overtime => overtime.id !== action.payload)
-      };
-      
-    case 'ADD_EMPLOYEE_COMMISSION':
-      return { ...state, employeeCommissions: [...state.employeeCommissions, action.payload] };
-      
-    case 'UPDATE_EMPLOYEE_COMMISSION':
-      return { 
-        ...state, 
-        employeeCommissions: state.employeeCommissions.map(commission => 
-          commission.id === action.payload.id ? action.payload : commission
-        ) 
-      };
-      
-    case 'DELETE_EMPLOYEE_COMMISSION':
-      return { 
-        ...state, 
-        employeeCommissions: state.employeeCommissions.filter(commission => commission.id !== action.payload)
-      };
-      
-    case 'SET_EMPLOYEE_PAYMENTS':
-      return { ...state, employeePayments: action.payload };
-      
-    case 'SET_EMPLOYEE_ADVANCES':
-      return { ...state, employeeAdvances: action.payload };
-      
-    case 'SET_EMPLOYEE_OVERTIMES':
-      return { ...state, employeeOvertimes: action.payload };
-      
-    case 'SET_EMPLOYEE_COMMISSIONS':
-      return { ...state, employeeCommissions: action.payload };
-      
-    case 'SET_CASH_FLOW':
-      return { ...state, cashFlow: action.payload };
-      
-    case 'ADD_CASH_FLOW':
-      return { ...state, cashFlow: [...state.cashFlow, action.payload] };
-      
-    case 'SET_CASH_BALANCE':
-      return { ...state, cashBalance: action.payload };
-      
-    case 'UPDATE_CASH_BALANCE':
-      return { ...state, cashBalance: action.payload };
-      
-    case 'SET_THIRD_PARTY_CHECKS':
-      return { ...state, thirdPartyChecks: action.payload };
-      
-    case 'ADD_THIRD_PARTY_CHECK':
-      return { ...state, thirdPartyChecks: [...state.thirdPartyChecks, action.payload] };
-      
-    case 'SET_CASH_TRANSACTIONS':
-      return { ...state, cashTransactions: action.payload };
-      
-    case 'ADD_CASH_TRANSACTION':
-      return { ...state, cashTransactions: [...state.cashTransactions, action.payload] };
-      
-    case 'SET_LOADING':
-      return { ...state, isLoading: action.payload };
-      
-    case 'SET_ERROR':
-      return { ...state, error: action.payload };
-      
-    default:
-      return state;
-  }
-}
+    const salesThisMonth = state.sales.filter(sale => {
+      const saleDate = new Date(sale.date);
+      return saleDate.getMonth() === thisMonth && saleDate.getFullYear() === thisYear;
+    });
+    const monthlyRevenue = salesThisMonth.reduce((sum, sale) => sum + sale.totalValue, 0);
 
-const AppContext = createContext<{
-  state: AppState;
-  dispatch: React.Dispatch<AppAction>;
-  loadAllData: () => Promise<void>;
-  createSale: (sale: Omit<Sale, 'id' | 'createdAt'>) => Promise<void>;
-  updateSale: (sale: Sale) => Promise<void>;
-  deleteSale: (id: string) => Promise<void>;
-  createDebt: (debt: Omit<Debt, 'id' | 'createdAt'>) => Promise<void>;
-  updateDebt: (debt: Debt) => Promise<void>;
-  deleteDebt: (id: string) => Promise<void>;
-  createEmployee: (employee: Omit<Employee, 'id' | 'createdAt'>) => Promise<void>;
-  updateEmployee: (employee: Employee) => Promise<void>;
-  deleteEmployee: (id: string) => Promise<void>;
-  createCheck: (check: Omit<Check, 'id' | 'createdAt'>) => Promise<void>;
-  updateCheck: (check: Check) => Promise<void>;
-  deleteCheck: (id: string) => Promise<void>;
-  createBoleto: (boleto: Omit<Boleto, 'id' | 'createdAt'>) => Promise<void>;
-  updateBoleto: (boleto: Boleto) => Promise<void>;
-  deleteBoleto: (id: string) => Promise<void>;
-  initializeCashBalance: (initialBalance: number) => Promise<void>;
-  updateCashBalance: (amount: number, type: 'entrada' | 'saida', description: string, category: string) => Promise<void>;
-} | null>(null);
+    // Vendas
+    const totalSales = state.sales.reduce((sum, sale) => sum + sale.totalValue, 0);
+    const totalReceived = state.sales.reduce((sum, sale) => sum + sale.receivedAmount, 0);
+    const totalPending = state.sales.reduce((sum, sale) => sum + sale.pendingAmount, 0);
 
-export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(appReducer, initialState);
+    // Dívidas
+    const totalDebts = state.debts.reduce((sum, debt) => sum + debt.totalValue, 0);
+    const totalPaidDebts = state.debts.reduce((sum, debt) => sum + debt.paidAmount, 0);
+    const totalPendingDebts = state.debts.reduce((sum, debt) => sum + debt.pendingAmount, 0);
 
-  // Carregar comissões de funcionários
-  const loadEmployeeCommissions = async () => {
-    if (!isSupabaseConfigured()) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('employee_commissions')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('❌ Erro ao buscar comissões:', error);
-        return;
-      }
-      
-      const commissions = (data || []).map(item => ({
-        id: item.id,
-        employeeId: item.employee_id,
-        saleId: item.sale_id,
-        saleValue: Number(item.sale_value) || 0,
-        commissionRate: Number(item.commission_rate) || 5,
-        commissionAmount: Number(item.commission_amount) || 0,
-        date: item.date,
-        status: item.status || 'pendente',
-        createdAt: item.created_at
-      }));
-      
-      dispatch({ type: 'SET_EMPLOYEE_COMMISSIONS', payload: commissions });
-      console.log('✅ Comissões carregadas:', commissions.length);
-    } catch (error) {
-      console.error('❌ Erro ao carregar comissões:', error);
-    }
-  };
+    // Cheques
+    const checksToday = state.checks.filter(check => check.dueDate === today);
+    const overdueChecks = state.checks.filter(check => check.dueDate < today && check.status === 'pendente');
+    const totalChecksValue = state.checks.reduce((sum, check) => sum + check.value, 0);
 
-  // Carregar pagamentos de funcionários
-  const loadEmployeePayments = async () => {
-    if (!isSupabaseConfigured()) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('employee_payments')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('❌ Erro ao buscar pagamentos:', error);
-        return;
-      }
-      
-      const payments = (data || []).map(item => ({
-        id: item.id,
-        employeeId: item.employee_id,
-        amount: Number(item.amount) || 0,
-        paymentDate: item.payment_date,
-        isPaid: item.is_paid || false,
-        receipt: item.receipt || '',
-        observations: item.observations || '',
-        createdAt: item.created_at
-      }));
-      
-      dispatch({ type: 'SET_EMPLOYEE_PAYMENTS', payload: payments });
-      console.log('✅ Pagamentos carregados:', payments.length);
-    } catch (error) {
-      console.error('❌ Erro ao carregar pagamentos:', error);
-    }
-  };
+    // Boletos
+    const boletosToday = state.boletos.filter(boleto => boleto.dueDate === today);
+    const overdueBoletos = state.boletos.filter(boleto => boleto.dueDate < today && boleto.status === 'pendente');
+    const totalBoletosValue = state.boletos.reduce((sum, boleto) => sum + boleto.value, 0);
+    const activeEmployees = state.employees.filter(emp => emp.isActive);
+    const sellers = activeEmployees.filter(emp => emp.isSeller);
+    const totalPayroll = activeEmployees.reduce((sum, emp) => sum + emp.salary, 0);
 
-  // Carregar adiantamentos de funcionários
-  const loadEmployeeAdvances = async () => {
-    if (!isSupabaseConfigured()) return;
-    
-    if (!isSupabaseConfigured()) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('employee_advances')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('❌ Erro ao buscar adiantamentos:', error);
-        return;
-      }
-      
-      const advances = (data || []).map(item => ({
-        id: item.id,
-        employeeId: item.employee_id,
-        amount: Number(item.amount) || 0,
-        date: item.date,
-        description: item.description || '',
-        paymentMethod: item.payment_method || 'dinheiro',
-        status: item.status || 'pendente',
-        createdAt: item.created_at
-      }));
-      
-      dispatch({ type: 'SET_EMPLOYEE_ADVANCES', payload: advances });
-      console.log('✅ Adiantamentos carregados:', advances.length);
-    } catch (error) {
-      console.error('❌ Erro ao carregar adiantamentos:', error);
-    }
-  };
+    // Comissões
+    const pendingCommissions = state.employeeCommissions.filter(comm => comm.status === 'pendente');
+    const totalPendingCommissions = pendingCommissions.reduce((sum, comm) => sum + comm.commissionAmount, 0);
+    const monthlyCommissions = state.employeeCommissions.filter(comm => {
+      const commDate = new Date(comm.date);
+      return commDate.getMonth() === thisMonth && commDate.getFullYear() === thisYear;
+    });
 
-  // Carregar horas extras de funcionários
-  const loadEmployeeOvertimes = async () => {
-    if (!isSupabaseConfigured()) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('employee_overtimes')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('❌ Erro ao buscar horas extras:', error);
-        return;
-      }
-      
-      const overtimes = (data || []).map(item => ({
-        id: item.id,
-        employeeId: item.employee_id,
-        hours: Number(item.hours) || 0,
-        hourlyRate: Number(item.hourly_rate) || 0,
-        totalAmount: Number(item.total_amount) || 0,
-        date: item.date,
-        description: item.description || '',
-        status: item.status || 'pendente',
-        createdAt: item.created_at
-      }));
-      
-      dispatch({ type: 'SET_EMPLOYEE_OVERTIMES', payload: overtimes });
-      console.log('✅ Horas extras carregadas:', overtimes.length);
-    } catch (error) {
-      console.error('❌ Erro ao carregar horas extras:', error);
-    }
-  };
-  // Load all data from Supabase
-  const loadAllData = async () => {
-    dispatch({ type: 'SET_LOADING', payload: true });
-    dispatch({ type: 'SET_ERROR', payload: null });
-    
-    // Verificar configuração do Supabase
-    if (!isSupabaseConfigured()) {
-      dispatch({ type: 'SET_ERROR', payload: 'Supabase não está configurado. Configure o arquivo .env com suas credenciais reais.' });
-      dispatch({ type: 'SET_LOADING', payload: false });
-      return;
-    }
+    // Caixa
+    const cashBalance = state.cashBalance?.currentBalance || 0;
 
-    // Testar conexão
-    const connectionOk = await testSupabaseConnection();
-    if (!connectionOk) {
-      dispatch({ type: 'SET_ERROR', payload: 'Não foi possível conectar ao Supabase. Verifique suas credenciais e conexão com a internet.' });
-      dispatch({ type: 'SET_LOADING', payload: false });
-      return;
-    }
+    // Lucro líquido
+    const netProfit = totalReceived - totalPaidDebts;
+    const profitMargin = totalReceived > 0 ? (netProfit / totalReceived) * 100 : 0;
 
-    // Garantir autenticação
-    const isAuth = await ensureAuthenticated();
-    if (!isAuth) {
-      dispatch({ type: 'SET_ERROR', payload: 'Não foi possível autenticar. Verifique suas credenciais do Supabase.' });
-      dispatch({ type: 'SET_LOADING', payload: false });
-      return;
-    }
-    
-    try {
-      console.log('🔄 Carregando dados do Supabase...');
-      
-      const [sales, debts, employees, checks, boletos] = await Promise.allSettled([
-        salesService.getAll(),
-        debtsService.getAll(),
-        employeesService.getAll(),
-        checksService.getAll(),
-        boletosService.getAll()
-      ]);
-      
-      // Processar resultados de forma segura
-      if (sales.status === 'fulfilled') {
-        dispatch({ type: 'SET_SALES', payload: sales.value });
-      } else {
-        console.error('❌ Erro ao carregar vendas:', sales.reason);
-      }
-      
-      if (debts.status === 'fulfilled') {
-        dispatch({ type: 'SET_DEBTS', payload: debts.value });
-      } else {
-        console.error('❌ Erro ao carregar dívidas:', debts.reason);
-      }
-      
-      if (employees.status === 'fulfilled') {
-        dispatch({ type: 'SET_EMPLOYEES', payload: employees.value });
-      } else {
-        console.error('❌ Erro ao carregar funcionários:', employees.reason);
-      }
-      
-      if (checks.status === 'fulfilled') {
-        dispatch({ type: 'SET_CHECKS', payload: checks.value });
-      } else {
-        console.error('❌ Erro ao carregar cheques:', checks.reason);
-      }
-      
-      if (boletos.status === 'fulfilled') {
-        dispatch({ type: 'SET_BOLETOS', payload: boletos.value });
-      } else {
-        console.error('❌ Erro ao carregar boletos:', boletos.reason);
-      }
-      
-      // Carregar dados adicionais
-      await Promise.allSettled([
-        loadEmployeeCommissions(),
-        loadEmployeePayments(),
-        loadEmployeeAdvances(),
-        loadEmployeeOvertimes()
-      ]);
-      
-      console.log('✅ Dados carregados do Supabase:', {
-        sales: sales.status === 'fulfilled' ? sales.value.length : 0,
-        debts: debts.status === 'fulfilled' ? debts.value.length : 0,
-        employees: employees.status === 'fulfilled' ? employees.value.length : 0,
-        checks: checks.status === 'fulfilled' ? checks.value.length : 0,
-        boletos: boletos.status === 'fulfilled' ? boletos.value.length : 0
-      });
-      
-    } catch (error) {
-      console.error('❌ Erro ao carregar dados do Supabase:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      dispatch({ type: 'SET_ERROR', payload: `Erro ao carregar dados: ${errorMessage}` });
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  // Sales operations
-  const createSale = async (saleData: Omit<Sale, 'id' | 'createdAt'>) => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      const sale = await salesService.create(saleData);
-      dispatch({ type: 'ADD_SALE', payload: sale });
-      
-      // Criar comissão automaticamente se vendedor foi selecionado
-      if (sale.sellerId) {
-        const seller = state.employees.find(e => e.id === sale.sellerId);
-        if (seller && seller.isSeller) {
-          try {
-            const commissionRate = saleData.customCommissionRate || 5;
-            const commissionAmount = (sale.totalValue * commissionRate) / 100;
-            
-            const commissionData = {
-              employee_id: sale.sellerId,
-              sale_id: sale.id,
-              sale_value: sale.totalValue,
-              commission_rate: commissionRate,
-              commission_amount: commissionAmount,
-              date: sale.date,
-              status: 'pendente'
-            };
-            
-            const { data: commissionResult, error: commissionError } = await supabase
-              .from('employee_commissions')
-              .insert([commissionData])
-              .select()
-              .single();
-            
-            if (commissionError) {
-              console.error('❌ Erro ao criar comissão:', commissionError);
-            } else {
-              const newCommission = {
-                id: commissionResult.id,
-                employeeId: commissionResult.employee_id,
-                saleId: commissionResult.sale_id,
-                saleValue: Number(commissionResult.sale_value),
-                commissionRate: Number(commissionResult.commission_rate),
-                commissionAmount: Number(commissionResult.commission_amount),
-                date: commissionResult.date,
-                status: commissionResult.status,
-                createdAt: commissionResult.created_at
-              };
-              
-              dispatch({ type: 'ADD_EMPLOYEE_COMMISSION', payload: newCommission });
-              console.log('✅ Comissão criada automaticamente:', newCommission.id);
-            }
-          } catch (error) {
-            console.error('❌ Erro ao processar comissão:', error);
-          }
-        }
-      }
-      
-      // Criar cheques automaticamente se houver pagamento em cheque
-      const hasCheckPayment = sale.paymentMethods.some(method => method.type === 'cheque');
-      if (hasCheckPayment) {
-        await AutomationService.createChecksForSale(sale);
-        // Recarregar cheques
-        const checks = await checksService.getAll();
-        dispatch({ type: 'SET_CHECKS', payload: checks });
-      }
-      
-      // Criar boletos automaticamente se houver pagamento em boleto
-      const hasBoletoPayment = sale.paymentMethods.some(method => method.type === 'boleto');
-      if (hasBoletoPayment) {
-        await AutomationService.createBoletosForSale(sale);
-        // Recarregar boletos
-        const boletos = await boletosService.getAll();
-        dispatch({ type: 'SET_BOLETOS', payload: boletos });
-      }
-      
-      // Create commission if seller is assigned
-      if (sale.sellerId) {
-        const seller = state.employees.find(e => e.id === sale.sellerId);
-        if (seller && seller.isSeller) {
-          // Comissão já foi criada acima
-          console.log('✅ Comissão processada para vendedor:', seller.name);
-        }
-      }
-      
-      console.log('✅ Venda criada no Supabase:', sale.id);
-    } catch (error) {
-      console.error('❌ Erro ao criar venda:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao criar venda. Tente novamente.' });
-      throw error;
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  const updateSale = async (sale: Sale) => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      const updatedSale = await salesService.update(sale);
-      dispatch({ type: 'UPDATE_SALE', payload: updatedSale });
-      
-      // Atualizar cheques e boletos automaticamente
-      const hasCheckPayment = sale.paymentMethods.some(method => method.type === 'cheque');
-      if (hasCheckPayment) {
-        await AutomationService.updateChecksForSale(sale, state.checks);
-        const checks = await checksService.getAll();
-        dispatch({ type: 'SET_CHECKS', payload: checks });
-      }
-      
-      const hasBoletoPayment = sale.paymentMethods.some(method => method.type === 'boleto');
-      if (hasBoletoPayment) {
-        await AutomationService.updateBoletosForSale(sale, state.boletos);
-        const boletos = await boletosService.getAll();
-        dispatch({ type: 'SET_BOLETOS', payload: boletos });
-      }
-      
-      console.log('✅ Venda atualizada no Supabase:', sale.id);
-    } catch (error) {
-      console.error('❌ Erro ao atualizar venda:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao atualizar venda. Tente novamente.' });
-      throw error;
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  const deleteSale = async (id: string) => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      await salesService.delete(id);
-      dispatch({ type: 'DELETE_SALE', payload: id });
-      console.log('✅ Venda excluída do Supabase:', id);
-    } catch (error) {
-      console.error('❌ Erro ao excluir venda:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao excluir venda. Tente novamente.' });
-      throw error;
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  // Debts operations
-  const createDebt = async (debtData: Omit<Debt, 'id' | 'createdAt'>) => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      const debt = await debtsService.create(debtData);
-      dispatch({ type: 'ADD_DEBT', payload: debt });
-      console.log('✅ Dívida criada no Supabase:', debt.id);
-    } catch (error) {
-      console.error('❌ Erro ao criar dívida:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao criar dívida. Tente novamente.' });
-      throw error;
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  const updateDebt = async (debt: Debt) => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      const updatedDebt = await debtsService.update(debt);
-      dispatch({ type: 'UPDATE_DEBT', payload: updatedDebt });
-      console.log('✅ Dívida atualizada no Supabase:', debt.id);
-    } catch (error) {
-      console.error('❌ Erro ao atualizar dívida:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao atualizar dívida. Tente novamente.' });
-      throw error;
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  const deleteDebt = async (id: string) => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      await debtsService.delete(id);
-      dispatch({ type: 'DELETE_DEBT', payload: id });
-      console.log('✅ Dívida excluída do Supabase:', id);
-    } catch (error) {
-      console.error('❌ Erro ao excluir dívida:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao excluir dívida. Tente novamente.' });
-      throw error;
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  // Employees operations
-  const createEmployee = async (employeeData: Omit<Employee, 'id' | 'createdAt'>) => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      const employee = await employeesService.create(employeeData);
-      dispatch({ type: 'ADD_EMPLOYEE', payload: employee });
-      console.log('✅ Funcionário criado no Supabase:', employee.id);
-    } catch (error) {
-      console.error('❌ Erro ao criar funcionário:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao criar funcionário. Tente novamente.' });
-      throw error;
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  const updateEmployee = async (employee: Employee) => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      const updatedEmployee = await employeesService.update(employee);
-      dispatch({ type: 'UPDATE_EMPLOYEE', payload: updatedEmployee });
-      console.log('✅ Funcionário atualizado no Supabase:', employee.id);
-    } catch (error) {
-      console.error('❌ Erro ao atualizar funcionário:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao atualizar funcionário. Tente novamente.' });
-      throw error;
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  const deleteEmployee = async (id: string) => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      await employeesService.delete(id);
-      dispatch({ type: 'DELETE_EMPLOYEE', payload: id });
-      console.log('✅ Funcionário excluído do Supabase:', id);
-    } catch (error) {
-      console.error('❌ Erro ao excluir funcionário:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao excluir funcionário. Tente novamente.' });
-      throw error;
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  // Checks operations
-  const createCheck = async (checkData: Omit<Check, 'id' | 'createdAt'>) => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      const check = await checksService.create(checkData);
-      dispatch({ type: 'ADD_CHECK', payload: check });
-      console.log('✅ Cheque criado no Supabase:', check.id);
-    } catch (error) {
-      console.error('❌ Erro ao criar cheque:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao criar cheque. Tente novamente.' });
-      throw error;
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  const updateCheck = async (check: Check) => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      const updatedCheck = await checksService.update(check);
-      dispatch({ type: 'UPDATE_CHECK', payload: updatedCheck });
-      console.log('✅ Cheque atualizado no Supabase:', check.id);
-    } catch (error) {
-      console.error('❌ Erro ao atualizar cheque:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao atualizar cheque. Tente novamente.' });
-      throw error;
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  const deleteCheck = async (id: string) => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      await checksService.delete(id);
-      dispatch({ type: 'DELETE_CHECK', payload: id });
-      console.log('✅ Cheque excluído do Supabase:', id);
-    } catch (error) {
-      console.error('❌ Erro ao excluir cheque:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao excluir cheque. Tente novamente.' });
-      throw error;
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  // Boletos operations
-  const createBoleto = async (boletoData: Omit<Boleto, 'id' | 'createdAt'>) => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      const boleto = await boletosService.create(boletoData);
-      dispatch({ type: 'ADD_BOLETO', payload: boleto });
-      console.log('✅ Boleto criado no Supabase:', boleto.id);
-    } catch (error) {
-      console.error('❌ Erro ao criar boleto:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao criar boleto. Tente novamente.' });
-      throw error;
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  const updateBoleto = async (boleto: Boleto) => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      const updatedBoleto = await boletosService.update(boleto);
-      dispatch({ type: 'UPDATE_BOLETO', payload: updatedBoleto });
-      console.log('✅ Boleto atualizado no Supabase:', boleto.id);
-    } catch (error) {
-      console.error('❌ Erro ao atualizar boleto:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao atualizar boleto. Tente novamente.' });
-      throw error;
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  const deleteBoleto = async (id: string) => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      await boletosService.delete(id);
-      dispatch({ type: 'DELETE_BOLETO', payload: id });
-      console.log('✅ Boleto excluído do Supabase:', id);
-    } catch (error) {
-      console.error('❌ Erro ao excluir boleto:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao excluir boleto. Tente novamente.' });
-      throw error;
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  // Cash operations
-  const initializeCashBalance = async (initialBalance: number) => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      
-      const cashBalance = {
-        id: 'main-cash-balance',
-        currentBalance: initialBalance,
-        lastUpdated: new Date().toISOString(),
-        initialBalance: initialBalance,
-        initialDate: new Date().toISOString().split('T')[0],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      if (isSupabaseConfigured()) {
-        // Salvar no Supabase
-        const { data, error } = await supabase
-          .from('cash_balances')
-          .upsert([{
-            id: cashBalance.id,
-            current_balance: cashBalance.currentBalance,
-            initial_balance: cashBalance.initialBalance,
-            initial_date: cashBalance.initialDate,
-            last_updated: cashBalance.lastUpdated
-          }])
-          .select()
-          .single();
-        
-        if (error) {
-          console.error('❌ Erro ao salvar saldo no Supabase:', error);
-          throw new Error(`Erro ao salvar saldo: ${error.message}`);
-        }
-        
-        console.log('✅ Saldo salvo no Supabase:', data);
-      }
-      
-      dispatch({ type: 'SET_CASH_BALANCE', payload: cashBalance });
-      
-      console.log('✅ Saldo inicial do caixa definido:', initialBalance);
-    } catch (error) {
-      console.error('❌ Erro ao inicializar saldo do caixa:', error);
-      throw error;
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  const updateCashBalance = async (amount: number, type: 'entrada' | 'saida', description: string, category: string) => {
-    try {
-      const currentBalance = state.cashBalance?.currentBalance || 0;
-      const newBalance = type === 'entrada' ? currentBalance + amount : currentBalance - amount;
-      
-      const updatedCashBalance = {
-        ...state.cashBalance!,
-        currentBalance: newBalance,
-        lastUpdated: new Date().toISOString()
-      };
-      
-      const transaction: CashTransaction = {
-        id: `transaction-${Date.now()}`,
-        date: new Date().toISOString().split('T')[0],
-        type,
-        amount,
-        description,
-        category: category as any,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      dispatch({ type: 'UPDATE_CASH_BALANCE', payload: updatedCashBalance });
-      dispatch({ type: 'ADD_CASH_TRANSACTION', payload: transaction });
-      
-      console.log('✅ Saldo do caixa atualizado:', newBalance);
-    } catch (error) {
-      console.error('❌ Erro ao atualizar saldo do caixa:', error);
-      throw error;
-    }
-  };
-
-  // Load data on mount and set up real-time subscriptions
-  useEffect(() => {
-    console.log('🔄 Inicializando AppContext...');
-    
-    // Inicializar saldo de caixa padrão se não existir
-    if (!state.cashBalance && !state.isLoading) {
-      const defaultCashBalance = {
-        id: 'main-cash-balance',
-        currentBalance: 0,
-        lastUpdated: new Date().toISOString(),
-        initialBalance: 0,
-        initialDate: new Date().toISOString().split('T')[0],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      dispatch({ type: 'SET_CASH_BALANCE', payload: defaultCashBalance });
-    }
-    
-    // Carregar dados apenas se Supabase estiver configurado
-    if (isSupabaseConfigured()) {
-      console.log('✅ Supabase configurado, carregando dados...');
-      loadAllData();
-    } else {
-      console.warn('⚠️ Supabase não configurado, usando modo offline');
-      dispatch({ type: 'SET_ERROR', payload: 'Configure o Supabase no arquivo .env para usar o sistema.' });
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-
-    // Set up real-time subscriptions apenas se configurado
-    let salesSubscription: any;
-    let debtsSubscription: any;
-    let employeesSubscription: any;
-    let checksSubscription: any;
-    let boletosSubscription: any;
-
-    if (isSupabaseConfigured()) {
-      salesSubscription = supabase
-        .channel('sales-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, (payload) => {
-          console.log('🔄 Mudança detectada na tabela sales, recarregando...');
-          console.log('Payload:', payload);
-          salesService.getAll().then(sales => dispatch({ type: 'SET_SALES', payload: sales })).catch(console.error);
-        })
-        .subscribe();
-
-      debtsSubscription = supabase
-        .channel('debts-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'debts' }, (payload) => {
-          console.log('🔄 Mudança detectada na tabela debts, recarregando...');
-          console.log('Payload:', payload);
-          debtsService.getAll().then(debts => dispatch({ type: 'SET_DEBTS', payload: debts })).catch(console.error);
-        })
-        .subscribe();
-
-      employeesSubscription = supabase
-        .channel('employees-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, (payload) => {
-          console.log('🔄 Mudança detectada na tabela employees, recarregando...');
-          console.log('Payload:', payload);
-          employeesService.getAll().then(employees => dispatch({ type: 'SET_EMPLOYEES', payload: employees })).catch(console.error);
-        })
-        .subscribe();
-
-      checksSubscription = supabase
-        .channel('checks-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'checks' }, (payload) => {
-          console.log('🔄 Mudança detectada na tabela checks, recarregando...');
-          console.log('Payload:', payload);
-          checksService.getAll().then(checks => dispatch({ type: 'SET_CHECKS', payload: checks })).catch(console.error);
-        })
-        .subscribe();
-
-      boletosSubscription = supabase
-        .channel('boletos-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'boletos' }, (payload) => {
-          console.log('🔄 Mudança detectada na tabela boletos, recarregando...');
-          console.log('Payload:', payload);
-          boletosService.getAll().then(boletos => dispatch({ type: 'SET_BOLETOS', payload: boletos })).catch(console.error);
-        })
-        .subscribe();
-      
-      // Subscription para comissões
-      const commissionsSubscription = supabase
-        .channel('commissions-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'employee_commissions' }, (payload) => {
-          console.log('🔄 Mudança detectada na tabela employee_commissions, recarregando...');
-          console.log('Payload:', payload);
-          loadEmployeeCommissions();
-        })
-        .subscribe();
-    }
-
-    // Cleanup subscriptions on unmount
-    return () => {
-      if (salesSubscription) salesSubscription.unsubscribe();
-      if (debtsSubscription) debtsSubscription.unsubscribe();
-      if (employeesSubscription) employeesSubscription.unsubscribe();
-      if (checksSubscription) checksSubscription.unsubscribe();
-      if (boletosSubscription) boletosSubscription.unsubscribe();
+    return {
+      totalSales,
+      totalReceived,
+      totalPending,
+      monthlyRevenue,
+      totalDebts,
+      totalPaidDebts,
+      totalPendingDebts,
+      checksToday: checksToday.length,
+      overdueChecks: overdueChecks.length,
+      totalChecksValue,
+      boletosToday: boletosToday.length,
+      overdueBoletos: overdueBoletos.length,
+      totalBoletosValue,
+      activeEmployees: activeEmployees.length,
+      sellers: sellers.length,
+      totalPayroll,
+      pendingCommissions: pendingCommissions.length,
+      totalPendingCommissions,
+      monthlyCommissions: monthlyCommissions.length,
+      cashBalance,
+      netProfit,
+      profitMargin
     };
-  }, []); // Executar apenas uma vez na inicialização
+  }, [state]);
+
+  // Dados para gráficos - últimos 30 dias
+  const chartData = useMemo(() => {
+    const last30Days = [];
+    const today = new Date();
+    
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const dailySales = state.sales.filter(sale => sale.date === dateStr);
+      const dailyDebts = state.debts.filter(debt => debt.date === dateStr);
+      
+      const salesValue = dailySales.reduce((sum, sale) => sum + sale.totalValue, 0);
+      const debtsValue = dailyDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
+      const profit = salesValue - debtsValue;
+      
+      last30Days.push({
+        date: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+        vendas: salesValue,
+        dividas: debtsValue,
+        lucro: profit
+      });
+    }
+    
+    return last30Days;
+  }, [state.sales, state.debts]);
+
+  // Distribuição de métodos de pagamento
+  const paymentMethodsData = useMemo(() => {
+    const methods = {};
+    state.sales.forEach(sale => {
+      sale.paymentMethods.forEach(method => {
+        const methodName = method.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        if (!methods[methodName]) {
+          methods[methodName] = 0;
+        }
+        methods[methodName] += method.amount;
+      });
+    });
+    return Object.entries(methods).map(([name, value]) => ({ name, value }));
+  }, [state.sales]);
+
+  // Top vendedores
+  const topSellers = useMemo(() => {
+    const sellerStats = {};
+    
+    state.sales.forEach(sale => {
+      if (sale.sellerId) {
+        const seller = state.employees.find(e => e.id === sale.sellerId);
+        if (seller) {
+          if (!sellerStats[seller.id]) {
+            sellerStats[seller.id] = {
+              name: seller.name,
+              totalSales: 0,
+              totalValue: 0,
+              commissions: 0
+            };
+          }
+          sellerStats[seller.id].totalSales += 1;
+          sellerStats[seller.id].totalValue += sale.totalValue;
+        }
+      }
+    });
+    
+    // Adicionar comissões
+    state.employeeCommissions.forEach(comm => {
+      const seller = state.employees.find(e => e.id === comm.employeeId);
+      if (seller && sellerStats[seller.id]) {
+        sellerStats[seller.id].commissions += comm.commissionAmount;
+      }
+    });
+    
+    return Object.values(sellerStats)
+      .sort((a, b) => b.totalValue - a.totalValue)
+      .slice(0, 5);
+  }, [state.sales, state.employees, state.employeeCommissions]);
+
+  if (state.isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <DollarSign className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-slate-600 font-semibold">Carregando dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <AppContext.Provider value={{ 
-      state, 
-      dispatch,
-      loadAllData,
-      createSale,
-      updateSale,
-      deleteSale,
-      createDebt,
-      updateDebt,
-      deleteDebt,
-      createEmployee,
-      updateEmployee,
-      deleteEmployee,
-      createCheck,
-      updateCheck,
-      deleteCheck,
-      createBoleto,
-      updateBoleto,
-      deleteBoleto,
-      initializeCashBalance,
-      updateCashBalance
-    }}>
-      {children}
-    </AppContext.Provider>
-  );
-}
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-xl">
+          <DollarSign className="w-8 h-8 text-white" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Dashboard Financeiro</h1>
+          <p className="text-slate-600 text-lg">Visão geral completa do seu negócio</p>
+        </div>
+      </div>
 
-export function useApp() {
-  const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
-  return context;
+      {/* Error Display */}
+      {state.error && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <AlertTriangle className="w-8 h-8 text-red-600" />
+            <div>
+              <h3 className="font-bold text-red-800">Aviso do Sistema</h3>
+              <p className="text-red-700">{state.error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Métricas Principais */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Vendas */}
+        <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-green-600">
+              <TrendingUp className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-green-900">Total de Vendas</h3>
+              <p className="text-2xl font-black text-green-700">
+                R$ {metrics.totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-green-600">{state.sales.length} vendas</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Recebido */}
+        <div className="card bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-emerald-600">
+              <ArrowUpCircle className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-emerald-900">Valor Recebido</h3>
+              <p className="text-2xl font-black text-emerald-700">
+                R$ {metrics.totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-emerald-600">Efetivamente recebido</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Dívidas */}
+        <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-red-600">
+              <TrendingDown className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-red-900">Total de Dívidas</h3>
+              <p className="text-2xl font-black text-red-700">
+                R$ {metrics.totalDebts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-red-600">{state.debts.length} dívidas</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Saldo em Caixa */}
+        <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-blue-600">
+              <Wallet className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-blue-900">Saldo em Caixa</h3>
+              <p className="text-2xl font-black text-blue-700">
+                R$ {metrics.cashBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-blue-600">Disponível agora</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Métricas Secundárias */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Lucro Líquido */}
+        <div className="card bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-purple-600">
+              <DollarSign className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-purple-900">Lucro Líquido</h3>
+              <p className={`text-2xl font-black ${metrics.netProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                R$ {metrics.netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-purple-600">{metrics.profitMargin.toFixed(1)}% margem</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Funcionários */}
+        <div className="card bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-indigo-600">
+              <Users className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-indigo-900">Funcionários</h3>
+              <p className="text-2xl font-black text-indigo-700">{metrics.activeEmployees}</p>
+              <p className="text-sm text-indigo-600">{metrics.sellers} vendedores</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Comissões Pendentes */}
+        <div className="card bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-yellow-600">
+              <Star className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-yellow-900">Comissões</h3>
+              <p className="text-2xl font-black text-yellow-700">
+                R$ {metrics.totalPendingCommissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-yellow-600">{metrics.pendingCommissions} pendentes</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Folha de Pagamento */}
+        <div className="card bg-gradient-to-br from-cyan-50 to-blue-50 border-cyan-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-cyan-600">
+              <CreditCard className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-cyan-900">Folha de Pagamento</h3>
+              <p className="text-2xl font-black text-cyan-700">
+                R$ {metrics.totalPayroll.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-cyan-600">Salários base</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Alertas e Vencimentos */}
+      {(metrics.checksToday > 0 || metrics.overdueChecks > 0 || metrics.boletosToday > 0 || metrics.overdueBoletos > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Cheques */}
+          {(metrics.checksToday > 0 || metrics.overdueChecks > 0) && (
+            <div className="card bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200 modern-shadow-xl">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 rounded-xl bg-yellow-600">
+                  <FileText className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-yellow-900">Cheques</h3>
+              </div>
+              
+              <div className="space-y-3">
+                {metrics.checksToday > 0 && (
+                  <div className="p-4 bg-blue-100 rounded-xl border border-blue-200">
+                    <div className="flex items-center gap-3">
+                      <Calendar className="w-5 h-5 text-blue-600" />
+                      <div>
+                        <p className="font-bold text-blue-900">Vencimentos Hoje</p>
+                        <p className="text-sm text-blue-700">{metrics.checksToday} cheque(s)</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {metrics.overdueChecks > 0 && (
+                  <div className="p-4 bg-red-100 rounded-xl border border-red-200">
+                    <div className="flex items-center gap-3">
+                      <AlertTriangle className="w-5 h-5 text-red-600" />
+                      <div>
+                        <p className="font-bold text-red-900">Cheques Vencidos</p>
+                        <p className="text-sm text-red-700">{metrics.overdueChecks} cheque(s)</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Boletos */}
+          {(metrics.boletosToday > 0 || metrics.overdueBoletos > 0) && (
+            <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 rounded-xl bg-blue-600">
+                  <Receipt className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-blue-900">Boletos</h3>
+              </div>
+              
+              <div className="space-y-3">
+                {metrics.boletosToday > 0 && (
+                  <div className="p-4 bg-green-100 rounded-xl border border-green-200">
+                    <div className="flex items-center gap-3">
+                      <Calendar className="w-5 h-5 text-green-600" />
+                      <div>
+                        <p className="font-bold text-green-900">Vencimentos Hoje</p>
+                        <p className="text-sm text-green-700">{metrics.boletosToday} boleto(s)</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {metrics.overdueBoletos > 0 && (
+                  <div className="p-4 bg-red-100 rounded-xl border border-red-200">
+                    <div className="flex items-center gap-3">
+                      <AlertTriangle className="w-5 h-5 text-red-600" />
+                      <div>
+                        <p className="font-bold text-red-900">Boletos Vencidos</p>
+                        <p className="text-sm text-red-700">{metrics.overdueBoletos} boleto(s)</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Fluxo Financeiro - Últimos 30 Dias */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-blue-600">
+              <BarChart3 className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Fluxo Financeiro (30 dias)</h3>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip formatter={(value) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
+              <Legend />
+              <Area type="monotone" dataKey="vendas" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} name="Vendas" />
+              <Area type="monotone" dataKey="dividas" stackId="2" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} name="Dívidas" />
+              <Line type="monotone" dataKey="lucro" stroke="#3b82f6" strokeWidth={3} name="Lucro" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Métodos de Pagamento */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-purple-600">
+              <PieChart className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Métodos de Pagamento</h3>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={paymentMethodsData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {paymentMethodsData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Top Vendedores */}
+      {topSellers.length > 0 && (
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-green-600">
+              <Star className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Top Vendedores</h3>
+          </div>
+          
+          <div className="space-y-4">
+            {topSellers.map((seller, index) => (
+              <div key={seller.name} className="p-4 bg-green-50 rounded-xl border border-green-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-green-900">{seller.name}</h4>
+                      <p className="text-sm text-green-700">{seller.totalSales} vendas</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-black text-green-600">
+                      R$ {seller.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-sm text-green-600 font-bold">
+                      Comissão: R$ {seller.commissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Resumo de Status */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Vendas por Status */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-green-600">
+              <CheckCircle className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Status das Vendas</h3>
+          </div>
+          
+          <div className="space-y-3">
+            {['pago', 'parcial', 'pendente'].map(status => {
+              const count = state.sales.filter(sale => sale.status === status).length;
+              const value = state.sales.filter(sale => sale.status === status).reduce((sum, sale) => sum + sale.totalValue, 0);
+              
+              return (
+                <div key={status} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                  <span className="font-medium capitalize text-slate-900">{status}</span>
+                  <div className="text-right">
+                    <p className="font-bold text-slate-900">{count} vendas</p>
+                    <p className="text-sm text-slate-600">
+                      R$ {value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Dívidas por Status */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-red-600">
+              <CreditCard className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Status das Dívidas</h3>
+          </div>
+          
+          <div className="space-y-3">
+            <div className="flex justify-between items-center p-3 bg-red-50 rounded-xl">
+              <span className="font-medium text-slate-900">Pagas</span>
+              <div className="text-right">
+                <p className="font-bold text-green-600">
+                  {state.debts.filter(debt => debt.isPaid).length} dívidas
+                </p>
+                <p className="text-sm text-slate-600">
+                  R$ {metrics.totalPaidDebts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center p-3 bg-red-50 rounded-xl">
+              <span className="font-medium text-slate-900">Pendentes</span>
+              <div className="text-right">
+                <p className="font-bold text-red-600">
+                  {state.debts.filter(debt => !debt.isPaid).length} dívidas
+                </p>
+                <p className="text-sm text-slate-600">
+                  R$ {metrics.totalPendingDebts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Recebimentos */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-emerald-600">
+              <Clock className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Recebimentos</h3>
+          </div>
+          
+          <div className="space-y-3">
+            <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-xl">
+              <span className="font-medium text-slate-900">Já Recebido</span>
+              <div className="text-right">
+                <p className="font-bold text-emerald-600">
+                  R$ {metrics.totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center p-3 bg-orange-50 rounded-xl">
+              <span className="font-medium text-slate-900">A Receber</span>
+              <div className="text-right">
+                <p className="font-bold text-orange-600">
+                  R$ {metrics.totalPending.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center p-3 bg-blue-50 rounded-xl">
+              <span className="font-medium text-slate-900">Cheques</span>
+              <div className="text-right">
+                <p className="font-bold text-blue-600">
+                  R$ {metrics.totalChecksValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-sm text-slate-600">{state.checks.length} cheques</p>
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center p-3 bg-cyan-50 rounded-xl">
+              <span className="font-medium text-slate-900">Boletos</span>
+              <div className="text-right">
+                <p className="font-bold text-cyan-600">
+                  R$ {metrics.totalBoletosValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-sm text-slate-600">{state.boletos.length} boletos</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Resumo Mensal */}
+      <div className="card bg-gradient-to-br from-green-100 to-emerald-100 border-green-300 modern-shadow-xl">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-green-900 mb-4">Resumo do Mês Atual</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div>
+              <p className="text-green-600 font-semibold">Faturamento</p>
+              <p className="text-3xl font-black text-green-700">
+                R$ {metrics.monthlyRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+            <div>
+              <p className="text-green-600 font-semibold">Vendas</p>
+              <p className="text-3xl font-black text-green-700">
+                {state.sales.filter(sale => {
+                  const saleDate = new Date(sale.date);
+                  return saleDate.getMonth() === new Date().getMonth() && saleDate.getFullYear() === new Date().getFullYear();
+                }).length}
+              </p>
+            </div>
+            <div>
+              <p className="text-green-600 font-semibold">Comissões</p>
+              <p className="text-3xl font-black text-green-700">
+                {metrics.monthlyCommissions}
+              </p>
+            </div>
+            <div>
+              <p className="text-green-600 font-semibold">Lucro</p>
+              <p className={`text-3xl font-black ${metrics.netProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                R$ {metrics.netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Debug Info - Mostrar apenas se houver problemas */}
+      {state.sales.length === 0 && state.debts.length === 0 && (
+        <div className="card bg-yellow-50 border-yellow-200 modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-4">
+            <AlertTriangle className="w-8 h-8 text-yellow-600" />
+            <h3 className="text-xl font-bold text-yellow-900">Informações do Sistema</h3>
+          </div>
+          
+          <div className="space-y-3 text-sm">
+            <p><strong>Supabase Configurado:</strong> {isSupabaseConfigured() ? '✅ Sim' : '❌ Não'}</p>
+            <p><strong>Vendas Carregadas:</strong> {state.sales.length}</p>
+            <p><strong>Dívidas Carregadas:</strong> {state.debts.length}</p>
+            <p><strong>Funcionários Carregados:</strong> {state.employees.length}</p>
+            <p><strong>Cheques Carregados:</strong> {state.checks.length}</p>
+            <p><strong>Boletos Carregados:</strong> {state.boletos.length}</p>
+            <p><strong>Comissões Carregadas:</strong> {state.employeeCommissions.length}</p>
+            <p><strong>Estado de Loading:</strong> {state.isLoading ? 'Carregando...' : 'Concluído'}</p>
+            {state.error && <p><strong>Erro:</strong> {state.error}</p>}
+          </div>
+          
+          <div className="mt-6">
+            <button
+              onClick={loadAllData}
+              className="btn-primary"
+            >
+              Recarregar Dados
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

@@ -126,7 +126,11 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       if (method.type === 'dinheiro' || method.type === 'pix' || method.type === 'cartao_debito') {
         return sum + method.amount;
       }
-      // Cheques, boletos e cartão de crédito são sempre pendentes até serem compensados
+      // Cartão de crédito à vista é considerado recebido
+      if (method.type === 'cartao_credito' && (!method.installments || method.installments === 1)) {
+        return sum + method.amount;
+      }
+      // Cheques, boletos e cartão parcelado são sempre pendentes até serem compensados
       return sum;
     }, 0);
     

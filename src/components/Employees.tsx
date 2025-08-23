@@ -844,25 +844,24 @@ export function Employees() {
                       <Upload className="w-8 h-8 mx-auto text-green-500 mb-3" />
                       <p className="text-sm text-green-700 font-semibold mb-2">Anexar recibo (opcional)</p>
                       <p className="text-xs text-green-600">PDF, JPG, PNG (máx. 10MB)</p>
-                      <input
-                        type="file"
-                        name="receipt"
-                        accept="image/*,.pdf,.doc,.docx"
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            console.log('Arquivo de recibo selecionado:', file.name, file.size);
-                            // Aqui você pode adicionar validação adicional se necessário
-                            if (file.size > 10 * 1024 * 1024) {
-                              alert('Arquivo muito grande. Máximo 10MB.');
-                              e.target.value = '';
-                              return;
-                            }
-                          }
-                        }}
-                      />
                     </div>
+                    <input
+                      type="file"
+                      name="receipt"
+                      accept="image/*,.pdf,.doc,.docx"
+                      className="mt-2 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          console.log('Arquivo de recibo selecionado:', file.name, file.size);
+                          if (file.size > 10 * 1024 * 1024) {
+                            alert('Arquivo muito grande. Máximo 10MB.');
+                            e.target.value = '';
+                            return;
+                          }
+                        }
+                      }}
+                    />
                   </div>
                 </div>
                 
