@@ -1013,22 +1013,6 @@ export const pixFeesService = {
     });
   },
 
-  async delete(id: string): Promise<void> => {
-    return withAuth(async () => {
-      console.log('🔄 Excluindo tarifa PIX:', id);
-      const { error } = await supabase
-        .from('pix_fees')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        console.error('❌ Erro ao excluir tarifa PIX:', error);
-        throw new Error(`Erro ao excluir tarifa PIX: ${error.message}`);
-      }
-      
-      console.log('✅ Tarifa PIX excluída com sucesso:', id);
-    });
-  }
   async delete(id: string): Promise<void> {
     return withAuth(async () => {
       console.log('🔄 Excluindo tarifa PIX:', id);
