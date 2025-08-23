@@ -1,697 +1,719 @@
-import React, { useMemo, useState } from 'react';
-import { DollarSign, TrendingUp, TrendingDown, Users, Calendar, AlertTriangle, CheckCircle, Clock, CreditCard, Receipt, FileText, Star, Wallet, ArrowUpCircle, ArrowDownCircle, BarChart3 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
-const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4'];
+// Types
+interface Employee {
+  id: string;
+  name: string;
+  position: string;
+  isSeller: boolean;
+  salary: number;
+  paymentDay: number;
+  nextPaymentDate?: string;
+  isActive: boolean;
+  hireDate: string;
+  observations?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
-export default function Dashboard() {
-  const { state } = useApp();
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+interface Sale {
+  id: string;
+  date: string;
+  deliveryDate?: string;
+  client: string;
+  sellerId?: string;
+  products: Array<{
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+  }>;
+  observations?: string;
+  totalValue: number;
+  paymentMethods: Array<{
+    type: string;
+    amount: number;
+  }>;
+  receivedAmount: number;
+  pendingAmount: number;
+  status: 'pago' | 'pendente' | 'parcial';
+  paymentDescription?: string;
+  paymentObservations?: string;
+  customCommissionRate: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
-  // Calcular métricas principais
-  const metrics = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const thisMonth = selectedMonth;
-    const thisYear = selectedYear;
+interface Debt {
+  id: string;
+  date: string;
+  description: string;
+  company: string;
+  totalValue: number;
+  paymentMethods: Array<{
+    type: string;
+    amount: number;
+  }>;
+  isPaid: boolean;
+  paidAmount: number;
+  pendingAmount: number;
+  checksUsed: string[];
+  paymentDescription?: string;
+  debtPaymentDescription?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
-    const salesThisMonth = state.sales.filter(sale => {
-      const saleDate = new Date(sale.date);
-      return saleDate.getMonth() === thisMonth && saleDate.getFullYear() === thisYear;
-    });
-    const monthlyRevenue = salesThisMonth.reduce((sum, sale) => sum + sale.totalValue, 0);
+interface Check {
+  id: string;
+  saleId?: string;
+  debtId?: string;
+  client: string;
+  value: number;
+  dueDate: string;
+  status: 'pendente' | 'compensado' | 'devolvido' | 'reapresentado';
+  isOwnCheck: boolean;
+  observations?: string;
+  usedFor?: string;
+  installmentNumber?: number;
+  totalInstallments?: number;
+  frontImage?: string;
+  backImage?: string;
+  selectedAvailableChecks?: string[];
+  usedInDebt?: string;
+  discountDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
-    // Vendas
-    const totalSales = state.sales.reduce((sum, sale) => sum + sale.totalValue, 0);
-    const totalReceived = state.sales.reduce((sum, sale) => sum + sale.receivedAmount, 0);
-    const totalPending = state.sales.reduce((sum, sale) => sum + sale.pendingAmount, 0);
+interface Boleto {
+  id: string;
+  saleId?: string;
+  client: string;
+  value: number;
+  dueDate: string;
+  status: 'pendente' | 'compensado' | 'vencido' | 'cancelado' | 'nao_pago';
+  installmentNumber: number;
+  totalInstallments: number;
+  boletoFile?: string;
+  observations?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
-    // Dívidas
-    const totalDebts = state.debts.reduce((sum, debt) => sum + debt.totalValue, 0);
-    const totalPaidDebts = state.debts.reduce((sum, debt) => sum + debt.paidAmount, 0);
-    const totalPendingDebts = state.debts.reduce((sum, debt) => sum + debt.pendingAmount, 0);
+interface EmployeeCommission {
+  id: string;
+  employeeId: string;
+  saleId: string;
+  saleValue: number;
+  commissionRate: number;
+  commissionAmount: number;
+  date: string;
+  status: 'pendente' | 'pago';
+  createdAt?: string;
+  updatedAt?: string;
+}
 
-    // Cheques
-    const checksToday = state.checks.filter(check => check.dueDate === today);
-    const overdueChecks = state.checks.filter(check => check.dueDate < today && check.status === 'pendente');
-    const totalChecksValue = state.checks.reduce((sum, check) => sum + check.value, 0);
+interface EmployeePayment {
+  id: string;
+  employeeId: string;
+  amount: number;
+  paymentDate: string;
+  isPaid: boolean;
+  receipt?: string;
+  observations?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
-    // Boletos
-    const boletosToday = state.boletos.filter(boleto => boleto.dueDate === today);
-    const overdueBoletos = state.boletos.filter(boleto => boleto.dueDate < today && boleto.status === 'pendente');
-    const totalBoletosValue = state.boletos.reduce((sum, boleto) => sum + boleto.value, 0);
-    const activeEmployees = state.employees.filter(emp => emp.isActive);
-    const sellers = activeEmployees.filter(emp => emp.isSeller);
-    const totalPayroll = activeEmployees.reduce((sum, emp) => sum + emp.salary, 0);
+interface EmployeeAdvance {
+  id: string;
+  employeeId: string;
+  amount: number;
+  date: string;
+  description?: string;
+  paymentMethod: 'dinheiro' | 'pix' | 'transferencia' | 'desconto_folha';
+  status: 'pendente' | 'descontado';
+  createdAt?: string;
+  updatedAt?: string;
+}
 
-    // Comissões
-    const pendingCommissions = state.employeeCommissions.filter(comm => comm.status === 'pendente');
-    const totalPendingCommissions = pendingCommissions.reduce((sum, comm) => sum + comm.commissionAmount, 0);
-    const monthlyCommissions = state.employeeCommissions.filter(comm => {
-      const commDate = new Date(comm.date);
-      return commDate.getMonth() === thisMonth && commDate.getFullYear() === thisYear;
-    });
+interface EmployeeOvertime {
+  id: string;
+  employeeId: string;
+  hours: number;
+  hourlyRate: number;
+  totalAmount: number;
+  date: string;
+  description: string;
+  status: 'pendente' | 'pago';
+  createdAt?: string;
+  updatedAt?: string;
+}
 
-    // Caixa
-    const cashBalance = state.cashBalance?.currentBalance || 0;
+interface CashBalance {
+  id: string;
+  currentBalance: number;
+  initialBalance: number;
+  initialDate: string;
+  lastUpdated: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
-    // Lucro líquido
-    const netProfit = totalReceived - totalPaidDebts;
-    const profitMargin = totalReceived > 0 ? (netProfit / totalReceived) * 100 : 0;
+interface CashTransaction {
+  id: string;
+  date: string;
+  type: 'entrada' | 'saida';
+  amount: number;
+  description: string;
+  category: 'venda' | 'divida' | 'adiantamento' | 'salario' | 'comissao' | 'cheque' | 'boleto' | 'outro';
+  relatedId?: string;
+  paymentMethod?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
-    return {
-      totalSales,
-      totalReceived,
-      totalPending,
-      monthlyRevenue,
-      totalDebts,
-      totalPaidDebts,
-      totalPendingDebts,
-      checksToday: checksToday.length,
-      overdueChecks: overdueChecks.length,
-      totalChecksValue,
-      boletosToday: boletosToday.length,
-      overdueBoletos: overdueBoletos.length,
-      totalBoletosValue,
-      activeEmployees: activeEmployees.length,
-      sellers: sellers.length,
-      totalPayroll,
-      pendingCommissions: pendingCommissions.length,
-      totalPendingCommissions,
-      monthlyCommissions: monthlyCommissions.length,
-      cashBalance,
-      netProfit,
-      profitMargin
-    };
-  }, [state]);
+interface AppState {
+  employees: Employee[];
+  sales: Sale[];
+  debts: Debt[];
+  checks: Check[];
+  boletos: Boleto[];
+  employeeCommissions: EmployeeCommission[];
+  employeePayments: EmployeePayment[];
+  employeeAdvances: EmployeeAdvance[];
+  employeeOvertimes: EmployeeOvertime[];
+  cashBalance: CashBalance | null;
+  cashTransactions: CashTransaction[];
+  isLoading: boolean;
+  error: string | null;
+}
 
-  // Dados para gráficos - últimos 30 dias
-  const chartData = useMemo(() => {
-    const last30Days = [];
-    const today = new Date();
-    
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      
-      const dailySales = state.sales.filter(sale => sale.date === dateStr);
-      const dailyDebts = state.debts.filter(debt => debt.date === dateStr);
-      
-      const salesValue = dailySales.reduce((sum, sale) => sum + sale.totalValue, 0);
-      const debtsValue = dailyDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
-      const profit = salesValue - debtsValue;
-      
-      last30Days.push({
-        date: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-        vendas: salesValue,
-        dividas: debtsValue,
-        lucro: profit
-      });
-    }
-    
-    return last30Days;
-  }, [state.sales, state.debts]);
+type AppAction = 
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_ERROR'; payload: string | null }
+  | { type: 'SET_EMPLOYEES'; payload: Employee[] }
+  | { type: 'SET_SALES'; payload: Sale[] }
+  | { type: 'SET_DEBTS'; payload: Debt[] }
+  | { type: 'SET_CHECKS'; payload: Check[] }
+  | { type: 'SET_BOLETOS'; payload: Boleto[] }
+  | { type: 'SET_EMPLOYEE_COMMISSIONS'; payload: EmployeeCommission[] }
+  | { type: 'SET_EMPLOYEE_PAYMENTS'; payload: EmployeePayment[] }
+  | { type: 'SET_EMPLOYEE_ADVANCES'; payload: EmployeeAdvance[] }
+  | { type: 'SET_EMPLOYEE_OVERTIMES'; payload: EmployeeOvertime[] }
+  | { type: 'SET_CASH_BALANCE'; payload: CashBalance | null }
+  | { type: 'SET_CASH_TRANSACTIONS'; payload: CashTransaction[] }
+  | { type: 'ADD_EMPLOYEE'; payload: Employee }
+  | { type: 'UPDATE_EMPLOYEE'; payload: Employee }
+  | { type: 'DELETE_EMPLOYEE'; payload: string }
+  | { type: 'ADD_SALE'; payload: Sale }
+  | { type: 'UPDATE_SALE'; payload: Sale }
+  | { type: 'DELETE_SALE'; payload: string }
+  | { type: 'ADD_DEBT'; payload: Debt }
+  | { type: 'UPDATE_DEBT'; payload: Debt }
+  | { type: 'DELETE_DEBT'; payload: string }
+  | { type: 'ADD_CHECK'; payload: Check }
+  | { type: 'UPDATE_CHECK'; payload: Check }
+  | { type: 'DELETE_CHECK'; payload: string }
+  | { type: 'ADD_BOLETO'; payload: Boleto }
+  | { type: 'UPDATE_BOLETO'; payload: Boleto }
+  | { type: 'DELETE_BOLETO'; payload: string }
+  | { type: 'ADD_EMPLOYEE_COMMISSION'; payload: EmployeeCommission }
+  | { type: 'UPDATE_EMPLOYEE_COMMISSION'; payload: EmployeeCommission }
+  | { type: 'DELETE_EMPLOYEE_COMMISSION'; payload: string }
+  | { type: 'ADD_EMPLOYEE_PAYMENT'; payload: EmployeePayment }
+  | { type: 'UPDATE_EMPLOYEE_PAYMENT'; payload: EmployeePayment }
+  | { type: 'DELETE_EMPLOYEE_PAYMENT'; payload: string }
+  | { type: 'ADD_EMPLOYEE_ADVANCE'; payload: EmployeeAdvance }
+  | { type: 'UPDATE_EMPLOYEE_ADVANCE'; payload: EmployeeAdvance }
+  | { type: 'DELETE_EMPLOYEE_ADVANCE'; payload: string }
+  | { type: 'ADD_EMPLOYEE_OVERTIME'; payload: EmployeeOvertime }
+  | { type: 'UPDATE_EMPLOYEE_OVERTIME'; payload: EmployeeOvertime }
+  | { type: 'DELETE_EMPLOYEE_OVERTIME'; payload: string }
+  | { type: 'UPDATE_CASH_BALANCE'; payload: CashBalance }
+  | { type: 'ADD_CASH_TRANSACTION'; payload: CashTransaction }
+  | { type: 'UPDATE_CASH_TRANSACTION'; payload: CashTransaction }
+  | { type: 'DELETE_CASH_TRANSACTION'; payload: string };
 
-  // Distribuição de métodos de pagamento
-  const paymentMethodsData = useMemo(() => {
-    const methods = {};
-    state.sales.forEach(sale => {
-      sale.paymentMethods.forEach(method => {
-        const methodName = method.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-        if (!methods[methodName]) {
-          methods[methodName] = 0;
-        }
-        methods[methodName] += method.amount;
-      });
-    });
-    return Object.entries(methods).map(([name, value]) => ({ name, value }));
-  }, [state.sales]);
+const initialState: AppState = {
+  employees: [],
+  sales: [],
+  debts: [],
+  checks: [],
+  boletos: [],
+  employeeCommissions: [],
+  employeePayments: [],
+  employeeAdvances: [],
+  employeeOvertimes: [],
+  cashBalance: null,
+  cashTransactions: [],
+  isLoading: false,
+  error: null,
+};
 
-  // Top vendedores
-  const topSellers = useMemo(() => {
-    const sellerStats = {};
-    
-    state.sales.forEach(sale => {
-      if (sale.sellerId) {
-        const seller = state.employees.find(e => e.id === sale.sellerId);
-        if (seller) {
-          if (!sellerStats[seller.id]) {
-            sellerStats[seller.id] = {
-              name: seller.name,
-              totalSales: 0,
-              totalValue: 0,
-              commissions: 0
-            };
-          }
-          sellerStats[seller.id].totalSales += 1;
-          sellerStats[seller.id].totalValue += sale.totalValue;
-        }
-      }
-    });
-    
-    // Adicionar comissões
-    state.employeeCommissions.forEach(comm => {
-      const seller = state.employees.find(e => e.id === comm.employeeId);
-      if (seller && sellerStats[seller.id]) {
-        sellerStats[seller.id].commissions += comm.commissionAmount;
-      }
-    });
-    
-    return Object.values(sellerStats)
-      .sort((a, b) => b.totalValue - a.totalValue)
-      .slice(0, 5);
-  }, [state.sales, state.employees, state.employeeCommissions]);
-
-  if (state.isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <DollarSign className="w-8 h-8 text-white" />
-          </div>
-          <p className="text-slate-600 font-semibold">Carregando dashboard...</p>
-        </div>
-      </div>
-    );
+function appReducer(state: AppState, action: AppAction): AppState {
+  switch (action.type) {
+    case 'SET_LOADING':
+      return { ...state, isLoading: action.payload };
+    case 'SET_ERROR':
+      return { ...state, error: action.payload };
+    case 'SET_EMPLOYEES':
+      return { ...state, employees: action.payload };
+    case 'SET_SALES':
+      return { ...state, sales: action.payload };
+    case 'SET_DEBTS':
+      return { ...state, debts: action.payload };
+    case 'SET_CHECKS':
+      return { ...state, checks: action.payload };
+    case 'SET_BOLETOS':
+      return { ...state, boletos: action.payload };
+    case 'SET_EMPLOYEE_COMMISSIONS':
+      return { ...state, employeeCommissions: action.payload };
+    case 'SET_EMPLOYEE_PAYMENTS':
+      return { ...state, employeePayments: action.payload };
+    case 'SET_EMPLOYEE_ADVANCES':
+      return { ...state, employeeAdvances: action.payload };
+    case 'SET_EMPLOYEE_OVERTIMES':
+      return { ...state, employeeOvertimes: action.payload };
+    case 'SET_CASH_BALANCE':
+      return { ...state, cashBalance: action.payload };
+    case 'SET_CASH_TRANSACTIONS':
+      return { ...state, cashTransactions: action.payload };
+    case 'ADD_EMPLOYEE':
+      return { ...state, employees: [...state.employees, action.payload] };
+    case 'UPDATE_EMPLOYEE':
+      return {
+        ...state,
+        employees: state.employees.map(emp =>
+          emp.id === action.payload.id ? action.payload : emp
+        ),
+      };
+    case 'DELETE_EMPLOYEE':
+      return {
+        ...state,
+        employees: state.employees.filter(emp => emp.id !== action.payload),
+      };
+    case 'ADD_SALE':
+      return { ...state, sales: [...state.sales, action.payload] };
+    case 'UPDATE_SALE':
+      return {
+        ...state,
+        sales: state.sales.map(sale =>
+          sale.id === action.payload.id ? action.payload : sale
+        ),
+      };
+    case 'DELETE_SALE':
+      return {
+        ...state,
+        sales: state.sales.filter(sale => sale.id !== action.payload),
+      };
+    case 'ADD_DEBT':
+      return { ...state, debts: [...state.debts, action.payload] };
+    case 'UPDATE_DEBT':
+      return {
+        ...state,
+        debts: state.debts.map(debt =>
+          debt.id === action.payload.id ? action.payload : debt
+        ),
+      };
+    case 'DELETE_DEBT':
+      return {
+        ...state,
+        debts: state.debts.filter(debt => debt.id !== action.payload),
+      };
+    case 'ADD_CHECK':
+      return { ...state, checks: [...state.checks, action.payload] };
+    case 'UPDATE_CHECK':
+      return {
+        ...state,
+        checks: state.checks.map(check =>
+          check.id === action.payload.id ? action.payload : check
+        ),
+      };
+    case 'DELETE_CHECK':
+      return {
+        ...state,
+        checks: state.checks.filter(check => check.id !== action.payload),
+      };
+    case 'ADD_BOLETO':
+      return { ...state, boletos: [...state.boletos, action.payload] };
+    case 'UPDATE_BOLETO':
+      return {
+        ...state,
+        boletos: state.boletos.map(boleto =>
+          boleto.id === action.payload.id ? action.payload : boleto
+        ),
+      };
+    case 'DELETE_BOLETO':
+      return {
+        ...state,
+        boletos: state.boletos.filter(boleto => boleto.id !== action.payload),
+      };
+    case 'ADD_EMPLOYEE_COMMISSION':
+      return { ...state, employeeCommissions: [...state.employeeCommissions, action.payload] };
+    case 'UPDATE_EMPLOYEE_COMMISSION':
+      return {
+        ...state,
+        employeeCommissions: state.employeeCommissions.map(comm =>
+          comm.id === action.payload.id ? action.payload : comm
+        ),
+      };
+    case 'DELETE_EMPLOYEE_COMMISSION':
+      return {
+        ...state,
+        employeeCommissions: state.employeeCommissions.filter(comm => comm.id !== action.payload),
+      };
+    case 'ADD_EMPLOYEE_PAYMENT':
+      return { ...state, employeePayments: [...state.employeePayments, action.payload] };
+    case 'UPDATE_EMPLOYEE_PAYMENT':
+      return {
+        ...state,
+        employeePayments: state.employeePayments.map(payment =>
+          payment.id === action.payload.id ? action.payload : payment
+        ),
+      };
+    case 'DELETE_EMPLOYEE_PAYMENT':
+      return {
+        ...state,
+        employeePayments: state.employeePayments.filter(payment => payment.id !== action.payload),
+      };
+    case 'ADD_EMPLOYEE_ADVANCE':
+      return { ...state, employeeAdvances: [...state.employeeAdvances, action.payload] };
+    case 'UPDATE_EMPLOYEE_ADVANCE':
+      return {
+        ...state,
+        employeeAdvances: state.employeeAdvances.map(advance =>
+          advance.id === action.payload.id ? action.payload : advance
+        ),
+      };
+    case 'DELETE_EMPLOYEE_ADVANCE':
+      return {
+        ...state,
+        employeeAdvances: state.employeeAdvances.filter(advance => advance.id !== action.payload),
+      };
+    case 'ADD_EMPLOYEE_OVERTIME':
+      return { ...state, employeeOvertimes: [...state.employeeOvertimes, action.payload] };
+    case 'UPDATE_EMPLOYEE_OVERTIME':
+      return {
+        ...state,
+        employeeOvertimes: state.employeeOvertimes.map(overtime =>
+          overtime.id === action.payload.id ? action.payload : overtime
+        ),
+      };
+    case 'DELETE_EMPLOYEE_OVERTIME':
+      return {
+        ...state,
+        employeeOvertimes: state.employeeOvertimes.filter(overtime => overtime.id !== action.payload),
+      };
+    case 'UPDATE_CASH_BALANCE':
+      return { ...state, cashBalance: action.payload };
+    case 'ADD_CASH_TRANSACTION':
+      return { ...state, cashTransactions: [...state.cashTransactions, action.payload] };
+    case 'UPDATE_CASH_TRANSACTION':
+      return {
+        ...state,
+        cashTransactions: state.cashTransactions.map(transaction =>
+          transaction.id === action.payload.id ? action.payload : transaction
+        ),
+      };
+    case 'DELETE_CASH_TRANSACTION':
+      return {
+        ...state,
+        cashTransactions: state.cashTransactions.filter(transaction => transaction.id !== action.payload),
+      };
+    default:
+      return state;
   }
+}
+
+interface AppContextType {
+  state: AppState;
+  dispatch: React.Dispatch<AppAction>;
+  loadAllData: () => Promise<void>;
+  isSupabaseConfigured: () => boolean;
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export function AppProvider({ children }: { children: React.ReactNode }) {
+  const [state, dispatch] = useReducer(appReducer, initialState);
+
+  const isSupabaseConfigured = () => {
+    return !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+  };
+
+  const loadAllData = async () => {
+    if (!isSupabaseConfigured()) {
+      dispatch({ type: 'SET_ERROR', payload: 'Supabase não está configurado. Configure as variáveis de ambiente.' });
+      return;
+    }
+
+    dispatch({ type: 'SET_LOADING', payload: true });
+    dispatch({ type: 'SET_ERROR', payload: null });
+
+    try {
+      // Load all data in parallel
+      const [
+        employeesResult,
+        salesResult,
+        debtsResult,
+        checksResult,
+        boletosResult,
+        commissionsResult,
+        paymentsResult,
+        advancesResult,
+        overtimesResult,
+        cashBalanceResult,
+        cashTransactionsResult,
+      ] = await Promise.all([
+        supabase.from('employees').select('*').order('name'),
+        supabase.from('sales').select('*').order('date', { ascending: false }),
+        supabase.from('debts').select('*').order('date', { ascending: false }),
+        supabase.from('checks').select('*').order('due_date'),
+        supabase.from('boletos').select('*').order('due_date'),
+        supabase.from('employee_commissions').select('*').order('date', { ascending: false }),
+        supabase.from('employee_payments').select('*').order('payment_date', { ascending: false }),
+        supabase.from('employee_advances').select('*').order('date', { ascending: false }),
+        supabase.from('employee_overtimes').select('*').order('date', { ascending: false }),
+        supabase.from('cash_balances').select('*').limit(1).single(),
+        supabase.from('cash_transactions').select('*').order('date', { ascending: false }),
+      ]);
+
+      if (employeesResult.error) throw employeesResult.error;
+      if (salesResult.error) throw salesResult.error;
+      if (debtsResult.error) throw debtsResult.error;
+      if (checksResult.error) throw checksResult.error;
+      if (boletosResult.error) throw boletosResult.error;
+      if (commissionsResult.error) throw commissionsResult.error;
+      if (paymentsResult.error) throw paymentsResult.error;
+      if (advancesResult.error) throw advancesResult.error;
+      if (overtimesResult.error) throw overtimesResult.error;
+      if (cashTransactionsResult.error) throw cashTransactionsResult.error;
+
+      // Transform data to match frontend types
+      const employees = employeesResult.data.map(emp => ({
+        id: emp.id,
+        name: emp.name,
+        position: emp.position,
+        isSeller: emp.is_seller,
+        salary: parseFloat(emp.salary),
+        paymentDay: emp.payment_day,
+        nextPaymentDate: emp.next_payment_date,
+        isActive: emp.is_active,
+        hireDate: emp.hire_date,
+        observations: emp.observations,
+        createdAt: emp.created_at,
+        updatedAt: emp.updated_at,
+      }));
+
+      const sales = salesResult.data.map(sale => ({
+        id: sale.id,
+        date: sale.date,
+        deliveryDate: sale.delivery_date,
+        client: sale.client,
+        sellerId: sale.seller_id,
+        products: sale.products,
+        observations: sale.observations,
+        totalValue: parseFloat(sale.total_value),
+        paymentMethods: sale.payment_methods,
+        receivedAmount: parseFloat(sale.received_amount),
+        pendingAmount: parseFloat(sale.pending_amount),
+        status: sale.status,
+        paymentDescription: sale.payment_description,
+        paymentObservations: sale.payment_observations,
+        customCommissionRate: parseFloat(sale.custom_commission_rate),
+        createdAt: sale.created_at,
+        updatedAt: sale.updated_at,
+      }));
+
+      const debts = debtsResult.data.map(debt => ({
+        id: debt.id,
+        date: debt.date,
+        description: debt.description,
+        company: debt.company,
+        totalValue: parseFloat(debt.total_value),
+        paymentMethods: debt.payment_methods,
+        isPaid: debt.is_paid,
+        paidAmount: parseFloat(debt.paid_amount),
+        pendingAmount: parseFloat(debt.pending_amount),
+        checksUsed: debt.checks_used,
+        paymentDescription: debt.payment_description,
+        debtPaymentDescription: debt.debt_payment_description,
+        createdAt: debt.created_at,
+        updatedAt: debt.updated_at,
+      }));
+
+      const checks = checksResult.data.map(check => ({
+        id: check.id,
+        saleId: check.sale_id,
+        debtId: check.debt_id,
+        client: check.client,
+        value: parseFloat(check.value),
+        dueDate: check.due_date,
+        status: check.status,
+        isOwnCheck: check.is_own_check,
+        observations: check.observations,
+        usedFor: check.used_for,
+        installmentNumber: check.installment_number,
+        totalInstallments: check.total_installments,
+        frontImage: check.front_image,
+        backImage: check.back_image,
+        selectedAvailableChecks: check.selected_available_checks,
+        usedInDebt: check.used_in_debt,
+        discountDate: check.discount_date,
+        createdAt: check.created_at,
+        updatedAt: check.updated_at,
+      }));
+
+      const boletos = boletosResult.data.map(boleto => ({
+        id: boleto.id,
+        saleId: boleto.sale_id,
+        client: boleto.client,
+        value: parseFloat(boleto.value),
+        dueDate: boleto.due_date,
+        status: boleto.status,
+        installmentNumber: boleto.installment_number,
+        totalInstallments: boleto.total_installments,
+        boletoFile: boleto.boleto_file,
+        observations: boleto.observations,
+        createdAt: boleto.created_at,
+        updatedAt: boleto.updated_at,
+      }));
+
+      const employeeCommissions = commissionsResult.data.map(comm => ({
+        id: comm.id,
+        employeeId: comm.employee_id,
+        saleId: comm.sale_id,
+        saleValue: parseFloat(comm.sale_value),
+        commissionRate: parseFloat(comm.commission_rate),
+        commissionAmount: parseFloat(comm.commission_amount),
+        date: comm.date,
+        status: comm.status,
+        createdAt: comm.created_at,
+        updatedAt: comm.updated_at,
+      }));
+
+      const employeePayments = paymentsResult.data.map(payment => ({
+        id: payment.id,
+        employeeId: payment.employee_id,
+        amount: parseFloat(payment.amount),
+        paymentDate: payment.payment_date,
+        isPaid: payment.is_paid,
+        receipt: payment.receipt,
+        observations: payment.observations,
+        createdAt: payment.created_at,
+        updatedAt: payment.updated_at,
+      }));
+
+      const employeeAdvances = advancesResult.data.map(advance => ({
+        id: advance.id,
+        employeeId: advance.employee_id,
+        amount: parseFloat(advance.amount),
+        date: advance.date,
+        description: advance.description,
+        paymentMethod: advance.payment_method,
+        status: advance.status,
+        createdAt: advance.created_at,
+        updatedAt: advance.updated_at,
+      }));
+
+      const employeeOvertimes = overtimesResult.data.map(overtime => ({
+        id: overtime.id,
+        employeeId: overtime.employee_id,
+        hours: parseFloat(overtime.hours),
+        hourlyRate: parseFloat(overtime.hourly_rate),
+        totalAmount: parseFloat(overtime.total_amount),
+        date: overtime.date,
+        description: overtime.description,
+        status: overtime.status,
+        createdAt: overtime.created_at,
+        updatedAt: overtime.updated_at,
+      }));
+
+      const cashBalance = cashBalanceResult.error ? null : {
+        id: cashBalanceResult.data.id,
+        currentBalance: parseFloat(cashBalanceResult.data.current_balance),
+        initialBalance: parseFloat(cashBalanceResult.data.initial_balance),
+        initialDate: cashBalanceResult.data.initial_date,
+        lastUpdated: cashBalanceResult.data.last_updated,
+        createdAt: cashBalanceResult.data.created_at,
+        updatedAt: cashBalanceResult.data.updated_at,
+      };
+
+      const cashTransactions = cashTransactionsResult.data.map(transaction => ({
+        id: transaction.id,
+        date: transaction.date,
+        type: transaction.type,
+        amount: parseFloat(transaction.amount),
+        description: transaction.description,
+        category: transaction.category,
+        relatedId: transaction.related_id,
+        paymentMethod: transaction.payment_method,
+        createdAt: transaction.created_at,
+        updatedAt: transaction.updated_at,
+      }));
+
+      // Dispatch all data
+      dispatch({ type: 'SET_EMPLOYEES', payload: employees });
+      dispatch({ type: 'SET_SALES', payload: sales });
+      dispatch({ type: 'SET_DEBTS', payload: debts });
+      dispatch({ type: 'SET_CHECKS', payload: checks });
+      dispatch({ type: 'SET_BOLETOS', payload: boletos });
+      dispatch({ type: 'SET_EMPLOYEE_COMMISSIONS', payload: employeeCommissions });
+      dispatch({ type: 'SET_EMPLOYEE_PAYMENTS', payload: employeePayments });
+      dispatch({ type: 'SET_EMPLOYEE_ADVANCES', payload: employeeAdvances });
+      dispatch({ type: 'SET_EMPLOYEE_OVERTIMES', payload: employeeOvertimes });
+      dispatch({ type: 'SET_CASH_BALANCE', payload: cashBalance });
+      dispatch({ type: 'SET_CASH_TRANSACTIONS', payload: cashTransactions });
+
+    } catch (error) {
+      console.error('Error loading data:', error);
+      dispatch({ type: 'SET_ERROR', payload: `Erro ao carregar dados: ${error.message}` });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
+
+  useEffect(() => {
+    loadAllData();
+  }, []);
+
+  const value = {
+    state,
+    dispatch,
+    loadAllData,
+    isSupabaseConfigured,
+  };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-xl">
-          <DollarSign className="w-8 h-8 text-white" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Dashboard Financeiro</h1>
-          <p className="text-slate-600 text-lg">Visão geral completa do seu negócio</p>
-        </div>
-      </div>
-
-      {/* Error Display */}
-      {state.error && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
-          <div className="flex items-center gap-4">
-            <AlertTriangle className="w-8 h-8 text-red-600" />
-            <div>
-              <h3 className="font-bold text-red-800">Aviso do Sistema</h3>
-              <p className="text-red-700">{state.error}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Métricas Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Vendas */}
-        <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-green-600">
-              <TrendingUp className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-green-900">Total de Vendas</h3>
-              <p className="text-2xl font-black text-green-700">
-                R$ {metrics.totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-green-600">{state.sales.length} vendas</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Recebido */}
-        <div className="card bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200 modern-shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-emerald-600">
-              <ArrowUpCircle className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-emerald-900">Valor Recebido</h3>
-              <p className="text-2xl font-black text-emerald-700">
-                R$ {metrics.totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-emerald-600">Efetivamente recebido</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Dívidas */}
-        <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 modern-shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-red-600">
-              <TrendingDown className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-red-900">Total de Dívidas</h3>
-              <p className="text-2xl font-black text-red-700">
-                R$ {metrics.totalDebts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-red-600">{state.debts.length} dívidas</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Saldo em Caixa */}
-        <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-blue-600">
-              <Wallet className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-blue-900">Saldo em Caixa</h3>
-              <p className="text-2xl font-black text-blue-700">
-                R$ {metrics.cashBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-blue-600">Disponível agora</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Métricas Secundárias */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Lucro Líquido */}
-        <div className="card bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200 modern-shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-purple-600">
-              <DollarSign className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-purple-900">Lucro Líquido</h3>
-              <p className={`text-2xl font-black ${metrics.netProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                R$ {metrics.netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-purple-600">{metrics.profitMargin.toFixed(1)}% margem</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Funcionários */}
-        <div className="card bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-200 modern-shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-indigo-600">
-              <Users className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-indigo-900">Funcionários</h3>
-              <p className="text-2xl font-black text-indigo-700">{metrics.activeEmployees}</p>
-              <p className="text-sm text-indigo-600">{metrics.sellers} vendedores</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Comissões Pendentes */}
-        <div className="card bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200 modern-shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-yellow-600">
-              <Star className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-yellow-900">Comissões</h3>
-              <p className="text-2xl font-black text-yellow-700">
-                R$ {metrics.totalPendingCommissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-yellow-600">{metrics.pendingCommissions} pendentes</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Folha de Pagamento */}
-        <div className="card bg-gradient-to-br from-cyan-50 to-blue-50 border-cyan-200 modern-shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-cyan-600">
-              <CreditCard className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-cyan-900">Folha de Pagamento</h3>
-              <p className="text-2xl font-black text-cyan-700">
-                R$ {metrics.totalPayroll.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-cyan-600">Salários base</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Alertas e Vencimentos */}
-      {(metrics.checksToday > 0 || metrics.overdueChecks > 0 || metrics.boletosToday > 0 || metrics.overdueBoletos > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Cheques */}
-          {(metrics.checksToday > 0 || metrics.overdueChecks > 0) && (
-            <div className="card bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200 modern-shadow-xl">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 rounded-xl bg-yellow-600">
-                  <FileText className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-yellow-900">Cheques</h3>
-              </div>
-              
-              <div className="space-y-3">
-                {metrics.checksToday > 0 && (
-                  <div className="p-4 bg-blue-100 rounded-xl border border-blue-200">
-                    <div className="flex items-center gap-3">
-                      <Calendar className="w-5 h-5 text-blue-600" />
-                      <div>
-                        <p className="font-bold text-blue-900">Vencimentos Hoje</p>
-                        <p className="text-sm text-blue-700">{metrics.checksToday} cheque(s)</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {metrics.overdueChecks > 0 && (
-                  <div className="p-4 bg-red-100 rounded-xl border border-red-200">
-                    <div className="flex items-center gap-3">
-                      <AlertTriangle className="w-5 h-5 text-red-600" />
-                      <div>
-                        <p className="font-bold text-red-900">Cheques Vencidos</p>
-                        <p className="text-sm text-red-700">{metrics.overdueChecks} cheque(s)</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Boletos */}
-          {(metrics.boletosToday > 0 || metrics.overdueBoletos > 0) && (
-            <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 rounded-xl bg-blue-600">
-                  <Receipt className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-blue-900">Boletos</h3>
-              </div>
-              
-              <div className="space-y-3">
-                {metrics.boletosToday > 0 && (
-                  <div className="p-4 bg-green-100 rounded-xl border border-green-200">
-                    <div className="flex items-center gap-3">
-                      <Calendar className="w-5 h-5 text-green-600" />
-                      <div>
-                        <p className="font-bold text-green-900">Vencimentos Hoje</p>
-                        <p className="text-sm text-green-700">{metrics.boletosToday} boleto(s)</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {metrics.overdueBoletos > 0 && (
-                  <div className="p-4 bg-red-100 rounded-xl border border-red-200">
-                    <div className="flex items-center gap-3">
-                      <AlertTriangle className="w-5 h-5 text-red-600" />
-                      <div>
-                        <p className="font-bold text-red-900">Boletos Vencidos</p>
-                        <p className="text-sm text-red-700">{metrics.overdueBoletos} boleto(s)</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Fluxo Financeiro - Últimos 30 Dias */}
-        <div className="card modern-shadow-xl">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-blue-600">
-              <BarChart3 className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900">Fluxo Financeiro (30 dias)</h3>
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip formatter={(value) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
-              <Legend />
-              <Area type="monotone" dataKey="vendas" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} name="Vendas" />
-              <Area type="monotone" dataKey="dividas" stackId="2" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} name="Dívidas" />
-              <Line type="monotone" dataKey="lucro" stroke="#3b82f6" strokeWidth={3} name="Lucro" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Métodos de Pagamento */}
-        <div className="card modern-shadow-xl">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-purple-600">
-              <PieChart className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900">Métodos de Pagamento</h3>
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={paymentMethodsData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {paymentMethodsData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Top Vendedores */}
-      {topSellers.length > 0 && (
-        <div className="card modern-shadow-xl">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-green-600">
-              <Star className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900">Top Vendedores</h3>
-          </div>
-          
-          <div className="space-y-4">
-            {topSellers.map((seller, index) => (
-              <div key={seller.name} className="p-4 bg-green-50 rounded-xl border border-green-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
-                      {index + 1}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-green-900">{seller.name}</h4>
-                      <p className="text-sm text-green-700">{seller.totalSales} vendas</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-black text-green-600">
-                      R$ {seller.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-sm text-green-600 font-bold">
-                      Comissão: R$ {seller.commissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Resumo de Status */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Vendas por Status */}
-        <div className="card modern-shadow-xl">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-green-600">
-              <CheckCircle className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900">Status das Vendas</h3>
-          </div>
-          
-          <div className="space-y-3">
-            {['pago', 'parcial', 'pendente'].map(status => {
-              const count = state.sales.filter(sale => sale.status === status).length;
-              const value = state.sales.filter(sale => sale.status === status).reduce((sum, sale) => sum + sale.totalValue, 0);
-              
-              return (
-                <div key={status} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-                  <span className="font-medium capitalize text-slate-900">{status}</span>
-                  <div className="text-right">
-                    <p className="font-bold text-slate-900">{count} vendas</p>
-                    <p className="text-sm text-slate-600">
-                      R$ {value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Dívidas por Status */}
-        <div className="card modern-shadow-xl">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-red-600">
-              <CreditCard className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900">Status das Dívidas</h3>
-          </div>
-          
-          <div className="space-y-3">
-            <div className="flex justify-between items-center p-3 bg-red-50 rounded-xl">
-              <span className="font-medium text-slate-900">Pagas</span>
-              <div className="text-right">
-                <p className="font-bold text-green-600">
-                  {state.debts.filter(debt => debt.isPaid).length} dívidas
-                </p>
-                <p className="text-sm text-slate-600">
-                  R$ {metrics.totalPaidDebts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex justify-between items-center p-3 bg-red-50 rounded-xl">
-              <span className="font-medium text-slate-900">Pendentes</span>
-              <div className="text-right">
-                <p className="font-bold text-red-600">
-                  {state.debts.filter(debt => !debt.isPaid).length} dívidas
-                </p>
-                <p className="text-sm text-slate-600">
-                  R$ {metrics.totalPendingDebts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recebimentos */}
-        <div className="card modern-shadow-xl">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-emerald-600">
-              <Clock className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900">Recebimentos</h3>
-          </div>
-          
-          <div className="space-y-3">
-            <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-xl">
-              <span className="font-medium text-slate-900">Já Recebido</span>
-              <div className="text-right">
-                <p className="font-bold text-emerald-600">
-                  R$ {metrics.totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex justify-between items-center p-3 bg-orange-50 rounded-xl">
-              <span className="font-medium text-slate-900">A Receber</span>
-              <div className="text-right">
-                <p className="font-bold text-orange-600">
-                  R$ {metrics.totalPending.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex justify-between items-center p-3 bg-blue-50 rounded-xl">
-              <span className="font-medium text-slate-900">Cheques</span>
-              <div className="text-right">
-                <p className="font-bold text-blue-600">
-                  R$ {metrics.totalChecksValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-                <p className="text-sm text-slate-600">{state.checks.length} cheques</p>
-              </div>
-            </div>
-            
-            <div className="flex justify-between items-center p-3 bg-cyan-50 rounded-xl">
-              <span className="font-medium text-slate-900">Boletos</span>
-              <div className="text-right">
-                <p className="font-bold text-cyan-600">
-                  R$ {metrics.totalBoletosValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-                <p className="text-sm text-slate-600">{state.boletos.length} boletos</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Resumo Mensal */}
-      <div className="card bg-gradient-to-br from-green-100 to-emerald-100 border-green-300 modern-shadow-xl">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-green-900 mb-4">Resumo do Mês Atual</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div>
-              <p className="text-green-600 font-semibold">Faturamento</p>
-              <p className="text-3xl font-black text-green-700">
-                R$ {metrics.monthlyRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <div>
-              <p className="text-green-600 font-semibold">Vendas</p>
-              <p className="text-3xl font-black text-green-700">
-                {state.sales.filter(sale => {
-                  const saleDate = new Date(sale.date);
-                  return saleDate.getMonth() === new Date().getMonth() && saleDate.getFullYear() === new Date().getFullYear();
-                }).length}
-              </p>
-            </div>
-            <div>
-              <p className="text-green-600 font-semibold">Comissões</p>
-              <p className="text-3xl font-black text-green-700">
-                {metrics.monthlyCommissions}
-              </p>
-            </div>
-            <div>
-              <p className="text-green-600 font-semibold">Lucro</p>
-              <p className={`text-3xl font-black ${metrics.netProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                R$ {metrics.netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Debug Info - Mostrar apenas se houver problemas */}
-      {state.sales.length === 0 && state.debts.length === 0 && (
-        <div className="card bg-yellow-50 border-yellow-200 modern-shadow-xl">
-          <div className="flex items-center gap-4 mb-4">
-            <AlertTriangle className="w-8 h-8 text-yellow-600" />
-            <h3 className="text-xl font-bold text-yellow-900">Informações do Sistema</h3>
-          </div>
-          
-          <div className="space-y-3 text-sm">
-            <p><strong>Supabase Configurado:</strong> {isSupabaseConfigured() ? '✅ Sim' : '❌ Não'}</p>
-            <p><strong>Vendas Carregadas:</strong> {state.sales.length}</p>
-            <p><strong>Dívidas Carregadas:</strong> {state.debts.length}</p>
-            <p><strong>Funcionários Carregados:</strong> {state.employees.length}</p>
-            <p><strong>Cheques Carregados:</strong> {state.checks.length}</p>
-            <p><strong>Boletos Carregados:</strong> {state.boletos.length}</p>
-            <p><strong>Comissões Carregadas:</strong> {state.employeeCommissions.length}</p>
-            <p><strong>Estado de Loading:</strong> {state.isLoading ? 'Carregando...' : 'Concluído'}</p>
-            {state.error && <p><strong>Erro:</strong> {state.error}</p>}
-          </div>
-          
-          <div className="mt-6">
-            <button
-              onClick={loadAllData}
-              className="btn-primary"
-            >
-              Recarregar Dados
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+    <AppContext.Provider value={value}>
+      {children}
+    </AppContext.Provider>
   );
 }
+
+export function useApp() {
+  const context = useContext(AppContext);
+  if (context === undefined) {
+    throw new Error('useApp must be used within an AppProvider');
+  }
+  return context;
+}
+
+// Export types for use in other components
+export type {
+  Employee,
+  Sale,
+  Debt,
+  Check,
+  Boleto,
+  EmployeeCommission,
+  EmployeePayment,
+  EmployeeAdvance,
+  EmployeeOvertime,
+  CashBalance,
+  CashTransaction,
+  AppState,
+};
