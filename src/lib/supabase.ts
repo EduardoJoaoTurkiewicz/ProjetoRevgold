@@ -1011,6 +1011,59 @@ export const pixFeesService = {
       console.log('✅ Tarifa PIX atualizada com sucesso:', updatedPixFee.id);
       return updatedPixFee;
     });
+  },
+
+  async delete(id: string): Promise<void> {
+    return withAuth(async () => {
+      console.log('🔄 Excluindo tarifa PIX:', id);
+      const { error } = await supabase
+        .from('pix_fees')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('❌ Erro ao excluir tarifa PIX:', error);
+        throw new Error(`Erro ao excluir tarifa PIX: ${error.message}`);
+      }
+      
+      console.log('✅ Tarifa PIX excluída com sucesso:', id);
+    });
+  }
+};
+
+// Upload de imagem para o bucket do Supabase
+export const uploadCheckImage = async (file: File): Promise<string> => {
+  if (!isSupabaseConfigured()) {
+    throw new Error('Supabase não está configurado.');
+  }
+
+  const isAuth = await ensureAuthenticated();
+  if (!isAuth) {
+    throw new Error('Não foi possível autenticar para fazer upload.');
+  }
+
+  try {
+    if (!file) {
+      throw new Error('Arquivo não fornecido.');
+    }
+
+    // Validar tipo de arquivo
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('Tipo de arquivo não suportado. Use JPEG, PNG ou WebP.');
+    }
+
+    // Validar tamanho (máximo 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      throw new Error('Arquivo muito grande. Tamanho máximo: 5MB.');
+    }
+
+    // Gerar nome único para o arquivo
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const fileExtension = file.name.split('.').pop() || 'jpg';
+    const fileName = `${timestamp}_${randomString}.${fileExtension}`;
     const filePath = `checks/${fileName}`;
 
     console.log('Iniciando upload:', { fileName, filePath, fileSize: file.size, fileType: file.type });
