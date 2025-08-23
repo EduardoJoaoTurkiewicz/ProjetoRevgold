@@ -20,7 +20,13 @@ export function BoletoForm({ boleto, onSubmit, onCancel }: BoletoFormProps) {
     installmentNumber: boleto?.installmentNumber || 1,
     totalInstallments: boleto?.totalInstallments || 1,
     observations: boleto?.observations || '',
-    boletoFile: boleto?.boletoFile || ''
+    boletoFile: boleto?.boletoFile || '',
+    overdueAction: boleto?.overdueAction || '',
+    interestAmount: boleto?.interestAmount || 0,
+    penaltyAmount: boleto?.penaltyAmount || 0,
+    notaryCosts: boleto?.notaryCosts || 0,
+    finalAmount: boleto?.finalAmount || 0,
+    overdueNotes: boleto?.overdueNotes || ''
   });
 
   const handleSaleSelection = (saleId: string) => {

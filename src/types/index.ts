@@ -163,6 +163,12 @@ export interface Boleto {
   totalInstallments: number;
   boletoFile?: string; // Base64 or file path
   observations?: string;
+  overdueAction?: 'pago_com_juros' | 'pago_com_multa' | 'pago_integral' | 'protestado' | 'negativado' | 'acordo_realizado' | 'cancelado' | 'perda_total';
+  interestAmount?: number;
+  penaltyAmount?: number;
+  notaryCosts?: number;
+  finalAmount?: number;
+  overdueNotes?: string;
   createdAt: string;
 }
 

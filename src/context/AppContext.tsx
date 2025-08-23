@@ -99,6 +99,12 @@ interface Boleto {
   totalInstallments: number;
   boletoFile?: string;
   observations?: string;
+  overdueAction?: 'pago_com_juros' | 'pago_com_multa' | 'pago_integral' | 'protestado' | 'negativado' | 'acordo_realizado' | 'cancelado' | 'perda_total';
+  interestAmount?: number;
+  penaltyAmount?: number;
+  notaryCosts?: number;
+  finalAmount?: number;
+  overdueNotes?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -586,6 +592,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         totalInstallments: boleto.total_installments,
         boletoFile: boleto.boleto_file,
         observations: boleto.observations,
+        overdueAction: boleto.overdue_action,
+        interestAmount: boleto.interest_amount ? parseFloat(boleto.interest_amount) : 0,
+        penaltyAmount: boleto.penalty_amount ? parseFloat(boleto.penalty_amount) : 0,
+        notaryCosts: boleto.notary_costs ? parseFloat(boleto.notary_costs) : 0,
+        finalAmount: boleto.final_amount ? parseFloat(boleto.final_amount) : parseFloat(boleto.value),
+        overdueNotes: boleto.overdue_notes,
         createdAt: boleto.created_at,
         updatedAt: boleto.updated_at,
       }));
@@ -1103,7 +1115,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         installment_number: boleto.installmentNumber,
         total_installments: boleto.totalInstallments,
         boleto_file: boleto.boletoFile || '',
-        observations: boleto.observations || ''
+        observations: boleto.observations || '',
+        overdue_action: boleto.overdueAction,
+        interest_amount: boleto.interestAmount || 0,
+        penalty_amount: boleto.penaltyAmount || 0,
+        notary_costs: boleto.notaryCosts || 0,
+        final_amount: boleto.finalAmount || boleto.value,
+        overdue_notes: boleto.overdueNotes || ''
       }])
       .select()
       .single();
@@ -1121,6 +1139,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       totalInstallments: data.total_installments,
       boletoFile: data.boleto_file || '',
       observations: data.observations || '',
+      overdueAction: data.overdue_action,
+      interestAmount: data.interest_amount ? parseFloat(data.interest_amount) : 0,
+      penaltyAmount: data.penalty_amount ? parseFloat(data.penalty_amount) : 0,
+      notaryCosts: data.notary_costs ? parseFloat(data.notary_costs) : 0,
+      finalAmount: data.final_amount ? parseFloat(data.final_amount) : parseFloat(data.value),
+      overdueNotes: data.overdue_notes || '',
       createdAt: data.created_at
     };
 
@@ -1141,6 +1165,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         total_installments: boleto.totalInstallments,
         boleto_file: boleto.boletoFile || '',
         observations: boleto.observations || '',
+        overdue_action: boleto.overdueAction,
+        interest_amount: boleto.interestAmount || 0,
+        penalty_amount: boleto.penaltyAmount || 0,
+        notary_costs: boleto.notaryCosts || 0,
+        final_amount: boleto.finalAmount || boleto.value,
+        overdue_notes: boleto.overdueNotes || '',
         updated_at: new Date().toISOString()
       })
       .eq('id', boleto.id)
@@ -1160,6 +1190,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       totalInstallments: data.total_installments,
       boletoFile: data.boleto_file || '',
       observations: data.observations || '',
+      overdueAction: data.overdue_action,
+      interestAmount: data.interest_amount ? parseFloat(data.interest_amount) : 0,
+      penaltyAmount: data.penalty_amount ? parseFloat(data.penalty_amount) : 0,
+      notaryCosts: data.notary_costs ? parseFloat(data.notary_costs) : 0,
+      finalAmount: data.final_amount ? parseFloat(data.final_amount) : parseFloat(data.value),
+      overdueNotes: data.overdue_notes || '',
       createdAt: data.created_at
     };
 

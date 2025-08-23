@@ -756,6 +756,12 @@ export const boletosService = {
         totalInstallments: item.total_installments || 1,
         boletoFile: item.boleto_file || '',
         observations: item.observations || '',
+        overdueAction: item.overdue_action,
+        interestAmount: item.interest_amount ? Number(item.interest_amount) : 0,
+        penaltyAmount: item.penalty_amount ? Number(item.penalty_amount) : 0,
+        notaryCosts: item.notary_costs ? Number(item.notary_costs) : 0,
+        finalAmount: item.final_amount ? Number(item.final_amount) : Number(item.value),
+        overdueNotes: item.overdue_notes || '',
         createdAt: item.created_at
       }));
       
@@ -778,7 +784,13 @@ export const boletosService = {
           installment_number: boleto.installmentNumber,
           total_installments: boleto.totalInstallments,
           boleto_file: boleto.boletoFile || '',
-          observations: boleto.observations || ''
+          observations: boleto.observations || '',
+          overdue_action: boleto.overdueAction,
+          interest_amount: boleto.interestAmount || 0,
+          penalty_amount: boleto.penaltyAmount || 0,
+          notary_costs: boleto.notaryCosts || 0,
+          final_amount: boleto.finalAmount || boleto.value,
+          overdue_notes: boleto.overdueNotes || ''
         }])
         .select()
         .single();
@@ -799,6 +811,12 @@ export const boletosService = {
         totalInstallments: data.total_installments,
         boletoFile: data.boleto_file || '',
         observations: data.observations || '',
+        overdueAction: data.overdue_action,
+        interestAmount: data.interest_amount ? Number(data.interest_amount) : 0,
+        penaltyAmount: data.penalty_amount ? Number(data.penalty_amount) : 0,
+        notaryCosts: data.notary_costs ? Number(data.notary_costs) : 0,
+        finalAmount: data.final_amount ? Number(data.final_amount) : Number(data.value),
+        overdueNotes: data.overdue_notes || '',
         createdAt: data.created_at
       };
       
@@ -822,6 +840,12 @@ export const boletosService = {
           total_installments: boleto.totalInstallments,
           boleto_file: boleto.boletoFile || '',
           observations: boleto.observations || '',
+          overdue_action: boleto.overdueAction,
+          interest_amount: boleto.interestAmount || 0,
+          penalty_amount: boleto.penaltyAmount || 0,
+          notary_costs: boleto.notaryCosts || 0,
+          final_amount: boleto.finalAmount || boleto.value,
+          overdue_notes: boleto.overdueNotes || '',
           updated_at: new Date().toISOString()
         })
         .eq('id', boleto.id)
@@ -844,6 +868,12 @@ export const boletosService = {
         totalInstallments: data.total_installments,
         boletoFile: data.boleto_file || '',
         observations: data.observations || '',
+        overdueAction: data.overdue_action,
+        interestAmount: data.interest_amount ? Number(data.interest_amount) : 0,
+        penaltyAmount: data.penalty_amount ? Number(data.penalty_amount) : 0,
+        notaryCosts: data.notary_costs ? Number(data.notary_costs) : 0,
+        finalAmount: data.final_amount ? Number(data.final_amount) : Number(data.value),
+        overdueNotes: data.overdue_notes || '',
         createdAt: data.created_at
       };
       

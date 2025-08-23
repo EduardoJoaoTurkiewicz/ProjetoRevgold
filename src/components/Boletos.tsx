@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Eye, FileText, Calendar, AlertCircle, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, FileText, Calendar, AlertCircle, X, Clock, DollarSign, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Boleto } from '../types';
 import { BoletoForm } from './forms/BoletoForm';
+import { OverdueBoletoForm } from './forms/OverdueBoletoForm';
 
 export function Boletos() {
   const { state, createBoleto, updateBoleto, deleteBoleto } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBoleto, setEditingBoleto] = useState<Boleto | null>(null);
   const [viewingBoleto, setViewingBoleto] = useState<Boleto | null>(null);
+  const [managingOverdueBoleto, setManagingOverdueBoleto] = useState<Boleto | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
   const dueToday = state.boletos.filter(boleto => boleto.dueDate === today);
   const overdue = state.boletos.filter(boleto => boleto.dueDate < today && boleto.status === 'pendente');
+  const overdueManaged = state.boletos.filter(boleto => boleto.dueDate < today && boleto.overdueAction);
 
   const handleAddBoleto = (boleto: Omit<Boleto, 'id' | 'createdAt'>) => {
     createBoleto(boleto).then(() => {
@@ -33,6 +36,21 @@ export function Boletos() {
         setEditingBoleto(null);
       }).catch(error => {
         alert('Erro ao atualizar boleto: ' + error.message);
+      });
+    }
+  };
+
+  const handleOverdueAction = (boleto: Omit<Boleto, 'id' | 'createdAt'>) => {
+    if (managingOverdueBoleto) {
+      const updatedBoleto: Boleto = {
+        ...boleto,
+        id: managingOverdueBoleto.id,
+        createdAt: managingOverdueBoleto.createdAt
+      };
+      updateBoleto(updatedBoleto).then(() => {
+        setManagingOverdueBoleto(null);
+      }).catch(error => {
+        alert('Erro ao atualizar boleto vencido: ' + error.message);
       });
     }
   };
@@ -72,6 +90,34 @@ export function Boletos() {
       case 'cancelado': return 'Cancelado';
       case 'nao_pago': return 'Não Pago';
       default: return 'Pendente';
+    }
+  };
+
+  const getOverdueActionLabel = (action?: string) => {
+    switch (action) {
+      case 'pago_com_juros': return 'Pago com Juros';
+      case 'pago_com_multa': return 'Pago com Multa';
+      case 'pago_integral': return 'Pago Integral';
+      case 'protestado': return 'Protestado';
+      case 'negativado': return 'Negativado';
+      case 'acordo_realizado': return 'Acordo Realizado';
+      case 'cancelado': return 'Cancelado';
+      case 'perda_total': return 'Perda Total';
+      default: return 'Não Definido';
+    }
+  };
+
+  const getOverdueActionColor = (action?: string) => {
+    switch (action) {
+      case 'pago_com_juros':
+      case 'pago_com_multa':
+      case 'pago_integral': return 'bg-green-100 text-green-800 border-green-200';
+      case 'acordo_realizado': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'protestado':
+      case 'negativado': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'cancelado':
+      case 'perda_total': return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -123,8 +169,8 @@ export function Boletos() {
       )}
 
       {/* Summary Cards */}
-      {(dueToday.length > 0 || overdue.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {(dueToday.length > 0 || overdue.length > 0 || overdueManaged.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {dueToday.length > 0 && (
             <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
               <div className="flex items-center gap-4">
@@ -146,13 +192,30 @@ export function Boletos() {
             <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 modern-shadow-xl">
               <div className="flex items-center gap-4">
                 <div className="p-3 rounded-xl bg-red-600 modern-shadow-lg">
-                  <Calendar className="w-8 h-8 text-white" />
+                  <AlertTriangle className="w-8 h-8 text-white" />
                 </div>
                 <div>
                   <h3 className="font-bold text-red-900 text-lg">Boletos Vencidos</h3>
                   <p className="text-red-700 font-medium">{overdue.length} boleto(s)</p>
                   <p className="text-sm text-red-600 font-semibold">
                     Total: R$ {overdue.reduce((sum, boleto) => sum + boleto.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {overdueManaged.length > 0 && (
+            <div className="card bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200 modern-shadow-xl">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-orange-600 modern-shadow-lg">
+                  <Clock className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-orange-900 text-lg">Vencidos Gerenciados</h3>
+                  <p className="text-orange-700 font-medium">{overdueManaged.length} boleto(s)</p>
+                  <p className="text-sm text-orange-600 font-semibold">
+                    Total Final: R$ {overdueManaged.reduce((sum, boleto) => sum + (boleto.finalAmount || boleto.value), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>
@@ -172,6 +235,7 @@ export function Boletos() {
                   <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Valor</th>
                   <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Vencimento</th>
                   <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Status</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Situação</th>
                   <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Parcela</th>
                   <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Venda</th>
                   <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Ações</th>
@@ -182,7 +246,14 @@ export function Boletos() {
                   <tr key={boleto.id} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-all duration-300">
                     <td className="py-4 px-6 text-sm font-bold text-slate-900">{boleto.client}</td>
                     <td className="py-4 px-6 text-sm font-black text-blue-600">
-                      R$ {boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      <div>
+                        <span>R$ {boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        {boleto.finalAmount && boleto.finalAmount !== boleto.value && (
+                          <div className="text-xs text-green-600 font-bold">
+                            Final: R$ {boleto.finalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="py-4 px-6 text-sm">
                       <span className={
@@ -192,6 +263,11 @@ export function Boletos() {
                       }>
                         {new Date(boleto.dueDate).toLocaleDateString('pt-BR')}
                       </span>
+                      {boleto.dueDate < today && (
+                        <div className="text-xs text-red-500 font-bold">
+                          {Math.ceil((new Date().getTime() - new Date(boleto.dueDate).getTime()) / (1000 * 60 * 60 * 24))} dias vencido
+                        </div>
+                      )}
                     </td>
                     <td className="py-4 px-6 text-sm">
                       <div className="flex items-center gap-2">
@@ -212,6 +288,34 @@ export function Boletos() {
                           </select>
                         )}
                       </div>
+                    </td>
+                    <td className="py-4 px-6 text-sm">
+                      {boleto.dueDate < today ? (
+                        <div className="space-y-1">
+                          {boleto.overdueAction ? (
+                            <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getOverdueActionColor(boleto.overdueAction)}`}>
+                              {getOverdueActionLabel(boleto.overdueAction)}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => setManagingOverdueBoleto(boleto)}
+                              className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors"
+                            >
+                              Gerenciar Vencimento
+                            </button>
+                          )}
+                          {boleto.overdueAction && (
+                            <button
+                              onClick={() => setManagingOverdueBoleto(boleto)}
+                              className="block px-2 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors"
+                            >
+                              Editar Situação
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 text-xs">Em dia</span>
+                      )}
                     </td>
                     <td className="py-4 px-6 text-sm">
                       <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">
@@ -293,6 +397,15 @@ export function Boletos() {
         />
       )}
 
+      {/* Overdue Boleto Management Modal */}
+      {managingOverdueBoleto && (
+        <OverdueBoletoForm
+          boleto={managingOverdueBoleto}
+          onSubmit={handleOverdueAction}
+          onCancel={() => setManagingOverdueBoleto(null)}
+        />
+      )}
+
       {/* View Boleto Modal */}
       {viewingBoleto && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
@@ -323,12 +436,22 @@ export function Boletos() {
                   <p className="text-sm text-slate-900 font-bold text-blue-600">
                     R$ {viewingBoleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
+                  {viewingBoleto.finalAmount && viewingBoleto.finalAmount !== viewingBoleto.value && (
+                    <p className="text-sm text-green-600 font-bold">
+                      Valor Final: R$ {viewingBoleto.finalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="form-label">Vencimento</label>
                   <p className="text-sm text-slate-900 font-medium">
                     {new Date(viewingBoleto.dueDate).toLocaleDateString('pt-BR')}
                   </p>
+                  {viewingBoleto.dueDate < today && (
+                    <p className="text-sm text-red-600 font-bold">
+                      {Math.ceil((new Date().getTime() - new Date(viewingBoleto.dueDate).getTime()) / (1000 * 60 * 60 * 24))} dias vencido
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="form-label">Status</label>
@@ -336,6 +459,14 @@ export function Boletos() {
                     {getStatusLabel(viewingBoleto.status)}
                   </span>
                 </div>
+                {viewingBoleto.overdueAction && (
+                  <div className="md:col-span-2">
+                    <label className="form-label">Situação do Vencimento</label>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getOverdueActionColor(viewingBoleto.overdueAction)}`}>
+                      {getOverdueActionLabel(viewingBoleto.overdueAction)}
+                    </span>
+                  </div>
+                )}
                 <div>
                   <label className="form-label">Parcela</label>
                   <p className="text-sm text-slate-900 font-medium">
@@ -356,6 +487,40 @@ export function Boletos() {
                   </p>
                 </div>
               </div>
+
+              {/* Informações de Vencimento */}
+              {viewingBoleto.dueDate < today && viewingBoleto.overdueAction && (
+                <div className="mb-8">
+                  <label className="form-label">Detalhes do Vencimento</label>
+                  <div className="p-6 bg-orange-50 border border-orange-200 rounded-xl">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p><strong>Ação Tomada:</strong> {getOverdueActionLabel(viewingBoleto.overdueAction)}</p>
+                        {viewingBoleto.interestAmount && viewingBoleto.interestAmount > 0 && (
+                          <p><strong>Juros:</strong> R$ {viewingBoleto.interestAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        )}
+                        {viewingBoleto.penaltyAmount && viewingBoleto.penaltyAmount > 0 && (
+                          <p><strong>Multa:</strong> R$ {viewingBoleto.penaltyAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        )}
+                      </div>
+                      <div>
+                        {viewingBoleto.notaryCosts && viewingBoleto.notaryCosts > 0 && (
+                          <p><strong>Custos de Cartório:</strong> R$ {viewingBoleto.notaryCosts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        )}
+                        {viewingBoleto.finalAmount && (
+                          <p><strong>Valor Final:</strong> R$ {viewingBoleto.finalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        )}
+                      </div>
+                    </div>
+                    {viewingBoleto.overdueNotes && (
+                      <div className="mt-4">
+                        <p><strong>Observações do Vencimento:</strong></p>
+                        <p className="text-slate-700 mt-1 p-3 bg-white rounded-lg border">{viewingBoleto.overdueNotes}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {viewingBoleto.observations && (
                 <div className="mb-8">
