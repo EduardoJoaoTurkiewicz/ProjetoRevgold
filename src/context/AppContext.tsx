@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { User } from '../types';
 
 // Types
 interface Employee {
@@ -176,6 +177,7 @@ interface CashTransaction {
 }
 
 interface AppState {
+  user: User | null;
   employees: Employee[];
   sales: Sale[];
   debts: Debt[];
@@ -192,6 +194,7 @@ interface AppState {
 }
 
 type AppAction = 
+  | { type: 'SET_USER'; payload: User }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_EMPLOYEES'; payload: Employee[] }
@@ -238,23 +241,28 @@ type AppAction =
   | { type: 'DELETE_CASH_TRANSACTION'; payload: string };
 
 const initialState: AppState = {
-  employees: [],
-  sales: [],
-  debts: [],
-  checks: [],
-  boletos: [],
-  employeeCommissions: [],
-  employeePayments: [],
-  employeeAdvances: [],
-  employeeOvertimes: [],
-  cashBalance: null,
-  cashTransactions: [],
-  isLoading: false,
-  error: null,
-};
+  user: null,
+  employees: Employee[];
+  sales: Sale[];
+  debts: Debt[];
+  checks: Check[];
+  boletos: Boleto[];
+  employeeCommissions: EmployeeCommission[];
+  employeePayments: EmployeePayment[];
+  employeeAdvances: EmployeeAdvance[];
+  employeeOvertimes: EmployeeOvertime[];
+  cashBalance: CashBalance | null;
+  cashTransactions: CashTransaction[];
+  isLoading: boolean;
+  error: string | null;
+}
+
+
 
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
+    case 'SET_USER':
+      return { ...state, user: action.payload };
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
     case 'SET_ERROR':
@@ -678,6 +686,552 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // CRUD operations for employees
+  const createEmployee = async (employee: Omit<Employee, 'id' | 'createdAt'>): Promise<Employee> => {
+    const { data, error } = await supabase
+      .from('employees')
+      .insert([{
+        name: employee.name,
+        position: employee.position,
+        is_seller: employee.isSeller,
+        salary: employee.salary,
+        payment_day: employee.paymentDay,
+        next_payment_date: employee.nextPaymentDate,
+        is_active: employee.isActive,
+        hire_date: employee.hireDate,
+        observations: employee.observations || ''
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newEmployee = {
+      id: data.id,
+      name: data.name,
+      position: data.position,
+      isSeller: data.is_seller,
+      salary: parseFloat(data.salary),
+      paymentDay: data.payment_day,
+      nextPaymentDate: data.next_payment_date,
+      isActive: data.is_active,
+      hireDate: data.hire_date,
+      observations: data.observations || '',
+      createdAt: data.created_at
+    };
+
+    dispatch({ type: 'ADD_EMPLOYEE', payload: newEmployee });
+    return newEmployee;
+  };
+
+  const updateEmployee = async (employee: Employee): Promise<Employee> => {
+    const { data, error } = await supabase
+      .from('employees')
+      .update({
+        name: employee.name,
+        position: employee.position,
+        is_seller: employee.isSeller,
+        salary: employee.salary,
+        payment_day: employee.paymentDay,
+        next_payment_date: employee.nextPaymentDate,
+        is_active: employee.isActive,
+        hire_date: employee.hireDate,
+        observations: employee.observations || '',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', employee.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const updatedEmployee = {
+      id: data.id,
+      name: data.name,
+      position: data.position,
+      isSeller: data.is_seller,
+      salary: parseFloat(data.salary),
+      paymentDay: data.payment_day,
+      nextPaymentDate: data.next_payment_date,
+      isActive: data.is_active,
+      hireDate: data.hire_date,
+      observations: data.observations || '',
+      createdAt: data.created_at
+    };
+
+    dispatch({ type: 'UPDATE_EMPLOYEE', payload: updatedEmployee });
+    return updatedEmployee;
+  };
+
+  const deleteEmployee = async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('employees')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    dispatch({ type: 'DELETE_EMPLOYEE', payload: id });
+  };
+
+  // CRUD operations for sales
+  const createSale = async (sale: Omit<Sale, 'id' | 'createdAt'>): Promise<Sale> => {
+    const { data, error } = await supabase
+      .from('sales')
+      .insert([{
+        date: sale.date,
+        delivery_date: sale.deliveryDate,
+        client: sale.client,
+        seller_id: sale.sellerId,
+        custom_commission_rate: sale.customCommissionRate || 5,
+        products: sale.products,
+        observations: sale.observations || '',
+        total_value: sale.totalValue,
+        payment_methods: sale.paymentMethods,
+        received_amount: sale.receivedAmount,
+        pending_amount: sale.pendingAmount,
+        status: sale.status,
+        payment_description: sale.paymentDescription || '',
+        payment_observations: sale.paymentObservations || ''
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newSale = {
+      id: data.id,
+      date: data.date,
+      deliveryDate: data.delivery_date,
+      client: data.client,
+      sellerId: data.seller_id,
+      products: data.products,
+      observations: data.observations || '',
+      totalValue: parseFloat(data.total_value),
+      paymentMethods: data.payment_methods,
+      receivedAmount: parseFloat(data.received_amount),
+      pendingAmount: parseFloat(data.pending_amount),
+      status: data.status,
+      paymentDescription: data.payment_description || '',
+      paymentObservations: data.payment_observations || '',
+      customCommissionRate: parseFloat(data.custom_commission_rate),
+      createdAt: data.created_at
+    };
+
+    dispatch({ type: 'ADD_SALE', payload: newSale });
+    return newSale;
+  };
+
+  const updateSale = async (sale: Sale): Promise<Sale> => {
+    const { data, error } = await supabase
+      .from('sales')
+      .update({
+        date: sale.date,
+        delivery_date: sale.deliveryDate,
+        client: sale.client,
+        seller_id: sale.sellerId,
+        custom_commission_rate: sale.customCommissionRate || 5,
+        products: sale.products,
+        observations: sale.observations || '',
+        total_value: sale.totalValue,
+        payment_methods: sale.paymentMethods,
+        received_amount: sale.receivedAmount,
+        pending_amount: sale.pendingAmount,
+        status: sale.status,
+        payment_description: sale.paymentDescription || '',
+        payment_observations: sale.paymentObservations || '',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', sale.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const updatedSale = {
+      id: data.id,
+      date: data.date,
+      deliveryDate: data.delivery_date,
+      client: data.client,
+      sellerId: data.seller_id,
+      products: data.products,
+      observations: data.observations || '',
+      totalValue: parseFloat(data.total_value),
+      paymentMethods: data.payment_methods,
+      receivedAmount: parseFloat(data.received_amount),
+      pendingAmount: parseFloat(data.pending_amount),
+      status: data.status,
+      paymentDescription: data.payment_description || '',
+      paymentObservations: data.payment_observations || '',
+      customCommissionRate: parseFloat(data.custom_commission_rate),
+      createdAt: data.created_at
+    };
+
+    dispatch({ type: 'UPDATE_SALE', payload: updatedSale });
+    return updatedSale;
+  };
+
+  const deleteSale = async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('sales')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    dispatch({ type: 'DELETE_SALE', payload: id });
+  };
+
+  // CRUD operations for debts
+  const createDebt = async (debt: Omit<Debt, 'id' | 'createdAt'>): Promise<Debt> => {
+    const { data, error } = await supabase
+      .from('debts')
+      .insert([{
+        date: debt.date,
+        description: debt.description || '',
+        company: debt.company || '',
+        total_value: debt.totalValue,
+        payment_methods: debt.paymentMethods,
+        is_paid: debt.isPaid,
+        paid_amount: debt.paidAmount,
+        pending_amount: debt.pendingAmount,
+        checks_used: debt.checksUsed,
+        payment_description: debt.paymentDescription || '',
+        debt_payment_description: debt.debtPaymentDescription || ''
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newDebt = {
+      id: data.id,
+      date: data.date,
+      description: data.description || '',
+      company: data.company || '',
+      totalValue: parseFloat(data.total_value),
+      paymentMethods: data.payment_methods,
+      isPaid: data.is_paid,
+      paidAmount: parseFloat(data.paid_amount),
+      pendingAmount: parseFloat(data.pending_amount),
+      checksUsed: data.checks_used,
+      paymentDescription: data.payment_description || '',
+      debtPaymentDescription: data.debt_payment_description || '',
+      createdAt: data.created_at
+    };
+
+    dispatch({ type: 'ADD_DEBT', payload: newDebt });
+    return newDebt;
+  };
+
+  const updateDebt = async (debt: Debt): Promise<Debt> => {
+    const { data, error } = await supabase
+      .from('debts')
+      .update({
+        date: debt.date,
+        description: debt.description || '',
+        company: debt.company || '',
+        total_value: debt.totalValue,
+        payment_methods: debt.paymentMethods,
+        is_paid: debt.isPaid,
+        paid_amount: debt.paidAmount,
+        pending_amount: debt.pendingAmount,
+        checks_used: debt.checksUsed,
+        payment_description: debt.paymentDescription || '',
+        debt_payment_description: debt.debtPaymentDescription || '',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', debt.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const updatedDebt = {
+      id: data.id,
+      date: data.date,
+      description: data.description || '',
+      company: data.company || '',
+      totalValue: parseFloat(data.total_value),
+      paymentMethods: data.payment_methods,
+      isPaid: data.is_paid,
+      paidAmount: parseFloat(data.paid_amount),
+      pendingAmount: parseFloat(data.pending_amount),
+      checksUsed: data.checks_used,
+      paymentDescription: data.payment_description || '',
+      debtPaymentDescription: data.debt_payment_description || '',
+      createdAt: data.created_at
+    };
+
+    dispatch({ type: 'UPDATE_DEBT', payload: updatedDebt });
+    return updatedDebt;
+  };
+
+  const deleteDebt = async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('debts')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    dispatch({ type: 'DELETE_DEBT', payload: id });
+  };
+
+  // CRUD operations for checks
+  const createCheck = async (check: Omit<Check, 'id' | 'createdAt'>): Promise<Check> => {
+    const { data, error } = await supabase
+      .from('checks')
+      .insert([{
+        sale_id: check.saleId,
+        debt_id: check.debtId,
+        client: check.client,
+        value: check.value,
+        due_date: check.dueDate,
+        status: check.status,
+        is_own_check: check.isOwnCheck,
+        observations: check.observations || '',
+        used_for: check.usedFor || '',
+        installment_number: check.installmentNumber,
+        total_installments: check.totalInstallments,
+        front_image: check.frontImage || '',
+        back_image: check.backImage || '',
+        selected_available_checks: check.selectedAvailableChecks,
+        used_in_debt: check.usedInDebt,
+        discount_date: check.discountDate
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newCheck = {
+      id: data.id,
+      saleId: data.sale_id,
+      debtId: data.debt_id,
+      client: data.client,
+      value: parseFloat(data.value),
+      dueDate: data.due_date,
+      status: data.status,
+      isOwnCheck: data.is_own_check,
+      observations: data.observations || '',
+      usedFor: data.used_for || '',
+      installmentNumber: data.installment_number,
+      totalInstallments: data.total_installments,
+      frontImage: data.front_image || '',
+      backImage: data.back_image || '',
+      selectedAvailableChecks: data.selected_available_checks,
+      usedInDebt: data.used_in_debt,
+      discountDate: data.discount_date,
+      createdAt: data.created_at
+    };
+
+    dispatch({ type: 'ADD_CHECK', payload: newCheck });
+    return newCheck;
+  };
+
+  const updateCheck = async (check: Check): Promise<Check> => {
+    const { data, error } = await supabase
+      .from('checks')
+      .update({
+        sale_id: check.saleId,
+        debt_id: check.debtId,
+        client: check.client,
+        value: check.value,
+        due_date: check.dueDate,
+        status: check.status,
+        is_own_check: check.isOwnCheck,
+        observations: check.observations || '',
+        used_for: check.usedFor || '',
+        installment_number: check.installmentNumber,
+        total_installments: check.totalInstallments,
+        front_image: check.frontImage || '',
+        back_image: check.backImage || '',
+        selected_available_checks: check.selectedAvailableChecks,
+        used_in_debt: check.usedInDebt,
+        discount_date: check.discountDate,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', check.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const updatedCheck = {
+      id: data.id,
+      saleId: data.sale_id,
+      debtId: data.debt_id,
+      client: data.client,
+      value: parseFloat(data.value),
+      dueDate: data.due_date,
+      status: data.status,
+      isOwnCheck: data.is_own_check,
+      observations: data.observations || '',
+      usedFor: data.used_for || '',
+      installmentNumber: data.installment_number,
+      totalInstallments: data.total_installments,
+      frontImage: data.front_image || '',
+      backImage: data.back_image || '',
+      selectedAvailableChecks: data.selected_available_checks,
+      usedInDebt: data.used_in_debt,
+      discountDate: data.discount_date,
+      createdAt: data.created_at
+    };
+
+    dispatch({ type: 'UPDATE_CHECK', payload: updatedCheck });
+    return updatedCheck;
+  };
+
+  const deleteCheck = async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('checks')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    dispatch({ type: 'DELETE_CHECK', payload: id });
+  };
+
+  // CRUD operations for boletos
+  const createBoleto = async (boleto: Omit<Boleto, 'id' | 'createdAt'>): Promise<Boleto> => {
+    const { data, error } = await supabase
+      .from('boletos')
+      .insert([{
+        sale_id: boleto.saleId,
+        client: boleto.client,
+        value: boleto.value,
+        due_date: boleto.dueDate,
+        status: boleto.status,
+        installment_number: boleto.installmentNumber,
+        total_installments: boleto.totalInstallments,
+        boleto_file: boleto.boletoFile || '',
+        observations: boleto.observations || ''
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newBoleto = {
+      id: data.id,
+      saleId: data.sale_id,
+      client: data.client,
+      value: parseFloat(data.value),
+      dueDate: data.due_date,
+      status: data.status,
+      installmentNumber: data.installment_number,
+      totalInstallments: data.total_installments,
+      boletoFile: data.boleto_file || '',
+      observations: data.observations || '',
+      createdAt: data.created_at
+    };
+
+    dispatch({ type: 'ADD_BOLETO', payload: newBoleto });
+    return newBoleto;
+  };
+
+  const updateBoleto = async (boleto: Boleto): Promise<Boleto> => {
+    const { data, error } = await supabase
+      .from('boletos')
+      .update({
+        sale_id: boleto.saleId,
+        client: boleto.client,
+        value: boleto.value,
+        due_date: boleto.dueDate,
+        status: boleto.status,
+        installment_number: boleto.installmentNumber,
+        total_installments: boleto.totalInstallments,
+        boleto_file: boleto.boletoFile || '',
+        observations: boleto.observations || '',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', boleto.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const updatedBoleto = {
+      id: data.id,
+      saleId: data.sale_id,
+      client: data.client,
+      value: parseFloat(data.value),
+      dueDate: data.due_date,
+      status: data.status,
+      installmentNumber: data.installment_number,
+      totalInstallments: data.total_installments,
+      boletoFile: data.boleto_file || '',
+      observations: data.observations || '',
+      createdAt: data.created_at
+    };
+
+    dispatch({ type: 'UPDATE_BOLETO', payload: updatedBoleto });
+    return updatedBoleto;
+  };
+
+  const deleteBoleto = async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('boletos')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    dispatch({ type: 'DELETE_BOLETO', payload: id });
+  };
+
+  // Cash management
+  const initializeCashBalance = async (initialAmount: number): Promise<void> => {
+    const { data, error } = await supabase
+      .from('cash_balances')
+      .insert([{
+        current_balance: initialAmount,
+        initial_balance: initialAmount,
+        initial_date: new Date().toISOString().split('T')[0],
+        last_updated: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newBalance = {
+      id: data.id,
+      currentBalance: parseFloat(data.current_balance),
+      initialBalance: parseFloat(data.initial_balance),
+      initialDate: data.initial_date,
+      lastUpdated: data.last_updated,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+
+    dispatch({ type: 'UPDATE_CASH_BALANCE', payload: newBalance });
+  };
+
+  const updateCashBalance = async (balance: CashBalance): Promise<void> => {
+    const { data, error } = await supabase
+      .from('cash_balances')
+      .update({
+        current_balance: balance.currentBalance,
+        last_updated: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', balance.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const updatedBalance = {
+      id: data.id,
+      currentBalance: parseFloat(data.current_balance),
+      initialBalance: parseFloat(data.initial_balance),
+      initialDate: data.initial_date,
+      lastUpdated: data.last_updated,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+
+    dispatch({ type: 'UPDATE_CASH_BALANCE', payload: updatedBalance });
+  };
+
   useEffect(() => {
     loadAllData();
   }, []);
@@ -686,6 +1240,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     state,
     dispatch,
     loadAllData,
+    createEmployee,
+    updateEmployee,
+    deleteEmployee,
+    createSale,
+    updateSale,
+    deleteSale,
+    createDebt,
+    updateDebt,
+    deleteDebt,
+    createCheck,
+    updateCheck,
+    deleteCheck,
+    createBoleto,
+    updateBoleto,
+    deleteBoleto,
+    initializeCashBalance,
+    updateCashBalance,
     isSupabaseConfigured,
   };
 
