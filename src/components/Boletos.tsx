@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAppContext } from '../context/AppContext';
+import { useApp } from '../context/AppContext';
 import { BoletoForm } from './forms/BoletoForm';
 import { Plus, FileText, Calendar, DollarSign } from 'lucide-react';
 
@@ -13,7 +13,7 @@ interface Boleto {
 }
 
 export function Boletos() {
-  const { user } = useAppContext();
+  const { user } = useApp();
   const [boletos, setBoletos] = useState<Boleto[]>([]);
   const [showForm, setShowForm] = useState(false);
 
