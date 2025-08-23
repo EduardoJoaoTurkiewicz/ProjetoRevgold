@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { FileText, Calendar, Download, Filter, DollarSign, TrendingUp, TrendingDown, BarChart3, PieChart, Users, CreditCard, Receipt, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
+import { FileText, Calendar, Download, Filter, DollarSign, TrendingUp, TrendingDown, BarChart3, PieChart, Users, CreditCard, Receipt, Clock, AlertTriangle, CheckCircle, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import jsPDF from 'jspdf';
