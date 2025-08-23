@@ -178,20 +178,20 @@ interface CashTransaction {
 
 interface AppState {
   user: User | null;
-  employees: Employee[];
-  sales: Sale[];
-  debts: Debt[];
-  checks: Check[];
-  boletos: Boleto[];
-  employeeCommissions: EmployeeCommission[];
-  employeePayments: EmployeePayment[];
-  employeeAdvances: EmployeeAdvance[];
-  employeeOvertimes: EmployeeOvertime[];
-  cashBalance: CashBalance | null;
-  cashTransactions: CashTransaction[];
-  isLoading: boolean;
-  error: string | null;
-}
+  employees: [],
+  sales: [],
+  debts: [],
+  checks: [],
+  boletos: [],
+  employeeCommissions: [],
+  employeePayments: [],
+  employeeAdvances: [],
+  employeeOvertimes: [],
+  cashBalance: null,
+  cashTransactions: [],
+  isLoading: false,
+  error: null,
+};
 
 type AppAction = 
   | { type: 'SET_USER'; payload: User }
@@ -242,19 +242,19 @@ type AppAction =
 
 const initialState: AppState = {
   user: null,
-  employees: Employee[];
-  sales: Sale[];
-  debts: Debt[];
-  checks: Check[];
-  boletos: Boleto[];
-  employeeCommissions: EmployeeCommission[];
-  employeePayments: EmployeePayment[];
-  employeeAdvances: EmployeeAdvance[];
-  employeeOvertimes: EmployeeOvertime[];
-  cashBalance: CashBalance | null;
-  cashTransactions: CashTransaction[];
-  isLoading: boolean;
-  error: string | null;
+  employees: [],
+  sales: [],
+  debts: [],
+  checks: [],
+  boletos: [],
+  employeeCommissions: [],
+  employeePayments: [],
+  employeeAdvances: [],
+  employeeOvertimes: [],
+  cashBalance: null,
+  cashTransactions: [],
+  isLoading: false,
+  error: null,
 }
 
 
