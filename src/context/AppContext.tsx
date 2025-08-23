@@ -528,7 +528,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         supabase.from('employee_overtimes').select('*').order('date', { ascending: false }),
         supabase.from('cash_balances').select('*').limit(1).maybeSingle(),
         supabase.from('cash_transactions').select('*').order('date', { ascending: false }),
-        supabase.from('pix_fees').select('*').order('date', { ascending: false }),
       ]);
 
       if (employeesResult.error) throw employeesResult.error;
@@ -541,7 +540,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (advancesResult.error) throw advancesResult.error;
       if (overtimesResult.error) throw overtimesResult.error;
       if (cashTransactionsResult.error) throw cashTransactionsResult.error;
-      if (pixFeesResult.error) throw pixFeesResult.error;
 
       // Transform data to match frontend types
       const employees = employeesResult.data.map(emp => ({
@@ -714,17 +712,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updatedAt: transaction.updated_at,
       }));
 
-      const pixFees = pixFeesResult.data.map(pixFee => ({
-        id: pixFee.id,
-        date: pixFee.date,
-        amount: parseFloat(pixFee.amount),
-        description: pixFee.description,
-        bank: pixFee.bank,
-        transactionType: pixFee.transaction_type,
-        relatedTransactionId: pixFee.related_transaction_id,
-        createdAt: pixFee.created_at,
-        updatedAt: pixFee.updated_at,
-      }));
+      // Load PIX fees separately with error handling
+      let pixFees = [];
+      try {
+        const pixFeesResult = await supabase.from('pix_fees').select('*').order('date', { ascending: false });
+        if (pixFeesResult.error) {
+          console.warn('PIX fees table not found, skipping:', pixFeesResult.error.message);
+        } else {
+          pixFees = pixFeesResult.data.map(pixFee => ({
+            id: pixFee.id,
+            date: pixFee.date,
+            amount: parseFloat(pixFee.amount),
+            description: pixFee.description,
+            bank: pixFee.bank,
+            transactionType: pixFee.transaction_type,
+            relatedTransactionId: pixFee.related_transaction_id,
+            createdAt: pixFee.created_at,
+            updatedAt: pixFee.updated_at,
+          }));
+        }
+      } catch (pixError) {
+        console.warn('Error loading PIX fees:', pixError);
+      }
 
       // Dispatch all data
       dispatch({ type: 'SET_EMPLOYEES', payload: employees });
