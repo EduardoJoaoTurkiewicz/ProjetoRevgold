@@ -1011,39 +1011,6 @@ export const pixFeesService = {
       console.log('✅ Tarifa PIX atualizada com sucesso:', updatedPixFee.id);
       return updatedPixFee;
     });
-  },
-
-};
-
-// Upload de imagem para o bucket de cheques
-export const uploadCheckImage = async (file: File, checkId: string, imageType: 'front' | 'back'): Promise<string> => {
-  if (!isSupabaseConfigured()) {
-    throw new Error('Supabase não está configurado. Configure as variáveis de ambiente para usar upload de imagens.');
-  }
-
-  const isAuth = await ensureAuthenticated();
-  if (!isAuth) {
-    throw new Error('Não foi possível autenticar para fazer upload.');
-  }
-
-  try {
-    // Validar arquivo
-    if (!file || file.size === 0) {
-      throw new Error('Arquivo inválido ou vazio.');
-    }
-
-    if (!file.type.startsWith('image/')) {
-      throw new Error('O arquivo deve ser uma imagem.');
-    }
-
-    if (file.size > 10 * 1024 * 1024) { // 10MB
-      throw new Error('O arquivo deve ter no máximo 10MB.');
-    }
-
-    // Gerar nome único para o arquivo
-    const timestamp = Date.now();
-    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const fileName = `${checkId}_${imageType}_${timestamp}.${fileExt}`;
     const filePath = `checks/${fileName}`;
 
     console.log('Iniciando upload:', { fileName, filePath, fileSize: file.size, fileType: file.type });
