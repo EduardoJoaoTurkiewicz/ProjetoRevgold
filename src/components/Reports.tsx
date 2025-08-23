@@ -17,6 +17,8 @@ export function Reports() {
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
+  const today = new Date().toISOString().split('T')[0];
+
   // Filtrar dados por período
   const filteredData = useMemo(() => {
     const sales = state.sales.filter(sale => 
