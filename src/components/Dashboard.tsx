@@ -34,22 +34,34 @@ const Dashboard: React.FC = () => {
   const todayStr = today.toISOString().split('T')[0];
   
   const metrics = useMemo(() => {
-    // Vendas de hoje
-    const todaySales = state.sales.filter(sale => sale.date === todayStr);
+    // Vendas de hoje - corrigir filtro de data
+    const todaySales = state.sales.filter(sale => {
+      const saleDate = new Date(sale.date + 'T00:00:00').toISOString().split('T')[0];
+      return saleDate === todayStr;
+    });
     const todayTotalSales = todaySales.reduce((sum, sale) => sum + sale.totalValue, 0);
     
-    // Valor efetivamente recebido hoje
+    // Valor efetivamente recebido hoje - incluir todos os tipos de recebimento
     let todayReceived = 0;
     
-    // Verificar pagamentos recebidos hoje de vendas
-    state.sales.forEach(sale => {
+    // Verificar pagamentos recebidos hoje de vendas (vendas feitas hoje)
+    todaySales.forEach(sale => {
       sale.paymentMethods.forEach(method => {
-        // Para métodos de pagamento imediatos (dinheiro, pix, cartao_debito)
-        if ((method.type === 'dinheiro' || method.type === 'pix' || method.type === 'cartao_debito') && sale.date === todayStr) {
+        // Para métodos de pagamento imediatos
+        if (['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(method.type)) {
           todayReceived += method.amount;
         }
-        
-        // Para pagamentos parcelados, verificar se alguma parcela vence hoje
+        // Para cartão de crédito à vista
+        else if (method.type === 'cartao_credito' && (!method.installments || method.installments === 1)) {
+          todayReceived += method.amount;
+        }
+      });
+    });
+    
+    // Adicionar recebimentos de outras fontes que vencem hoje
+    state.sales.forEach(sale => {
+      sale.paymentMethods.forEach(method => {
+        // Para pagamentos parcelados de vendas anteriores que vencem hoje
         if (method.installments && method.installments > 1) {
           for (let i = 0; i < method.installments; i++) {
             const dueDate = new Date(method.firstInstallmentDate || method.startDate || sale.date);
@@ -65,34 +77,48 @@ const Dashboard: React.FC = () => {
     
     // Verificar cheques compensados hoje
     state.checks.forEach(check => {
-      if (check.status === 'compensado' && check.dueDate === todayStr) {
+      const checkDueDate = new Date(check.dueDate + 'T00:00:00').toISOString().split('T')[0];
+      if (check.status === 'compensado' && checkDueDate === todayStr) {
         todayReceived += check.value;
       }
     });
     
     // Verificar boletos pagos hoje
     state.boletos.forEach(boleto => {
-      if (boleto.status === 'compensado' && boleto.dueDate === todayStr) {
+      const boletoDueDate = new Date(boleto.dueDate + 'T00:00:00').toISOString().split('T')[0];
+      if (boleto.status === 'compensado' && boletoDueDate === todayStr) {
         todayReceived += boleto.value;
       }
     });
     
-    // Dívidas criadas hoje
-    const todayDebts = state.debts.filter(debt => debt.date === todayStr);
+    // Dívidas criadas hoje - corrigir filtro de data
+    const todayDebts = state.debts.filter(debt => {
+      const debtDate = new Date(debt.date + 'T00:00:00').toISOString().split('T')[0];
+      return debtDate === todayStr;
+    });
     const todayTotalDebts = todayDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
     
-    // Valor pago hoje (dívidas pagas hoje)
+    // Valor pago hoje - incluir todos os tipos de pagamento
     let todayPaid = 0;
     
-    // Calcular pagamentos feitos hoje
-    state.debts.forEach(debt => {
+    // Calcular pagamentos feitos hoje (dívidas criadas hoje)
+    todayDebts.forEach(debt => {
       debt.paymentMethods.forEach(method => {
-        // Para métodos de pagamento imediatos
-        if ((method.type === 'dinheiro' || method.type === 'pix' || method.type === 'cartao_debito') && debt.date === todayStr) {
+        // Para métodos de pagamento imediatos que foram pagos hoje
+        if (['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(method.type)) {
           todayPaid += method.amount;
         }
-        
-        // Para pagamentos parcelados, verificar se alguma parcela vence hoje
+        // Para cartão de crédito à vista
+        else if (method.type === 'cartao_credito' && (!method.installments || method.installments === 1)) {
+          todayPaid += method.amount;
+        }
+      });
+    });
+    
+    // Adicionar pagamentos de dívidas anteriores que vencem hoje
+    state.debts.forEach(debt => {
+      debt.paymentMethods.forEach(method => {
+        // Para pagamentos parcelados de dívidas anteriores que vencem hoje
         if (method.installments && method.installments > 1) {
           for (let i = 0; i < method.installments; i++) {
             const dueDate = new Date(method.startDate || debt.date);
@@ -504,7 +530,9 @@ const Dashboard: React.FC = () => {
               <p className="text-3xl font-black text-blue-800">
                 R$ {(state.cashBalance?.currentBalance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-sm text-blue-700 font-semibold">Saldo atual</p>
+              <p className="text-sm text-blue-700 font-semibold">
+                {state.cashBalance ? 'Saldo atual' : 'Caixa não inicializado'}
+              </p>
             </div>
           </div>
         </div>

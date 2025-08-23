@@ -183,6 +183,8 @@ export interface CashBalance {
   lastUpdated: string;
   initialBalance: number;
   initialDate: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ThirdPartyCheck {

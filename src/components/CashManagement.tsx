@@ -187,6 +187,8 @@ export function CashManagement() {
     
     try {
       await initializeCashBalance(initialAmount);
+      // Forçar atualização da interface
+      window.location.reload();
     } catch (error) {
       alert('Erro ao inicializar caixa: ' + (error as Error).message);
     } finally {
@@ -195,7 +197,7 @@ export function CashManagement() {
   };
 
   // Se não há saldo inicial, mostrar formulário de inicialização
-  if (!state.cashBalance) {
+  if (!state.cashBalance || state.cashBalance.currentBalance === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center p-8">
         <div className="card modern-shadow-xl max-w-2xl w-full">
@@ -203,7 +205,9 @@ export function CashManagement() {
             <div className="w-24 h-24 bg-gradient-to-br from-green-600 to-emerald-700 rounded-full flex items-center justify-center mx-auto mb-6">
               <Wallet className="w-12 h-12 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-4">Inicializar Caixa</h1>
+            <h1 className="text-3xl font-bold text-slate-900 mb-4">
+              {!state.cashBalance ? 'Inicializar Caixa' : 'Definir Saldo Inicial'}
+            </h1>
             <p className="text-slate-600 text-lg">
               Para começar a usar o sistema de caixa, informe o valor atual em caixa da empresa.
             </p>
@@ -215,6 +219,7 @@ export function CashManagement() {
               <input
                 type="number"
                 step="0.01"
+                min="0"
                 value={initialAmount}
                 onChange={(e) => setInitialAmount(parseFloat(e.target.value) || 0)}
                 className="input-field text-center text-2xl font-bold"
@@ -242,7 +247,8 @@ export function CashManagement() {
               disabled={isInitializing}
               className="btn-primary w-full"
             >
-              {isInitializing ? 'Inicializando...' : 'Inicializar Caixa'}
+              {isInitializing ? 'Inicializando...' : 
+               !state.cashBalance ? 'Inicializar Caixa' : 'Atualizar Saldo Inicial'}
             </button>
           </form>
         </div>

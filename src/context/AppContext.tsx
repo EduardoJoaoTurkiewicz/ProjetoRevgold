@@ -690,12 +690,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const initializeCashBalance = async (initialBalance: number) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
+      
+      if (!isSupabaseConfigured()) {
+        // Para desenvolvimento sem Supabase, usar estado local
+        const cashBalance = {
+          id: 'main-cash-balance',
+          currentBalance: initialBalance,
+          lastUpdated: new Date().toISOString(),
+          initialBalance: initialBalance,
+          initialDate: new Date().toISOString().split('T')[0],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        
+        dispatch({ type: 'SET_CASH_BALANCE', payload: cashBalance });
+        console.log('✅ Saldo inicial do caixa definido (modo local):', initialBalance);
+        return;
+      }
+      
       const cashBalance = {
         id: 'main-cash-balance',
         currentBalance: initialBalance,
         lastUpdated: new Date().toISOString(),
         initialBalance: initialBalance,
-        initialDate: new Date().toISOString().split('T')[0]
+        initialDate: new Date().toISOString().split('T')[0],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
       
       // TODO: Save to database
@@ -728,7 +748,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         amount,
         description,
         category: category as any,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
       
       dispatch({ type: 'UPDATE_CASH_BALANCE', payload: updatedCashBalance });
@@ -743,6 +764,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Load data on mount and set up real-time subscriptions
   useEffect(() => {
+    // Inicializar saldo de caixa padrão se não existir
+    if (!state.cashBalance && !state.isLoading) {
+      const defaultCashBalance = {
+        id: 'main-cash-balance',
+        currentBalance: 0,
+        lastUpdated: new Date().toISOString(),
+        initialBalance: 0,
+        initialDate: new Date().toISOString().split('T')[0],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      dispatch({ type: 'SET_CASH_BALANCE', payload: defaultCashBalance });
+    }
+    
     // Carregar dados apenas se Supabase estiver configurado
     if (isSupabaseConfigured()) {
       loadAllData();
