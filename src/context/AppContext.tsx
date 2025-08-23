@@ -633,14 +633,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }));
 
       const cashBalance = cashBalanceResult.error ? null : {
-        id: cashBalanceResult.data.id,
-        currentBalance: parseFloat(cashBalanceResult.data.current_balance),
-        initialBalance: parseFloat(cashBalanceResult.data.initial_balance),
-        initialDate: cashBalanceResult.data.initial_date,
-        lastUpdated: cashBalanceResult.data.last_updated,
-        createdAt: cashBalanceResult.data.created_at,
-        updatedAt: cashBalanceResult.data.updated_at,
-      };
+        id: cashBalanceResult.data?.id,
+        currentBalance: parseFloat(cashBalanceResult.data?.current_balance || '0'),
+        initialBalance: parseFloat(cashBalanceResult.data?.initial_balance || '0'),
+        initialDate: cashBalanceResult.data?.initial_date || '',
+        lastUpdated: cashBalanceResult.data?.last_updated || '',
+        createdAt: cashBalanceResult.data?.created_at,
+        updatedAt: cashBalanceResult.data?.updated_at,
+      } : null;
 
       const cashTransactions = cashTransactionsResult.data.map(transaction => ({
         id: transaction.id,
