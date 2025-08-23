@@ -422,6 +422,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const loadEmployeeAdvances = async () => {
     if (!isSupabaseConfigured()) return;
     
+    if (!isSupabaseConfigured()) return;
+    
     try {
       const { data, error } = await supabase
         .from('employee_advances')
