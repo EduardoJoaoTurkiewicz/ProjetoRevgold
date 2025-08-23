@@ -187,8 +187,8 @@ export function CashManagement() {
     
     try {
       await initializeCashBalance(initialAmount);
-      // Forçar atualização da interface
-      window.location.reload();
+      // Não recarregar a página, apenas atualizar o estado
+      console.log('✅ Caixa inicializado com sucesso');
     } catch (error) {
       alert('Erro ao inicializar caixa: ' + (error as Error).message);
     } finally {

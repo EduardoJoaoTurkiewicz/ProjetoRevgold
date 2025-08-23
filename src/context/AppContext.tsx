@@ -908,23 +908,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       
-      if (!isSupabaseConfigured()) {
-        // Para desenvolvimento sem Supabase, usar estado local
-        const cashBalance = {
-          id: 'main-cash-balance',
-          currentBalance: initialBalance,
-          lastUpdated: new Date().toISOString(),
-          initialBalance: initialBalance,
-          initialDate: new Date().toISOString().split('T')[0],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        
-        dispatch({ type: 'SET_CASH_BALANCE', payload: cashBalance });
-        console.log('✅ Saldo inicial do caixa definido (modo local):', initialBalance);
-        return;
-      }
-      
       const cashBalance = {
         id: 'main-cash-balance',
         currentBalance: initialBalance,
@@ -935,7 +918,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updatedAt: new Date().toISOString()
       };
       
-      // TODO: Save to database
+      if (isSupabaseConfigured()) {
+        // Salvar no Supabase
+        const { data, error } = await supabase
+          .from('cash_balances')
+          .upsert([{
+            id: cashBalance.id,
+            current_balance: cashBalance.currentBalance,
+            initial_balance: cashBalance.initialBalance,
+            initial_date: cashBalance.initialDate,
+            last_updated: cashBalance.lastUpdated
+          }])
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('❌ Erro ao salvar saldo no Supabase:', error);
+          throw new Error(`Erro ao salvar saldo: ${error.message}`);
+        }
+        
+        console.log('✅ Saldo salvo no Supabase:', data);
+      }
+      
       dispatch({ type: 'SET_CASH_BALANCE', payload: cashBalance });
       
       console.log('✅ Saldo inicial do caixa definido:', initialBalance);

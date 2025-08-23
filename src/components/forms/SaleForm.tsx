@@ -120,18 +120,14 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   };
 
   const calculateAmounts = () => {
-    // Only count immediate payments (not installments) as received
+    // Calcular valores recebidos corretamente
     const totalPaid = formData.paymentMethods.reduce((sum, method) => {
-      // For installments, only the first installment is considered "received" immediately
-      if (method.installments && method.installments > 1) {
-        return sum + (method.installmentValue || 0); // Only first installment
-      }
-      // For single payments, full amount is received
+      // Apenas pagamentos instantâneos são considerados recebidos
       if (method.type === 'dinheiro' || method.type === 'pix' || method.type === 'cartao_debito') {
         return sum + method.amount;
       }
-      // For checks and other methods, consider as pending unless it's a single payment
-      return sum + (method.installments === 1 || !method.installments ? method.amount : 0);
+      // Cheques, boletos e cartão de crédito são sempre pendentes até serem compensados
+      return sum;
     }, 0);
     
     const pending = formData.totalValue - totalPaid;
