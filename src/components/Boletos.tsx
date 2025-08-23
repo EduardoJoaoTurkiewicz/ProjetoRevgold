@@ -143,6 +143,19 @@ export function Boletos() {
     }
   };
 
+  if (state.isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <Receipt className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-slate-600 font-semibold">Carregando boletos...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -152,7 +165,7 @@ export function Boletos() {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Gestão de Boletos</h1>
-            <p className="text-slate-600 text-lg">Controle completo de boletos por venda e dívida</p>
+            <p className="text-slate-600 text-lg">Controle completo de boletos bancários</p>
           </div>
         </div>
         <button
@@ -203,14 +216,160 @@ export function Boletos() {
         </div>
       )}
 
-      {/* Sales with Boletos */}
+      {/* Todos os Boletos */}
       <div className="card modern-shadow-xl">
         <div className="mb-6">
-          <h2 className="text-xl font-bold text-slate-900 mb-2">Vendas com Boletos</h2>
-          <p className="text-slate-600">Vendas que possuem boletos gerados</p>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Todos os Boletos</h2>
+          <p className="text-slate-600">Lista completa de todos os boletos registrados no sistema</p>
         </div>
         
-        {salesWithBoletos.length > 0 ? (
+        {state.boletos.length > 0 ? (
+          <div className="overflow-x-auto modern-scrollbar">
+            <table className="min-w-full table-auto">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Cliente</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Valor</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Vencimento</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Parcela</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Status</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Arquivo</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Venda</th>
+                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {state.boletos.map(boleto => {
+                  const relatedSale = state.sales.find(sale => sale.id === boleto.saleId);
+                  
+                  return (
+                    <tr key={boleto.id} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-all duration-300">
+                      <td className="py-4 px-6 text-sm font-bold text-slate-900">{boleto.client}</td>
+                      <td className="py-4 px-6 text-sm font-black text-blue-600">
+                        R$ {boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-4 px-6 text-sm">
+                        <span className={
+                          boleto.dueDate === today ? 'text-blue-600 font-bold' :
+                          boleto.dueDate < today ? 'text-red-600 font-bold' :
+                          'text-slate-900 font-medium'
+                        }>
+                          {new Date(boleto.dueDate).toLocaleDateString('pt-BR')}
+                        </span>
+                        {boleto.dueDate === today && (
+                          <div className="text-xs text-blue-600 font-bold">Vence hoje!</div>
+                        )}
+                        {boleto.dueDate < today && boleto.status === 'pendente' && (
+                          <div className="text-xs text-red-600 font-bold">Vencido!</div>
+                        )}
+                      </td>
+                      <td className="py-4 px-6 text-sm">
+                        <span className="px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-800 font-bold border border-blue-200">
+                          {boleto.installmentNumber}/{boleto.totalInstallments}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(boleto.status)}`}>
+                            {getStatusLabel(boleto.status)}
+                          </span>
+                          {(boleto.status === 'pendente' || boleto.status === 'vencido') && (
+                            <select
+                              value={boleto.status}
+                              onChange={(e) => updateBoletoStatus(boleto.id, e.target.value as Boleto['status'])}
+                              className="text-xs border rounded-lg px-2 py-1 bg-white modern-shadow"
+                            >
+                              <option value="pendente">Pendente</option>
+                              <option value="compensado">Compensado</option>
+                              <option value="vencido">Vencido</option>
+                              <option value="cancelado">Cancelado</option>
+                              <option value="nao_pago">Não Pago</option>
+                            </select>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 text-sm">
+                        {boleto.boletoFile ? (
+                          <span className="px-3 py-1 rounded-full text-xs bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">
+                            ✓ Anexado
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => setUploadingBoleto(boleto)}
+                            className="px-3 py-1 rounded-full text-xs bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors font-bold border border-amber-200"
+                          >
+                            Anexar
+                          </button>
+                        )}
+                      </td>
+                      <td className="py-4 px-6 text-sm">
+                        {relatedSale ? (
+                          <div>
+                            <span className="text-blue-600 font-medium">{relatedSale.client}</span>
+                            <div className="text-xs text-slate-500">
+                              {new Date(relatedSale.date).toLocaleDateString('pt-BR')}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs">Manual</span>
+                        )}
+                      </td>
+                      <td className="py-4 px-6 text-sm">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setViewingBoleto(boleto)}
+                            className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-modern"
+                            title="Visualizar"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setEditingBoleto(boleto)}
+                            className="text-emerald-600 hover:text-emerald-800 p-2 rounded-lg hover:bg-emerald-50 transition-modern"
+                            title="Editar"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteBoleto(boleto.id)}
+                            className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-modern"
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-20">
+            <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 floating-animation">
+              <Receipt className="w-12 h-12 text-blue-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-slate-800 mb-4">Nenhum boleto registrado</h3>
+            <p className="text-slate-600 mb-8 text-lg">Comece registrando seu primeiro boleto para controlar os recebimentos.</p>
+            <button
+              onClick={() => setIsFormOpen(true)}
+              className="btn-primary modern-shadow-xl"
+            >
+              Registrar primeiro boleto
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Sales with Boletos */}
+      {salesWithBoletos.length > 0 && (
+        <div className="card modern-shadow-xl">
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-slate-900 mb-2">Vendas com Boletos</h2>
+            <p className="text-slate-600">Vendas que possuem boletos gerados</p>
+          </div>
+          
           <div className="space-y-4">
             {salesWithBoletos.map(sale => (
               <div key={sale.id} className="border border-slate-200 rounded-2xl overflow-hidden">
@@ -321,6 +480,20 @@ export function Boletos() {
                                   )}
                                 </td>
                                 <td className="py-3 px-4 text-sm">
+                                  {relatedSale ? (
+                                    <div>
+                                      <span className="text-blue-600 font-medium">{relatedSale.client}</span>
+                                      <div className="text-xs text-slate-500">
+                                        {new Date(relatedSale.date).toLocaleDateString('pt-BR')}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700 font-bold">
+                                      Manual
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4 text-sm">
                                   <div className="flex items-center gap-2">
                                     <button
                                       onClick={() => setViewingBoleto(boleto)}
@@ -346,33 +519,62 @@ export function Boletos() {
                                   </div>
                                 </td>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      
-                      {sale.observations && (
-                        <div className="mt-4 p-4 bg-slate-50 rounded-xl">
-                          <h5 className="font-medium text-slate-900 mb-2">Observações da Venda</h5>
-                          <p className="text-sm text-slate-600">{sale.observations}</p>
-                        </div>
-                      )}
+                            );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-20">
+                    <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 floating-animation">
+                      <Receipt className="w-12 h-12 text-blue-600" />
                     </div>
+                    <h3 className="text-2xl font-bold text-slate-800 mb-4">Nenhum boleto registrado</h3>
+                    <p className="text-slate-600 mb-8 text-lg">Comece registrando seu primeiro boleto para controlar os recebimentos.</p>
+                    <button
+                      onClick={() => setIsFormOpen(true)}
+                      className="btn-primary modern-shadow-xl"
+                    >
+                      Registrar primeiro boleto
+                    </button>
                   </div>
                 )}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <Receipt className="w-20 h-20 mx-auto mb-6 text-slate-300" />
-            <p className="text-slate-500 mb-4 text-xl font-medium">Nenhuma venda com boletos ainda.</p>
-            <p className="text-slate-400 text-sm mb-6">
-              Os boletos são criados automaticamente quando você registra vendas com pagamento em boleto.
-            </p>
-          </div>
-        )}
-      </div>
+
+              {/* Resumo de Totais */}
+              {state.boletos.length > 0 && (
+                <div className="mt-8 p-6 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-2xl border-2 border-blue-300">
+                  <h3 className="text-xl font-bold text-blue-900 mb-4">Resumo Geral</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="text-center">
+                      <p className="text-blue-600 font-semibold">Total de Boletos</p>
+                      <p className="text-2xl font-black text-blue-800">{state.boletos.length}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-blue-600 font-semibold">Valor Total</p>
+                      <p className="text-2xl font-black text-blue-800">
+                        R$ {state.boletos.reduce((sum, b) => sum + b.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-blue-600 font-semibold">Compensados</p>
+                      <p className="text-2xl font-black text-green-600">
+                        {state.boletos.filter(b => b.status === 'compensado').length}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-blue-600 font-semibold">Pendentes</p>
+                      <p className="text-2xl font-black text-orange-600">
+                        {state.boletos.filter(b => b.status === 'pendente').length}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Debts with Boletos */}
       {debtsWithBoletos.length > 0 && (
@@ -467,65 +669,121 @@ export function Boletos() {
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
           <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
             <div className="p-8">
-              <div className="flex items-center gap-4 mb-8">
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 modern-shadow-xl">
-                  <Receipt className="w-8 h-8 text-white" />
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 modern-shadow-xl">
+                    <Receipt className="w-8 h-8 text-white" />
+                  </div>
+                  <h2 className="text-3xl font-bold text-slate-900">Detalhes do Boleto</h2>
                 </div>
-                <h2 className="text-3xl font-bold text-slate-900">Detalhes do Boleto</h2>
+                <button
+                  onClick={() => setViewingBoleto(null)}
+                  className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>
                   <label className="form-label">Cliente</label>
-                  <p className="text-sm text-slate-900 font-medium">{viewingBoleto.client}</p>
+                  <p className="text-lg text-slate-900 font-bold">{viewingBoleto.client}</p>
                 </div>
                 <div>
                   <label className="form-label">Valor</label>
-                  <p className="text-sm text-slate-900 font-bold text-emerald-600">
+                  <p className="text-2xl font-black text-blue-600">
                     R$ {viewingBoleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div>
                   <label className="form-label">Vencimento</label>
-                  <p className="text-sm text-slate-900 font-medium">
+                  <p className="text-lg text-slate-900 font-bold">
                     {new Date(viewingBoleto.dueDate).toLocaleDateString('pt-BR')}
                   </p>
+                  {viewingBoleto.dueDate === today && (
+                    <span className="inline-block mt-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded-full">
+                      Vence hoje!
+                    </span>
+                  )}
+                  {viewingBoleto.dueDate < today && viewingBoleto.status === 'pendente' && (
+                    <span className="inline-block mt-1 px-2 py-1 bg-red-100 text-red-800 text-xs font-bold rounded-full">
+                      Vencido!
+                    </span>
+                  )}
                 </div>
                 <div>
                   <label className="form-label">Status</label>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(viewingBoleto.status)}`}>
+                  <span className={`px-4 py-2 rounded-full text-sm font-bold border ${getStatusColor(viewingBoleto.status)}`}>
                     {getStatusLabel(viewingBoleto.status)}
                   </span>
                 </div>
                 <div>
                   <label className="form-label">Parcela</label>
-                  <p className="text-sm text-slate-900 font-medium">
+                  <p className="text-lg text-slate-900 font-bold">
                     {viewingBoleto.installmentNumber} de {viewingBoleto.totalInstallments}
                   </p>
                 </div>
                 <div>
                   <label className="form-label">Arquivo</label>
                   {viewingBoleto.boletoFile ? (
-                    <p className="text-sm text-emerald-600 font-bold">✓ Boleto anexado</p>
+                    <p className="text-emerald-600 font-bold">✓ Boleto anexado</p>
                   ) : (
-                    <p className="text-sm text-amber-600 font-bold">⚠️ Aguardando anexo</p>
+                    <p className="text-amber-600 font-bold">⚠️ Aguardando anexo</p>
                   )}
+                </div>
+                <div className="md:col-span-2">
+                  <label className="form-label">Venda Relacionada</label>
+                  {viewingBoleto.saleId ? (
+                    (() => {
+                      const sale = state.sales.find(s => s.id === viewingBoleto.saleId);
+                      return sale ? (
+                        <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                          <p className="font-bold text-blue-900">{sale.client}</p>
+                          <p className="text-sm text-blue-700">
+                            Data da venda: {new Date(sale.date).toLocaleDateString('pt-BR')}
+                          </p>
+                          <p className="text-sm text-blue-700">
+                            Valor total: R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-sm text-blue-700">
+                            Status: {sale.status === 'pago' ? 'Pago' : sale.status === 'parcial' ? 'Parcial' : 'Pendente'}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-slate-500">Venda não encontrada</p>
+                      );
+                    })()
+                  ) : (
+                    <p className="text-slate-500">Boleto criado manualmente</p>
+                  )}
+                </div>
+                <div className="md:col-span-2">
+                  <label className="form-label">Data de Criação</label>
+                  <p className="text-sm text-slate-600">
+                    {new Date(viewingBoleto.createdAt).toLocaleString('pt-BR')}
+                  </p>
                 </div>
               </div>
 
               {viewingBoleto.observations && (
                 <div className="mb-8">
                   <label className="form-label">Observações</label>
-                  <p className="text-sm text-slate-900 p-4 bg-slate-50 rounded-xl border">
-                    {viewingBoleto.observations}
-                  </p>
+                  <div className="p-4 bg-slate-50 rounded-xl border">
+                    <p className="text-slate-900 whitespace-pre-wrap">{viewingBoleto.observations}</p>
+                  </div>
                 </div>
               )}
 
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => setEditingBoleto(viewingBoleto)}
+                  className="btn-secondary"
+                >
+                  Editar
+                </button>
                 <button
                   onClick={() => setViewingBoleto(null)}
-                  className="btn-secondary"
+                  className="btn-primary"
                 >
                   Fechar
                 </button>
