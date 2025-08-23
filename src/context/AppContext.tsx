@@ -640,7 +640,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         lastUpdated: cashBalanceResult.data?.last_updated || '',
         createdAt: cashBalanceResult.data?.created_at,
         updatedAt: cashBalanceResult.data?.updated_at,
-      } : null;
+      };
+
+      const finalCashBalance = cashBalance && cashBalance.id ? cashBalance : null;
 
       const cashTransactions = cashTransactionsResult.data.map(transaction => ({
         id: transaction.id,
@@ -665,7 +667,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'SET_EMPLOYEE_PAYMENTS', payload: employeePayments });
       dispatch({ type: 'SET_EMPLOYEE_ADVANCES', payload: employeeAdvances });
       dispatch({ type: 'SET_EMPLOYEE_OVERTIMES', payload: employeeOvertimes });
-      dispatch({ type: 'SET_CASH_BALANCE', payload: cashBalance });
+      dispatch({ type: 'SET_CASH_BALANCE', payload: finalCashBalance });
       dispatch({ type: 'SET_CASH_TRANSACTIONS', payload: cashTransactions });
 
     } catch (error) {
