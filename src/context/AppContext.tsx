@@ -255,7 +255,7 @@ const initialState: AppState = {
   cashTransactions: [],
   isLoading: false,
   error: null,
-};
+}
 
 
 
