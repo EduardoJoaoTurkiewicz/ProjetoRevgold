@@ -1099,14 +1099,14 @@ export const uploadCheckImage = async (file: File): Promise<string> => {
 
     console.log('URL pública gerada:', publicUrl);
     return publicUrl;
-
-  } catch (error) {
-    console.error('Erro completo no upload:', error);
-    
-    if (error instanceof Error) {
-      throw error;
-    } else {
-      throw new Error('Erro desconhecido durante o upload da imagem.');
+    } catch (error) {
+      console.error('Erro completo no upload:', error);
+      
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error('Erro desconhecido durante o upload da imagem.');
+      }
     }
   }
 };
