@@ -934,7 +934,7 @@ export default function Dashboard() {
             <div>
               <p className="text-green-600 font-semibold">Faturamento</p>
               <p className="text-3xl font-black text-green-700">
-                R$ {metrics.monthlyRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {(metrics.monthlyRevenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
             <div>
@@ -949,13 +949,13 @@ export default function Dashboard() {
             <div>
               <p className="text-green-600 font-semibold">Comissões</p>
               <p className="text-3xl font-black text-green-700">
-                {metrics.monthlyCommissions}
+                {metrics.monthlyCommissions || 0}
               </p>
             </div>
             <div>
               <p className="text-green-600 font-semibold">Lucro</p>
-              <p className={`text-3xl font-black ${metrics.netProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                R$ {metrics.netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              <p className={`text-3xl font-black ${(metrics.netProfit || 0) >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                R$ {(metrics.netProfit || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
           </div>
