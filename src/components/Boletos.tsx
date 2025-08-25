@@ -533,7 +533,7 @@ export function Boletos() {
                   </div>
                   <div>
                     <p><strong>Métodos de Pagamento:</strong></p>
-                    {debt.paymentMethods.map((method, index) => (
+                    {(debt.paymentMethods || []).map((method, index) => (
                       <p key={index} className="text-orange-600 font-medium">
                         • {method.type.replace('_', ' ')}: R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>

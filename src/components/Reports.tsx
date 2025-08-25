@@ -70,7 +70,7 @@ export function Reports() {
     
     // Calcular pagamentos do período
     state.debts.forEach(debt => {
-      debt.paymentMethods.forEach(method => {
+      (debt.paymentMethods || []).forEach(method => {
         if (method.installments && method.installments > 1) {
           for (let i = 0; i < method.installments; i++) {
             const dueDate = new Date(method.startDate || debt.date);
@@ -155,7 +155,7 @@ export function Reports() {
   const paymentMethodsData = useMemo(() => {
     const methods = {};
     filteredData.sales.forEach(sale => {
-      sale.paymentMethods.forEach(method => {
+      (sale.paymentMethods || []).forEach(method => {
         const methodName = method.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
         if (!methods[methodName]) {
           methods[methodName] = 0;

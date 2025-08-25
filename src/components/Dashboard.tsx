@@ -39,7 +39,7 @@ export default function Dashboard() {
     
     // Vendas com pagamento instantâneo hoje
     salesToday.forEach(sale => {
-      sale.paymentMethods.forEach(method => {
+      (sale.paymentMethods || []).forEach(method => {
         if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type)) {
           totalReceivedToday += method.amount;
         }
@@ -76,7 +76,7 @@ export default function Dashboard() {
     
     // Dívidas pagas hoje
     debtsToday.forEach(debt => {
-      debt.paymentMethods.forEach(method => {
+      (debt.paymentMethods || []).forEach(method => {
         if (['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(method.type)) {
           totalPaidToday += method.amount;
         }
@@ -93,7 +93,7 @@ export default function Dashboard() {
     // Adicionar boletos da empresa pagos hoje
     (state?.debts || []).forEach(debt => {
       if (debt.date === today && debt.isPaid) {
-        debt.paymentMethods.forEach(method => {
+        (debt.paymentMethods || []).forEach(method => {
           if (method.type === 'boleto') {
             totalPaidToday += method.amount;
           }
@@ -267,7 +267,7 @@ export default function Dashboard() {
   const paymentMethodsData = useMemo(() => {
     const methods = {};
     (state?.sales || []).forEach(sale => {
-      sale.paymentMethods.forEach(method => {
+      (sale.paymentMethods || []).forEach(method => {
         const methodName = method.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
         if (!methods[methodName]) {
           methods[methodName] = 0;
@@ -623,7 +623,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <p><strong>Métodos de Pagamento:</strong></p>
-                    {debt.paymentMethods.map((method, index) => (
+                    {(debt.paymentMethods || []).map((method, index) => (
                       <p key={index} className="text-red-600 font-medium">
                         • {method.type.replace('_', ' ')}: R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
@@ -693,7 +693,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <p><strong>Métodos de Pagamento:</strong></p>
-                    {sale.paymentMethods.map((method, index) => (
+                    {(sale.paymentMethods || []).map((method, index) => (
                       <p key={index} className="text-green-600 font-medium">
                         • {method.type.replace('_', ' ')}: R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>

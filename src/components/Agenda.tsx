@@ -72,7 +72,7 @@ export function Agenda() {
 
     // Dívidas da empresa (que a empresa deve pagar)
     state.debts.forEach(debt => {
-      debt.paymentMethods.forEach((method, index) => {
+      (debt.paymentMethods || []).forEach((method, index) => {
         if (method.installments && method.installments > 1) {
           for (let i = 0; i < method.installments; i++) {
             const dueDate = new Date(method.startDate || debt.date);
@@ -149,7 +149,7 @@ export function Agenda() {
         });
       }
       
-      sale.paymentMethods.forEach((method, methodIndex) => {
+      (sale.paymentMethods || []).forEach((method, methodIndex) => {
         if (method.installments && method.installments > 1) {
           for (let i = 0; i < method.installments; i++) {
             const dueDate = new Date(method.firstInstallmentDate || method.startDate || sale.date);

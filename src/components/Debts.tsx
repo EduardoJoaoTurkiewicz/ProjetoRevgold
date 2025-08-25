@@ -264,7 +264,7 @@ export function Debts() {
               <div className="mb-8">
                 <h3 className="text-xl font-bold text-red-800 mb-4">Métodos de Pagamento</h3>
                 <div className="space-y-3">
-                  {viewingDebt.paymentMethods.map((method, index) => (
+                  {(viewingDebt.paymentMethods || []).map((method, index) => (
                     <div key={index} className="p-4 bg-red-50 rounded-xl border border-red-100">
                       <div className="flex justify-between items-center">
                         <span className="font-bold text-red-800 capitalize">
@@ -380,7 +380,7 @@ export function Debts() {
                 <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
                   <h3 className="text-xl font-bold text-green-900 mb-4">Métodos de Pagamento</h3>
                   <div className="space-y-4">
-                    {viewingObservations.paymentMethods.map((method, index) => (
+                    {(viewingObservations.paymentMethods || []).map((method, index) => (
                       <div key={index} className="p-4 bg-white rounded-xl border border-green-100 shadow-sm">
                         <div className="flex justify-between items-center mb-2">
                           <span className="font-bold text-green-800 capitalize text-lg">
