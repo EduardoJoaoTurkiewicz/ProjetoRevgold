@@ -30,7 +30,6 @@ function AppContent() {
   
   console.log('✅ AppContent - Usuário válido logado:', currentUser.username, 'Página atual:', currentPage);
 
-  // Renderizar diretamente sem delay desnecessário
   const renderPage = () => {
     switch (currentPage) {
       case 'sales':
@@ -59,9 +58,7 @@ function AppContent() {
   return (
     <div className="min-h-screen relative z-20">
       <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
-        <div className="relative z-10">
-          {renderPage()}
-        </div>
+        {renderPage()}
       </Layout>
     </div>
   );

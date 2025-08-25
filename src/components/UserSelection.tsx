@@ -132,38 +132,36 @@ export function UserSelection() {
     
     setIsConnecting(true);
     
-    setTimeout(() => {
-      try {
-        console.log('📤 Despachando ação SET_USER...');
-        const userData = { 
-          id: user.id, 
-          username: user.name, 
-          role: 'user' as const
-        };
-        
-        console.log('👤 Dados do usuário a serem definidos:', userData);
-        
-        dispatch({ 
-          type: 'SET_USER', 
-          payload: userData
-        });
-        
-        console.log('✅ Usuário definido no contexto com sucesso');
-        
-        // Mostrar aviso sobre Supabase apenas após login bem-sucedido
-        if (!isSupabaseConfigured()) {
-          setTimeout(() => {
-            alert('⚠️ Aviso: Sistema funcionando em modo local!\n\nPara salvar dados permanentemente:\n1. Configure o arquivo .env com suas credenciais do Supabase\n2. Reiniciar o servidor\n\nEnquanto isso, você pode usar o sistema normalmente.');
-          }, 1000);
-        }
-        
-      } catch (error) {
-        console.error('❌ Erro ao definir usuário:', error);
-        alert('Erro ao acessar o sistema. Tente recarregar a página.');
-      } finally {
-        setIsConnecting(false);
+    try {
+      console.log('📤 Despachando ação SET_USER...');
+      const userData = { 
+        id: user.id, 
+        username: user.name, 
+        role: 'user' as const
+      };
+      
+      console.log('👤 Dados do usuário a serem definidos:', userData);
+      
+      dispatch({ 
+        type: 'SET_USER', 
+        payload: userData
+      });
+      
+      console.log('✅ Usuário definido no contexto com sucesso');
+      
+      // Mostrar aviso sobre Supabase apenas após login bem-sucedido
+      if (!isSupabaseConfigured()) {
+        setTimeout(() => {
+          alert('⚠️ Aviso: Sistema funcionando em modo local!\n\nPara salvar dados permanentemente:\n1. Configure o arquivo .env com suas credenciais do Supabase\n2. Reiniciar o servidor\n\nEnquanto isso, você pode usar o sistema normalmente.');
+        }, 1000);
       }
-    }, 100); // Reduzir delay para entrada mais rápida
+      
+    } catch (error) {
+      console.error('❌ Erro ao definir usuário:', error);
+      alert('Erro ao acessar o sistema. Tente recarregar a página.');
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   return (
