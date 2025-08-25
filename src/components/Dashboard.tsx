@@ -9,6 +9,9 @@ const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4'
 export default function Dashboard() {
   const { state, loadAllData, isSupabaseConfigured: checkSupabase } = useApp();
   
+  // Define today at component level so it's accessible throughout
+  const today = new Date().toISOString().split('T')[0];
+  
   console.log('📊 Dashboard renderizado, estado:', {
     isLoading: state.isLoading,
     error: state.error,
@@ -26,7 +29,6 @@ export default function Dashboard() {
   }, [checkSupabase, loadAllData]);
   // Calcular métricas principais
   const metrics = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
     const thisMonth = new Date().getMonth();
     const thisYear = new Date().getFullYear();
 
