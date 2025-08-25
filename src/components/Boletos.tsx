@@ -91,7 +91,7 @@ export function Boletos() {
         
         // Criar transação de entrada no caixa para o valor líquido
         if (netReceived > 0) {
-          state.createCashTransaction({
+          createCashTransaction({
             date: new Date().toISOString().split('T')[0],
             type: 'entrada',
             amount: netReceived,
@@ -106,7 +106,7 @@ export function Boletos() {
         
         // Se houve custos de cartório, criar transação de saída
         if (notaryCosts > 0) {
-          state.createCashTransaction({
+          createCashTransaction({
             date: new Date().toISOString().split('T')[0],
             type: 'saida',
             amount: notaryCosts,

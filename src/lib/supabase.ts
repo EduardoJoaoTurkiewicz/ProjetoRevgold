@@ -122,6 +122,71 @@ export async function executeQuery(query: string, params?: any[]) {
   }
 }
 
+// Service objects for automation
+export const checksService = {
+  async create(checkData: any) {
+    if (!isSupabaseConfigured()) {
+      // Return mock data for local development
+      return {
+        ...checkData,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString()
+      };
+    }
+    const { data, error } = await supabase.from('checks').insert([checkData]).select().single();
+    if (error) throw error;
+    return data;
+  },
+  
+  async update(id: string, checkData: any) {
+    if (!isSupabaseConfigured()) {
+      return; // No-op for local development
+    }
+    const { error } = await supabase.from('checks').update(checkData).eq('id', id);
+    if (error) throw error;
+  },
+  
+  async delete(id: string) {
+    if (!isSupabaseConfigured()) {
+      return; // No-op for local development
+    }
+    const { error } = await supabase.from('checks').delete().eq('id', id);
+    if (error) throw error;
+  }
+};
+
+export const boletosService = {
+  async create(boletoData: any) {
+    if (!isSupabaseConfigured()) {
+      // Return mock data for local development
+      return {
+        ...boletoData,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString()
+      };
+    }
+    const { data, error } = await supabase.from('boletos').insert([boletoData]).select().single();
+    if (error) throw error;
+    return data;
+  },
+  
+  async update(id: string, boletoData: any) {
+    if (!isSupabaseConfigured()) {
+      return; // No-op for local development
+    }
+    const { error } = await supabase.from('boletos').update(boletoData).eq('id', id);
+    if (error) throw error;
+  },
+  
+  async delete(id: string) {
+    if (!isSupabaseConfigured()) {
+      return; // No-op for local development
+    }
+    const { error } = await supabase.from('boletos').delete().eq('id', id);
+    if (error) throw error;
+  }
+};
+
 // Health check function
 export async function healthCheck() {
   try {

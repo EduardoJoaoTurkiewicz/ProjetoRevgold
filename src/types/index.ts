@@ -1,240 +1,112 @@
-export interface User {
-  id: string;
-  username: string;
-  role: 'user';
-}
+import { Sale, Check, Boleto, PaymentMethod, ThirdPartyCheckDetails } from '../types';
+import { checksService, boletosService } from './supabase';
 
-export interface PaymentMethod {
-  type: 'dinheiro' | 'pix' | 'cartao_credito' | 'cartao_debito' | 'cheque' | 'boleto' | 'transferencia';
-  amount: number;
-  installments?: number;
-  installmentValue?: number;
-  installmentInterval?: number;
-  startDate?: string;
-  firstInstallmentDate?: string;
-  isOwnCheck?: boolean;
-  isThirdPartyCheck?: boolean;
-  thirdPartyDetails?: ThirdPartyCheckDetails[];
-}
+export class AutomationService {
+  // Criar cheques automaticamente para vendas com pagamento em cheque
+    const createdChecks: Check[] = [];
+    
+    for (const [methodIndex, method] of sale.paymentMethods.entries()) {
+      if (method.type === 'cheque') {
+        const installments = method.installments || 1;
+        
+        for (let i = 0; i < installments; i++) {
+          const dueDate = new Date(method.firstInstallmentDate || method.startDate || sale.date);
+          dueDate.setDate(dueDate.getDate() + (i * (method.installmentInterval || 30)));
+          
+          const checkData: Omit<Check, 'id' | 'createdAt'> = {
+            saleId: sale.id,
+            client: sale.client,
+            value: method.installmentValue || method.amount,
+  thirdPartyCheckDetails?: ThirdPartyCheckDetails;
+            dueDate: dueDate.toISOString().split('T')[0],
+            status: 'pendente',
+            isOwnCheck: false, // Default, pode ser alterado depois
+            usedFor: `Venda - ${sale.client}`,
+            installmentNumber: i + 1,
+            totalInstallments: installments,
+            observations: `Cheque gerado automaticamente para venda ${sale.id} - Parcela ${i + 1}/${installments}`
+          };
+          
+          try {
+            const check = await checksService.create(checkData);
+            createdChecks.push(check);
+            console.log(`✅ Cheque ${i + 1}/${installments} criado para venda ${sale.id}`);
+          } catch (error) {
+            console.error(`❌ Erro ao criar cheque ${i + 1}/${installments}:`, error);
+          }
+        }
+      }
+    }
+    
+    return createdChecks;
+  }
 
-export interface Sale {
-  id: string;
-  date: string;
-  deliveryDate?: string;
-  client: string;
-  sellerId?: string; // ID do funcionário vendedor
-  customCommissionRate?: number; // Porcentagem personalizada de comissão para esta venda
-  products: string; // Simplified to string description
-  observations?: string;
-  totalValue: number;
-  paymentMethods: PaymentMethod[];
-  receivedAmount: number;
-  pendingAmount: number;
-  status: 'pago' | 'pendente' | 'parcial';
-  paymentDescription?: string;
-  paymentObservations?: string;
-  createdAt: string;
-}
+  // Criar boletos automaticamente para vendas com pagamento em boleto
+  static async createBoletosForSale(sale: Sale): Promise<Boleto[]> {
+    const createdBoletos: Boleto[] = [];
+    
+    for (const [methodIndex, method] of sale.paymentMethods.entries()) {
+      if (method.type === 'boleto') {
+        const installments = method.installments || 1;
+        
+        for (let i = 0; i < installments; i++) {
+          const dueDate = new Date(method.firstInstallmentDate || method.startDate || sale.date);
+          dueDate.setDate(dueDate.getDate() + (i * (method.installmentInterval || 30)));
+          
+          const boletoData: Omit<Boleto, 'id' | 'createdAt'> = {
+            saleId: sale.id,
+            client: sale.client,
+            value: method.installmentValue || method.amount,
+            dueDate: dueDate.toISOString().split('T')[0],
+            status: 'pendente',
+            installmentNumber: i + 1,
+            totalInstallments: installments,
+            observations: `Boleto gerado automaticamente para venda ${sale.id} - Parcela ${i + 1}/${installments}`
+          };
+          
+          try {
+            const boleto = await boletosService.create(boletoData);
+            createdBoletos.push(boleto);
+            console.log(`✅ Boleto ${i + 1}/${installments} criado para venda ${sale.id}`);
+          } catch (error) {
+            console.error(`❌ Erro ao criar boleto ${i + 1}/${installments}:`, error);
+          }
+        }
+      }
+    }
+    
+    return createdBoletos;
+  }
 
-export interface Product {
-  name: string;
-  quantity: number;
-  unitPrice?: number;
-  totalPrice?: number;
-}
+  // Atualizar cheques quando uma venda for editada
+  static async updateChecksForSale(sale: Sale, existingChecks: Check[]): Promise<void> {
+    // Remover cheques antigos desta venda
+    for (const check of existingChecks.filter(c => c.saleId === sale.id)) {
+      try {
+        await checksService.delete(check.id);
+        console.log(`✅ Cheque antigo removido: ${check.id}`);
+      } catch (error) {
+        console.error(`❌ Erro ao remover cheque antigo:`, error);
+      }
+    }
+    
+    // Criar novos cheques
+    await this.createChecksForSale(sale);
+  }
 
-export interface Debt {
-  id: string;
-  date: string;
-  description: string;
-  company: string;
-  totalValue: number;
-  paymentMethods: PaymentMethod[];
-  isPaid: boolean;
-  paidAmount: number;
-  pendingAmount: number;
-  checksUsed?: string[];
-  paymentDescription?: string;
-  debtPaymentDescription?: string;
-  paymentDescription?: string;
-  debtPaymentDescription?: string;
-  createdAt: string;
-}
-
-export interface Check {
-  id: string;
-  saleId?: string;
-  debtId?: string;
-  client: string;
-  value: number;
-  dueDate: string;
-  status: 'pendente' | 'compensado' | 'devolvido' | 'reapresentado';
-  isOwnCheck: boolean;
-  observations?: string;
-  usedFor?: string;
-  installmentNumber?: number;
-  totalInstallments?: number;
-  frontImage?: string;
-  backImage?: string;
-  selectedAvailableChecks?: string[];
-  usedInDebt?: string; // ID da dívida onde foi usado
-  discountDate?: string; // Data de desconto para cheques próprios
-  createdAt: string;
-}
-
-export interface Installment {
-  id: string;
-  saleId?: string;
-  debtId?: string;
-  amount: number;
-  dueDate: string;
-  isPaid: boolean;
-  type: 'venda' | 'divida';
-  description: string;
-}
-
-export interface Employee {
-  id: string;
-  name: string;
-  position: string;
-  isSeller: boolean; // Indica se é vendedor
-  salary: number;
-  paymentDay: number; // Day of month (1-31)
-  nextPaymentDate?: string; // Optional specific date for next payment
-  isActive: boolean;
-  hireDate: string;
-  observations?: string;
-  createdAt: string;
-}
-
-export interface EmployeePayment {
-  id: string;
-  employeeId: string;
-  amount: number;
-  paymentDate: string;
-  isPaid: boolean;
-  receipt?: string; // Base64 or file path
-  observations?: string;
-  createdAt: string;
-}
-
-export interface EmployeeAdvance {
-  id: string;
-  employeeId: string;
-  amount: number;
-  date: string;
-  description: string;
-  paymentMethod: 'dinheiro' | 'pix' | 'transferencia' | 'desconto_folha';
-  status: 'pendente' | 'descontado';
-  createdAt: string;
-}
-
-export interface EmployeeOvertime {
-  id: string;
-  employeeId: string;
-  hours: number;
-  hourlyRate: number;
-  totalAmount: number;
-  date: string;
-  description: string;
-  status: 'pendente' | 'pago';
-  createdAt: string;
-}
-
-export interface EmployeeCommission {
-  id: string;
-  employeeId: string;
-  saleId: string;
-  saleValue: number;
-  commissionRate: number; // Porcentagem personalizada para esta venda
-  commissionAmount: number;
-  date: string;
-  status: 'pendente' | 'pago';
-  createdAt: string;
-}
-export interface Boleto {
-  id: string;
-  saleId?: string;
-  client: string;
-  value: number;
-  dueDate: string;
-  status: 'pendente' | 'compensado' | 'vencido' | 'cancelado' | 'nao_pago';
-  installmentNumber: number;
-  totalInstallments: number;
-  boletoFile?: string; // Base64 or file path
-  observations?: string;
-  overdueAction?: 'pago_com_juros' | 'pago_com_multa' | 'pago_integral' | 'protestado' | 'negativado' | 'acordo_realizado' | 'cancelado' | 'perda_total';
-  interestAmount?: number;
-  penaltyAmount?: number;
-  notaryCosts?: number;
-  finalAmount?: number;
-  overdueNotes?: string;
-  createdAt: string;
-}
-
-export interface CashFlow {
-  id: string;
-  date: string;
-  type: 'entrada' | 'saida';
-  amount: number;
-  description: string;
-  category: 'venda' | 'divida' | 'adiantamento' | 'salario' | 'comissao' | 'outro';
-  relatedId?: string; // ID da venda, dívida, etc.
-  createdAt: string;
-}
-
-export interface CashBalance {
-  id: string;
-  currentBalance: number;
-  lastUpdated: string;
-  initialBalance: number;
-  initialDate: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ThirdPartyCheck {
-  id: string;
-  checkId: string;
-  bank: string;
-  agency: string;
-  account: string;
-  checkNumber: string;
-  issuer: string; // Quem emitiu o cheque
-  cpfCnpj: string;
-  observations?: string;
-}
-
-export interface ThirdPartyCheckDetails {
-  bank: string;
-  agency: string;
-  account: string;
-  checkNumber: string;
-  issuer: string;
-  cpfCnpj: string;
-  observations?: string;
-}
-
-export interface CashTransaction {
-  id: string;
-  date: string;
-  type: 'entrada' | 'saida';
-  amount: number;
-  description: string;
-  category: 'venda' | 'divida' | 'adiantamento' | 'salario' | 'comissao' | 'cheque' | 'boleto' | 'outro';
-  relatedId?: string;
-  paymentMethod?: string;
-  createdAt: string;
-}
-
-export interface PixFee {
-  id: string;
-  date: string;
-  amount: number;
-  description: string;
-  bank: string;
-  transactionType: 'pix_out' | 'pix_in' | 'ted' | 'doc' | 'other';
-  relatedTransactionId?: string;
-  createdAt: string;
-  updatedAt?: string;
+  // Atualizar boletos quando uma venda for editada
+  static async updateBoletosForSale(sale: Sale, existingBoletos: Boleto[]): Promise<void> {
+    // Remover boletos antigos desta venda
+    for (const boleto of existingBoletos.filter(b => b.saleId === sale.id)) {
+      try {
+        await boletosService.delete(boleto.id);
+        console.log(`✅ Boleto antigo removido: ${boleto.id}`);
+      } catch (error) {
+        console.error(`❌ Erro ao remover boleto antigo:`, error);
+      }
+    }
+    
+    // Criar novos boletos
+    await this.createBoletosForSale(sale);
+  }
 }

@@ -42,10 +42,8 @@ export default function Dashboard() {
     // Vendas com pagamento instantâneo hoje
     salesToday.forEach(sale => {
       (sale.paymentMethods || []).forEach(method => {
-        if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type)) {
-          totalReceivedToday += method.amount;
-        }
-        if (method.type === 'cartao_credito' && (!method.installments || method.installments === 1)) {
+        if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
+            (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
           totalReceivedToday += method.amount;
         }
       });
@@ -78,11 +76,13 @@ export default function Dashboard() {
     
     // Dívidas pagas hoje
     debtsToday.forEach(debt => {
-      (debt.paymentMethods || []).forEach(method => {
-        if (['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(method.type)) {
-          totalPaidToday += method.amount;
-        }
-      });
+      if (debt.isPaid) {
+        (debt.paymentMethods || []).forEach(method => {
+          if (['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(method.type)) {
+            totalPaidToday += method.amount;
+          }
+        });
+      }
     });
     
     // Adicionar cheques próprios pagos hoje

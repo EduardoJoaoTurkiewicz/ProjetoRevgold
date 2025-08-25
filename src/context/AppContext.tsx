@@ -51,6 +51,12 @@ type AppAction =
   | { type: 'SET_EMPLOYEE_OVERTIMES'; payload: EmployeeOvertime[] }
   | { type: 'SET_EMPLOYEE_COMMISSIONS'; payload: EmployeeCommission[] }
   | { type: 'ADD_EMPLOYEE_COMMISSION'; payload: EmployeeCommission }
+  | { type: 'ADD_EMPLOYEE_ADVANCE'; payload: EmployeeAdvance }
+  | { type: 'UPDATE_EMPLOYEE_ADVANCE'; payload: EmployeeAdvance }
+  | { type: 'ADD_EMPLOYEE_OVERTIME'; payload: EmployeeOvertime }
+  | { type: 'UPDATE_EMPLOYEE_OVERTIME'; payload: EmployeeOvertime }
+  | { type: 'ADD_EMPLOYEE_PAYMENT'; payload: EmployeePayment }
+  | { type: 'UPDATE_EMPLOYEE_COMMISSION'; payload: EmployeeCommission }
   | { type: 'SET_CASH_BALANCE'; payload: CashBalance }
   | { type: 'SET_CASH_TRANSACTIONS'; payload: CashTransaction[] }
   | { type: 'ADD_CASH_TRANSACTION'; payload: CashTransaction }
@@ -177,6 +183,33 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, employeeCommissions: action.payload };
     case 'ADD_EMPLOYEE_COMMISSION':
       return { ...state, employeeCommissions: [...state.employeeCommissions, action.payload] };
+    case 'ADD_EMPLOYEE_ADVANCE':
+      return { ...state, employeeAdvances: [...state.employeeAdvances, action.payload] };
+    case 'UPDATE_EMPLOYEE_ADVANCE':
+      return { 
+        ...state, 
+        employeeAdvances: state.employeeAdvances.map(advance => 
+          advance.id === action.payload.id ? action.payload : advance
+        ) 
+      };
+    case 'ADD_EMPLOYEE_OVERTIME':
+      return { ...state, employeeOvertimes: [...state.employeeOvertimes, action.payload] };
+    case 'UPDATE_EMPLOYEE_OVERTIME':
+      return { 
+        ...state, 
+        employeeOvertimes: state.employeeOvertimes.map(overtime => 
+          overtime.id === action.payload.id ? action.payload : overtime
+        ) 
+      };
+    case 'ADD_EMPLOYEE_PAYMENT':
+      return { ...state, employeePayments: [...state.employeePayments, action.payload] };
+    case 'UPDATE_EMPLOYEE_COMMISSION':
+      return { 
+        ...state, 
+        employeeCommissions: state.employeeCommissions.map(commission => 
+          commission.id === action.payload.id ? action.payload : commission
+        ) 
+      };
     case 'SET_CASH_BALANCE':
       return { ...state, cashBalance: action.payload };
     case 'SET_CASH_TRANSACTIONS':
@@ -230,6 +263,12 @@ interface AppContextType {
   initializeCashBalance: (initialAmount: number) => Promise<void>;
   updateCashBalance: (balance: CashBalance) => Promise<void>;
   createCashTransaction: (transaction: Omit<CashTransaction, 'id' | 'createdAt'>) => Promise<CashTransaction>;
+  createEmployeeAdvance: (advance: Omit<EmployeeAdvance, 'id' | 'createdAt'>) => Promise<EmployeeAdvance>;
+  updateEmployeeAdvance: (advance: EmployeeAdvance) => Promise<void>;
+  createEmployeeOvertime: (overtime: Omit<EmployeeOvertime, 'id' | 'createdAt'>) => Promise<EmployeeOvertime>;
+  updateEmployeeOvertime: (overtime: EmployeeOvertime) => Promise<void>;
+  createEmployeePayment: (payment: Omit<EmployeePayment, 'id' | 'createdAt'>) => Promise<EmployeePayment>;
+  updateEmployeeCommission: (commission: EmployeeCommission) => Promise<void>;
   createPixFee: (pixFee: Omit<PixFee, 'id' | 'createdAt'>) => Promise<PixFee>;
   updatePixFee: (pixFee: PixFee) => Promise<void>;
   deletePixFee: (id: string) => Promise<void>;
@@ -719,6 +758,99 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'DELETE_PIX_FEE', payload: id });
   };
 
+  // Employee Advance functions
+  const createEmployeeAdvance = async (advanceData: Omit<EmployeeAdvance, 'id' | 'createdAt'>): Promise<EmployeeAdvance> => {
+    if (!isSupabaseConfigured()) {
+      const newAdvance: EmployeeAdvance = {
+        ...advanceData,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString()
+      };
+      dispatch({ type: 'ADD_EMPLOYEE_ADVANCE', payload: newAdvance });
+      return newAdvance;
+    }
+
+    const { data, error } = await supabase.from('employee_advances').insert([advanceData]).select().single();
+    if (error) throw error;
+    
+    dispatch({ type: 'ADD_EMPLOYEE_ADVANCE', payload: data });
+    return data;
+  };
+
+  const updateEmployeeAdvance = async (advance: EmployeeAdvance): Promise<void> => {
+    if (!isSupabaseConfigured()) {
+      dispatch({ type: 'UPDATE_EMPLOYEE_ADVANCE', payload: advance });
+      return;
+    }
+
+    const { error } = await supabase.from('employee_advances').update(advance).eq('id', advance.id);
+    if (error) throw error;
+    
+    dispatch({ type: 'UPDATE_EMPLOYEE_ADVANCE', payload: advance });
+  };
+
+  // Employee Overtime functions
+  const createEmployeeOvertime = async (overtimeData: Omit<EmployeeOvertime, 'id' | 'createdAt'>): Promise<EmployeeOvertime> => {
+    if (!isSupabaseConfigured()) {
+      const newOvertime: EmployeeOvertime = {
+        ...overtimeData,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString()
+      };
+      dispatch({ type: 'ADD_EMPLOYEE_OVERTIME', payload: newOvertime });
+      return newOvertime;
+    }
+
+    const { data, error } = await supabase.from('employee_overtimes').insert([overtimeData]).select().single();
+    if (error) throw error;
+    
+    dispatch({ type: 'ADD_EMPLOYEE_OVERTIME', payload: data });
+    return data;
+  };
+
+  const updateEmployeeOvertime = async (overtime: EmployeeOvertime): Promise<void> => {
+    if (!isSupabaseConfigured()) {
+      dispatch({ type: 'UPDATE_EMPLOYEE_OVERTIME', payload: overtime });
+      return;
+    }
+
+    const { error } = await supabase.from('employee_overtimes').update(overtime).eq('id', overtime.id);
+    if (error) throw error;
+    
+    dispatch({ type: 'UPDATE_EMPLOYEE_OVERTIME', payload: overtime });
+  };
+
+  // Employee Payment functions
+  const createEmployeePayment = async (paymentData: Omit<EmployeePayment, 'id' | 'createdAt'>): Promise<EmployeePayment> => {
+    if (!isSupabaseConfigured()) {
+      const newPayment: EmployeePayment = {
+        ...paymentData,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString()
+      };
+      dispatch({ type: 'ADD_EMPLOYEE_PAYMENT', payload: newPayment });
+      return newPayment;
+    }
+
+    const { data, error } = await supabase.from('employee_payments').insert([paymentData]).select().single();
+    if (error) throw error;
+    
+    dispatch({ type: 'ADD_EMPLOYEE_PAYMENT', payload: data });
+    return data;
+  };
+
+  const updateEmployeeCommission = async (commission: EmployeeCommission): Promise<void> => {
+    if (!isSupabaseConfigured()) {
+      dispatch({ type: 'UPDATE_EMPLOYEE_COMMISSION', payload: commission });
+      return;
+    }
+
+    const { error } = await supabase.from('employee_commissions').update(commission).eq('id', commission.id);
+    if (error) throw error;
+    
+    dispatch({ type: 'UPDATE_EMPLOYEE_COMMISSION', payload: commission });
+  };
+
   // Carregar dados na inicialização
   useEffect(() => {
     console.log('🚀 AppProvider useEffect executado');
@@ -754,6 +886,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     initializeCashBalance,
     updateCashBalance,
     createCashTransaction,
+    createEmployeeAdvance,
+    updateEmployeeAdvance,
+    createEmployeeOvertime,
+    updateEmployeeOvertime,
+    createEmployeePayment,
+    updateEmployeeCommission,
     createPixFee,
     updatePixFee,
     deletePixFee

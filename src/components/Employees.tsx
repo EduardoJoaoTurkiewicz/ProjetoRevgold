@@ -7,7 +7,20 @@ import { EmployeeAdvanceForm } from './forms/EmployeeAdvanceForm';
 import { EmployeeOvertimeForm } from './forms/EmployeeOvertimeForm';
 
 export function Employees() {
-  const { state, createEmployee, updateEmployee, deleteEmployee, loadAllData } = useApp();
+  const { 
+    state, 
+    createEmployee, 
+    updateEmployee, 
+    deleteEmployee, 
+    loadAllData,
+    createEmployeeAdvance,
+    updateEmployeeAdvance,
+    createEmployeeOvertime,
+    updateEmployeeOvertime,
+    createEmployeePayment,
+    updateEmployeeCommission,
+    createCashTransaction
+  } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [viewingEmployee, setViewingEmployee] = useState<Employee | null>(null);
@@ -48,66 +61,73 @@ export function Employees() {
   };
 
   const handleAddAdvance = (advance: Omit<EmployeeAdvance, 'id' | 'createdAt'>) => {
-    const newAdvance: EmployeeAdvance = {
-      ...advance,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
-    };
-    
-    // TODO: Implement advance service
-    // advanceService.create(advance)
-    setAdvanceEmployee(null);
+    createEmployeeAdvance(advance).then(() => {
+      setAdvanceEmployee(null);
+    }).catch(error => {
+      alert('Erro ao criar adiantamento: ' + error.message);
+    });
   };
 
   const handleAddOvertime = (overtime: Omit<EmployeeOvertime, 'id' | 'createdAt'>) => {
-    const newOvertime: EmployeeOvertime = {
-      ...overtime,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
-    };
-    
-    // TODO: Implement overtime service
-    // overtimeService.create(overtime)
-    setOvertimeEmployee(null);
+    createEmployeeOvertime(overtime).then(() => {
+      setOvertimeEmployee(null);
+    }).catch(error => {
+      alert('Erro ao criar hora extra: ' + error.message);
+    });
   };
   const handlePayment = (payment: { amount: number; observations: string; receipt?: string }) => {
     if (paymentEmployee) {
       const newPayment: EmployeePayment = {
-        id: Date.now().toString(),
         employeeId: paymentEmployee.id,
         amount: payment.amount,
         paymentDate: new Date().toISOString().split('T')[0],
         isPaid: true,
         receipt: payment.receipt,
-        observations: payment.observations,
-        createdAt: new Date().toISOString()
+        observations: payment.observations
       };
       
-      // TODO: Implement payment service
-      // paymentService.create(newPayment)
-      
-      // Marcar adiantamentos como descontados
-      const pendingAdvances = getEmployeeAdvances(paymentEmployee.id).filter(a => a.status === 'pendente');
-      pendingAdvances.forEach(advance => {
-        // TODO: Implement advance update
-        // advanceService.update({ ...advance, status: 'descontado' })
+      createEmployeePayment(newPayment).then(() => {
+        // Criar transação de caixa para o pagamento
+        createCashTransaction({
+          date: new Date().toISOString().split('T')[0],
+          type: 'saida',
+          amount: payment.amount,
+          description: `Pagamento de salário - ${paymentEmployee.name}`,
+          category: 'salario',
+          relatedId: paymentEmployee.id,
+          paymentMethod: 'dinheiro'
+        }).catch(error => {
+          console.error('Erro ao criar transação de caixa:', error);
+        });
+        
+        // Marcar adiantamentos como descontados
+        const pendingAdvances = getEmployeeAdvances(paymentEmployee.id).filter(a => a.status === 'pendente');
+        pendingAdvances.forEach(advance => {
+          updateEmployeeAdvance({ ...advance, status: 'descontado' }).catch(error => {
+            console.error('Erro ao atualizar adiantamento:', error);
+          });
+        });
+        
+        // Marcar horas extras como pagas
+        const pendingOvertimes = getEmployeeOvertimes(paymentEmployee.id).filter(o => o.status === 'pendente');
+        pendingOvertimes.forEach(overtime => {
+          updateEmployeeOvertime({ ...overtime, status: 'pago' }).catch(error => {
+            console.error('Erro ao atualizar hora extra:', error);
+          });
+        });
+        
+        // Marcar comissões como pagas
+        const pendingCommissions = getEmployeeCommissions(paymentEmployee.id).filter(c => c.status === 'pendente');
+        pendingCommissions.forEach(commission => {
+          updateEmployeeCommission({ ...commission, status: 'pago' }).catch(error => {
+            console.error('Erro ao atualizar comissão:', error);
+          });
+        });
+        
+        setPaymentEmployee(null);
+      }).catch(error => {
+        alert('Erro ao registrar pagamento: ' + error.message);
       });
-      
-      // Marcar horas extras como pagas
-      const pendingOvertimes = getEmployeeOvertimes(paymentEmployee.id).filter(o => o.status === 'pendente');
-      pendingOvertimes.forEach(overtime => {
-        // TODO: Implement overtime update
-        // overtimeService.update({ ...overtime, status: 'pago' })
-      });
-      
-      // Marcar comissões como pagas
-      const pendingCommissions = getEmployeeCommissions(paymentEmployee.id).filter(c => c.status === 'pendente');
-      pendingCommissions.forEach(commission => {
-        // TODO: Implement commission update
-        // commissionService.update({ ...commission, status: 'pago' })
-      });
-      
-      setPaymentEmployee(null);
     }
   };
 

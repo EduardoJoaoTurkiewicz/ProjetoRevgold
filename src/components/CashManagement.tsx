@@ -21,7 +21,8 @@ export function CashManagement() {
     state.sales.forEach(sale => {
       if (sale.date === selectedDate) {
         (sale.paymentMethods || []).forEach(method => {
-          if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type)) {
+          if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
+              (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
             transactions.push({
               id: `sale-${sale.id}-${method.type}`,
               type: 'entrada' as const,
@@ -101,7 +102,7 @@ export function CashManagement() {
 
     // Dívidas pagas no dia
     state.debts.forEach(debt => {
-      if (debt.date === selectedDate) {
+      if (debt.date === selectedDate && debt.isPaid) {
         (debt.paymentMethods || []).forEach(method => {
           if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type)) {
             transactions.push({
@@ -147,7 +148,8 @@ export function CashManagement() {
       state.sales.forEach(sale => {
         if (sale.date === dateStr) {
           (sale.paymentMethods || []).forEach(method => {
-            if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type)) {
+            if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
+                (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
               entrada += method.amount;
             }
           });
@@ -179,7 +181,7 @@ export function CashManagement() {
       
       // Calcular saídas do dia
       state.debts.forEach(debt => {
-        if (debt.date === dateStr) {
+        if (debt.date === dateStr && debt.isPaid) {
           (debt.paymentMethods || []).forEach(method => {
             if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type)) {
               saida += method.amount;

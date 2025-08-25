@@ -24,6 +24,7 @@ export class AutomationService {
             usedFor: `Venda - ${sale.client}`,
             installmentNumber: i + 1,
             totalInstallments: installments,
+            thirdPartyCheckDetails: method.thirdPartyDetails && method.thirdPartyDetails[i] ? method.thirdPartyDetails[i] : undefined,
             observations: `Cheque gerado automaticamente para venda ${sale.id} - Parcela ${i + 1}/${installments}`
           };
           
