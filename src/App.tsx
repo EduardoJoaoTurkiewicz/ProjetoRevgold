@@ -20,16 +20,14 @@ function AppContent() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   
   console.log('🔍 AppContent - Estado do usuário atual:', currentUser);
-  console.log('🔍 AppContent - Tipo do currentUser:', typeof currentUser);
-  console.log('🔍 AppContent - currentUser é null?', currentUser === null);
-  console.log('🔍 AppContent - currentUser é undefined?', currentUser === undefined);
 
-  if (!currentUser) {
-    console.log('👤 AppContent - Nenhum usuário selecionado, mostrando tela de seleção');
+  // Verificar se o usuário está definido corretamente
+  if (!currentUser || !currentUser.id || !currentUser.username) {
+    console.log('👤 AppContent - Usuário não válido, mostrando tela de seleção');
     return <UserSelection />;
   }
   
-  console.log('✅ AppContent - Usuário logado:', currentUser.username, 'Página atual:', currentPage);
+  console.log('✅ AppContent - Usuário válido logado:', currentUser.username, 'Página atual:', currentPage);
 
   const renderPage = () => {
     switch (currentPage) {
