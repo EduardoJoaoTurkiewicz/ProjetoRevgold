@@ -68,7 +68,7 @@ export default function Dashboard() {
     });
     
     // Dívidas do dia
-    const debtsToday = state.debts.filter(debt => debt.date === today);
+    const debtsToday = (state.debts || []).filter(debt => debt.date === today);
     const totalDebtsToday = debtsToday.reduce((sum, debt) => sum + debt.totalValue, 0);
     
     // Valor pago hoje
@@ -84,14 +84,14 @@ export default function Dashboard() {
     });
     
     // Adicionar cheques próprios pagos hoje
-    state.checks.forEach(check => {
+    (state.checks || []).forEach(check => {
       if (check.isOwnCheck && check.dueDate === today && check.status === 'compensado') {
         totalPaidToday += check.value;
       }
     });
     
     // Adicionar boletos da empresa pagos hoje
-    state.debts.forEach(debt => {
+    (state.debts || []).forEach(debt => {
       if (debt.date === today && debt.isPaid) {
         debt.paymentMethods.forEach(method => {
           if (method.type === 'boleto') {
@@ -102,11 +102,11 @@ export default function Dashboard() {
     });
     
     // Vendas totais e recebimentos totais
-    const totalSales = state.sales.reduce((sum, sale) => sum + sale.totalValue, 0);
-    let totalReceived = state.sales.reduce((sum, sale) => sum + sale.receivedAmount, 0);
+    const totalSales = (state.sales || []).reduce((sum, sale) => sum + sale.totalValue, 0);
+    let totalReceived = (state.sales || []).reduce((sum, sale) => sum + sale.receivedAmount, 0);
     
     // Adicionar boletos compensados ao valor recebido
-    state.boletos.forEach(boleto => {
+    (state.boletos || []).forEach(boleto => {
       if (boleto.status === 'compensado') {
         const finalAmount = boleto.finalAmount || boleto.value;
         const notaryCosts = boleto.notaryCosts || 0;
@@ -115,8 +115,8 @@ export default function Dashboard() {
       }
     });
     
-    const totalPending = state.sales.reduce((sum, sale) => sum + sale.pendingAmount, 0);
-    const salesThisMonth = state.sales.filter(sale => {
+    const totalPending = (state.sales || []).reduce((sum, sale) => sum + sale.pendingAmount, 0);
+    const salesThisMonth = (state.sales || []).filter(sale => {
       const saleDate = new Date(sale.date);
       return saleDate.getMonth() === thisMonth && saleDate.getFullYear() === thisYear;
     });
@@ -124,7 +124,7 @@ export default function Dashboard() {
     let monthlyReceived = salesThisMonth.reduce((sum, sale) => sum + sale.receivedAmount, 0);
     
     // Adicionar boletos compensados do mês ao valor recebido
-    const monthlyBoletos = state.boletos.filter(boleto => {
+    const monthlyBoletos = (state.boletos || []).filter(boleto => {
       const boletoDate = new Date(boleto.dueDate);
       return boletoDate.getMonth() === thisMonth && 
              boletoDate.getFullYear() === thisYear && 
@@ -139,12 +139,12 @@ export default function Dashboard() {
     });
 
     // Dívidas
-    const totalDebts = state.debts.reduce((sum, debt) => sum + debt.totalValue, 0);
-    const totalPaidDebts = state.debts.reduce((sum, debt) => sum + debt.paidAmount, 0);
-    const totalPendingDebts = state.debts.reduce((sum, debt) => sum + debt.pendingAmount, 0);
+    const totalDebts = (state.debts || []).reduce((sum, debt) => sum + debt.totalValue, 0);
+    const totalPaidDebts = (state.debts || []).reduce((sum, debt) => sum + debt.paidAmount, 0);
+    const totalPendingDebts = (state.debts || []).reduce((sum, debt) => sum + debt.pendingAmount, 0);
     
     // Dívidas do mês
-    const debtsThisMonth = state.debts.filter(debt => {
+    const debtsThisMonth = (state.debts || []).filter(debt => {
       const debtDate = new Date(debt.date);
       return debtDate.getMonth() === thisMonth && debtDate.getFullYear() === thisYear;
     });
@@ -152,24 +152,24 @@ export default function Dashboard() {
     const monthlyPaidDebts = debtsThisMonth.reduce((sum, debt) => sum + debt.paidAmount, 0);
 
     // Cheques
-    const checksToday = state.checks.filter(check => check.dueDate === today);
-    const overdueChecks = state.checks.filter(check => check.dueDate < today && check.status === 'pendente');
-    const totalChecksValue = state.checks.reduce((sum, check) => sum + check.value, 0);
+    const checksToday = (state.checks || []).filter(check => check.dueDate === today);
+    const overdueChecks = (state.checks || []).filter(check => check.dueDate < today && check.status === 'pendente');
+    const totalChecksValue = (state.checks || []).reduce((sum, check) => sum + check.value, 0);
 
     // Boletos
-    const boletosToday = state.boletos.filter(boleto => boleto.dueDate === today);
-    const overdueBoletos = state.boletos.filter(boleto => boleto.dueDate < today && boleto.status === 'pendente');
-    const totalBoletosValue = state.boletos.reduce((sum, boleto) => sum + boleto.value, 0);
+    const boletosToday = (state.boletos || []).filter(boleto => boleto.dueDate === today);
+    const overdueBoletos = (state.boletos || []).filter(boleto => boleto.dueDate < today && boleto.status === 'pendente');
+    const totalBoletosValue = (state.boletos || []).reduce((sum, boleto) => sum + boleto.value, 0);
 
     // Funcionários
-    const activeEmployees = state.employees.filter(emp => emp.isActive);
+    const activeEmployees = (state.employees || []).filter(emp => emp.isActive);
     const sellers = activeEmployees.filter(emp => emp.isSeller);
     const totalPayroll = activeEmployees.reduce((sum, emp) => sum + emp.salary, 0);
 
     // Comissões
-    const pendingCommissions = state.employeeCommissions.filter(comm => comm.status === 'pendente');
+    const pendingCommissions = (state.employeeCommissions || []).filter(comm => comm.status === 'pendente');
     const totalPendingCommissions = pendingCommissions.reduce((sum, comm) => sum + comm.commissionAmount, 0);
-    const monthlyCommissions = state.employeeCommissions.filter(comm => {
+    const monthlyCommissions = (state.employeeCommissions || []).filter(comm => {
       const commDate = new Date(comm.date);
       return commDate.getMonth() === thisMonth && commDate.getFullYear() === thisYear;
     });
@@ -182,7 +182,7 @@ export default function Dashboard() {
     const monthlyProfitMargin = monthlyReceived > 0 ? (monthlyNetProfit / monthlyReceived) * 100 : 0;
     
     // Dívidas para pagar no mês atual
-    const monthlyPayableDebts = state.debts.filter(debt => {
+    const monthlyPayableDebts = (state.debts || []).filter(debt => {
       const debtDate = new Date(debt.date);
       return debtDate.getMonth() === thisMonth && 
              debtDate.getFullYear() === thisYear && 
@@ -190,7 +190,7 @@ export default function Dashboard() {
     });
     
     // Vendas para receber no mês atual
-    const monthlyReceivableSales = state.sales.filter(sale => {
+    const monthlyReceivableSales = (state.sales || []).filter(sale => {
       const saleDate = new Date(sale.date);
       return saleDate.getMonth() === thisMonth && 
              saleDate.getFullYear() === thisYear && 
@@ -245,8 +245,8 @@ export default function Dashboard() {
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
       
-      const dailySales = state.sales.filter(sale => sale.date === dateStr);
-      const dailyDebts = state.debts.filter(debt => debt.date === dateStr);
+      const dailySales = (state.sales || []).filter(sale => sale.date === dateStr);
+      const dailyDebts = (state.debts || []).filter(debt => debt.date === dateStr);
       
       const salesValue = dailySales.reduce((sum, sale) => sum + sale.totalValue, 0);
       const debtsValue = dailyDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
@@ -266,7 +266,7 @@ export default function Dashboard() {
   // Distribuição de métodos de pagamento
   const paymentMethodsData = useMemo(() => {
     const methods = {};
-    state.sales.forEach(sale => {
+    (state.sales || []).forEach(sale => {
       sale.paymentMethods.forEach(method => {
         const methodName = method.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
         if (!methods[methodName]) {
@@ -282,9 +282,9 @@ export default function Dashboard() {
   const topSellers = useMemo(() => {
     const sellerStats = {};
     
-    state.sales.forEach(sale => {
+    (state.sales || []).forEach(sale => {
       if (sale.sellerId) {
-        const seller = state.employees.find(e => e.id === sale.sellerId);
+        const seller = (state.employees || []).find(e => e.id === sale.sellerId);
         if (seller) {
           if (!sellerStats[seller.id]) {
             sellerStats[seller.id] = {
@@ -301,8 +301,8 @@ export default function Dashboard() {
     });
     
     // Adicionar comissões
-    state.employeeCommissions.forEach(comm => {
-      const seller = state.employees.find(e => e.id === comm.employeeId);
+    (state.employeeCommissions || []).forEach(comm => {
+      const seller = (state.employees || []).find(e => e.id === comm.employeeId);
       if (seller && sellerStats[seller.id]) {
         sellerStats[seller.id].commissions += comm.commissionAmount;
       }
@@ -365,7 +365,7 @@ export default function Dashboard() {
               <p className="text-2xl font-black text-green-700">
                 R$ {metrics.totalSalesToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-sm text-green-600">{state.sales.filter(s => s.date === today).length} vendas</p>
+              <p className="text-sm text-green-600">{(state.sales || []).filter(s => s.date === today).length} vendas</p>
             </div>
           </div>
         </div>
@@ -397,7 +397,7 @@ export default function Dashboard() {
               <p className="text-2xl font-black text-red-700">
                 R$ {metrics.totalDebtsToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-sm text-red-600">{state.debts.filter(d => d.date === today).length} dívidas</p>
+              <p className="text-sm text-red-600">{(state.debts || []).filter(d => d.date === today).length} dívidas</p>
             </div>
           </div>
         </div>
@@ -704,7 +704,7 @@ export default function Dashboard() {
                 {sale.sellerId && (
                   <div className="mt-4 p-3 bg-white rounded-lg border">
                     <p className="text-sm text-green-700">
-                      <strong>Vendedor:</strong> {state.employees.find(e => e.id === sale.sellerId)?.name || 'N/A'}
+                      <strong>Vendedor:</strong> {(state.employees || []).find(e => e.id === sale.sellerId)?.name || 'N/A'}
                     </p>
                   </div>
                 )}
@@ -819,8 +819,8 @@ export default function Dashboard() {
           
           <div className="space-y-3">
             {['pago', 'parcial', 'pendente'].map(status => {
-              const count = state.sales.filter(sale => sale.status === status).length;
-              const value = state.sales.filter(sale => sale.status === status).reduce((sum, sale) => sum + sale.totalValue, 0);
+              const count = (state.sales || []).filter(sale => sale.status === status).length;
+              const value = (state.sales || []).filter(sale => sale.status === status).reduce((sum, sale) => sum + sale.totalValue, 0);
               
               return (
                 <div key={status} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
@@ -851,7 +851,7 @@ export default function Dashboard() {
               <span className="font-medium text-slate-900">Pagas</span>
               <div className="text-right">
                 <p className="font-bold text-green-600">
-                  {state.debts.filter(debt => debt.isPaid).length} dívidas
+                  {(state.debts || []).filter(debt => debt.isPaid).length} dívidas
                 </p>
                 <p className="text-sm text-slate-600">
                   R$ {metrics.totalPaidDebts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -863,7 +863,7 @@ export default function Dashboard() {
               <span className="font-medium text-slate-900">Pendentes</span>
               <div className="text-right">
                 <p className="font-bold text-red-600">
-                  {state.debts.filter(debt => !debt.isPaid).length} dívidas
+                  {(state.debts || []).filter(debt => !debt.isPaid).length} dívidas
                 </p>
                 <p className="text-sm text-slate-600">
                   R$ {metrics.totalPendingDebts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -908,6 +908,7 @@ export default function Dashboard() {
                   R$ {metrics.totalChecksValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
                 <p className="text-sm text-slate-600">{state.checks.length} cheques</p>
+                <p className="text-sm text-slate-600">{(state.checks || []).length} cheques</p>
               </div>
             </div>
             
@@ -918,6 +919,7 @@ export default function Dashboard() {
                   R$ {metrics.totalBoletosValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
                 <p className="text-sm text-slate-600">{state.boletos.length} boletos</p>
+                <p className="text-sm text-slate-600">{(state.boletos || []).length} boletos</p>
               </div>
             </div>
           </div>
@@ -938,7 +940,7 @@ export default function Dashboard() {
             <div>
               <p className="text-green-600 font-semibold">Vendas</p>
               <p className="text-3xl font-black text-green-700">
-                {state.sales.filter(sale => {
+                {(state.sales || []).filter(sale => {
                   const saleDate = new Date(sale.date);
                   return saleDate.getMonth() === new Date().getMonth() && saleDate.getFullYear() === new Date().getFullYear();
                 }).length}
@@ -971,12 +973,12 @@ export default function Dashboard() {
           <div className="space-y-3 text-sm">
             <p><strong>Supabase Configurado:</strong> {checkSupabase() ? '✅ Sim' : '❌ Não'}</p>
             <p><strong>Modo de Operação:</strong> {checkSupabase() ? 'Conectado ao banco' : 'Local (dados não persistem)'}</p>
-            <p><strong>Vendas Carregadas:</strong> {state.sales.length}</p>
-            <p><strong>Dívidas Carregadas:</strong> {state.debts.length}</p>
-            <p><strong>Funcionários Carregados:</strong> {state.employees.length}</p>
-            <p><strong>Cheques Carregados:</strong> {state.checks.length}</p>
-            <p><strong>Boletos Carregados:</strong> {state.boletos.length}</p>
-            <p><strong>Comissões Carregadas:</strong> {state.employeeCommissions.length}</p>
+            <p><strong>Vendas Carregadas:</strong> {(state.sales || []).length}</p>
+            <p><strong>Dívidas Carregadas:</strong> {(state.debts || []).length}</p>
+            <p><strong>Funcionários Carregados:</strong> {(state.employees || []).length}</p>
+            <p><strong>Cheques Carregados:</strong> {(state.checks || []).length}</p>
+            <p><strong>Boletos Carregados:</strong> {(state.boletos || []).length}</p>
+            <p><strong>Comissões Carregadas:</strong> {(state.employeeCommissions || []).length}</p>
             <p><strong>Estado de Loading:</strong> {state.isLoading ? 'Carregando...' : 'Concluído'}</p>
             {state.error && <p><strong>Erro:</strong> {state.error}</p>}
           </div>
