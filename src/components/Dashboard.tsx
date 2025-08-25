@@ -19,15 +19,11 @@ export default function Dashboard() {
 
   // Forçar recarregamento se não há dados e não está carregando
   React.useEffect(() => {
-    if (!state.isLoading && 
-        state.sales.length === 0 && 
-        state.debts.length === 0 && 
-        state.employees.length === 0 && 
-        checkSupabase()) {
+    if (!state.isLoading && checkSupabase()) {
       console.log('🔄 Dashboard detectou falta de dados, recarregando...');
       loadAllData();
     }
-  }, [state.isLoading, state.sales.length, state.debts.length, state.employees.length, checkSupabase, loadAllData]);
+  }, [state.isLoading, checkSupabase, loadAllData]);
   // Calcular métricas principais
   const metrics = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -965,7 +961,7 @@ export default function Dashboard() {
       </div>
 
       {/* Debug Info - Mostrar apenas se houver problemas */}
-      {(state.sales.length === 0 && state.debts.length === 0) || !checkSupabase() && (
+      {!checkSupabase() && (
         <div className="card bg-yellow-50 border-yellow-200 modern-shadow-xl">
           <div className="flex items-center gap-4 mb-4">
             <AlertTriangle className="w-8 h-8 text-yellow-600" />
@@ -974,6 +970,7 @@ export default function Dashboard() {
           
           <div className="space-y-3 text-sm">
             <p><strong>Supabase Configurado:</strong> {checkSupabase() ? '✅ Sim' : '❌ Não'}</p>
+            <p><strong>Modo de Operação:</strong> {checkSupabase() ? 'Conectado ao banco' : 'Local (dados não persistem)'}</p>
             <p><strong>Vendas Carregadas:</strong> {state.sales.length}</p>
             <p><strong>Dívidas Carregadas:</strong> {state.debts.length}</p>
             <p><strong>Funcionários Carregados:</strong> {state.employees.length}</p>
@@ -984,14 +981,16 @@ export default function Dashboard() {
             {state.error && <p><strong>Erro:</strong> {state.error}</p>}
           </div>
           
-          <div className="mt-6">
+          {checkSupabase() && (
+            <div className="mt-6">
             <button
               onClick={loadAllData}
               className="btn-primary"
             >
               Recarregar Dados
             </button>
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>

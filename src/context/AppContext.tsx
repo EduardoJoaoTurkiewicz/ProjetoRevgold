@@ -277,7 +277,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     if (!isSupabaseConfigured()) {
       console.log('❌ Supabase não configurado');
-      dispatch({ type: 'SET_ERROR', payload: 'Supabase não está configurado. Configure o arquivo .env com suas credenciais.' });
+      console.log('⚠️ Continuando sem Supabase - sistema funcionará em modo local');
+      dispatch({ type: 'SET_LOADING', payload: false });
       return;
     }
 
@@ -780,7 +781,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       loadAllData();
     } else if (state.currentUser && !isSupabaseConfigured()) {
       console.log('⚠️ Usuário definido mas Supabase não configurado');
-      dispatch({ type: 'SET_ERROR', payload: 'Supabase não está configurado. Configure o arquivo .env com suas credenciais.' });
+      // Não bloquear o sistema se Supabase não estiver configurado
+      console.log('⚠️ Continuando sem Supabase - dados não serão persistidos');
     }
   }, [state.currentUser]);
 

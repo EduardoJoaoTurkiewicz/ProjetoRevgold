@@ -130,12 +130,6 @@ export function UserSelection() {
   const handleUserSelect = (user: typeof USERS[0]) => {
     console.log('🎯 handleUserSelect chamado para:', user.name);
     
-    // Verificar se o Supabase está configurado antes de prosseguir
-    if (!isSupabaseConfigured()) {
-      alert('⚠️ Sistema não configurado!\n\nPara usar o sistema, você precisa:\n1. Configurar o arquivo .env com suas credenciais do Supabase\n2. Reiniciar o servidor\n\nSem isso, nenhum dado será salvo!');
-      return;
-    }
-    
     setIsConnecting(true);
     
     setTimeout(() => {
@@ -156,13 +150,20 @@ export function UserSelection() {
         
         console.log('✅ Usuário definido no contexto com sucesso');
         
+        // Mostrar aviso sobre Supabase apenas após login bem-sucedido
+        if (!isSupabaseConfigured()) {
+          setTimeout(() => {
+            alert('⚠️ Aviso: Sistema funcionando em modo local!\n\nPara salvar dados permanentemente:\n1. Configure o arquivo .env com suas credenciais do Supabase\n2. Reiniciar o servidor\n\nEnquanto isso, você pode usar o sistema normalmente.');
+          }, 1000);
+        }
+        
       } catch (error) {
         console.error('❌ Erro ao definir usuário:', error);
         alert('Erro ao acessar o sistema. Tente recarregar a página.');
       } finally {
         setIsConnecting(false);
       }
-    }, 500);
+    }, 100); // Reduzir delay para entrada mais rápida
   };
 
   return (
