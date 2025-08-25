@@ -798,7 +798,7 @@ export default function Dashboard() {
                       R$ {seller.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                     <p className="text-sm text-green-600 font-bold">
-                      Comissão: R$ {seller.commissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      Comissão: R$ {(seller.commissions ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
