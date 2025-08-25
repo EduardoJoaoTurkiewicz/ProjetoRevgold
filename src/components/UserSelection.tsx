@@ -148,11 +148,8 @@ export function UserSelection() {
       
       console.log('✅ Usuário definido no contexto com sucesso');
       
-      // Aguardar um pouco para garantir que o estado foi atualizado
-      setTimeout(() => {
-        console.log('🔄 Verificando se usuário foi definido...');
-        setIsConnecting(false);
-      }, 100);
+      // Não precisamos do setTimeout, o estado será atualizado automaticamente
+      setIsConnecting(false);
       
     } catch (error) {
       console.error('❌ Erro ao definir usuário:', error);

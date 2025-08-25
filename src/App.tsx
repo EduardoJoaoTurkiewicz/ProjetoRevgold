@@ -22,7 +22,7 @@ function AppContent() {
   console.log('🔍 AppContent - Estado do usuário atual:', currentUser);
 
   // Verificar se o usuário está definido corretamente
-  if (!currentUser || !currentUser.id || !currentUser.username) {
+  if (!currentUser) {
     console.log('👤 AppContent - Usuário não válido, mostrando tela de seleção');
     return <UserSelection />;
   }

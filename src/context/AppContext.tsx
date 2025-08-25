@@ -97,7 +97,11 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, error: action.payload };
     case 'SET_USER':
       console.log('👤 Definindo usuário no estado:', action.payload);
-      return { ...state, currentUser: action.payload };
+      return { 
+        ...state, 
+        currentUser: action.payload,
+        error: null // Limpar qualquer erro anterior
+      };
     case 'SET_EMPLOYEES':
       return { ...state, employees: action.payload };
     case 'SET_SALES':
