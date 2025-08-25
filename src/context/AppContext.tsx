@@ -88,12 +88,15 @@ const initialState: AppState = {
 };
 
 function appReducer(state: AppState, action: AppAction): AppState {
+  console.log('🔄 Reducer recebeu ação:', action.type, action.payload);
+  
   switch (action.type) {
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
     case 'SET_ERROR':
       return { ...state, error: action.payload };
     case 'SET_USER':
+      console.log('👤 Definindo usuário no estado:', action.payload);
       return { ...state, currentUser: action.payload };
     case 'SET_EMPLOYEES':
       return { ...state, employees: action.payload };

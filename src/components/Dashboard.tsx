@@ -8,6 +8,14 @@ const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4'
 
 export default function Dashboard() {
   const { state, loadAllData, isSupabaseConfigured: checkSupabase } = useApp();
+  
+  console.log('📊 Dashboard renderizado, estado:', {
+    isLoading: state.isLoading,
+    error: state.error,
+    salesCount: state.sales.length,
+    debtsCount: state.debts.length,
+    employeesCount: state.employees.length
+  });
 
   // Calcular métricas principais
   const metrics = useMemo(() => {

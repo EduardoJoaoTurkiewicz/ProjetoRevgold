@@ -127,18 +127,30 @@ export function UserSelection() {
   };
 
   const handleUserSelect = (user: typeof USERS[0]) => {
+    console.log('🎯 handleUserSelect chamado para:', user.name);
+    setIsConnecting(true);
+    
     if (connectionStatus === 'error') {
-      alert('⚠️ Problema na conexão com o banco de dados!\n\nVerifique:\n1. Se o arquivo .env está configurado corretamente\n2. Se as credenciais do Supabase estão corretas\n3. Se o projeto Supabase está ativo\n\nSem isso, os dados não serão salvos.');
+      console.warn('⚠️ Conexão com problemas, mas permitindo acesso ao sistema');
     }
     
-    dispatch({ 
-      type: 'SET_USER', 
-      payload: { 
-        id: user.id, 
-        username: user.name, 
-        role: 'user'
-      } 
-    });
+    try {
+      console.log('📤 Despachando ação SET_USER...');
+      dispatch({ 
+        type: 'SET_USER', 
+        payload: { 
+          id: user.id, 
+          username: user.name, 
+          role: 'user'
+        } 
+      });
+      console.log('✅ Usuário definido no contexto com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao definir usuário:', error);
+      alert('Erro ao acessar o sistema. Tente recarregar a página.');
+    } finally {
+      setTimeout(() => setIsConnecting(false), 500);
+    }
   };
 
   return (
