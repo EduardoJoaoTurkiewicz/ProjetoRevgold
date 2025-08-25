@@ -87,7 +87,6 @@ export function UserSelection() {
   const [connectionStatus, setConnectionStatus] = React.useState<'checking' | 'connected' | 'error'>('checking');
   const [connectionDetails, setConnectionDetails] = React.useState<any>(null);
   const [isConnecting, setIsConnecting] = React.useState(false);
-  const [isConnecting, setIsConnecting] = React.useState(false);
 
   // Test connection on component mount
   React.useEffect(() => {
