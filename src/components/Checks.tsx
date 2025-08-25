@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Eye, Upload, Calendar, Trash2, ChevronDown, ChevronRight, FileText } from 'lucide-react';
+import { Plus, Edit, Eye, Upload, Calendar, Trash2, ChevronDown, ChevronRight, FileText, AlertTriangle, CreditCard, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Check } from '../types';
 import { CheckForm } from './forms/CheckForm';
@@ -106,6 +106,23 @@ export function Checks() {
     setExpandedDebts(newExpanded);
   };
 
+  const getStatusColor = (status: Check['status']) => {
+    switch (status) {
+      case 'compensado': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case 'devolvido': return 'bg-red-100 text-red-800 border-red-200';
+      case 'reapresentado': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getStatusLabel = (status: Check['status']) => {
+    switch (status) {
+      case 'compensado': return 'Compensado';
+      case 'devolvido': return 'Devolvido';
+      case 'reapresentado': return 'Reapresentado';
+      default: return 'Pendente';
+    }
+  };
   const getStatusColor = (status: Check['status']) => {
     switch (status) {
       case 'compensado': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
