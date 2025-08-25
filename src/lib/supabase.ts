@@ -37,12 +37,12 @@ export function isSupabaseConfigured(): boolean {
     key && 
     url !== 'https://your-project-id.supabase.co' && 
     key !== 'your-anon-key-here' &&
-    url.includes('supabase.co')
+    (url.includes('supabase.co') || url.includes('localhost'))
   );
   
   console.log('🔍 Verificação do Supabase:', {
-    url: url ? '✅ Configurada' : '❌ Não configurada',
-    key: key ? '✅ Configurada' : '❌ Não configurada',
+    url: url ? `✅ ${url.substring(0, 30)}...` : '❌ Não configurada',
+    key: key ? `✅ ${key.substring(0, 20)}...` : '❌ Não configurada',
     isValid: isConfigured ? '✅ Válida' : '❌ Inválida'
   });
   

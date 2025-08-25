@@ -19,7 +19,7 @@ export default function Dashboard() {
 
   // Forçar recarregamento se não há dados e não está carregando
   React.useEffect(() => {
-    if (!state.isLoading && checkSupabase()) {
+    if (!state.isLoading && checkSupabase() && state.sales.length === 0) {
       console.log('🔄 Dashboard detectou falta de dados, recarregando...');
       loadAllData();
     }

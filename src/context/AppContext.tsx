@@ -778,17 +778,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     console.log('🔄 useEffect disparado - currentUser:', state.currentUser, 'isSupabaseConfigured:', isSupabaseConfigured());
     
-    if (state.currentUser && isSupabaseConfigured()) {
-      console.log('🔄 Usuário definido, carregando dados...', state.currentUser);
-      loadAllData();
-    } else if (state.currentUser && !isSupabaseConfigured()) {
-      console.log('⚠️ Usuário definido mas Supabase não configurado');
-      // Não bloquear o sistema se Supabase não estiver configurado
-      console.log('⚠️ Continuando sem Supabase - dados não serão persistidos');
-      dispatch({ type: 'SET_LOADING', payload: false });
-    } else if (state.currentUser) {
-      console.log('✅ Usuário definido, sistema pronto');
-      dispatch({ type: 'SET_LOADING', payload: false });
+    if (state.currentUser) {
+      console.log('✅ Usuário definido, sistema pronto:', state.currentUser);
+      
+      if (isSupabaseConfigured()) {
+        console.log('🔄 Carregando dados do Supabase...');
+        loadAllData();
+      } else {
+        console.log('⚠️ Supabase não configurado - funcionando em modo local');
+        dispatch({ type: 'SET_LOADING', payload: false });
+      }
     }
   }, [state.currentUser, isSupabaseConfigured]);
 

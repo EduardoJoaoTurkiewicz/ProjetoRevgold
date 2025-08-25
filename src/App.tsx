@@ -56,7 +56,7 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen relative z-20">
+    <div className="min-h-screen relative z-10">
       <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
         {renderPage()}
       </Layout>
