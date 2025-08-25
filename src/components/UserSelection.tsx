@@ -83,7 +83,7 @@ const UserAvatar = () => (
 );
 
 export function UserSelection() {
-  const { dispatch, isSupabaseConfigured } = useApp();
+  const { dispatch } = useApp();
   const [connectionStatus, setConnectionStatus] = React.useState<'checking' | 'connected' | 'error'>('checking');
   const [connectionDetails, setConnectionDetails] = React.useState<any>(null);
   const [isConnecting, setIsConnecting] = React.useState(false);
