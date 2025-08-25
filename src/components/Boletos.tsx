@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Eye, FileText, Calendar, AlertCircle, X, Clock, DollarSign, AlertTriangle } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, FileText, Calendar, AlertCircle, X, Clock, DollarSign, AlertTriangle, CreditCard } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Boleto } from '../types';
 import { BoletoForm } from './forms/BoletoForm';
