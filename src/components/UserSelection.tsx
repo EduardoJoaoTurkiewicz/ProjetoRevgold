@@ -1,7 +1,7 @@
 import React from 'react';
 import { User, ChevronRight, Zap, Sparkles, Building2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { testSupabaseConnection, healthCheck } from '../lib/supabase';
+import { testSupabaseConnection, healthCheck, isSupabaseConfigured } from '../lib/supabase';
 
 const USERS = [
   { 
