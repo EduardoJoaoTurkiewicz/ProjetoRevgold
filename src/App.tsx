@@ -63,7 +63,7 @@ function AppContent() {
   const { state } = useApp();
   const [currentPage, setCurrentPage] = useState('dashboard');
 
-  if (!state.user) {
+  if (!state.currentUser) {
     return <UserSelection />;
   }
 
