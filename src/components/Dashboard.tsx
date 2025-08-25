@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react';
 import { DollarSign, TrendingUp, TrendingDown, Users, Calendar, AlertTriangle, CheckCircle, Clock, CreditCard, Receipt, FileText, Star, Wallet, ArrowUpCircle, ArrowDownCircle, BarChart3 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { isSupabaseConfigured } from '../lib/supabase';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
 const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4'];
 
 export default function Dashboard() {
-  const { state, loadAllData } = useApp();
+  const { state, loadAllData, isSupabaseConfigured: checkSupabase } = useApp();
 
   // Calcular métricas principais
   const metrics = useMemo(() => {
@@ -945,7 +946,7 @@ export default function Dashboard() {
       </div>
 
       {/* Debug Info - Mostrar apenas se houver problemas */}
-      {state.sales.length === 0 && state.debts.length === 0 && (
+      {(state.sales.length === 0 && state.debts.length === 0) || !checkSupabase() && (
         <div className="card bg-yellow-50 border-yellow-200 modern-shadow-xl">
           <div className="flex items-center gap-4 mb-4">
             <AlertTriangle className="w-8 h-8 text-yellow-600" />
@@ -953,7 +954,7 @@ export default function Dashboard() {
           </div>
           
           <div className="space-y-3 text-sm">
-            <p><strong>Supabase Configurado:</strong> {isSupabaseConfigured() ? '✅ Sim' : '❌ Não'}</p>
+            <p><strong>Supabase Configurado:</strong> {checkSupabase() ? '✅ Sim' : '❌ Não'}</p>
             <p><strong>Vendas Carregadas:</strong> {state.sales.length}</p>
             <p><strong>Dívidas Carregadas:</strong> {state.debts.length}</p>
             <p><strong>Funcionários Carregados:</strong> {state.employees.length}</p>

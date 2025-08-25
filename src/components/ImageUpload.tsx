@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, Image as ImageIcon, Loader2, AlertCircle } from 'lucide-react';
 import { uploadCheckImage, deleteCheckImage, getCheckImageUrl } from '../lib/supabase';
-import { useApp } from '../context/AppContext';
 
 interface ImageUploadProps {
   checkId: string;
@@ -26,7 +25,12 @@ export function ImageUpload({
     currentImage ? getCheckImageUrl(currentImage) : null
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { isSupabaseConfigured } = useApp();
+  
+  const isSupabaseConfigured = () => {
+    const url = import.meta.env.VITE_SUPABASE_URL;
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    return !!(url && key && url !== 'https://your-project-id.supabase.co' && key !== 'your-anon-key-here');
+  };
 
   const validateFile = (file: File): string | null => {
     // Validar tipo de arquivo
