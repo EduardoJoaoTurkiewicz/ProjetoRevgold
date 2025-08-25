@@ -508,7 +508,7 @@ export function Checks() {
                           const updatedCheck = { ...check, status: 'compensado' as const };
                           updateCheck(updatedCheck).then(() => {
                             // Criar transação de caixa para reduzir o saldo
-                            state.createCashTransaction({
+                            createCashTransaction({
                               date: new Date().toISOString().split('T')[0],
                               type: 'saida',
                               amount: check.value,

@@ -502,7 +502,7 @@ export function Boletos() {
                           const updatedDebt = { ...debt, isPaid: true, paidAmount: debt.totalValue, pendingAmount: 0 };
                           updateDebt(updatedDebt).then(() => {
                             // Criar transação de caixa para reduzir o saldo
-                            state.createCashTransaction({
+                            createCashTransaction({
                               date: new Date().toISOString().split('T')[0],
                               type: 'saida',
                               amount: debt.totalValue,
