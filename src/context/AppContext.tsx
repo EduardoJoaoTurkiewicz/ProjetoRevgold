@@ -1,835 +1,392 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { supabase } from '../lib/supabase';
-import { 
-  Employee, 
-  Sale, 
-  Debt, 
-  Check, 
-  Boleto, 
-  EmployeePayment, 
-  EmployeeAdvance, 
-  EmployeeOvertime, 
-  EmployeeCommission,
-  CashBalance,
-  CashTransaction,
-  PixFee,
-  User
-} from '../types';
+import React from 'react';
+import { User, ChevronRight, Zap, Sparkles, Building2 } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import { testSupabaseConnection, healthCheck } from '../lib/supabase';
 
-interface AppState {
-  currentUser: User | null;
-  employees: Employee[];
-  sales: Sale[];
-  debts: Debt[];
-  checks: Check[];
-  boletos: Boleto[];
-  employeePayments: EmployeePayment[];
-  employeeAdvances: EmployeeAdvance[];
-  employeeOvertimes: EmployeeOvertime[];
-  employeeCommissions: EmployeeCommission[];
-  cashBalance: CashBalance | null;
-  cashTransactions: CashTransaction[];
-  pixFees: PixFee[];
-  isLoading: boolean;
-  error: string | null;
-}
-
-type AppAction = 
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_USER'; payload: User }
-  | { type: 'SET_EMPLOYEES'; payload: Employee[] }
-  | { type: 'SET_SALES'; payload: Sale[] }
-  | { type: 'SET_DEBTS'; payload: Debt[] }
-  | { type: 'SET_CHECKS'; payload: Check[] }
-  | { type: 'SET_BOLETOS'; payload: Boleto[] }
-  | { type: 'SET_EMPLOYEE_PAYMENTS'; payload: EmployeePayment[] }
-  | { type: 'SET_EMPLOYEE_ADVANCES'; payload: EmployeeAdvance[] }
-  | { type: 'SET_EMPLOYEE_OVERTIMES'; payload: EmployeeOvertime[] }
-  | { type: 'SET_EMPLOYEE_COMMISSIONS'; payload: EmployeeCommission[] }
-  | { type: 'SET_CASH_BALANCE'; payload: CashBalance | null }
-  | { type: 'SET_CASH_TRANSACTIONS'; payload: CashTransaction[] }
-  | { type: 'SET_PIX_FEES'; payload: PixFee[] }
-  | { type: 'ADD_EMPLOYEE'; payload: Employee }
-  | { type: 'UPDATE_EMPLOYEE'; payload: Employee }
-  | { type: 'DELETE_EMPLOYEE'; payload: string }
-  | { type: 'ADD_SALE'; payload: Sale }
-  | { type: 'UPDATE_SALE'; payload: Sale }
-  | { type: 'DELETE_SALE'; payload: string }
-  | { type: 'ADD_DEBT'; payload: Debt }
-  | { type: 'UPDATE_DEBT'; payload: Debt }
-  | { type: 'DELETE_DEBT'; payload: string }
-  | { type: 'ADD_CHECK'; payload: Check }
-  | { type: 'UPDATE_CHECK'; payload: Check }
-  | { type: 'DELETE_CHECK'; payload: string }
-  | { type: 'ADD_BOLETO'; payload: Boleto }
-  | { type: 'UPDATE_BOLETO'; payload: Boleto }
-  | { type: 'DELETE_BOLETO'; payload: string }
-  | { type: 'ADD_PIX_FEE'; payload: PixFee }
-  | { type: 'UPDATE_PIX_FEE'; payload: PixFee }
-  | { type: 'DELETE_PIX_FEE'; payload: string };
-
-const initialState: AppState = {
-  currentUser: null,
-  employees: [],
-  sales: [],
-  debts: [],
-  checks: [],
-  boletos: [],
-  employeePayments: [],
-  employeeAdvances: [],
-  employeeOvertimes: [],
-  employeeCommissions: [],
-  cashBalance: null,
-  cashTransactions: [],
-  pixFees: [],
-  isLoading: false,
-  error: null
-};
-
-function appReducer(state: AppState, action: AppAction): AppState {
-  console.log('🔄 Reducer recebeu ação:', action.type, action.payload);
-  
-  switch (action.type) {
-    case 'SET_LOADING':
-      return { ...state, isLoading: action.payload };
-    case 'SET_ERROR':
-      return { ...state, error: action.payload };
-    case 'SET_USER':
-      console.log('👤 Definindo usuário no estado:', action.payload);
-      return { 
-        ...state, 
-        currentUser: action.payload,
-        error: null // Limpar qualquer erro anterior
-      };
-    case 'SET_EMPLOYEES':
-      return { ...state, employees: action.payload };
-    case 'SET_SALES':
-      return { ...state, sales: action.payload };
-    case 'SET_DEBTS':
-      return { ...state, debts: action.payload };
-    case 'SET_CHECKS':
-      return { ...state, checks: action.payload };
-    case 'SET_BOLETOS':
-      return { ...state, boletos: action.payload };
-    case 'SET_EMPLOYEE_PAYMENTS':
-      return { ...state, employeePayments: action.payload };
-    case 'SET_EMPLOYEE_ADVANCES':
-      return { ...state, employeeAdvances: action.payload };
-    case 'SET_EMPLOYEE_OVERTIMES':
-      return { ...state, employeeOvertimes: action.payload };
-    case 'SET_EMPLOYEE_COMMISSIONS':
-      return { ...state, employeeCommissions: action.payload };
-    case 'SET_CASH_BALANCE':
-      return { ...state, cashBalance: action.payload };
-    case 'SET_CASH_TRANSACTIONS':
-      return { ...state, cashTransactions: action.payload };
-    case 'SET_PIX_FEES':
-      return { ...state, pixFees: action.payload };
-    case 'ADD_EMPLOYEE':
-      return { ...state, employees: [...state.employees, action.payload] };
-    case 'UPDATE_EMPLOYEE':
-      return { 
-        ...state, 
-        employees: state.employees.map(emp => 
-          emp.id === action.payload.id ? action.payload : emp
-        ) 
-      };
-    case 'DELETE_EMPLOYEE':
-      return { 
-        ...state, 
-        employees: state.employees.filter(emp => emp.id !== action.payload) 
-      };
-    case 'ADD_SALE':
-      return { ...state, sales: [action.payload, ...state.sales] };
-    case 'UPDATE_SALE':
-      return { 
-        ...state, 
-        sales: state.sales.map(sale => 
-          sale.id === action.payload.id ? action.payload : sale
-        ) 
-      };
-    case 'DELETE_SALE':
-      return { 
-        ...state, 
-        sales: state.sales.filter(sale => sale.id !== action.payload) 
-      };
-    case 'ADD_DEBT':
-      return { ...state, debts: [action.payload, ...state.debts] };
-    case 'UPDATE_DEBT':
-      return { 
-        ...state, 
-        debts: state.debts.map(debt => 
-          debt.id === action.payload.id ? action.payload : debt
-        ) 
-      };
-    case 'DELETE_DEBT':
-      return { 
-        ...state, 
-        debts: state.debts.filter(debt => debt.id !== action.payload) 
-      };
-    case 'ADD_CHECK':
-      return { ...state, checks: [...state.checks, action.payload] };
-    case 'UPDATE_CHECK':
-      return { 
-        ...state, 
-        checks: state.checks.map(check => 
-          check.id === action.payload.id ? action.payload : check
-        ) 
-      };
-    case 'DELETE_CHECK':
-      return { 
-        ...state, 
-        checks: state.checks.filter(check => check.id !== action.payload) 
-      };
-    case 'ADD_BOLETO':
-      return { ...state, boletos: [...state.boletos, action.payload] };
-    case 'UPDATE_BOLETO':
-      return { 
-        ...state, 
-        boletos: state.boletos.map(boleto => 
-          boleto.id === action.payload.id ? action.payload : boleto
-        ) 
-      };
-    case 'DELETE_BOLETO':
-      return { 
-        ...state, 
-        boletos: state.boletos.filter(boleto => boleto.id !== action.payload) 
-      };
-    case 'ADD_PIX_FEE':
-      return { ...state, pixFees: [action.payload, ...state.pixFees] };
-    case 'UPDATE_PIX_FEE':
-      return { 
-        ...state, 
-        pixFees: state.pixFees.map(fee => 
-          fee.id === action.payload.id ? action.payload : fee
-        ) 
-      };
-    case 'DELETE_PIX_FEE':
-      return { 
-        ...state, 
-        pixFees: state.pixFees.filter(fee => fee.id !== action.payload) 
-      };
-    default:
-      return state;
+const USERS = [
+  { 
+    id: '1', 
+    name: 'Eduardo João', 
+    avatar: 'svg'
+  },
+  { 
+    id: '2', 
+    name: 'Eduardo Junior', 
+    avatar: 'svg'
+  },
+  { 
+    id: '3', 
+    name: 'Samuel', 
+    avatar: 'svg'
+  },
+  { 
+    id: '4', 
+    name: 'Lídia', 
+    avatar: 'svg'
   }
-}
+];
 
-interface AppContextType {
-  state: AppState;
-  dispatch: React.Dispatch<AppAction>;
-  
-  // Utility functions
-  isSupabaseConfigured: () => boolean;
-  loadAllData: () => Promise<void>;
-  
-  // Employee functions
-  createEmployee: (employee: Omit<Employee, 'id' | 'createdAt'>) => Promise<Employee>;
-  updateEmployee: (employee: Employee) => Promise<Employee>;
-  deleteEmployee: (id: string) => Promise<void>;
-  
-  // Sale functions
-  createSale: (sale: Omit<Sale, 'id' | 'createdAt'>) => Promise<Sale>;
-  updateSale: (sale: Sale) => Promise<Sale>;
-  deleteSale: (id: string) => Promise<void>;
-  
-  // Debt functions
-  createDebt: (debt: Omit<Debt, 'id' | 'createdAt'>) => Promise<Debt>;
-  updateDebt: (debt: Debt) => Promise<Debt>;
-  deleteDebt: (id: string) => Promise<void>;
-  
-  // Check functions
-  createCheck: (check: Omit<Check, 'id' | 'createdAt'>) => Promise<Check>;
-  updateCheck: (check: Check) => Promise<Check>;
-  deleteCheck: (id: string) => Promise<void>;
-  
-  // Boleto functions
-  createBoleto: (boleto: Omit<Boleto, 'id' | 'createdAt'>) => Promise<Boleto>;
-  updateBoleto: (boleto: Boleto) => Promise<Boleto>;
-  deleteBoleto: (id: string) => Promise<void>;
-  
-  // PIX Fee functions
-  createPixFee: (pixFee: Omit<PixFee, 'id' | 'createdAt'>) => Promise<PixFee>;
-  updatePixFee: (pixFee: PixFee) => Promise<PixFee>;
-  deletePixFee: (id: string) => Promise<void>;
-  
-  // Cash functions
-  initializeCashBalance: (initialAmount: number) => Promise<CashBalance>;
-  updateCashBalance: (balance: CashBalance) => Promise<CashBalance>;
-  createCashTransaction: (transaction: Omit<CashTransaction, 'id' | 'createdAt'>) => Promise<CashTransaction>;
-}
-
-const AppContext = createContext<AppContextType | undefined>(undefined);
-
-export function AppProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(appReducer, initialState);
-
-  // Utility functions
-  const isSupabaseConfigured = () => {
-    const url = import.meta.env.VITE_SUPABASE_URL;
-    const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    return !!(url && key && url !== 'https://your-project-id.supabase.co' && key !== 'your-anon-key-here');
-  };
-
-  // Load all data
-  const loadAllData = async () => {
-    console.log('🔄 loadAllData chamado');
+// Avatar SVG Component
+const UserAvatar = () => (
+  <svg viewBox="0 0 100 100" className="w-full h-full">
+    <defs>
+      <linearGradient id="skinGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#fbbf24" />
+        <stop offset="100%" stopColor="#f59e0b" />
+      </linearGradient>
+      <linearGradient id="shirtGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#059669" />
+        console.log('⚠️ Erro ao carregar funcionários:', employeesResult.status === 'fulfilled' ? employeesResult.value.error?.message : employeesResult.reason);
+        dispatch({ type: 'SET_EMPLOYEES', payload: [] });
+      </linearGradient>
+      <linearGradient id="hairGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#92400e" />
+        <stop offset="100%" stopColor="#78350f" />
+      </linearGradient>
+    </defs>
+        console.log('⚠️ Erro ao carregar vendas:', salesResult.status === 'fulfilled' ? salesResult.value.error?.message : salesResult.reason);
+        dispatch({ type: 'SET_SALES', payload: [] });
+    {/* Head */}
+    <circle cx="50" cy="35" r="18" fill="url(#skinGradient)" stroke="#f59e0b" strokeWidth="1"/>
     
-    if (!isSupabaseConfigured()) {
-      console.log('❌ Supabase não configurado');
-      console.log('⚠️ Continuando sem Supabase - sistema funcionará em modo local');
-      dispatch({ type: 'SET_LOADING', payload: false });
-      return;
-    }
-
-    dispatch({ type: 'SET_LOADING', payload: true });
-    dispatch({ type: 'SET_ERROR', payload: null });
-
-    try {
-      console.log('🔄 Carregando dados do Supabase...');
-      
-      // Load all data in parallel
-      const [
-        employeesResult,
-        salesResult,
-        debtsResult,
-        checksResult,
-        boletosResult,
-        employeePaymentsResult,
-        employeeAdvancesResult,
-        employeeOvertimesResult,
-        employeeCommissionsResult,
-        cashBalanceResult,
-        cashTransactionsResult,
-        pixFeesResult
-      ] = await Promise.allSettled([
-        supabase.from('employees').select('*').order('name'),
-        supabase.from('sales').select('*').order('date', { ascending: false }),
-        supabase.from('debts').select('*').order('date', { ascending: false }),
-        supabase.from('checks').select('*').order('due_date'),
-        supabase.from('boletos').select('*').order('due_date'),
-        supabase.from('employee_payments').select('*').order('payment_date', { ascending: false }),
-        supabase.from('employee_advances').select('*').order('date', { ascending: false }),
-        supabase.from('employee_overtimes').select('*').order('date', { ascending: false }),
-        supabase.from('employee_commissions').select('*').order('date', { ascending: false }),
-        supabase.from('cash_balances').select('*').order('created_at', { ascending: false }).limit(1).single(),
-        supabase.from('cash_transactions').select('*').order('date', { ascending: false }),
-        supabase.from('pix_fees').select('*').order('date', { ascending: false })
-      ]);
-
-      // Process results
-      if (employeesResult.status === 'fulfilled' && !employeesResult.value.error) {
-        dispatch({ type: 'SET_EMPLOYEES', payload: employeesResult.value.data || [] });
-        console.log('✅ Funcionários carregados:', employeesResult.value.data?.length || 0);
-      } else {
-        console.log('⚠️ Erro ao carregar funcionários:', employeesResult.status === 'fulfilled' ? employeesResult.value.error : employeesResult.reason);
-      }
-
-      if (salesResult.status === 'fulfilled' && !salesResult.value.error) {
-        dispatch({ type: 'SET_SALES', payload: salesResult.value.data || [] });
-        console.log('✅ Vendas carregadas:', salesResult.value.data?.length || 0);
-      } else {
-        console.log('⚠️ Erro ao carregar vendas:', salesResult.status === 'fulfilled' ? salesResult.value.error : salesResult.reason);
-      }
-
-      if (debtsResult.status === 'fulfilled' && !debtsResult.value.error) {
-        dispatch({ type: 'SET_DEBTS', payload: debtsResult.value.data || [] });
-        console.log('✅ Dívidas carregadas:', debtsResult.value.data?.length || 0);
-      } else {
-        console.log('⚠️ Erro ao carregar dívidas:', debtsResult.status === 'fulfilled' ? debtsResult.value.error : debtsResult.reason);
-      }
-
-      if (checksResult.status === 'fulfilled' && !checksResult.value.error) {
-        dispatch({ type: 'SET_CHECKS', payload: checksResult.value.data || [] });
-        console.log('✅ Cheques carregados:', checksResult.value.data?.length || 0);
-      } else {
-        console.log('⚠️ Erro ao carregar cheques:', checksResult.status === 'fulfilled' ? checksResult.value.error : checksResult.reason);
-      }
-
-      if (boletosResult.status === 'fulfilled' && !boletosResult.value.error) {
-        dispatch({ type: 'SET_BOLETOS', payload: boletosResult.value.data || [] });
-        console.log('✅ Boletos carregados:', boletosResult.value.data?.length || 0);
-      } else {
-        console.log('⚠️ Erro ao carregar boletos:', boletosResult.status === 'fulfilled' ? boletosResult.value.error : boletosResult.reason);
-      }
-
-      if (employeePaymentsResult.status === 'fulfilled' && !employeePaymentsResult.value.error) {
-        dispatch({ type: 'SET_EMPLOYEE_PAYMENTS', payload: employeePaymentsResult.value.data || [] });
-        console.log('✅ Pagamentos carregados:', employeePaymentsResult.value.data?.length || 0);
-      } else {
-        console.log('⚠️ Erro ao carregar pagamentos:', employeePaymentsResult.status === 'fulfilled' ? employeePaymentsResult.value.error : employeePaymentsResult.reason);
-      }
-
-      if (employeeAdvancesResult.status === 'fulfilled' && !employeeAdvancesResult.value.error) {
-        dispatch({ type: 'SET_EMPLOYEE_ADVANCES', payload: employeeAdvancesResult.value.data || [] });
-        console.log('✅ Adiantamentos carregados:', employeeAdvancesResult.value.data?.length || 0);
-      } else {
-        console.log('⚠️ Erro ao carregar adiantamentos:', employeeAdvancesResult.status === 'fulfilled' ? employeeAdvancesResult.value.error : employeeAdvancesResult.reason);
-      }
-
-      if (employeeOvertimesResult.status === 'fulfilled' && !employeeOvertimesResult.value.error) {
-        dispatch({ type: 'SET_EMPLOYEE_OVERTIMES', payload: employeeOvertimesResult.value.data || [] });
-        console.log('✅ Horas extras carregadas:', employeeOvertimesResult.value.data?.length || 0);
-      } else {
-        console.log('⚠️ Erro ao carregar horas extras:', employeeOvertimesResult.status === 'fulfilled' ? employeeOvertimesResult.value.error : employeeOvertimesResult.reason);
-      }
-
-      if (employeeCommissionsResult.status === 'fulfilled' && !employeeCommissionsResult.value.error) {
-        dispatch({ type: 'SET_EMPLOYEE_COMMISSIONS', payload: employeeCommissionsResult.value.data || [] });
-        console.log('✅ Comissões carregadas:', employeeCommissionsResult.value.data?.length || 0);
-      } else {
-        console.log('⚠️ Erro ao carregar comissões:', employeeCommissionsResult.status === 'fulfilled' ? employeeCommissionsResult.value.error : employeeCommissionsResult.reason);
-      }
-
-      if (cashBalanceResult.status === 'fulfilled' && cashBalanceResult.value.data && !cashBalanceResult.value.error) {
-        dispatch({ type: 'SET_CASH_BALANCE', payload: cashBalanceResult.value.data });
-        console.log('✅ Saldo do caixa carregado:', cashBalanceResult.value.data?.current_balance || 0);
-      } else {
-        console.log('⚠️ Nenhum saldo de caixa encontrado ou erro:', cashBalanceResult.status === 'fulfilled' ? cashBalanceResult.value.error : cashBalanceResult.reason);
-        dispatch({ type: 'SET_CASH_BALANCE', payload: null });
-      }
-
-      if (cashTransactionsResult.status === 'fulfilled' && !cashTransactionsResult.value.error) {
-        dispatch({ type: 'SET_CASH_TRANSACTIONS', payload: cashTransactionsResult.value.data || [] });
-        console.log('✅ Transações do caixa carregadas:', cashTransactionsResult.value.data?.length || 0);
-      } else {
-        console.log('⚠️ Erro ao carregar transações do caixa:', cashTransactionsResult.status === 'fulfilled' ? cashTransactionsResult.value.error : cashTransactionsResult.reason);
-      }
-
-      if (pixFeesResult.status === 'fulfilled' && !pixFeesResult.value.error) {
-        dispatch({ type: 'SET_PIX_FEES', payload: pixFeesResult.value.data || [] });
-        console.log('✅ Tarifas PIX carregadas:', pixFeesResult.value.data?.length || 0);
-      } else {
-        console.log('⚠️ Erro ao carregar tarifas PIX:', pixFeesResult.status === 'fulfilled' ? pixFeesResult.value.error : pixFeesResult.reason);
-      }
-
-      console.log('✅ Todos os dados carregados com sucesso!');
-      
-    } catch (error) {
-      console.error('❌ Erro ao carregar dados:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao carregar dados do banco. Verifique a conexão com o Supabase.' });
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  // Employee functions
-  const createEmployee = async (employeeData: Omit<Employee, 'id' | 'createdAt'>): Promise<Employee> => {
-    const { data, error } = await supabase
-      .from('employees')
-      .insert([employeeData])
-      .select()
-      .single();
-
-    if (error) throw error;
+    {/* Hair */}
+    <path d="M32 25 Q50 15 68 25 Q68 20 50 18 Q32 20 32 25" fill="url(#hairGradient)"/>
     
-    dispatch({ type: 'ADD_EMPLOYEE', payload: data });
-    return data;
-  };
-
-  const updateEmployee = async (employee: Employee): Promise<Employee> => {
-    const { data, error } = await supabase
-      .from('employees')
-      .update(employee)
-      .eq('id', employee.id)
-      .select()
-      .single();
-
-    if (error) throw error;
+        console.log('⚠️ Erro ao carregar dívidas:', debtsResult.status === 'fulfilled' ? debtsResult.value.error?.message : debtsResult.reason);
+        dispatch({ type: 'SET_DEBTS', payload: [] });
+    <circle cx="44" cy="32" r="2" fill="#1f2937"/>
+    <circle cx="56" cy="32" r="2" fill="#1f2937"/>
+    <circle cx="44.5" cy="31.5" r="0.5" fill="white"/>
+    <circle cx="56.5" cy="31.5" r="0.5" fill="white"/>
     
-    dispatch({ type: 'UPDATE_EMPLOYEE', payload: data });
-    return data;
-  };
-
-  const deleteEmployee = async (id: string): Promise<void> => {
-    const { error } = await supabase
-      .from('employees')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
+    {/* Nose */}
+        console.log('⚠️ Erro ao carregar cheques:', checksResult.status === 'fulfilled' ? checksResult.value.error?.message : checksResult.reason);
+        dispatch({ type: 'SET_CHECKS', payload: [] });
     
-    dispatch({ type: 'DELETE_EMPLOYEE', payload: id });
-  };
-
-  // Sale functions
-  const createSale = async (saleData: Omit<Sale, 'id' | 'createdAt'>): Promise<Sale> => {
-    const { data, error } = await supabase
-      .from('sales')
-      .insert([saleData])
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    // Create commission if seller is assigned
-    if (saleData.sellerId) {
-      const commissionData = {
-        employee_id: saleData.sellerId,
-        sale_id: data.id,
-        sale_value: saleData.totalValue,
-        commission_rate: saleData.customCommissionRate || 5,
-        commission_amount: (saleData.totalValue * (saleData.customCommissionRate || 5)) / 100,
-        date: saleData.date,
-        status: 'pendente'
-      };
-
-      await supabase.from('employee_commissions').insert([commissionData]);
-    }
-
-    // Create checks and boletos automatically
-    await createChecksAndBoletosForSale(data);
+    {/* Mouth */}
+    <path d="M47 40 Q50 42 53 40" stroke="#1f2937" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
     
-    dispatch({ type: 'ADD_SALE', payload: data });
-    return data;
-  };
-
-  const updateSale = async (sale: Sale): Promise<Sale> => {
-    const { data, error } = await supabase
-      .from('sales')
-      .update(sale)
-      .eq('id', sale.id)
-      .select()
-      .single();
-
-    if (error) throw error;
+    {/* Body */}
+    <ellipse cx="50" cy="70" rx="20" ry="25" fill="url(#shirtGradient)" stroke="#047857" strokeWidth="1"/>
+        console.log('⚠️ Erro ao carregar boletos:', boletosResult.status === 'fulfilled' ? boletosResult.value.error?.message : boletosResult.reason);
+        dispatch({ type: 'SET_BOLETOS', payload: [] });
+    {/* Arms */}
+    <ellipse cx="28" cy="65" rx="6" ry="15" fill="url(#shirtGradient)" stroke="#047857" strokeWidth="1"/>
+    <ellipse cx="72" cy="65" rx="6" ry="15" fill="url(#shirtGradient)" stroke="#047857" strokeWidth="1"/>
     
-    dispatch({ type: 'UPDATE_SALE', payload: data });
-    return data;
-  };
-
-  const deleteSale = async (id: string): Promise<void> => {
-    const { error } = await supabase
-      .from('sales')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
+    {/* Hands */}
+    <circle cx="28" cy="78" r="4" fill="url(#skinGradient)" stroke="#f59e0b" strokeWidth="0.5"/>
+        console.log('⚠️ Erro ao carregar pagamentos:', employeePaymentsResult.status === 'fulfilled' ? employeePaymentsResult.value.error?.message : employeePaymentsResult.reason);
+        dispatch({ type: 'SET_EMPLOYEE_PAYMENTS', payload: [] });
     
-    dispatch({ type: 'DELETE_SALE', payload: id });
-  };
+    {/* Collar */}
+    <path d="M40 55 L50 60 L60 55" stroke="#10b981" strokeWidth="2" fill="none"/>
+    
+    {/* RevGold Logo on shirt */}
+    <circle cx="50" cy="70" r="6" fill="#10b981" opacity="0.8"/>
+        console.log('⚠️ Erro ao carregar adiantamentos:', employeeAdvancesResult.status === 'fulfilled' ? employeeAdvancesResult.value.error?.message : employeeAdvancesResult.reason);
+        dispatch({ type: 'SET_EMPLOYEE_ADVANCES', payload: [] });
+  </svg>
+);
 
-  // Helper function to create checks and boletos for sales
-  const createChecksAndBoletosForSale = async (sale: Sale) => {
-    for (const method of sale.paymentMethods) {
-      if (method.type === 'cheque') {
-        const installments = method.installments || 1;
+export function UserSelection() {
+  const { dispatch, isSupabaseConfigured } = useApp();
+  const [connectionStatus, setConnectionStatus] = React.useState<'checking' | 'connected' | 'error'>('checking');
+        console.log('⚠️ Erro ao carregar horas extras:', employeeOvertimesResult.status === 'fulfilled' ? employeeOvertimesResult.value.error?.message : employeeOvertimesResult.reason);
+        dispatch({ type: 'SET_EMPLOYEE_OVERTIMES', payload: [] });
+  const [isConnecting, setIsConnecting] = React.useState(false);
+
+  // Test connection on component mount
+  React.useEffect(() => {
+    const testConnection = async () => {
+      console.log('🔍 Testando conexão com Supabase...');
+        console.log('⚠️ Erro ao carregar comissões:', employeeCommissionsResult.status === 'fulfilled' ? employeeCommissionsResult.value.error?.message : employeeCommissionsResult.reason);
+        dispatch({ type: 'SET_EMPLOYEE_COMMISSIONS', payload: [] });
+      if (!isSupabaseConfigured()) {
+        setConnectionStatus('error');
+        setConnectionDetails({ error: 'Supabase não configurado' });
+        return;
+        console.log('✅ Saldo do caixa carregado:', cashBalanceResult.value.data?.currentBalance || 0);
+
+        console.log('⚠️ Nenhum saldo de caixa encontrado ou erro:', cashBalanceResult.status === 'fulfilled' ? cashBalanceResult.value.error?.message : cashBalanceResult.reason);
+        const health = await healthCheck();
+        setConnectionDetails(health);
         
-        for (let i = 0; i < installments; i++) {
-          const dueDate = new Date(method.firstInstallmentDate || sale.date);
-          dueDate.setDate(dueDate.getDate() + (i * (method.installmentInterval || 30)));
-          
-          const checkData = {
-            sale_id: sale.id,
-            client: sale.client,
-            value: method.installmentValue || method.amount,
-            due_date: dueDate.toISOString().split('T')[0],
-            status: 'pendente',
-            is_own_check: method.isOwnCheck || false,
-            used_for: `Venda - ${sale.client}`,
-            installment_number: i + 1,
-            total_installments: installments
-          };
-          
-          await supabase.from('checks').insert([checkData]);
+        if (health.connected) {
+          setConnectionStatus('connected');
+          console.log('✅ Conexão com Supabase estabelecida');
+        } else {
+        console.log('⚠️ Erro ao carregar transações do caixa:', cashTransactionsResult.status === 'fulfilled' ? cashTransactionsResult.value.error?.message : cashTransactionsResult.reason);
+        dispatch({ type: 'SET_CASH_TRANSACTIONS', payload: [] });
+          console.log('❌ Falha na conexão com Supabase');
         }
-      }
-      
-      if (method.type === 'boleto') {
-        const installments = method.installments || 1;
-        
-        for (let i = 0; i < installments; i++) {
-          const dueDate = new Date(method.firstInstallmentDate || sale.date);
-          dueDate.setDate(dueDate.getDate() + (i * (method.installmentInterval || 30)));
-          
-          const boletoData = {
-            sale_id: sale.id,
-            client: sale.client,
-            value: method.installmentValue || method.amount,
-            due_date: dueDate.toISOString().split('T')[0],
-            status: 'pendente',
-            installment_number: i + 1,
-            total_installments: installments
-          };
-          
-          await supabase.from('boletos').insert([boletoData]);
-        }
-      }
-    }
-  };
-
-  // Debt functions
-  const createDebt = async (debtData: Omit<Debt, 'id' | 'createdAt'>): Promise<Debt> => {
-    const { data, error } = await supabase
-      .from('debts')
-      .insert([debtData])
-      .select()
-      .single();
-
-    if (error) throw error;
-    
-    dispatch({ type: 'ADD_DEBT', payload: data });
-    return data;
-  };
-
-  const updateDebt = async (debt: Debt): Promise<Debt> => {
-    const { data, error } = await supabase
-      .from('debts')
-      .update(debt)
-      .eq('id', debt.id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    
-    dispatch({ type: 'UPDATE_DEBT', payload: data });
-    return data;
-  };
-
-  const deleteDebt = async (id: string): Promise<void> => {
-    const { error } = await supabase
-      .from('debts')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
-    
-    dispatch({ type: 'DELETE_DEBT', payload: id });
-  };
-
-  // Check functions
-  const createCheck = async (checkData: Omit<Check, 'id' | 'createdAt'>): Promise<Check> => {
-    const { data, error } = await supabase
-      .from('checks')
-      .insert([checkData])
-      .select()
-      .single();
-
-    if (error) throw error;
-    
-    dispatch({ type: 'ADD_CHECK', payload: data });
-    return data;
-  };
-
-  const updateCheck = async (check: Check): Promise<Check> => {
-    const { data, error } = await supabase
-      .from('checks')
-      .update(check)
-      .eq('id', check.id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    
-    dispatch({ type: 'UPDATE_CHECK', payload: data });
-    return data;
-  };
-
-  const deleteCheck = async (id: string): Promise<void> => {
-    const { error } = await supabase
-      .from('checks')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
-    
-    dispatch({ type: 'DELETE_CHECK', payload: id });
-  };
-
-  // Boleto functions
-  const createBoleto = async (boletoData: Omit<Boleto, 'id' | 'createdAt'>): Promise<Boleto> => {
-    const { data, error } = await supabase
-      .from('boletos')
-      .insert([boletoData])
-      .select()
-      .single();
-
-    if (error) throw error;
-    
-    dispatch({ type: 'ADD_BOLETO', payload: data });
-    return data;
-  };
-
-  const updateBoleto = async (boleto: Boleto): Promise<Boleto> => {
-    const { data, error } = await supabase
-      .from('boletos')
-      .update(boleto)
-      .eq('id', boleto.id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    
-    dispatch({ type: 'UPDATE_BOLETO', payload: data });
-    return data;
-  };
-
-  const deleteBoleto = async (id: string): Promise<void> => {
-    const { error } = await supabase
-      .from('boletos')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
-    
-    dispatch({ type: 'DELETE_BOLETO', payload: id });
-  };
-
-  // PIX Fee functions
-  const createPixFee = async (pixFeeData: Omit<PixFee, 'id' | 'createdAt'>): Promise<PixFee> => {
-    const { data, error } = await supabase
-      .from('pix_fees')
-      .insert([pixFeeData])
-      .select()
-      .single();
-
-    if (error) throw error;
-    
-    dispatch({ type: 'ADD_PIX_FEE', payload: data });
-    return data;
-  };
-
-  const updatePixFee = async (pixFee: PixFee): Promise<PixFee> => {
-    const { data, error } = await supabase
-      .from('pix_fees')
-      .update(pixFee)
-      .eq('id', pixFee.id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    
-    dispatch({ type: 'UPDATE_PIX_FEE', payload: data });
-    return data;
-  };
-
-  const deletePixFee = async (id: string): Promise<void> => {
-    const { error } = await supabase
-      .from('pix_fees')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
-    
-    dispatch({ type: 'DELETE_PIX_FEE', payload: id });
-  };
-
-  // Cash functions
-  const initializeCashBalance = async (initialAmount: number): Promise<CashBalance> => {
-    const balanceData = {
-      current_balance: initialAmount,
-      initial_balance: initialAmount,
-      initial_date: new Date().toISOString().split('T')[0],
-      last_updated: new Date().toISOString()
+      } catch (error) {
+        setConnectionStatus('error');
+        setConnectionDetails({ error: error.message });
+        console.error('❌ Erro ao testar conexão:', error);
+        console.log('⚠️ Erro ao carregar tarifas PIX:', pixFeesResult.status === 'fulfilled' ? pixFeesResult.value.error?.message : pixFeesResult.reason);
+        dispatch({ type: 'SET_PIX_FEES', payload: [] });
     };
 
-    const { data, error } = await supabase
-      .from('cash_balances')
-      .insert([balanceData])
-      .select()
-      .single();
-
-    if (error) throw error;
-    
-    dispatch({ type: 'SET_CASH_BALANCE', payload: data });
-    return data;
+    testConnection();
+  }, [isSupabaseConfigured]);
+  
+  const getGreeting = () => {
+      dispatch({ type: 'SET_ERROR', payload: null }); // Não mostrar erro se for problema de configuração
+    if (hour < 12) return 'Bom dia';
+    if (hour < 18) return 'Boa tarde';
+    return 'Boa noite';
   };
 
-  const updateCashBalance = async (balance: CashBalance): Promise<CashBalance> => {
-    const { data, error } = await supabase
-      .from('cash_balances')
-      .update(balance)
-      .eq('id', balance.id)
-      .select()
-      .single();
-
-    if (error) throw error;
+  const handleUserSelect = (user: typeof USERS[0]) => {
+    console.log('🎯 handleUserSelect chamado para:', user.name);
     
-    dispatch({ type: 'SET_CASH_BALANCE', payload: data });
-    return data;
-  };
-
-  const createCashTransaction = async (transactionData: Omit<CashTransaction, 'id' | 'createdAt'>): Promise<CashTransaction> => {
-    const { data, error } = await supabase
-      .from('cash_transactions')
-      .insert([transactionData])
-      .select()
-      .single();
-
-    if (error) throw error;
+    setIsConnecting(true);
     
-    // Update cash balance
-    if (state.cashBalance) {
-      const newBalance = transactionData.type === 'entrada' 
-        ? state.cashBalance.currentBalance + transactionData.amount
-        : state.cashBalance.currentBalance - transactionData.amount;
+        setIsConnecting(false);
+        supabase.from('employees').select('*').order('name').then(result => ({ ...result, table: 'employees' })),
+        supabase.from('sales').select('*').order('date', { ascending: false }).then(result => ({ ...result, table: 'sales' })),
+        supabase.from('debts').select('*').order('date', { ascending: false }).then(result => ({ ...result, table: 'debts' })),
+        supabase.from('checks').select('*').order('due_date').then(result => ({ ...result, table: 'checks' })),
+        supabase.from('boletos').select('*').order('due_date').then(result => ({ ...result, table: 'boletos' })),
+        supabase.from('employee_payments').select('*').order('payment_date', { ascending: false }).then(result => ({ ...result, table: 'employee_payments' })),
+        supabase.from('employee_advances').select('*').order('date', { ascending: false }).then(result => ({ ...result, table: 'employee_advances' })),
+        supabase.from('employee_overtimes').select('*').order('date', { ascending: false }).then(result => ({ ...result, table: 'employee_overtimes' })),
+        supabase.from('employee_commissions').select('*').order('date', { ascending: false }).then(result => ({ ...result, table: 'employee_commissions' })),
+        supabase.from('cash_balances').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle().then(result => ({ ...result, table: 'cash_balances' })),
+        supabase.from('cash_transactions').select('*').order('date', { ascending: false }).then(result => ({ ...result, table: 'cash_transactions' })),
+        supabase.from('pix_fees').select('*').order('date', { ascending: false }).then(result => ({ ...result, table: 'pix_fees' }))
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-green-500/10 rounded-full blur-3xl revgold-animate-pulse-glow" style={{ animationDelay: '4s' }}></div>
+      </div>
       
-      await updateCashBalance({
-        ...state.cashBalance,
-        currentBalance: newBalance,
-        lastUpdated: new Date().toISOString()
-      });
-    }
-    
-    return data;
-  };
-
-  // Load data when user is set
-  useEffect(() => {
-    console.log('🔄 useEffect disparado - currentUser:', state.currentUser, 'isSupabaseConfigured:', isSupabaseConfigured());
-    
-    if (state.currentUser) {
-      console.log('✅ Usuário definido, sistema pronto:', state.currentUser);
+      {/* Floating Particles */}
+      <div className="absolute inset-0 overflow-hidden">
+        {Array.from({ length: 30 }).map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-3 h-3 bg-green-400/40 rounded-full revgold-animate-floating"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 6}s`,
+              animationDuration: `${4 + Math.random() * 3}s`
+            }}
+          ></div>
+        ))}
+      </div>
       
-      if (isSupabaseConfigured()) {
-        console.log('🔄 Carregando dados do Supabase...');
-        loadAllData();
-      } else {
-        console.log('⚠️ Supabase não configurado - funcionando em modo local');
-        dispatch({ type: 'SET_LOADING', payload: false });
-      }
-    }
-  }, [state.currentUser, isSupabaseConfigured]);
+      <div className="w-full max-w-6xl">
+        {/* Header Section */}
+        <div className="text-center mb-20 revgold-animate-fade-in">
+          {connectionStatus === 'error' && (
+            <div className="mb-12 p-8 bg-gradient-to-r from-red-100 to-red-200 border-2 border-red-300 rounded-3xl shadow-2xl">
+              <div className="flex items-center justify-center gap-4 mb-4">
+                <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center">
+                  <Zap className="w-8 h-8 text-white" />
+                </div>
+                <div className="text-left">
+                  <h3 className="text-2xl font-black text-red-800">⚠️ Configuração Necessária</h3>
+                  <p className="text-red-700 font-bold">{connectionDetails?.error || 'Problema na conexão'}</p>
+                </div>
+              </div>
+              <div className="text-red-800 space-y-2 text-left max-w-2xl mx-auto">
+                <p className="font-bold text-lg mb-4">Para usar o sistema, você precisa:</p>
+                <ol className="list-decimal list-inside space-y-2 font-semibold">
+                  <li>Acessar <a href="https://supabase.com" target="_blank" className="text-blue-600 underline">supabase.com</a> e criar uma conta</li>
+                  <li>Criar um novo projeto no Supabase</li>
+                  <li>Ir em Settings → API e copiar suas credenciais</li>
+                  <li>Configurar o arquivo .env com suas credenciais reais</li>
+                  <li>Reiniciar o servidor de desenvolvimento</li>
+                </ol>
+                <p className="text-red-700 font-bold mt-4 text-center">
+                  ⚠️ Sem isso, NENHUM DADO será salvo no banco!
+                </p>
+                {connectionDetails?.tables && (
+                  <div className="mt-6 p-4 bg-white/50 rounded-xl">
+                    <h4 className="font-bold text-red-800 mb-2">Status das Tabelas:</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      {Object.entries(connectionDetails.tables).map(([table, status]) => (
+                        <div key={table} className="flex justify-between">
+                          <span className="text-red-700">{table}:</span>
+                          <span className={status.includes('✅') ? 'text-green-600' : 'text-red-600'}>
+                            {status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {connectionStatus === 'checking' && (
+            <div className="mb-12 p-8 bg-gradient-to-r from-blue-100 to-indigo-200 border-2 border-blue-300 rounded-3xl shadow-2xl">
+              <div className="flex items-center justify-center gap-4">
+                <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center animate-pulse">
+                  <Zap className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-blue-800">🔍 Verificando Conexão</h3>
+                  <p className="text-blue-700 font-bold">Testando conexão com o banco de dados...</p>
+                </div>
+              </div>
+            </div>
+          )}
 
-  const value: AppContextType = {
-    state,
-    dispatch,
-    isSupabaseConfigured,
-    loadAllData,
-    createEmployee,
-    updateEmployee,
-    deleteEmployee,
-    createSale,
-    updateSale,
-    deleteSale,
-    createDebt,
-    updateDebt,
-    deleteDebt,
-    createCheck,
-    updateCheck,
-    deleteCheck,
-    createBoleto,
-    updateBoleto,
-    deleteBoleto,
-    createPixFee,
-    updatePixFee,
-    deletePixFee,
-    initializeCashBalance,
-    updateCashBalance,
-    createCashTransaction
-  };
+          <div className="inline-flex items-center justify-center mb-12 relative">
+            <div className="w-48 h-48 bg-gradient-to-br from-green-600 to-emerald-700 rounded-full flex items-center justify-center shadow-2xl revgold-hover-lift revgold-animate-floating relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full"></div>
+              <div className="w-32 h-32 flex items-center justify-center relative z-10">
+                <img 
+                  src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
+                  alt="RevGold Logo" 
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    console.warn('Logo principal não encontrada na tela de seleção, usando fallback');
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent && !parent.querySelector('.logo-fallback-main')) {
+                      const fallback = document.createElement('div');
+                      fallback.className = 'logo-fallback-main w-full h-full bg-white/90 rounded-full flex items-center justify-center text-green-600 font-black text-6xl shadow-inner';
+                      fallback.textContent = 'RG';
+                      parent.appendChild(fallback);
+                    }
+                  }}
+                  onLoad={() => console.log('Logo principal carregada com sucesso')}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <h1 className="text-8xl md:text-9xl font-black text-white mb-8 revgold-animate-slide-up">
+            {getGreeting()}!
+          </h1>
+          
+          <p className="text-3xl text-green-200 font-bold revgold-animate-slide-up revgold-stagger-2 mb-6">
+            Bem-vindo ao Sistema RevGold
+          </p>
+          
+          <p className="text-xl text-emerald-200 font-medium revgold-animate-slide-up revgold-stagger-3 mb-12">
+            Sistema Profissional de Gestão Empresarial
+          </p>
+          
+          <div className="flex items-center justify-center space-x-6 revgold-animate-scale-in revgold-stagger-4">
+            <div className="w-40 h-1 bg-gradient-to-r from-transparent to-green-400 rounded-full"></div>
+            <div className="w-6 h-6 bg-green-400 rounded-full shadow-lg revgold-animate-pulse-glow"></div>
+            <div className="w-40 h-1 bg-gradient-to-l from-transparent to-green-400 rounded-full"></div>
+          </div>
+        </div>
 
-  return (
-    <AppContext.Provider value={value}>
-      {children}
-    </AppContext.Provider>
+        {/* User Cards */}
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto mb-20 ${isConnecting ? 'pointer-events-none opacity-50' : ''}`}>
+          {USERS.map((user, index) => (
+            <div
+              key={user.id}
+              onClick={() => handleUserSelect(user)}
+              className={`group cursor-pointer revgold-animate-scale-in revgold-stagger-${index + 1} revgold-hover-glow ${isConnecting ? 'cursor-not-allowed' : ''}`}
+            >
+              <div className="relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-xl border border-green-300/30 p-10 transition-all duration-500 hover:bg-white/20 hover:border-green-400/60 hover:shadow-2xl hover:scale-105">
+                {/* Card Background Gradient */}
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                
+                {/* Loading Overlay */}
+                {isConnecting && (
+                  <div className="absolute inset-0 bg-white/20 backdrop-blur-sm flex items-center justify-center z-10">
+                    <div className="w-8 h-8 border-4 border-green-400 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between relative z-10">
+                  <div className="flex items-center space-x-8">
+                    <div className="relative">
+                      <div className="w-24 h-24 bg-gradient-to-br from-green-600 to-emerald-700 rounded-3xl flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-500 group-hover:scale-110 revgold-animate-floating">
+                        {user.avatar === 'svg' ? (
+                          <div className="w-16 h-16">
+                            <UserAvatar />
+                          </div>
+                        ) : (
+                          <span className="text-4xl filter drop-shadow-lg">{user.avatar}</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex-1">
+                      <h3 className="text-3xl font-black text-white group-hover:text-green-200 transition-colors duration-300 mb-2">
+                        {user.name}
+                      </h3>
+                      {isConnecting && (
+                        <p className="text-green-300 text-sm font-bold animate-pulse">
+                          Conectando...
+                        </p>
+                      )}
+                      <div className="flex items-center mt-4 space-x-2">
+                        <Building2 className="w-4 h-4 text-green-400" />
+                        <span className="text-sm text-green-400 font-bold uppercase tracking-wide">Sistema RevGold</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-4">
+                    <div className="w-4 h-4 bg-green-400 rounded-full revgold-animate-pulse-glow shadow-lg"></div>
+                    <div className={`w-20 h-20 bg-gradient-to-br from-green-600 to-emerald-700 rounded-3xl flex items-center justify-center shadow-xl group-hover:shadow-2xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 ${isConnecting ? 'animate-spin' : ''}`}>
+                      {isConnecting ? (
+                        <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <ChevronRight className="w-10 h-10 text-white group-hover:translate-x-2 transition-transform duration-300" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="text-center revgold-animate-slide-up revgold-stagger-6">
+          <div className="inline-block">
+            <div className="bg-white/10 backdrop-blur-xl border border-green-300/30 rounded-3xl p-10 max-w-2xl mx-auto shadow-2xl">
+              <div className="flex items-center justify-center space-x-8 mb-8">
+                <div className="w-20 h-20 bg-gradient-to-br from-green-600 to-emerald-700 rounded-3xl flex items-center justify-center shadow-xl revgold-animate-floating">
+                  {connectionStatus === 'connected' ? (
+                    <Zap className="w-10 h-10 text-white" />
+                  ) : (
+                    <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">!</span>
+                    </div>
+                  )}
+                </div>
+                <div className="text-left">
+                  <p className="text-3xl font-black text-white mb-3">
+                    Sistema RevGold
+                  </p>
+                  <p className="text-base text-green-200 font-bold uppercase tracking-wider">
+                    {connectionStatus === 'connected' ? 'Gestão Empresarial Profissional' : 'Configure o Supabase'}
+                  </p>
+                </div>
+              </div>
+              
+              <p className="text-lg text-slate-300 italic mb-8 font-medium">
+                "Colorindo seu ambiente e levando vida para os seus dias"
+              </p>
+              
+              <div className="flex items-center justify-center space-x-4">
+                <div className={`w-4 h-4 rounded-full shadow-lg ${
+                  connectionStatus === 'connected' ? 'bg-green-400 revgold-animate-pulse-glow' : 'bg-red-400 animate-pulse'
+                }`}></div>
+                <span className={`text-base font-bold uppercase tracking-wide ${
+                  connectionStatus === 'connected' ? 'text-green-300' : 'text-red-300'
+                }`}>
+                  {connectionStatus === 'connected' ? 'Sistema Online' : connectionStatus === 'checking' ? 'Verificando...' : 'Configuração Necessária'}
+                </span>
+                <Sparkles className="w-5 h-5 text-green-400 revgold-animate-floating" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
-}
-
-export function useApp() {
-  const context = useContext(AppContext);
-  if (context === undefined) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
-  return context;
 }

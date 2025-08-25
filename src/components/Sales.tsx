@@ -44,7 +44,7 @@ export function Sales() {
 
   if (state.isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-96 relative z-10">
+      <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
           <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
             <DollarSign className="w-8 h-8 text-white" />
@@ -56,7 +56,7 @@ export function Sales() {
   }
 
   return (
-    <div className="space-y-8 relative z-10">
+    <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
           <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 shadow-xl floating-animation">
@@ -78,7 +78,7 @@ export function Sales() {
 
       {/* Error Display */}
       {state.error && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 relative z-10">
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
           <div className="flex items-center gap-4">
             <AlertCircle className="w-8 h-8 text-red-600" />
             <div>
@@ -90,7 +90,7 @@ export function Sales() {
       )}
 
       {/* Sales List */}
-      <div className="card modern-shadow-xl relative z-10">
+      <div className="card modern-shadow-xl">
         {state.sales.length > 0 ? (
           <div className="overflow-x-auto modern-scrollbar">
             <table className="min-w-full">

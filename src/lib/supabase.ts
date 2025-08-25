@@ -37,7 +37,8 @@ export function isSupabaseConfigured(): boolean {
     key && 
     url !== 'https://your-project-id.supabase.co' && 
     key !== 'your-anon-key-here' &&
-    (url.includes('supabase.co') || url.includes('localhost'))
+    url.length > 10 && 
+    key.length > 10
   );
   
   console.log('🔍 Verificação do Supabase:', {

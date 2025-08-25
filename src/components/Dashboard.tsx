@@ -19,11 +19,11 @@ export default function Dashboard() {
 
   // Forçar recarregamento se não há dados e não está carregando
   React.useEffect(() => {
-    if (!state.isLoading && checkSupabase() && state.sales.length === 0) {
+    if (!state.isLoading && checkSupabase()) {
       console.log('🔄 Dashboard detectou falta de dados, recarregando...');
       loadAllData();
     }
-  }, [state.isLoading, checkSupabase, loadAllData]);
+  }, [checkSupabase, loadAllData]);
   // Calcular métricas principais
   const metrics = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];

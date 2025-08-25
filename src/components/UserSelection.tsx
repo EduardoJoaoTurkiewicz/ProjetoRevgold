@@ -151,20 +151,13 @@ export function UserSelection() {
         
         console.log('✅ Usuário definido no contexto com sucesso');
         
-        // Mostrar aviso sobre Supabase apenas se não estiver configurado
-        if (!isSupabaseConfigured()) {
-          setTimeout(() => {
-            console.log('⚠️ Sistema funcionando em modo local - dados não serão persistidos');
-          }, 500);
-        }
-        
       } catch (error) {
         console.error('❌ Erro ao definir usuário:', error);
         alert('Erro ao acessar o sistema. Tente recarregar a página.');
       } finally {
         setIsConnecting(false);
       }
-    }, 800);
+    }, 300);
   };
 
   return (
