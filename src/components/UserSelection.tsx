@@ -129,33 +129,40 @@ export function UserSelection() {
 
   const handleUserSelect = (user: typeof USERS[0]) => {
     console.log('🎯 handleUserSelect chamado para:', user.name);
+    
+    // Verificar se o Supabase está configurado antes de prosseguir
+    if (!isSupabaseConfigured()) {
+      alert('⚠️ Sistema não configurado!\n\nPara usar o sistema, você precisa:\n1. Configurar o arquivo .env com suas credenciais do Supabase\n2. Reiniciar o servidor\n\nSem isso, nenhum dado será salvo!');
+      return;
+    }
+    
     setIsConnecting(true);
     
-    try {
-      console.log('📤 Despachando ação SET_USER...');
-      const userData = { 
-        id: user.id, 
-        username: user.name, 
-        role: 'user' as const
-      };
-      
-      console.log('👤 Dados do usuário a serem definidos:', userData);
-      
-      dispatch({ 
-        type: 'SET_USER', 
-        payload: userData
-      });
-      
-      console.log('✅ Usuário definido no contexto com sucesso');
-      
-      // Não precisamos do setTimeout, o estado será atualizado automaticamente
-      setIsConnecting(false);
-      
-    } catch (error) {
-      console.error('❌ Erro ao definir usuário:', error);
-      alert('Erro ao acessar o sistema. Tente recarregar a página.');
-      setIsConnecting(false);
-    }
+    setTimeout(() => {
+      try {
+        console.log('📤 Despachando ação SET_USER...');
+        const userData = { 
+          id: user.id, 
+          username: user.name, 
+          role: 'user' as const
+        };
+        
+        console.log('👤 Dados do usuário a serem definidos:', userData);
+        
+        dispatch({ 
+          type: 'SET_USER', 
+          payload: userData
+        });
+        
+        console.log('✅ Usuário definido no contexto com sucesso');
+        
+      } catch (error) {
+        console.error('❌ Erro ao definir usuário:', error);
+        alert('Erro ao acessar o sistema. Tente recarregar a página.');
+      } finally {
+        setIsConnecting(false);
+      }
+    }, 500);
   };
 
   return (
@@ -288,16 +295,23 @@ export function UserSelection() {
         </div>
 
         {/* User Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto mb-20">
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto mb-20 ${isConnecting ? 'pointer-events-none opacity-50' : ''}`}>
           {USERS.map((user, index) => (
             <div
               key={user.id}
               onClick={() => handleUserSelect(user)}
-              className={`group cursor-pointer revgold-animate-scale-in revgold-stagger-${index + 1} revgold-hover-glow`}
+              className={`group cursor-pointer revgold-animate-scale-in revgold-stagger-${index + 1} revgold-hover-glow ${isConnecting ? 'cursor-not-allowed' : ''}`}
             >
               <div className="relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-xl border border-green-300/30 p-10 transition-all duration-500 hover:bg-white/20 hover:border-green-400/60 hover:shadow-2xl hover:scale-105">
                 {/* Card Background Gradient */}
                 <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                
+                {/* Loading Overlay */}
+                {isConnecting && (
+                  <div className="absolute inset-0 bg-white/20 backdrop-blur-sm flex items-center justify-center z-10">
+                    <div className="w-8 h-8 border-4 border-green-400 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
                 
                 <div className="flex items-center justify-between relative z-10">
                   <div className="flex items-center space-x-8">
@@ -317,6 +331,11 @@ export function UserSelection() {
                       <h3 className="text-3xl font-black text-white group-hover:text-green-200 transition-colors duration-300 mb-2">
                         {user.name}
                       </h3>
+                      {isConnecting && (
+                        <p className="text-green-300 text-sm font-bold animate-pulse">
+                          Conectando...
+                        </p>
+                      )}
                       <div className="flex items-center mt-4 space-x-2">
                         <Building2 className="w-4 h-4 text-green-400" />
                         <span className="text-sm text-green-400 font-bold uppercase tracking-wide">Sistema RevGold</span>
@@ -326,8 +345,12 @@ export function UserSelection() {
                   
                   <div className="flex items-center space-x-4">
                     <div className="w-4 h-4 bg-green-400 rounded-full revgold-animate-pulse-glow shadow-lg"></div>
-                    <div className="w-20 h-20 bg-gradient-to-br from-green-600 to-emerald-700 rounded-3xl flex items-center justify-center shadow-xl group-hover:shadow-2xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500">
-                      <ChevronRight className="w-10 h-10 text-white group-hover:translate-x-2 transition-transform duration-300" />
+                    <div className={`w-20 h-20 bg-gradient-to-br from-green-600 to-emerald-700 rounded-3xl flex items-center justify-center shadow-xl group-hover:shadow-2xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 ${isConnecting ? 'animate-spin' : ''}`}>
+                      {isConnecting ? (
+                        <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <ChevronRight className="w-10 h-10 text-white group-hover:translate-x-2 transition-transform duration-300" />
+                      )}
                     </div>
                   </div>
                 </div>

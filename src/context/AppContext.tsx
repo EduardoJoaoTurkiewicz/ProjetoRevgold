@@ -273,7 +273,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Load all data
   const loadAllData = async () => {
+    console.log('🔄 loadAllData chamado');
+    
     if (!isSupabaseConfigured()) {
+      console.log('❌ Supabase não configurado');
       dispatch({ type: 'SET_ERROR', payload: 'Supabase não está configurado. Configure o arquivo .env com suas credenciais.' });
       return;
     }
@@ -317,61 +320,86 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (employeesResult.status === 'fulfilled' && !employeesResult.value.error) {
         dispatch({ type: 'SET_EMPLOYEES', payload: employeesResult.value.data || [] });
         console.log('✅ Funcionários carregados:', employeesResult.value.data?.length || 0);
+      } else {
+        console.log('⚠️ Erro ao carregar funcionários:', employeesResult.status === 'fulfilled' ? employeesResult.value.error : employeesResult.reason);
       }
 
       if (salesResult.status === 'fulfilled' && !salesResult.value.error) {
         dispatch({ type: 'SET_SALES', payload: salesResult.value.data || [] });
         console.log('✅ Vendas carregadas:', salesResult.value.data?.length || 0);
+      } else {
+        console.log('⚠️ Erro ao carregar vendas:', salesResult.status === 'fulfilled' ? salesResult.value.error : salesResult.reason);
       }
 
       if (debtsResult.status === 'fulfilled' && !debtsResult.value.error) {
         dispatch({ type: 'SET_DEBTS', payload: debtsResult.value.data || [] });
         console.log('✅ Dívidas carregadas:', debtsResult.value.data?.length || 0);
+      } else {
+        console.log('⚠️ Erro ao carregar dívidas:', debtsResult.status === 'fulfilled' ? debtsResult.value.error : debtsResult.reason);
       }
 
       if (checksResult.status === 'fulfilled' && !checksResult.value.error) {
         dispatch({ type: 'SET_CHECKS', payload: checksResult.value.data || [] });
         console.log('✅ Cheques carregados:', checksResult.value.data?.length || 0);
+      } else {
+        console.log('⚠️ Erro ao carregar cheques:', checksResult.status === 'fulfilled' ? checksResult.value.error : checksResult.reason);
       }
 
       if (boletosResult.status === 'fulfilled' && !boletosResult.value.error) {
         dispatch({ type: 'SET_BOLETOS', payload: boletosResult.value.data || [] });
         console.log('✅ Boletos carregados:', boletosResult.value.data?.length || 0);
+      } else {
+        console.log('⚠️ Erro ao carregar boletos:', boletosResult.status === 'fulfilled' ? boletosResult.value.error : boletosResult.reason);
       }
 
       if (employeePaymentsResult.status === 'fulfilled' && !employeePaymentsResult.value.error) {
         dispatch({ type: 'SET_EMPLOYEE_PAYMENTS', payload: employeePaymentsResult.value.data || [] });
         console.log('✅ Pagamentos carregados:', employeePaymentsResult.value.data?.length || 0);
+      } else {
+        console.log('⚠️ Erro ao carregar pagamentos:', employeePaymentsResult.status === 'fulfilled' ? employeePaymentsResult.value.error : employeePaymentsResult.reason);
       }
 
       if (employeeAdvancesResult.status === 'fulfilled' && !employeeAdvancesResult.value.error) {
         dispatch({ type: 'SET_EMPLOYEE_ADVANCES', payload: employeeAdvancesResult.value.data || [] });
         console.log('✅ Adiantamentos carregados:', employeeAdvancesResult.value.data?.length || 0);
+      } else {
+        console.log('⚠️ Erro ao carregar adiantamentos:', employeeAdvancesResult.status === 'fulfilled' ? employeeAdvancesResult.value.error : employeeAdvancesResult.reason);
       }
 
       if (employeeOvertimesResult.status === 'fulfilled' && !employeeOvertimesResult.value.error) {
         dispatch({ type: 'SET_EMPLOYEE_OVERTIMES', payload: employeeOvertimesResult.value.data || [] });
         console.log('✅ Horas extras carregadas:', employeeOvertimesResult.value.data?.length || 0);
+      } else {
+        console.log('⚠️ Erro ao carregar horas extras:', employeeOvertimesResult.status === 'fulfilled' ? employeeOvertimesResult.value.error : employeeOvertimesResult.reason);
       }
 
       if (employeeCommissionsResult.status === 'fulfilled' && !employeeCommissionsResult.value.error) {
         dispatch({ type: 'SET_EMPLOYEE_COMMISSIONS', payload: employeeCommissionsResult.value.data || [] });
         console.log('✅ Comissões carregadas:', employeeCommissionsResult.value.data?.length || 0);
+      } else {
+        console.log('⚠️ Erro ao carregar comissões:', employeeCommissionsResult.status === 'fulfilled' ? employeeCommissionsResult.value.error : employeeCommissionsResult.reason);
       }
 
-      if (cashBalanceResult.status === 'fulfilled' && !cashBalanceResult.value.error) {
+      if (cashBalanceResult.status === 'fulfilled' && cashBalanceResult.value.data && !cashBalanceResult.value.error) {
         dispatch({ type: 'SET_CASH_BALANCE', payload: cashBalanceResult.value.data });
         console.log('✅ Saldo do caixa carregado:', cashBalanceResult.value.data?.current_balance || 0);
+      } else {
+        console.log('⚠️ Nenhum saldo de caixa encontrado ou erro:', cashBalanceResult.status === 'fulfilled' ? cashBalanceResult.value.error : cashBalanceResult.reason);
+        dispatch({ type: 'SET_CASH_BALANCE', payload: null });
       }
 
       if (cashTransactionsResult.status === 'fulfilled' && !cashTransactionsResult.value.error) {
         dispatch({ type: 'SET_CASH_TRANSACTIONS', payload: cashTransactionsResult.value.data || [] });
         console.log('✅ Transações do caixa carregadas:', cashTransactionsResult.value.data?.length || 0);
+      } else {
+        console.log('⚠️ Erro ao carregar transações do caixa:', cashTransactionsResult.status === 'fulfilled' ? cashTransactionsResult.value.error : cashTransactionsResult.reason);
       }
 
       if (pixFeesResult.status === 'fulfilled' && !pixFeesResult.value.error) {
         dispatch({ type: 'SET_PIX_FEES', payload: pixFeesResult.value.data || [] });
         console.log('✅ Tarifas PIX carregadas:', pixFeesResult.value.data?.length || 0);
+      } else {
+        console.log('⚠️ Erro ao carregar tarifas PIX:', pixFeesResult.status === 'fulfilled' ? pixFeesResult.value.error : pixFeesResult.reason);
       }
 
       console.log('✅ Todos os dados carregados com sucesso!');
@@ -747,8 +775,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Load data when user is set
   useEffect(() => {
-    if (state.currentUser) {
+    if (state.currentUser && isSupabaseConfigured()) {
+      console.log('🔄 Usuário definido, carregando dados...', state.currentUser);
       loadAllData();
+    } else if (state.currentUser && !isSupabaseConfigured()) {
+      console.log('⚠️ Usuário definido mas Supabase não configurado');
+      dispatch({ type: 'SET_ERROR', payload: 'Supabase não está configurado. Configure o arquivo .env com suas credenciais.' });
     }
   }, [state.currentUser]);
 

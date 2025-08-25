@@ -4,12 +4,18 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 // Only create client if environment variables are properly configured
-export const supabase = supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co', 
+  supabaseAnonKey || 'placeholder-key'
+);
 
 // Test connection function
 export async function testSupabaseConnection() {
+  if (!isSupabaseConfigured()) {
+    console.log('❌ Supabase não configurado');
+    return false;
+  }
+  
   try {
     const { data, error } = await supabase.from('employees').select('count').single();
     if (error) throw error;
