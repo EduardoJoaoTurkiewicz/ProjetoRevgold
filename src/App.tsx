@@ -19,14 +19,17 @@ function AppContent() {
   const { currentUser } = useApp();
   const [currentPage, setCurrentPage] = useState('dashboard');
   
-  console.log('🔍 Estado do usuário atual:', currentUser);
+  console.log('🔍 AppContent - Estado do usuário atual:', currentUser);
+  console.log('🔍 AppContent - Tipo do currentUser:', typeof currentUser);
+  console.log('🔍 AppContent - currentUser é null?', currentUser === null);
+  console.log('🔍 AppContent - currentUser é undefined?', currentUser === undefined);
 
   if (!currentUser) {
-    console.log('👤 Nenhum usuário selecionado, mostrando tela de seleção');
+    console.log('👤 AppContent - Nenhum usuário selecionado, mostrando tela de seleção');
     return <UserSelection />;
   }
   
-  console.log('✅ Usuário logado:', currentUser.username, 'Página atual:', currentPage);
+  console.log('✅ AppContent - Usuário logado:', currentUser.username, 'Página atual:', currentPage);
 
   const renderPage = () => {
     switch (currentPage) {

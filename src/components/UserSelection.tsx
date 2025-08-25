@@ -87,6 +87,7 @@ export function UserSelection() {
   const [connectionStatus, setConnectionStatus] = React.useState<'checking' | 'connected' | 'error'>('checking');
   const [connectionDetails, setConnectionDetails] = React.useState<any>(null);
   const [isConnecting, setIsConnecting] = React.useState(false);
+  const [isConnecting, setIsConnecting] = React.useState(false);
 
   // Test connection on component mount
   React.useEffect(() => {
@@ -131,26 +132,33 @@ export function UserSelection() {
     console.log('🎯 handleUserSelect chamado para:', user.name);
     setIsConnecting(true);
     
-    if (connectionStatus === 'error') {
-      console.warn('⚠️ Conexão com problemas, mas permitindo acesso ao sistema');
-    }
-    
     try {
       console.log('📤 Despachando ação SET_USER...');
+      const userData = { 
+        id: user.id, 
+        username: user.name, 
+        role: 'user' as const
+      };
+      
+      console.log('👤 Dados do usuário a serem definidos:', userData);
+      
       dispatch({ 
         type: 'SET_USER', 
-        payload: { 
-          id: user.id, 
-          username: user.name, 
-          role: 'user'
-        } 
+        payload: userData
       });
+      
       console.log('✅ Usuário definido no contexto com sucesso');
+      
+      // Aguardar um pouco para garantir que o estado foi atualizado
+      setTimeout(() => {
+        console.log('🔄 Verificando se usuário foi definido...');
+        setIsConnecting(false);
+      }, 100);
+      
     } catch (error) {
       console.error('❌ Erro ao definir usuário:', error);
       alert('Erro ao acessar o sistema. Tente recarregar a página.');
-    } finally {
-      setTimeout(() => setIsConnecting(false), 500);
+      setIsConnecting(false);
     }
   };
 
