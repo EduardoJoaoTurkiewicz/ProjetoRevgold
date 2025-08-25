@@ -60,10 +60,10 @@ import { Employees } from './components/Employees';
 import { useApp } from './context/AppContext';
 
 function AppContent() {
-  const { state } = useApp();
+  const { currentUser } = useApp();
   const [currentPage, setCurrentPage] = useState('dashboard');
 
-  if (!state.currentUser) {
+  if (!currentUser) {
     return <UserSelection />;
   }
 
