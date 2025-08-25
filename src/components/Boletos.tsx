@@ -16,6 +16,20 @@ export function Boletos() {
   const dueToday = state.boletos.filter(boleto => boleto.dueDate === today);
   const overdue = state.boletos.filter(boleto => boleto.dueDate < today && boleto.status === 'pendente');
   const overdueManaged = state.boletos.filter(boleto => boleto.dueDate < today && boleto.overdueAction);
+  
+  // Novos cálculos para widgets
+  const notDueYet = state.boletos.filter(boleto => boleto.dueDate > today && boleto.status === 'pendente');
+  const totalNotDueYet = notDueYet.reduce((sum, boleto) => sum + boleto.value, 0);
+  
+  // Boletos que a empresa tem para pagar (simulando - você pode ajustar conforme sua lógica de negócio)
+  const companyPayableBoletos = state.debts.filter(debt => 
+    debt.paymentMethods.some(method => method.type === 'boleto') && !debt.isPaid
+  );
+  const totalCompanyPayableBoletos = companyPayableBoletos.reduce((sum, debt) => {
+    return sum + debt.paymentMethods
+      .filter(method => method.type === 'boleto')
+      .reduce((methodSum, method) => methodSum + method.amount, 0);
+  }, 0);
 
   const handleAddBoleto = (boleto: Omit<Boleto, 'id' | 'createdAt'>) => {
     createBoleto(boleto).then(() => {
@@ -208,8 +222,39 @@ export function Boletos() {
       )}
 
       {/* Summary Cards */}
-      {(dueToday.length > 0 || overdue.length > 0 || overdueManaged.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Boletos não vencidos */}
+        <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-green-600 modern-shadow-lg">
+              <FileText className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-green-900 text-lg">Não Vencidos</h3>
+              <p className="text-green-700 font-medium">{notDueYet.length} boleto(s)</p>
+              <p className="text-sm text-green-600 font-semibold">
+                Total: R$ {totalNotDueYet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Boletos para pagar */}
+        <div className="card bg-gradient-to-br from-orange-50 to-red-50 border-orange-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-orange-600 modern-shadow-lg">
+              <CreditCard className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-orange-900 text-lg">Para Pagar</h3>
+              <p className="text-orange-700 font-medium">{companyPayableBoletos.length} dívida(s)</p>
+              <p className="text-sm text-orange-600 font-semibold">
+                Total: R$ {totalCompanyPayableBoletos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        </div>
+
           {dueToday.length > 0 && (
             <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
               <div className="flex items-center gap-4">
@@ -260,8 +305,7 @@ export function Boletos() {
               </div>
             </div>
           )}
-        </div>
-      )}
+      </div>
 
       {/* Boletos List */}
       <div className="card modern-shadow-xl">
@@ -423,6 +467,84 @@ export function Boletos() {
           </div>
         )}
       </div>
+
+      {/* Boletos que a empresa tem para pagar */}
+      {companyPayableBoletos.length > 0 && (
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-orange-600">
+              <CreditCard className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-orange-900">Boletos para Pagar</h3>
+            <span className="text-orange-600 font-semibold">
+              Total: R$ {totalCompanyPayableBoletos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+          
+          <div className="space-y-4">
+            {companyPayableBoletos.map(debt => (
+              <div key={debt.id} className="p-6 bg-orange-50 rounded-xl border border-orange-200">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h4 className="font-bold text-orange-900 text-lg">{debt.company}</h4>
+                    <p className="text-orange-700">{debt.description}</p>
+                    <p className="text-sm text-orange-600">
+                      Data: {new Date(debt.date).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-black text-orange-600">
+                      R$ {debt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <button
+                      onClick={() => {
+                        if (window.confirm('Marcar esta dívida como paga?')) {
+                          const updatedDebt = { ...debt, isPaid: true, paidAmount: debt.totalValue, pendingAmount: 0 };
+                          updateDebt(updatedDebt).then(() => {
+                            // Criar transação de caixa para reduzir o saldo
+                            state.createCashTransaction({
+                              date: new Date().toISOString().split('T')[0],
+                              type: 'saida',
+                              amount: debt.totalValue,
+                              description: `Pagamento de boleto - ${debt.company}`,
+                              category: 'divida',
+                              relatedId: debt.id,
+                              paymentMethod: 'boleto'
+                            }).catch(error => {
+                              console.error('Erro ao criar transação de caixa:', error);
+                            });
+                          }).catch(error => {
+                            alert('Erro ao marcar como pago: ' + error.message);
+                          });
+                        }
+                      }}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-bold"
+                    >
+                      Marcar como Pago
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p><strong>Valor Total:</strong> R$ {debt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    <p><strong>Valor Pago:</strong> R$ {debt.paidAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    <p><strong>Valor Pendente:</strong> R$ {debt.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                  <div>
+                    <p><strong>Métodos de Pagamento:</strong></p>
+                    {debt.paymentMethods.map((method, index) => (
+                      <p key={index} className="text-orange-600 font-medium">
+                        • {method.type.replace('_', ' ')}: R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Boleto Form Modal */}
       {(isFormOpen || editingBoleto) && (

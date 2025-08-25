@@ -67,6 +67,24 @@ export default function Dashboard() {
       });
     });
     
+    // Adicionar cheques próprios pagos hoje
+    state.checks.forEach(check => {
+      if (check.isOwnCheck && check.dueDate === today && check.status === 'compensado') {
+        totalPaidToday += check.value;
+      }
+    });
+    
+    // Adicionar boletos da empresa pagos hoje
+    state.debts.forEach(debt => {
+      if (debt.date === today && debt.isPaid) {
+        debt.paymentMethods.forEach(method => {
+          if (method.type === 'boleto') {
+            totalPaidToday += method.amount;
+          }
+        });
+      }
+    });
+    
     // Vendas totais e recebimentos totais
     const totalSales = state.sales.reduce((sum, sale) => sum + sale.totalValue, 0);
     let totalReceived = state.sales.reduce((sum, sale) => sum + sale.receivedAmount, 0);
@@ -146,6 +164,22 @@ export default function Dashboard() {
     // Lucro líquido do mês
     const monthlyNetProfit = monthlyReceived - monthlyPaidDebts;
     const monthlyProfitMargin = monthlyReceived > 0 ? (monthlyNetProfit / monthlyReceived) * 100 : 0;
+    
+    // Dívidas para pagar no mês atual
+    const monthlyPayableDebts = state.debts.filter(debt => {
+      const debtDate = new Date(debt.date);
+      return debtDate.getMonth() === thisMonth && 
+             debtDate.getFullYear() === thisYear && 
+             !debt.isPaid;
+    });
+    
+    // Vendas para receber no mês atual
+    const monthlyReceivableSales = state.sales.filter(sale => {
+      const saleDate = new Date(sale.date);
+      return saleDate.getMonth() === thisMonth && 
+             saleDate.getFullYear() === thisYear && 
+             sale.pendingAmount > 0;
+    });
 
     return {
       totalSalesToday,
@@ -178,7 +212,10 @@ export default function Dashboard() {
       monthlyCommissions: monthlyCommissions.length,
       cashBalance,
       netProfit: monthlyNetProfit,
-      profitMargin: monthlyProfitMargin
+      profitMargin: monthlyProfitMargin,
+      monthlyPayableDebts,
+      monthlyReceivableSales,
+      totalPaidToday
     };
   }, [state]);
 
@@ -300,7 +337,7 @@ export default function Dashboard() {
       )}
 
       {/* Métricas Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         {/* Vendas */}
         <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl">
           <div className="flex items-center gap-4">
@@ -308,11 +345,11 @@ export default function Dashboard() {
               <TrendingUp className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-green-900">Total de Vendas</h3>
+              <h3 className="font-bold text-green-900">Vendas Hoje</h3>
               <p className="text-2xl font-black text-green-700">
-                R$ {metrics.totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {metrics.totalSalesToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-sm text-green-600">{state.sales.length} vendas</p>
+              <p className="text-sm text-green-600">{state.sales.filter(s => s.date === today).length} vendas</p>
             </div>
           </div>
         </div>
@@ -324,9 +361,9 @@ export default function Dashboard() {
               <ArrowUpCircle className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-emerald-900">Valor Recebido</h3>
+              <h3 className="font-bold text-emerald-900">Recebido Hoje</h3>
               <p className="text-2xl font-black text-emerald-700">
-                R$ {metrics.totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {metrics.totalReceivedToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
               <p className="text-sm text-emerald-600">Efetivamente recebido</p>
             </div>
@@ -340,11 +377,27 @@ export default function Dashboard() {
               <TrendingDown className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-red-900">Total de Dívidas</h3>
+              <h3 className="font-bold text-red-900">Dívidas Hoje</h3>
               <p className="text-2xl font-black text-red-700">
-                R$ {metrics.totalDebts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {metrics.totalDebtsToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-sm text-red-600">{state.debts.length} dívidas</p>
+              <p className="text-sm text-red-600">{state.debts.filter(d => d.date === today).length} dívidas</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Valor Pago Hoje */}
+        <div className="card bg-gradient-to-br from-orange-50 to-red-50 border-orange-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-orange-600">
+              <ArrowDownCircle className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-orange-900">Pago Hoje</h3>
+              <p className="text-2xl font-black text-orange-700">
+                R$ {metrics.totalPaidToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-orange-600">Efetivamente pago</p>
             </div>
           </div>
         </div>
@@ -509,6 +562,139 @@ export default function Dashboard() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Dívidas para Pagar no Mês */}
+      {metrics.monthlyPayableDebts.length > 0 && (
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-red-600">
+              <CreditCard className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-red-900">Dívidas para Pagar este Mês</h3>
+            <span className="text-red-600 font-semibold">
+              Total: R$ {metrics.monthlyPayableDebts.reduce((sum, debt) => sum + debt.pendingAmount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+          
+          <div className="space-y-4 max-h-96 overflow-y-auto modern-scrollbar">
+            {metrics.monthlyPayableDebts.map(debt => (
+              <div key={debt.id} className="p-6 bg-red-50 rounded-xl border border-red-200">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h4 className="font-bold text-red-900 text-lg">{debt.company}</h4>
+                    <p className="text-red-700">{debt.description}</p>
+                    <p className="text-sm text-red-600">
+                      Data: {new Date(debt.date).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-black text-red-600">
+                      R$ {debt.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-200 text-red-800">
+                      PENDENTE
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p><strong>Valor Total:</strong> R$ {debt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    <p><strong>Valor Pago:</strong> R$ {debt.paidAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    <p><strong>Valor Pendente:</strong> R$ {debt.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                  <div>
+                    <p><strong>Métodos de Pagamento:</strong></p>
+                    {debt.paymentMethods.map((method, index) => (
+                      <p key={index} className="text-red-600 font-medium">
+                        • {method.type.replace('_', ' ')}: R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+                
+                {debt.paymentDescription && (
+                  <div className="mt-4 p-3 bg-white rounded-lg border">
+                    <p className="text-sm text-red-700"><strong>Descrição do Pagamento:</strong> {debt.paymentDescription}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Vendas para Receber no Mês */}
+      {metrics.monthlyReceivableSales.length > 0 && (
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-green-600">
+              <Clock className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-green-900">Vendas para Receber este Mês</h3>
+            <span className="text-green-600 font-semibold">
+              Total: R$ {metrics.monthlyReceivableSales.reduce((sum, sale) => sum + sale.pendingAmount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+          
+          <div className="space-y-4 max-h-96 overflow-y-auto modern-scrollbar">
+            {metrics.monthlyReceivableSales.map(sale => (
+              <div key={sale.id} className="p-6 bg-green-50 rounded-xl border border-green-200">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h4 className="font-bold text-green-900 text-lg">{sale.client}</h4>
+                    <p className="text-green-700">{typeof sale.products === 'string' ? sale.products : 'Produtos vendidos'}</p>
+                    <p className="text-sm text-green-600">
+                      Data: {new Date(sale.date).toLocaleDateString('pt-BR')}
+                    </p>
+                    {sale.deliveryDate && (
+                      <p className="text-sm text-green-600">
+                        Entrega: {new Date(sale.deliveryDate).toLocaleDateString('pt-BR')}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-black text-green-600">
+                      R$ {sale.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      sale.status === 'pago' ? 'bg-green-200 text-green-800' :
+                      sale.status === 'parcial' ? 'bg-yellow-200 text-yellow-800' :
+                      'bg-orange-200 text-orange-800'
+                    }`}>
+                      {sale.status.toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p><strong>Valor Total:</strong> R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    <p><strong>Valor Recebido:</strong> R$ {sale.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    <p><strong>Valor Pendente:</strong> R$ {sale.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                  <div>
+                    <p><strong>Métodos de Pagamento:</strong></p>
+                    {sale.paymentMethods.map((method, index) => (
+                      <p key={index} className="text-green-600 font-medium">
+                        • {method.type.replace('_', ' ')}: R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+                
+                {sale.sellerId && (
+                  <div className="mt-4 p-3 bg-white rounded-lg border">
+                    <p className="text-sm text-green-700">
+                      <strong>Vendedor:</strong> {state.employees.find(e => e.id === sale.sellerId)?.name || 'N/A'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

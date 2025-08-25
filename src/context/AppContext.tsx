@@ -719,9 +719,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (pixFeesResult.error) {
           console.warn('PIX fees table not found, skipping:', pixFeesResult.error.message);
         } else {
-          pixFees = pixFeesResult.data.map(pixFee => ({
+          createCashTransaction({
             id: pixFee.id,
-            date: pixFee.date,
+          createCashTransaction({
             amount: parseFloat(pixFee.amount),
             description: pixFee.description,
             bank: pixFee.bank,

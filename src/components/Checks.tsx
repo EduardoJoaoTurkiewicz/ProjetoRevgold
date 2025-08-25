@@ -16,6 +16,17 @@ export function Checks() {
   const today = new Date().toISOString().split('T')[0];
   const dueToday = state.checks.filter(check => check.dueDate === today);
   const overdue = state.checks.filter(check => check.dueDate < today && check.status === 'pendente');
+  
+  // Novos cálculos para widgets
+  const notDueYet = state.checks.filter(check => check.dueDate > today && check.status === 'pendente');
+  const totalNotDueYet = notDueYet.reduce((sum, check) => sum + check.value, 0);
+  const totalOverdue = overdue.reduce((sum, check) => sum + check.value, 0);
+  
+  // Cheques próprios que a empresa tem para pagar
+  const companyPayableChecks = state.checks.filter(check => 
+    check.isOwnCheck && check.status === 'pendente'
+  );
+  const totalCompanyPayableChecks = companyPayableChecks.reduce((sum, check) => sum + check.value, 0);
 
   // Group checks by sales and debts
   const salesWithChecks = state.sales.filter(sale => 
@@ -135,8 +146,55 @@ export function Checks() {
       </div>
 
       {/* Summary Cards */}
-      {(dueToday.length > 0 || overdue.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Cheques não vencidos */}
+        <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-green-600 modern-shadow-lg">
+              <Calendar className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-green-900 text-lg">Não Vencidos</h3>
+              <p className="text-green-700 font-medium">{notDueYet.length} cheque(s)</p>
+              <p className="text-sm text-green-600 font-semibold">
+                Total: R$ {totalNotDueYet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Cheques vencidos */}
+        <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-red-600 modern-shadow-lg">
+              <AlertTriangle className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-red-900 text-lg">Vencidos</h3>
+              <p className="text-red-700 font-medium">{overdue.length} cheque(s)</p>
+              <p className="text-sm text-red-600 font-semibold">
+                Total: R$ {totalOverdue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Cheques para pagar */}
+        <div className="card bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-orange-600 modern-shadow-lg">
+              <CreditCard className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-orange-900 text-lg">Para Pagar</h3>
+              <p className="text-orange-700 font-medium">{companyPayableChecks.length} cheque(s)</p>
+              <p className="text-sm text-orange-600 font-semibold">
+                Total: R$ {totalCompanyPayableChecks.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        </div>
+
           {dueToday.length > 0 && (
             <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
               <div className="flex items-center gap-4">
@@ -153,25 +211,7 @@ export function Checks() {
               </div>
             </div>
           )}
-
-          {overdue.length > 0 && (
-            <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 modern-shadow-xl">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-red-600 modern-shadow-lg">
-                  <Calendar className="w-8 h-8 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-red-900 text-lg">Cheques Vencidos</h3>
-                  <p className="text-red-700 font-medium">{overdue.length} cheque(s)</p>
-                  <p className="text-sm text-red-600 font-semibold">
-                    Total: R$ {overdue.reduce((sum, check) => sum + check.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      </div>
 
       {/* Sales with Checks */}
       <div className="card modern-shadow-xl">
@@ -423,6 +463,91 @@ export function Checks() {
                     </div>
                   </div>
                 )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Cheques próprios que a empresa tem para pagar */}
+      {companyPayableChecks.length > 0 && (
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-orange-600">
+              <CreditCard className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-orange-900">Cheques Próprios para Pagar</h3>
+            <span className="text-orange-600 font-semibold">
+              Total: R$ {totalCompanyPayableChecks.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+          
+          <div className="space-y-4">
+            {companyPayableChecks.map(check => (
+              <div key={check.id} className="p-6 bg-orange-50 rounded-xl border border-orange-200">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h4 className="font-bold text-orange-900 text-lg">{check.client}</h4>
+                    <p className="text-orange-700">{check.usedFor || 'Cheque próprio'}</p>
+                    <p className="text-sm text-orange-600">
+                      Vencimento: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
+                    </p>
+                    {check.installmentNumber && check.totalInstallments && (
+                      <p className="text-sm text-orange-600">
+                        Parcela: {check.installmentNumber}/{check.totalInstallments}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-black text-orange-600">
+                      R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                    <button
+                      onClick={() => {
+                        if (window.confirm('Marcar este cheque como pago?')) {
+                          const updatedCheck = { ...check, status: 'compensado' as const };
+                          updateCheck(updatedCheck).then(() => {
+                            // Criar transação de caixa para reduzir o saldo
+                            state.createCashTransaction({
+                              date: new Date().toISOString().split('T')[0],
+                              type: 'saida',
+                              amount: check.value,
+                              description: `Pagamento de cheque próprio - ${check.client}`,
+                              category: 'cheque',
+                              relatedId: check.id,
+                              paymentMethod: 'cheque'
+                            }).catch(error => {
+                              console.error('Erro ao criar transação de caixa:', error);
+                            });
+                          }).catch(error => {
+                            alert('Erro ao marcar como pago: ' + error.message);
+                          });
+                        }
+                      }}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-bold"
+                    >
+                      Marcar como Pago
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p><strong>Status:</strong> {getStatusLabel(check.status)}</p>
+                    <p><strong>Tipo:</strong> Cheque Próprio</p>
+                    {check.observations && (
+                      <p><strong>Observações:</strong> {check.observations}</p>
+                    )}
+                  </div>
+                  <div>
+                    {check.discountDate && (
+                      <p><strong>Data de Desconto:</strong> {new Date(check.discountDate).toLocaleDateString('pt-BR')}</p>
+                    )}
+                    {check.usedInDebt && (
+                      <p><strong>Usado em Dívida:</strong> Sim</p>
+                    )}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
