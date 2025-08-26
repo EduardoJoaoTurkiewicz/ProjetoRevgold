@@ -249,20 +249,8 @@ export async function ensureAuthenticated() {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
-      console.log('🔐 Fazendo login automático...');
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: 'admin@revgold.com',
-        password: 'revgold123'
-      });
-      
-      if (error) {
-        console.warn('⚠️ Login automático falhou (usuário pode não existir):', error.message);
-        // Continue sem autenticação - o sistema ainda pode funcionar com RLS policies
-        return false;
-      }
-      
-      console.log('✅ Login automático realizado');
-      return true;
+      console.log('🔐 Sem sessão ativa - sistema funcionará com RLS policies');
+      return false;
     }
     
     return true;
