@@ -132,86 +132,25 @@ export function UserSelection() {
     
     setIsConnecting(true);
     
-    // Autenticar automaticamente com Supabase se configurado
-    const authenticateAndLogin = async () => {
-      try {
-        if (isSupabaseConfigured()) {
-          console.log('🔐 Fazendo login automático no Supabase...');
-          
-          // Tentar fazer login automático com email/senha padrão
-          try {
-            const { data, error } = await supabase.auth.signInWithPassword({
-              email: 'admin@revgold.com',
-              password: 'revgold123'
-            });
-            
-            if (error && error.message === 'Invalid login credentials') {
-              console.log('🔐 Usuário não existe, tentando criar...');
-              
-              // Tentar criar usuário se não existir
-              const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-                email: 'admin@revgold.com',
-                password: 'revgold123',
-                options: {
-                  emailRedirectTo: undefined // Desabilitar confirmação por email
-                }
-              });
-              
-              if (signUpError) {
-                console.warn('⚠️ Erro ao criar usuário:', signUpError.message);
-                console.log('💡 Sistema funcionará sem autenticação');
-              } else {
-                console.log('✅ Usuário criado com sucesso');
-              }
-            } else if (error) {
-              console.warn('⚠️ Erro de autenticação:', error.message);
-              console.log('💡 Sistema funcionará sem autenticação');
-            } else {
-              console.log('✅ Login realizado com sucesso');
-            }
-          } catch (authError) {
-            // Silently handle authentication errors to avoid console spam
-            console.log('💡 Sistema funcionará sem autenticação');
-          }
-        }
-        
-        console.log('📤 Despachando ação SET_USER...');
-        const userData = { 
-          id: user.id, 
-          username: user.name, 
-          role: 'user' as const
-        };
-        
-        console.log('👤 Dados do usuário a serem definidos:', userData);
-        
-        dispatch({ 
-          type: 'SET_USER', 
-          payload: userData
-        });
-        
-        console.log('✅ Usuário definido no contexto com sucesso');
-        
-      } catch (error) {
-        console.warn('❌ Erro ao definir usuário:', error);
-        console.warn('⚠️ Sistema iniciado com problemas de autenticação. Algumas funcionalidades podem ser limitadas.');
-        
-        // Mesmo com erro de autenticação, definir o usuário para permitir acesso
-        const userData = { 
-          id: user.id, 
-          username: user.name, 
-          role: 'user' as const
-        };
-        dispatch({ 
-          type: 'SET_USER', 
-          payload: userData
-        });
-      } finally {
-        setIsConnecting(false);
-      }
-    };
-    
-    // Executar autenticação
-    authenticateAndLogin();
+    // Definir usuário diretamente sem autenticação complexa
+    setTimeout(() => {
+      console.log('📤 Despachando ação SET_USER...');
+      const userData = { 
+        id: user.id, 
+        username: user.name, 
+        role: 'user' as const
+      };
+      
+      console.log('👤 Dados do usuário a serem definidos:', userData);
+      
+      dispatch({ 
+        type: 'SET_USER', 
+        payload: userData
+      });
+      
+      console.log('✅ Usuário definido no contexto com sucesso');
+      setIsConnecting(false);
+    }, 500); // Pequeno delay para mostrar o loading
   };
 
   return (

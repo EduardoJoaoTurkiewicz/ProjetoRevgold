@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { DollarSign } from 'lucide-react';
 
+import { useAuthInitialization } from './hooks/useAuthInitialization';
 import { AppProvider } from './context/AppContext';
 import { UserSelection } from './components/UserSelection';
 import Layout from './components/Layout';
@@ -19,6 +20,9 @@ import { useApp } from './context/AppContext';
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [isInitializing, setIsInitializing] = useState(true);
+  
+  // Inicializar autenticação automaticamente
+  useAuthInitialization();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50">
@@ -87,7 +91,9 @@ function AppContent({
         </div>
       </div>
     ) : (
-      <UserSelection />
+      <div className="min-h-screen">
+        <UserSelection />
+      </div>
     );
   }
   

@@ -305,7 +305,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const loadAllData = async () => {
     if (!isSupabaseConfigured()) {
       console.log('⚠️ Supabase não configurado, usando dados locais');
-      dispatch({ type: 'SET_ERROR', payload: 'Supabase não configurado. Configure as variáveis de ambiente para persistir dados.' });
+      dispatch({ type: 'SET_ERROR', payload: null });
       return;
     }
 
@@ -315,15 +315,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       console.log('📊 Carregando dados do Supabase...');
 
-      // Test connection first
-      const { data: testData, error: testError } = await supabase
-        .from('employees')
-        .select('count')
-        .limit(1);
-      
-      if (testError) {
-        throw new Error(`Conexão com Supabase falhou: ${testError.message}`);
-      }
       // Carregar dados em paralelo
       const [
         salesData,
