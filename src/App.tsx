@@ -16,10 +16,36 @@ import { Agenda } from './components/Agenda';
 import { Employees } from './components/Employees';
 import { useApp } from './context/AppContext';
 
-function AppContent() {
-  const { currentUser } = useApp();
+function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [isInitializing, setIsInitializing] = useState(true);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50">
+      <AppProvider>
+        <AppContent 
+          currentPage={currentPage} 
+          setCurrentPage={setCurrentPage}
+          isInitializing={isInitializing}
+          setIsInitializing={setIsInitializing}
+        />
+      </AppProvider>
+    </div>
+  );
+}
+
+function AppContent({ 
+  currentPage, 
+  setCurrentPage, 
+  isInitializing, 
+  setIsInitializing 
+}: {
+  currentPage: string;
+  setCurrentPage: (page: string) => void;
+  isInitializing: boolean;
+  setIsInitializing: (initializing: boolean) => void;
+}) {
+  const { currentUser } = useApp();
   
   console.log('🔍 AppContent - Estado do usuário atual:', currentUser);
 
@@ -30,7 +56,7 @@ function AppContent() {
     }, 1000); // Dar tempo para o sistema carregar
     
     return () => clearTimeout(timer);
-  }, []);
+  }, [setIsInitializing]);
 
   // Verificar se o usuário está definido corretamente
   if (!currentUser || isInitializing) {
@@ -95,16 +121,6 @@ function AppContent() {
       <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
         {renderPage()}
       </Layout>
-    </div>
-  );
-}
-
-function App() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50">
-      <AppProvider>
-        <AppContent />
-      </AppProvider>
     </div>
   );
 }
