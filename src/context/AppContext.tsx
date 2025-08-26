@@ -556,6 +556,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         updatedAt: new Date().toISOString()
       };
       setSales(prev => [...prev, newSale]);
+      
+      // Create checks and boletos automatically for payment methods
+      try {
+        await AutomationService.createChecksForSale(newSale);
+        await AutomationService.createBoletosForSale(newSale);
+        // Refresh checks and boletos after creation
+        await fetchChecks();
+        await fetchBoletos();
+      } catch (error) {
+        console.error('Error creating automated checks/boletos:', error);
+      }
       return;
     }
     
@@ -566,6 +577,27 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       
       if (error) throw error;
       await fetchSales();
+      
+      // Get the created sale to pass to automation service
+      const { data: createdSales } = await supabase
+        .from('sales')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (createdSales && createdSales.length > 0) {
+        const newSale = createdSales[0];
+        // Create checks and boletos automatically for payment methods
+        try {
+          await AutomationService.createChecksForSale(newSale);
+          await AutomationService.createBoletosForSale(newSale);
+          // Refresh checks and boletos after creation
+          await fetchChecks();
+          await fetchBoletos();
+        } catch (error) {
+          console.error('Error creating automated checks/boletos:', error);
+        }
+      }
     } catch (error) {
       console.error('Error adding sale:', error);
       throw error;
@@ -577,6 +609,18 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setSales(prev => prev.map(s => 
         s.id === id ? { ...s, ...sale, updatedAt: new Date().toISOString() } : s
       ));
+      
+      // Update checks and boletos for the updated sale
+      const updatedSale = sales.find(s => s.id === id);
+      if (updatedSale) {
+        const fullUpdatedSale = { ...updatedSale, ...sale };
+        try {
+          await AutomationService.updateChecksForSale(fullUpdatedSale, checks);
+          await AutomationService.updateBoletosForSale(fullUpdatedSale, boletos);
+        } catch (error) {
+          console.error('Error updating automated checks/boletos:', error);
+        }
+      }
       return;
     }
     
@@ -588,6 +632,26 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       
       if (error) throw error;
       await fetchSales();
+      
+      // Get the updated sale to pass to automation service
+      const { data: updatedSales } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (updatedSales) {
+        // Update checks and boletos for the updated sale
+        try {
+          await AutomationService.updateChecksForSale(updatedSales, checks);
+          await AutomationService.updateBoletosForSale(updatedSales, boletos);
+          // Refresh checks and boletos after update
+          await fetchChecks();
+          await fetchBoletos();
+        } catch (error) {
+          console.error('Error updating automated checks/boletos:', error);
+        }
+      }
     } catch (error) {
       console.error('Error updating sale:', error);
       throw error;
