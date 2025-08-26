@@ -1159,6 +1159,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         updatedAt: new Date().toISOString()
       };
       setCashTransactions(prev => [...prev, newTransaction]);
+      
+      // Atualizar saldo do caixa baseado na transação
+      if (cashBalance) {
+        const balanceChange = transaction.type === 'entrada' ? transaction.amount : -transaction.amount;
+        const newBalance = cashBalance.currentBalance + balanceChange;
+        setCashBalance({
+          ...cashBalance,
+          currentBalance: newBalance,
+          lastUpdated: new Date().toISOString()
+        });
+      }
       return;
     }
     
@@ -1168,6 +1179,18 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         .insert([transaction]);
       
       if (error) throw error;
+      
+      // Atualizar saldo do caixa baseado na transação
+      if (cashBalance) {
+        const balanceChange = transaction.type === 'entrada' ? transaction.amount : -transaction.amount;
+        const newBalance = cashBalance.currentBalance + balanceChange;
+        await updateCashBalance({
+          ...cashBalance,
+          currentBalance: newBalance,
+          lastUpdated: new Date().toISOString()
+        });
+      }
+      
       await fetchCashTransactions();
     } catch (error) {
       console.error('Error adding cash transaction:', error);
