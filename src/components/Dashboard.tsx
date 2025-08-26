@@ -328,41 +328,8 @@ export default function Dashboard() {
     });
     
     return Object.values(sellerStats)
-      .filter(seller => {
-        return seller && 
-               typeof seller === 'object' && 
-               'name' in seller &&
-               'totalSales' in seller &&
-               'totalValue' in seller &&
-               'commissions' in seller;
-      })
-      .map(seller => {
-        const safeSeller = {
-          name: String(seller.name || 'Vendedor'),
-          totalSales: Number(seller.totalSales || 0),
-          totalValue: Number(seller.totalValue || 0),
-          commissions: Number(seller.commissions || 0)
-        };
-        
-        // Garantir valores válidos
-        if (isNaN(safeSeller.totalSales) || !isFinite(safeSeller.totalSales)) {
-          safeSeller.totalSales = 0;
-        }
-        if (isNaN(safeSeller.totalValue) || !isFinite(safeSeller.totalValue)) {
-          safeSeller.totalValue = 0;
-        }
-        if (isNaN(safeSeller.commissions) || !isFinite(safeSeller.commissions)) {
-          safeSeller.commissions = 0;
-        }
-        
-        return safeSeller;
-      })
-      .sort((a, b) => {
-        const aValue = Number(a?.totalValue || 0);
-        const bValue = Number(b?.totalValue || 0);
-        if (isNaN(aValue) || isNaN(bValue)) return 0;
-        return bValue - aValue;
-      })
+      .filter(seller => seller && typeof seller === 'object')
+      .sort((a, b) => (b.totalValue || 0) - (a.totalValue || 0))
       .slice(0, 5);
   }, [sales, employees, employeeCommissions]);
 
@@ -833,45 +800,30 @@ export default function Dashboard() {
           
           <div className="space-y-4">
             {topSellers.map((seller, index) => {
-              // Validação extra de segurança
-              if (!seller || typeof seller !== 'object') {
-                return null;
-              }
-              
-              const sellerName = String(seller.name || 'Vendedor');
-              const totalSales = Number(seller.totalSales || 0);
-              const totalValue = Number(seller.totalValue || 0);
-              const commissions = Number(seller.commissions || 0);
-              
-              // Verificar se os valores são válidos antes de renderizar
-              if (isNaN(totalSales) || isNaN(totalValue) || isNaN(commissions)) {
-                return null;
-              }
-              
               return (
-                <div key={`seller-${index}-${sellerName}`} className="p-4 bg-green-50 rounded-xl border border-green-200">
+                <div key={`seller-${index}-${seller.name}`} className="p-4 bg-green-50 rounded-xl border border-green-200">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
                         {index + 1}
                       </div>
                       <div>
-                        <h4 className="font-bold text-green-900">{sellerName}</h4>
-                        <p className="text-sm text-green-700">{totalSales} vendas</p>
+                        <h4 className="font-bold text-green-900">{seller.name || 'Vendedor'}</h4>
+                        <p className="text-sm text-green-700">{seller.totalSales || 0} vendas</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-black text-green-600">
-                        R$ {(totalValue ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {(seller.totalValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                       <p className="text-sm text-green-600 font-bold">
-                        Comissão: R$ {(commissions ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        Comissão: R$ {(seller.commissions || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
                   </div>
                 </div>
               );
-            }).filter(Boolean)}
+            })}
           </div>
         </div>
       )}
