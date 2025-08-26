@@ -800,6 +800,11 @@ export default function Dashboard() {
           
           <div className="space-y-4">
             {topSellers.map((seller, index) => {
+             // Add defensive check to ensure seller object exists and has required properties
+             if (!seller || typeof seller !== 'object') {
+               return null;
+             }
+             
               return (
                 <div key={`seller-${index}-${seller.name}`} className="p-4 bg-green-50 rounded-xl border border-green-200">
                   <div className="flex items-center justify-between">
@@ -814,16 +819,16 @@ export default function Dashboard() {
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-black text-green-600">
-                        R$ {Number(seller.totalValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                       R$ {(Number(seller.totalValue) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                       <p className="text-sm text-green-600 font-bold">
-                        Comissão: R$ {Number(seller.commissions || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                       Comissão: R$ {(Number(seller.commissions) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
                   </div>
                 </div>
               );
-            })}
+           }).filter(Boolean)}
           </div>
         </div>
       )}
