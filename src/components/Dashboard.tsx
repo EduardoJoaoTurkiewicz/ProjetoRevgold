@@ -300,7 +300,7 @@ export default function Dashboard() {
     (state?.sales || []).forEach(sale => {
       if (sale.sellerId) {
         const seller = (state?.employees || []).find(e => e.id === sale.sellerId);
-        if (seller) {
+        if (seller && sellerStats[seller.id]) {
           sellerStats[seller.id].totalSales += 1;
           sellerStats[seller.id].totalValue += sale.totalValue;
         }
@@ -316,12 +316,14 @@ export default function Dashboard() {
     });
     
     return Object.values(sellerStats)
-      .sort((a, b) => (b.totalValue || 0) - (a.totalValue || 0))
+      .filter(seller => seller && typeof seller === 'object')
       .map(seller => ({
-        ...seller,
+        name: seller.name || 'Vendedor',
+        totalSales: seller.totalSales || 0,
         totalValue: seller.totalValue || 0,
         commissions: seller.commissions || 0
       }))
+      .sort((a, b) => b.totalValue - a.totalValue)
       .slice(0, 5);
   }, [state?.sales, state?.employees, state?.employeeCommissions]);
 
