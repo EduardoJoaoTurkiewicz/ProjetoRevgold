@@ -192,7 +192,7 @@ export function UserSelection() {
         console.log('✅ Usuário definido no contexto com sucesso');
         
       } catch (error) {
-        console.error('❌ Erro ao definir usuário:', error);
+        console.warn('❌ Erro ao definir usuário:', error);
         console.warn('⚠️ Sistema iniciado com problemas de autenticação. Algumas funcionalidades podem ser limitadas.');
         
         // Mesmo com erro de autenticação, definir o usuário para permitir acesso
