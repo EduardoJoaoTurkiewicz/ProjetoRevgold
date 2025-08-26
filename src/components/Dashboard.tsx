@@ -118,7 +118,7 @@ const Dashboard: React.FC = () => {
                     </p>
                   </div>
                   <p className="font-semibold text-red-600">
-                    R$ {boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {(boleto.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
               ))}
