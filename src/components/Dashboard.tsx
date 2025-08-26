@@ -316,13 +316,23 @@ export default function Dashboard() {
     });
     
     return Object.values(sellerStats)
-      .filter(seller => seller && typeof seller === 'object')
-      .map(seller => ({
-        name: seller.name || 'Vendedor',
-        totalSales: Number(seller.totalSales) || 0,
-        totalValue: Number(seller.totalValue) || 0,
-        commissions: Number(seller.commissions) || 0
-      }))
+      .filter(seller => seller && typeof seller === 'object' && seller.name)
+      .map(seller => {
+        // Ensure all values are properly defined and are numbers
+        const safeSeller = {
+          name: String(seller.name || 'Vendedor'),
+          totalSales: Number(seller.totalSales || 0),
+          totalValue: Number(seller.totalValue || 0),
+          commissions: Number(seller.commissions || 0)
+        };
+        
+        // Validate that all numeric values are valid numbers
+        if (isNaN(safeSeller.totalSales)) safeSeller.totalSales = 0;
+        if (isNaN(safeSeller.totalValue)) safeSeller.totalValue = 0;
+        if (isNaN(safeSeller.commissions)) safeSeller.commissions = 0;
+        
+        return safeSeller;
+      })
       .sort((a, b) => b.totalValue - a.totalValue)
       .slice(0, 5);
   }, [state?.sales, state?.employees, state?.employeeCommissions]);
@@ -794,29 +804,27 @@ export default function Dashboard() {
           
           <div className="space-y-4">
             {topSellers.map((seller, index) => (
-              seller ? (
-              <div key={seller.name || index} className="p-4 bg-green-50 rounded-xl border border-green-200">
+              <div key={seller?.name || `seller-${index}`} className="p-4 bg-green-50 rounded-xl border border-green-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
                       {index + 1}
                     </div>
                     <div>
-                      <h4 className="font-bold text-green-900">{seller.name}</h4>
-                      <p className="text-sm text-green-700">{seller.totalSales} vendas</p>
+                      <h4 className="font-bold text-green-900">{seller?.name || 'Vendedor'}</h4>
+                      <p className="text-sm text-green-700">{seller?.totalSales || 0} vendas</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-black text-green-600">
-                      R$ {(Number(seller.totalValue) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {(seller?.totalValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                     <p className="text-sm text-green-600 font-bold">
-                      Comissão: R$ {(Number(seller.commissions) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      Comissão: R$ {(seller?.commissions || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
               </div>
-              ) : null
             ))}
           </div>
         </div>
