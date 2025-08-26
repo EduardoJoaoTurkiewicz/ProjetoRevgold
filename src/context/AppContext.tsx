@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { AutomationService } from '../lib/automationService';
 import type { 
   Employee, 
   Sale, 
@@ -34,6 +35,7 @@ interface AppContextType {
   
   // Loading states
   loading: boolean;
+  isLoading: boolean;
   
   // Utility functions
   loadAllData: () => Promise<void>;
@@ -54,36 +56,34 @@ interface AppContextType {
   fetchCashBalance: () => Promise<void>;
   
   // CRUD operations
-  addEmployee: (employee: Omit<Employee, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
-  updateEmployee: (id: string, employee: Partial<Employee>) => Promise<void>;
+  addEmployee: (employee: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateEmployee: (employee: Employee) => Promise<void>;
   deleteEmployee: (id: string) => Promise<void>;
   
-  addSale: (sale: Omit<Sale, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  addSale: (sale: Omit<Sale, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateSale: (id: string, sale: Partial<Sale>) => Promise<void>;
   deleteSale: (id: string) => Promise<void>;
   
-  addDebt: (debt: Omit<Debt, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
-  updateDebt: (id: string, debt: Partial<Debt>) => Promise<void>;
+  addDebt: (debt: Omit<Debt, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateDebt: (debt: Debt) => Promise<void>;
   deleteDebt: (id: string) => Promise<void>;
   
-  addCheck: (check: Omit<Check, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
-  updateCheck: (id: string, check: Partial<Check>) => Promise<void>;
+  addCheck: (check: Omit<Check, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateCheck: (check: Check) => Promise<void>;
   deleteCheck: (id: string) => Promise<void>;
   
-  addBoleto: (boleto: Omit<Boleto, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
-  updateBoleto: (id: string, boleto: Partial<Boleto>) => Promise<void>;
+  addBoleto: (boleto: Omit<Boleto, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateBoleto: (boleto: Boleto) => Promise<void>;
   deleteBoleto: (id: string) => Promise<void>;
   
-  addEmployeePayment: (payment: Omit<EmployeePayment, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  addEmployeePayment: (payment: Omit<EmployeePayment, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateEmployeePayment: (id: string, payment: Partial<EmployeePayment>) => Promise<void>;
   deleteEmployeePayment: (id: string) => Promise<void>;
   
-  addEmployeeAdvance: (advance: Omit<EmployeeAdvance, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
-  updateEmployeeAdvance: (id: string, advance: Partial<EmployeeAdvance>) => Promise<void>;
+  addEmployeeAdvance: (advance: Omit<EmployeeAdvance, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateEmployeeAdvance: (advance: EmployeeAdvance) => Promise<void>;
   deleteEmployeeAdvance: (id: string) => Promise<void>;
   
-  addEmployeeCommission: (commission: Omit<EmployeeCommission, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
-  updateEmployeeCommission: (id: string, commission: Partial<EmployeeCommission>) => Promise<void>;
   deleteEmployeeCommission: (id: string) => Promise<void>;
   
   addEmployeeOvertime: (overtime: Omit<EmployeeOvertime, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
