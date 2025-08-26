@@ -343,6 +343,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const fetchCashBalance = async () => {
     try {
+      if (!isSupabaseConfigured()) {
+        setCashBalance({ currentBalance: 0, lastUpdated: new Date().toISOString() });
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('cash_balance')
         .select('*')
