@@ -8,7 +8,12 @@ import { EmployeeOvertimeForm } from './forms/EmployeeOvertimeForm';
 
 export function Employees() {
   const { 
-    state, 
+    employees,
+    employeePayments,
+    employeeAdvances,
+    employeeOvertimes,
+    employeeCommissions,
+    sales,
     createEmployee, 
     updateEmployee, 
     deleteEmployee, 
@@ -132,23 +137,23 @@ export function Employees() {
   };
 
   const getEmployeePayments = (employeeId: string) => {
-    return state.employeePayments.filter(payment => payment.employeeId === employeeId);
+    return employeePayments.filter(payment => payment.employeeId === employeeId);
   };
 
   const getEmployeeAdvances = (employeeId: string) => {
-    return state.employeeAdvances.filter(advance => advance.employeeId === employeeId);
+    return employeeAdvances.filter(advance => advance.employeeId === employeeId);
   };
 
   const getEmployeeOvertimes = (employeeId: string) => {
-    return state.employeeOvertimes.filter(overtime => overtime.employeeId === employeeId);
+    return employeeOvertimes.filter(overtime => overtime.employeeId === employeeId);
   };
 
   const getEmployeeCommissions = (employeeId: string) => {
-    return state.employeeCommissions.filter(commission => commission.employeeId === employeeId);
+    return employeeCommissions.filter(commission => commission.employeeId === employeeId);
   };
 
   const calculateEmployeePayroll = (employeeId: string) => {
-    const employee = state.employees.find(e => e.id === employeeId);
+    const employee = employees.find(e => e.id === employeeId);
     if (!employee) return null;
 
     const currentMonth = new Date().getMonth();
@@ -249,7 +254,7 @@ export function Employees() {
             <Users className="w-8 h-8 text-blue-600" />
             <div>
               <h3 className="font-medium text-blue-900">Total de Funcionários</h3>
-              <p className="text-blue-700">{state.employees.filter(e => e.isActive).length} ativos</p>
+              <p className="text-blue-700">{employees.filter(e => e.isActive).length} ativos</p>
             </div>
           </div>
         </div>
@@ -259,7 +264,7 @@ export function Employees() {
             <Star className="w-8 h-8 text-green-600" />
             <div>
               <h3 className="font-medium text-green-900">Vendedores</h3>
-              <p className="text-green-700">{state.employees.filter(e => e.isActive && e.isSeller).length} ativos</p>
+              <p className="text-green-700">{employees.filter(e => e.isActive && e.isSeller).length} ativos</p>
             </div>
           </div>
         </div>
@@ -269,7 +274,7 @@ export function Employees() {
             <div>
               <h3 className="font-medium text-green-900">Folha de Pagamento</h3>
               <p className="text-green-700">
-                R$ {state.employees
+                R$ {employees
                   .filter(e => e.isActive)
                   .reduce((sum, e) => sum + e.salary, 0)
                   .toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -284,7 +289,7 @@ export function Employees() {
             <div>
               <h3 className="font-medium text-orange-900">Próximos Pagamentos</h3>
               <p className="text-orange-700">
-                {state.employees.filter(e => {
+                {employees.filter(e => {
                   const nextPayment = getNextPaymentDate(e);
                   const today = new Date();
                   const diffDays = Math.ceil((nextPayment.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
@@ -298,7 +303,7 @@ export function Employees() {
 
       {/* Employees List */}
       <div className="card">
-        {state.employees.length > 0 ? (
+        {employees.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full table-auto">
               <thead>
@@ -314,7 +319,7 @@ export function Employees() {
                 </tr>
               </thead>
               <tbody>
-                {state.employees.map(employee => {
+                {employees.map(employee => {
                   const nextPayment = getNextPaymentDate(employee);
                   const lastPayment = getLastPayment(employee.id);
                   const today = new Date();
@@ -676,7 +681,7 @@ export function Employees() {
                           <h4 className="font-bold text-slate-900 mb-4">Todas as Comissões Pendentes</h4>
                           <div className="space-y-3">
                             {payroll.allPendingCommissions.map(commission => {
-                              const sale = state.sales.find(s => s.id === commission.saleId);
+                              const sale = sales.find(s => s.id === commission.saleId);
                               return (
                                 <div key={commission.id} className="p-3 bg-blue-50 rounded-xl">
                                   <p className="font-semibold text-blue-900">
