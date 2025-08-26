@@ -138,10 +138,38 @@ export function UserSelection() {
         if (isSupabaseConfigured()) {
           console.log('🔐 Fazendo login automático no Supabase...');
           
-          // Sistema funcionará sem autenticação automática
-          // As RLS policies devem permitir acesso anônimo ou você pode criar um usuário manualmente
-          console.log('💡 Sistema iniciado sem autenticação automática');
-          console.log('💡 Para usar autenticação, crie um usuário no Supabase Auth ou configure RLS policies adequadas');
+          // Tentar fazer login automático com email/senha padrão
+          try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+              email: 'admin@revgold.com',
+              password: 'revgold123'
+            });
+            
+            if (error) {
+              console.log('🔐 Usuário não existe, tentando criar...');
+              
+              // Tentar criar usuário se não existir
+              const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                email: 'admin@revgold.com',
+                password: 'revgold123',
+                options: {
+                  emailRedirectTo: undefined // Desabilitar confirmação por email
+                }
+              });
+              
+              if (signUpError) {
+                console.warn('⚠️ Erro ao criar usuário:', signUpError.message);
+                console.log('💡 Sistema funcionará sem autenticação');
+              } else {
+                console.log('✅ Usuário criado com sucesso');
+              }
+            } else {
+              console.log('✅ Login realizado com sucesso');
+            }
+          } catch (authError) {
+            console.warn('⚠️ Erro na autenticação:', authError);
+            console.log('💡 Sistema funcionará sem autenticação');
+          }
         }
         
         console.log('📤 Despachando ação SET_USER...');
@@ -162,8 +190,18 @@ export function UserSelection() {
         
       } catch (error) {
         console.error('❌ Erro ao definir usuário:', error);
-        // Não mostrar alert para erros de autenticação - o sistema pode funcionar sem auth
-        console.warn('⚠️ Sistema iniciado sem autenticação. Algumas funcionalidades podem ser limitadas.');
+        console.warn('⚠️ Sistema iniciado com problemas de autenticação. Algumas funcionalidades podem ser limitadas.');
+        
+        // Mesmo com erro de autenticação, definir o usuário para permitir acesso
+        const userData = { 
+          id: user.id, 
+          username: user.name, 
+          role: 'user' as const
+        };
+        dispatch({ 
+          type: 'SET_USER', 
+          payload: userData
+        });
       } finally {
         setIsConnecting(false);
       }

@@ -501,6 +501,7 @@ export function Boletos() {
                       onClick={() => {
                         if (window.confirm('Marcar esta dívida como paga?')) {
                           const updatedDebt = { ...debt, isPaid: true, paidAmount: debt.totalValue, pendingAmount: 0 };
+                          const { updateDebt, createCashTransaction } = useApp();
                           updateDebt(updatedDebt).then(() => {
                             // Criar transação de caixa para reduzir o saldo
                             createCashTransaction({

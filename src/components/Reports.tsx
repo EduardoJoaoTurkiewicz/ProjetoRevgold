@@ -165,6 +165,8 @@ export function Reports() {
       });
     });
     return Object.entries(methods).map(([name, value]) => ({ name, value }));
+  }, [filteredData.sales]);
+
   // Dados detalhados para a nova seção
   const detailedData = useMemo(() => {
     // 1. Vendas do período
@@ -295,7 +297,6 @@ export function Reports() {
       };
     });
     
-    const totalDebtsValue = debtsInPeriod.reduce((sum, debt) => sum + debt.totalValue, 0);
   }, [filteredData.sales]);
     // 4. Valores efetivamente pagos no período
     const paidValues = [];

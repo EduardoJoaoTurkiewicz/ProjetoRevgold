@@ -272,8 +272,6 @@ interface AppContextType {
   createPixFee: (pixFee: Omit<PixFee, 'id' | 'createdAt'>) => Promise<PixFee>;
   updatePixFee: (pixFee: PixFee) => Promise<void>;
   deletePixFee: (id: string) => Promise<void>;
-  updateDebt: (debt: Debt) => Promise<void>;
-  createCashTransaction: (transaction: Omit<CashTransaction, 'id' | 'createdAt'>) => Promise<CashTransaction>;
 }
 
 // Criar contexto
@@ -307,7 +305,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const loadAllData = async () => {
     if (!isSupabaseConfigured()) {
       console.log('⚠️ Supabase não configurado, usando dados locais');
-      dispatch({ type: 'SET_ERROR', payload: null }); // Não mostrar erro se não configurado
+      dispatch({ type: 'SET_ERROR', payload: 'Supabase não configurado. Configure as variáveis de ambiente para persistir dados.' });
       return;
     }
 
@@ -316,13 +314,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     try {
       console.log('📊 Carregando dados do Supabase...');
-
-      // Verificar se o usuário está autenticado
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.log('🔐 Usuário não autenticado, continuando sem autenticação...');
-        console.log('💡 Dica: Para usar autenticação, crie um usuário no Supabase Auth ou configure RLS policies para permitir acesso anônimo');
-      }
 
       // Carregar dados em paralelo
       const [
@@ -356,22 +347,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Processar resultados
       if (salesData.status === 'fulfilled' && !salesData.value.error) {
         dispatch({ type: 'SET_SALES', payload: salesData.value.data || [] });
+        console.log('✅ Vendas carregadas:', salesData.value.data?.length || 0);
       }
       
       if (debtsData.status === 'fulfilled' && !debtsData.value.error) {
         dispatch({ type: 'SET_DEBTS', payload: debtsData.value.data || [] });
+        console.log('✅ Dívidas carregadas:', debtsData.value.data?.length || 0);
       }
       
       if (checksData.status === 'fulfilled' && !checksData.value.error) {
         dispatch({ type: 'SET_CHECKS', payload: checksData.value.data || [] });
+        console.log('✅ Cheques carregados:', checksData.value.data?.length || 0);
       }
       
       if (boletosData.status === 'fulfilled' && !boletosData.value.error) {
         dispatch({ type: 'SET_BOLETOS', payload: boletosData.value.data || [] });
+        console.log('✅ Boletos carregados:', boletosData.value.data?.length || 0);
       }
       
       if (employeesData.status === 'fulfilled' && !employeesData.value.error) {
         dispatch({ type: 'SET_EMPLOYEES', payload: employeesData.value.data || [] });
+        console.log('✅ Funcionários carregados:', employeesData.value.data?.length || 0);
       }
       
       if (employeePaymentsData.status === 'fulfilled' && !employeePaymentsData.value.error) {
@@ -441,12 +437,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return newSale;
     }
 
-    // Verificar autenticação antes de fazer operações
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      console.log('🔐 Operação sem autenticação - dependendo das RLS policies');
-    }
-
     const { data, error } = await supabase.from('sales').insert([saleData]).select().single();
     if (error) throw error;
     
@@ -512,12 +502,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       };
       dispatch({ type: 'ADD_DEBT', payload: newDebt });
       return newDebt;
-    }
-
-    // Verificar autenticação
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      console.log('🔐 Operação sem autenticação - dependendo das RLS policies');
     }
 
     const { data, error } = await supabase.from('debts').insert([debtData]).select().single();
@@ -647,12 +631,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       };
       dispatch({ type: 'ADD_EMPLOYEE', payload: newEmployee });
       return newEmployee;
-    }
-
-    // Verificar autenticação
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      console.log('🔐 Operação sem autenticação - dependendo das RLS policies');
     }
 
     const { data, error } = await supabase.from('employees').insert([employeeData]).select().single();

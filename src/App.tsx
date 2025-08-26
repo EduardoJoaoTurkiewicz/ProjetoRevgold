@@ -86,7 +86,9 @@ function AppContent({
           <p className="text-green-200 font-semibold">Carregando componentes...</p>
         </div>
       </div>
-    ) : <UserSelection />;
+    ) : (
+      <UserSelection />
+    );
   }
   
   console.log('✅ AppContent - Usuário válido logado:', currentUser.username, 'Página atual:', currentPage);
