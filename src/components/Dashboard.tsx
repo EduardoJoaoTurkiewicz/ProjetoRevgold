@@ -317,6 +317,11 @@ export default function Dashboard() {
     
     return Object.values(sellerStats)
       .sort((a, b) => (b.totalValue || 0) - (a.totalValue || 0))
+      .map(seller => ({
+        ...seller,
+        totalValue: seller.totalValue || 0,
+        commissions: seller.commissions || 0
+      }))
       .slice(0, 5);
   }, [state?.sales, state?.employees, state?.employeeCommissions]);
 
@@ -800,10 +805,10 @@ export default function Dashboard() {
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-black text-green-600">
-                      R$ {(typeof seller.totalValue === 'number' && !isNaN(seller.totalValue) ? seller.totalValue : 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {seller.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                     <p className="text-sm text-green-600 font-bold">
-                      Comissão: R$ {(typeof seller.commissions === 'number' && !isNaN(seller.commissions) ? seller.commissions : 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      Comissão: R$ {seller.commissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
