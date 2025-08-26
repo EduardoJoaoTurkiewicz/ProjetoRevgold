@@ -498,7 +498,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!isSupabaseConfigured()) {
       throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
-
     const { data, error } = await supabase.from('debts').insert([debtData]).select().single();
     if (error) throw error;
     
@@ -517,7 +516,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'UPDATE_DEBT', payload: debt });
   };
 
-  const deleteDebt = async (id: string): Promise<void> => {
     if (!isSupabaseConfigured()) {
       throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
@@ -561,7 +559,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
     
     dispatch({ type: 'DELETE_CHECK', payload: id });
-  };
 
   // Funções CRUD para Boletos - APENAS SUPABASE
   const createBoleto = async (boletoData: Omit<Boleto, 'id' | 'createdAt'>): Promise<Boleto> => {
@@ -581,8 +578,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
-    const { error } = await supabase.from('boletos').update(boleto).eq('id', boleto.id);
-    if (error) throw error;
     
     dispatch({ type: 'UPDATE_BOLETO', payload: boleto });
   };
@@ -735,8 +730,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   // Employee Overtime functions - APENAS SUPABASE
-  const createEmployeeOvertime = async (overtimeData: Omit<EmployeeOvertime, 'id' | 'createdAt'>): Promise<EmployeeOvertime> => {
-    if (!isSupabaseConfigured()) {
       throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
@@ -773,7 +766,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateEmployeeCommission = async (commission: EmployeeCommission): Promise<void> => {
     if (!isSupabaseConfigured()) {
-      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { error } = await supabase.from('employee_commissions').update(commission).eq('id', commission.id);
@@ -781,12 +773,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     dispatch({ type: 'UPDATE_EMPLOYEE_COMMISSION', payload: commission });
   };
-
-  // Carregar dados apenas se Supabase estiver configurado
-  useEffect(() => {
-    console.log('🚀 AppProvider useEffect executado');
-    if (isSupabaseConfigured()) {
-      loadAllData();
     } else {
       dispatch({ type: 'SET_ERROR', payload: 'Supabase não configurado. Configure as variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' });
     }
@@ -795,8 +781,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const contextValue: AppContextType = {
     state,
     dispatch,
-    currentUser: state.currentUser,
-    setCurrentUser,
     loadAllData,
     isSupabaseConfigured: checkSupabaseConfig,
     createSale,
