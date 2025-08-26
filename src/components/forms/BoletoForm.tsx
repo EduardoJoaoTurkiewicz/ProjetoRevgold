@@ -27,7 +27,7 @@ export function BoletoForm({ boleto, onSubmit, onCancel }: BoletoFormProps) {
     notaryCosts: boleto?.notaryCosts || 0,
     finalAmount: boleto?.finalAmount || 0,
     overdueNotes: boleto?.overdueNotes || '',
-    overdueAction: boleto?.overdueAction || null
+    overdueAction: boleto?.overdueAction || ''
   });
 
   const handleSaleSelection = (saleId: string) => {

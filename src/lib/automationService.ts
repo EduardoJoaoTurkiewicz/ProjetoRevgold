@@ -62,6 +62,7 @@ export class AutomationService {
             status: 'pendente',
             installmentNumber: i + 1,
             totalInstallments: installments,
+            boletoFile: '',
             observations: `Boleto gerado automaticamente para venda ${sale.id} - Parcela ${i + 1}/${installments}`
           };
           

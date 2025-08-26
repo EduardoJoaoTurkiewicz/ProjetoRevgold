@@ -120,20 +120,10 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
     
     const pending = formData.totalValue - totalPaid;
     
-    // Determinar status automaticamente
-    let status: 'pago' | 'pendente' | 'parcial';
-    if (pending <= 0) {
-      status = 'pago';
-    } else if (totalPaid > 0) {
-      status = 'parcial';
-    } else {
-      status = 'pendente';
-    }
-    
     return {
       paidAmount: totalPaid,
       pendingAmount: Math.max(0, pending),
-      isPaid: status === 'pago'
+      isPaid: pending <= 0
     };
   };
 

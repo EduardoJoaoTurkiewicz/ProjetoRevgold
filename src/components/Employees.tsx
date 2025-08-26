@@ -108,7 +108,7 @@ export function Employees() {
         // Marcar adiantamentos como descontados
         const pendingAdvances = getEmployeeAdvances(paymentEmployee.id).filter(a => a.status === 'pendente');
         pendingAdvances.forEach(advance => {
-          updateEmployeeAdvance({ ...advance, status: 'descontado' }).catch(error => {
+          updateEmployeeAdvance({ ...advance, status: 'descontado' as const }).catch(error => {
             console.error('Erro ao atualizar adiantamento:', error);
           });
         });

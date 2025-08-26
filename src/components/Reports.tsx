@@ -28,6 +28,22 @@ export default function Reports() {
     return new Date().toISOString().split('T')[0];
   });
 
+  const getPaymentMethodColor = (method: string) => {
+    switch (method.toLowerCase()) {
+      case 'dinheiro': return 'bg-green-100 text-green-800 border-green-200';
+      case 'pix': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'cartao_credito': 
+      case 'cartão de crédito': return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'cartao_debito':
+      case 'cartão de débito': return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+      case 'cheque': 
+      case 'cheque próprio': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'boleto': return 'bg-cyan-100 text-cyan-800 border-cyan-200';
+      case 'transferencia': return 'bg-gray-100 text-gray-800 border-gray-200';
+      default: return 'bg-slate-100 text-slate-800 border-slate-200';
+    }
+  };
+
   // Filtrar dados por período
   const filteredData = useMemo(() => {
     // Vendas do período
@@ -232,22 +248,6 @@ export default function Reports() {
       }
     };
   }, [sales, debts, checks, boletos, employees, employeePayments, pixFees, cashBalance, startDate, endDate]);
-
-  const getPaymentMethodColor = (method: string) => {
-    switch (method.toLowerCase()) {
-      case 'dinheiro': return 'bg-green-100 text-green-800 border-green-200';
-      case 'pix': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'cartao_credito': 
-      case 'cartão de crédito': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'cartao_debito':
-      case 'cartão de débito': return 'bg-indigo-100 text-indigo-800 border-indigo-200';
-      case 'cheque': 
-      case 'cheque próprio': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'boleto': return 'bg-cyan-100 text-cyan-800 border-cyan-200';
-      case 'transferencia': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-slate-100 text-slate-800 border-slate-200';
-    }
-  };
 
   return (
     <div className="space-y-8">

@@ -6,7 +6,7 @@ import { CheckForm } from './forms/CheckForm';
 import { getCheckImageUrl } from '../lib/supabase';
 
 export function Checks() {
-  const { checks, sales, debts, createCheck, updateCheck, deleteCheck } = useApp();
+  const { checks, sales, debts, createCheck, updateCheck, deleteCheck, createCashTransaction } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCheck, setEditingCheck] = useState<Check | null>(null);
   const [viewingCheck, setViewingCheck] = useState<Check | null>(null);
@@ -506,7 +506,6 @@ export function Checks() {
                       onClick={() => {
                         if (window.confirm('Marcar este cheque como pago?')) {
                           const updatedCheck = { ...check, status: 'compensado' as const };
-                          const { updateCheck, createCashTransaction } = useApp();
                           updateCheck(updatedCheck).then(() => {
                             // Criar transação de caixa para reduzir o saldo
                             createCashTransaction({
