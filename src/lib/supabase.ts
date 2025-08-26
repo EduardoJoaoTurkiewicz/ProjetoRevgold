@@ -41,11 +41,9 @@ export function isSupabaseConfigured(): boolean {
     key.length > 10
   );
   
-  console.log('🔍 Verificação do Supabase:', {
-    url: url ? `✅ ${url.substring(0, 30)}...` : '❌ Não configurada',
-    key: key ? `✅ ${key.substring(0, 20)}...` : '❌ Não configurada',
-    isValid: isConfigured ? '✅ Válida' : '❌ Inválida'
-  });
+  if (!isConfigured) {
+    console.log('⚠️ Supabase não está configurado corretamente. Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env');
+  }
   
   return isConfigured;
 }

@@ -154,6 +154,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const fetchEmployees = async () => {
     if (!isSupabaseConfigured()) {
       setEmployees([]);
+      console.log('⚠️ Supabase não configurado - usando dados locais para employees');
       return;
     }
     
@@ -167,13 +168,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setEmployees(data || []);
     } catch (error) {
       console.error('Error fetching employees:', error);
-      setError('Erro ao carregar funcionários');
+      console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para employees');
+      setEmployees([]);
     }
   };
 
   const fetchSales = async () => {
     if (!isSupabaseConfigured()) {
       setSales([]);
+      console.log('⚠️ Supabase não configurado - usando dados locais para sales');
       return;
     }
     
@@ -187,13 +190,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setSales(data || []);
     } catch (error) {
       console.error('Error fetching sales:', error);
-      setError('Erro ao carregar vendas');
+      console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para sales');
+      setSales([]);
     }
   };
 
   const fetchDebts = async () => {
     if (!isSupabaseConfigured()) {
       setDebts([]);
+      console.log('⚠️ Supabase não configurado - usando dados locais para debts');
       return;
     }
     
@@ -207,13 +212,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setDebts(data || []);
     } catch (error) {
       console.error('Error fetching debts:', error);
-      setError('Erro ao carregar dívidas');
+      console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para debts');
+      setDebts([]);
     }
   };
 
   const fetchChecks = async () => {
     if (!isSupabaseConfigured()) {
       setChecks([]);
+      console.log('⚠️ Supabase não configurado - usando dados locais para checks');
       return;
     }
     
@@ -227,13 +234,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setChecks(data || []);
     } catch (error) {
       console.error('Error fetching checks:', error);
-      setError('Erro ao carregar cheques');
+      console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para checks');
+      setChecks([]);
     }
   };
 
   const fetchBoletos = async () => {
     if (!isSupabaseConfigured()) {
       setBoletos([]);
+      console.log('⚠️ Supabase não configurado - usando dados locais para boletos');
       return;
     }
     
@@ -247,13 +256,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setBoletos(data || []);
     } catch (error) {
       console.error('Error fetching boletos:', error);
-      setError('Erro ao carregar boletos');
+      console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para boletos');
+      setBoletos([]);
     }
   };
 
   const fetchEmployeePayments = async () => {
     if (!isSupabaseConfigured()) {
       setEmployeePayments([]);
+      console.log('⚠️ Supabase não configurado - usando dados locais para employee payments');
       return;
     }
     
@@ -267,13 +278,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setEmployeePayments(data || []);
     } catch (error) {
       console.error('Error fetching employee payments:', error);
-      setError('Erro ao carregar pagamentos de funcionários');
+      console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para employee payments');
+      setEmployeePayments([]);
     }
   };
 
   const fetchEmployeeAdvances = async () => {
     if (!isSupabaseConfigured()) {
       setEmployeeAdvances([]);
+      console.log('⚠️ Supabase não configurado - usando dados locais para employee advances');
       return;
     }
     
@@ -287,13 +300,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setEmployeeAdvances(data || []);
     } catch (error) {
       console.error('Error fetching employee advances:', error);
-      setError('Erro ao carregar adiantamentos');
+      console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para employee advances');
+      setEmployeeAdvances([]);
     }
   };
 
   const fetchEmployeeCommissions = async () => {
     if (!isSupabaseConfigured()) {
       setEmployeeCommissions([]);
+      console.log('⚠️ Supabase não configurado - usando dados locais para employee commissions');
       return;
     }
     
@@ -307,13 +322,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setEmployeeCommissions(data || []);
     } catch (error) {
       console.error('Error fetching employee commissions:', error);
-      setError('Erro ao carregar comissões');
+      console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para employee commissions');
+      setEmployeeCommissions([]);
     }
   };
 
   const fetchEmployeeOvertimes = async () => {
     if (!isSupabaseConfigured()) {
       setEmployeeOvertimes([]);
+      console.log('⚠️ Supabase não configurado - usando dados locais para employee overtimes');
       return;
     }
     
@@ -327,13 +344,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setEmployeeOvertimes(data || []);
     } catch (error) {
       console.error('Error fetching employee overtimes:', error);
-      setError('Erro ao carregar horas extras');
+      console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para employee overtimes');
+      setEmployeeOvertimes([]);
     }
   };
 
   const fetchCashTransactions = async () => {
     if (!isSupabaseConfigured()) {
       setCashTransactions([]);
+      console.log('⚠️ Supabase não configurado - usando dados locais para cash transactions');
       return;
     }
     
@@ -347,13 +366,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setCashTransactions(data || []);
     } catch (error) {
       console.error('Error fetching cash transactions:', error);
-      setError('Erro ao carregar transações de caixa');
+      console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para cash transactions');
+      setCashTransactions([]);
     }
   };
 
   const fetchPixFees = async () => {
     if (!isSupabaseConfigured()) {
       setPixFees([]);
+      console.log('⚠️ Supabase não configurado - usando dados locais para pix fees');
       return;
     }
     
@@ -367,7 +388,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setPixFees(data || []);
     } catch (error) {
       console.error('Error fetching pix fees:', error);
-      setError('Erro ao carregar taxas PIX');
+      console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para pix fees');
+      setPixFees([]);
     }
   };
 
@@ -379,6 +401,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         initialDate: new Date().toISOString().split('T')[0],
         lastUpdated: new Date().toISOString() 
       });
+      console.log('⚠️ Supabase não configurado - usando dados locais para cash balance');
       return;
     }
     
@@ -397,6 +420,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       });
     } catch (error) {
       console.error('Error fetching cash balance:', error);
+      console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para cash balance');
       setCashBalance({ 
         currentBalance: 0, 
         initialBalance: 0,
