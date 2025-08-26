@@ -249,20 +249,7 @@ export const ensureAuthenticated = async () => {
 
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: 'admin@example.com',
-        password: 'admin123'
-      });
-      
-      if (error) {
-        console.warn('Authentication failed:', error.message);
-        return null;
-      }
-      
-      return data.user;
-    }
-    
+    // Return the current user (null if not authenticated)
     return user;
   } catch (error) {
     console.warn('Supabase connection failed. Please check your configuration.');
