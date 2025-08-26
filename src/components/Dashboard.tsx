@@ -7,23 +7,35 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4'];
 
 export default function Dashboard() {
-  const { state, loadAllData, isSupabaseConfigured: checkSupabase } = useApp();
+  const { 
+    loading, 
+    error, 
+    sales, 
+    debts, 
+    employees, 
+    checks, 
+    boletos, 
+    employeeCommissions, 
+    cashBalance, 
+    loadAllData, 
+    isSupabaseConfigured: checkSupabase 
+  } = useApp();
   
   // Define today at component level so it's accessible throughout
   const today = new Date().toISOString().split('T')[0];
   
   console.log('📊 Dashboard renderizado, estado:', {
-    isLoading: state.isLoading,
-    error: state.error,
-    salesCount: state.sales.length,
-    debtsCount: state.debts.length,
-    employeesCount: state.employees.length
+    isLoading: loading,
+    error: error,
+    salesCount: sales.length,
+    debtsCount: debts.length,
+    employeesCount: employees.length
   });
 
   // Carregar dados se necessário
   React.useEffect(() => {
     // Sempre tentar carregar dados quando o dashboard for montado
-    if (!state.isLoading) {
+    if (!loading) {
       console.log('🔄 Dashboard carregando dados...');
       loadAllData();
     }
@@ -34,7 +46,7 @@ export default function Dashboard() {
     const thisYear = new Date().getFullYear();
 
     // Vendas do dia
-    const salesToday = (state?.sales || []).filter(sale => sale.date === today);
+    const salesToday = (sales || []).filter(sale => sale.date === today);
     const totalSalesToday = salesToday.reduce((sum, sale) => sum + sale.totalValue, 0);
     
     // Valor recebido hoje (incluindo cheques e boletos compensados hoje)
@@ -51,14 +63,14 @@ export default function Dashboard() {
     });
     
     // Cheques compensados hoje
-    (state?.checks || []).forEach(check => {
+    (checks || []).forEach(check => {
       if (check.dueDate === today && check.status === 'compensado') {
         totalReceivedToday += check.value;
       }
     });
     
     // Boletos pagos hoje
-    (state?.boletos || []).forEach(boleto => {
+    (boletos || []).forEach(boleto => {
       if (boleto.dueDate === today && boleto.status === 'compensado') {
         // Usar valor final menos custos de cartório
         const finalAmount = boleto.finalAmount || boleto.value;
@@ -69,7 +81,7 @@ export default function Dashboard() {
     });
     
     // Dívidas do dia
-    const debtsToday = (state?.debts || []).filter(debt => debt.date === today);
+    const debtsToday = (debts || []).filter(debt => debt.date === today);
     const totalDebtsToday = debtsToday.reduce((sum, debt) => sum + debt.totalValue, 0);
     
     // Valor pago hoje
@@ -87,14 +99,14 @@ export default function Dashboard() {
     });
     
     // Adicionar cheques próprios pagos hoje
-    (state?.checks || []).forEach(check => {
+    (checks || []).forEach(check => {
       if (check.isOwnCheck && check.dueDate === today && check.status === 'compensado') {
         totalPaidToday += check.value;
       }
     });
     
     // Adicionar boletos da empresa pagos hoje
-    (state?.debts || []).forEach(debt => {
+    (debts || []).forEach(debt => {
       if (debt.date === today && debt.isPaid) {
         (debt.paymentMethods || []).forEach(method => {
           if (method.type === 'boleto') {
@@ -105,11 +117,11 @@ export default function Dashboard() {
     });
     
     // Vendas totais e recebimentos totais
-    const totalSales = (state?.sales || []).reduce((sum, sale) => sum + sale.totalValue, 0);
-    let totalReceived = (state?.sales || []).reduce((sum, sale) => sum + sale.receivedAmount, 0);
+    const totalSales = (sales || []).reduce((sum, sale) => sum + sale.totalValue, 0);
+    let totalReceived = (sales || []).reduce((sum, sale) => sum + sale.receivedAmount, 0);
     
     // Adicionar boletos compensados ao valor recebido
-    (state?.boletos || []).forEach(boleto => {
+    (boletos || []).forEach(boleto => {
       if (boleto.status === 'compensado') {
         const finalAmount = boleto.finalAmount || boleto.value;
         const notaryCosts = boleto.notaryCosts || 0;
@@ -118,8 +130,8 @@ export default function Dashboard() {
       }
     });
     
-    const totalPending = (state?.sales || []).reduce((sum, sale) => sum + sale.pendingAmount, 0);
-    const salesThisMonth = (state?.sales || []).filter(sale => {
+    const totalPending = (sales || []).reduce((sum, sale) => sum + sale.pendingAmount, 0);
+    const salesThisMonth = (sales || []).filter(sale => {
       const saleDate = new Date(sale.date);
       return saleDate.getMonth() === thisMonth && saleDate.getFullYear() === thisYear;
     });
@@ -127,7 +139,7 @@ export default function Dashboard() {
     let monthlyReceived = salesThisMonth.reduce((sum, sale) => sum + sale.receivedAmount, 0);
     
     // Adicionar boletos compensados do mês ao valor recebido
-    const monthlyBoletos = (state?.boletos || []).filter(boleto => {
+    const monthlyBoletos = (boletos || []).filter(boleto => {
       const boletoDate = new Date(boleto.dueDate);
       return boletoDate.getMonth() === thisMonth && 
              boletoDate.getFullYear() === thisYear && 
@@ -142,12 +154,12 @@ export default function Dashboard() {
     });
 
     // Dívidas
-    const totalDebts = (state?.debts || []).reduce((sum, debt) => sum + debt.totalValue, 0);
-    const totalPaidDebts = (state?.debts || []).reduce((sum, debt) => sum + debt.paidAmount, 0);
-    const totalPendingDebts = (state?.debts || []).reduce((sum, debt) => sum + debt.pendingAmount, 0);
+    const totalDebts = (debts || []).reduce((sum, debt) => sum + debt.totalValue, 0);
+    const totalPaidDebts = (debts || []).reduce((sum, debt) => sum + debt.paidAmount, 0);
+    const totalPendingDebts = (debts || []).reduce((sum, debt) => sum + debt.pendingAmount, 0);
     
     // Dívidas do mês
-    const debtsThisMonth = (state?.debts || []).filter(debt => {
+    const debtsThisMonth = (debts || []).filter(debt => {
       const debtDate = new Date(debt.date);
       return debtDate.getMonth() === thisMonth && debtDate.getFullYear() === thisYear;
     });
@@ -155,37 +167,37 @@ export default function Dashboard() {
     const monthlyPaidDebts = debtsThisMonth.reduce((sum, debt) => sum + debt.paidAmount, 0);
 
     // Cheques
-    const checksToday = (state?.checks || []).filter(check => check.dueDate === today);
-    const overdueChecks = (state?.checks || []).filter(check => check.dueDate < today && check.status === 'pendente');
-    const totalChecksValue = (state?.checks || []).reduce((sum, check) => sum + check.value, 0);
+    const checksToday = (checks || []).filter(check => check.dueDate === today);
+    const overdueChecks = (checks || []).filter(check => check.dueDate < today && check.status === 'pendente');
+    const totalChecksValue = (checks || []).reduce((sum, check) => sum + check.value, 0);
 
     // Boletos
-    const boletosToday = (state?.boletos || []).filter(boleto => boleto.dueDate === today);
-    const overdueBoletos = (state?.boletos || []).filter(boleto => boleto.dueDate < today && boleto.status === 'pendente');
-    const totalBoletosValue = (state?.boletos || []).reduce((sum, boleto) => sum + boleto.value, 0);
+    const boletosToday = (boletos || []).filter(boleto => boleto.dueDate === today);
+    const overdueBoletos = (boletos || []).filter(boleto => boleto.dueDate < today && boleto.status === 'pendente');
+    const totalBoletosValue = (boletos || []).reduce((sum, boleto) => sum + boleto.value, 0);
 
     // Funcionários
-    const activeEmployees = (state?.employees || []).filter(emp => emp.isActive);
+    const activeEmployees = (employees || []).filter(emp => emp.isActive);
     const sellers = activeEmployees.filter(emp => emp.isSeller);
     const totalPayroll = activeEmployees.reduce((sum, emp) => sum + emp.salary, 0);
 
     // Comissões
-    const pendingCommissions = (state?.employeeCommissions || []).filter(comm => comm.status === 'pendente');
+    const pendingCommissions = (employeeCommissions || []).filter(comm => comm.status === 'pendente');
     const totalPendingCommissions = pendingCommissions.reduce((sum, comm) => sum + comm.commissionAmount, 0);
-    const monthlyCommissions = (state?.employeeCommissions || []).filter(comm => {
+    const monthlyCommissions = (employeeCommissions || []).filter(comm => {
       const commDate = new Date(comm.date);
       return commDate.getMonth() === thisMonth && commDate.getFullYear() === thisYear;
     });
 
     // Caixa
-    const cashBalance = state?.cashBalance?.currentBalance || 0;
+    const currentCashBalance = cashBalance?.currentBalance || 0;
 
     // Lucro líquido do mês
     const monthlyNetProfit = monthlyReceived - monthlyPaidDebts;
     const monthlyProfitMargin = monthlyReceived > 0 ? (monthlyNetProfit / monthlyReceived) * 100 : 0;
     
     // Dívidas para pagar no mês atual
-    const monthlyPayableDebts = (state?.debts || []).filter(debt => {
+    const monthlyPayableDebts = (debts || []).filter(debt => {
       const debtDate = new Date(debt.date);
       return debtDate.getMonth() === thisMonth && 
              debtDate.getFullYear() === thisYear && 
@@ -193,7 +205,7 @@ export default function Dashboard() {
     });
     
     // Vendas para receber no mês atual
-    const monthlyReceivableSales = (state?.sales || []).filter(sale => {
+    const monthlyReceivableSales = (sales || []).filter(sale => {
       const saleDate = new Date(sale.date);
       return saleDate.getMonth() === thisMonth && 
              saleDate.getFullYear() === thisYear && 
@@ -229,14 +241,14 @@ export default function Dashboard() {
       pendingCommissions: pendingCommissions.length,
       totalPendingCommissions,
       monthlyCommissions: monthlyCommissions.length,
-      cashBalance,
+      cashBalance: currentCashBalance,
       netProfit: monthlyNetProfit,
       profitMargin: monthlyProfitMargin,
       monthlyPayableDebts,
       monthlyReceivableSales,
       totalPaidToday
     };
-  }, [state]);
+  }, [sales, debts, employees, checks, boletos, employeeCommissions, cashBalance]);
 
   // Dados para gráficos - últimos 30 dias
   const chartData = useMemo(() => {
@@ -248,8 +260,8 @@ export default function Dashboard() {
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
       
-      const dailySales = (state?.sales || []).filter(sale => sale.date === dateStr);
-      const dailyDebts = (state?.debts || []).filter(debt => debt.date === dateStr);
+      const dailySales = (sales || []).filter(sale => sale.date === dateStr);
+      const dailyDebts = (debts || []).filter(debt => debt.date === dateStr);
       
       const salesValue = dailySales.reduce((sum, sale) => sum + sale.totalValue, 0);
       const debtsValue = dailyDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
@@ -264,12 +276,12 @@ export default function Dashboard() {
     }
     
     return last30Days;
-  }, [state?.sales, state?.debts]);
+  }, [sales, debts]);
 
   // Distribuição de métodos de pagamento
   const paymentMethodsData = useMemo(() => {
     const methods = {};
-    (state?.sales || []).forEach(sale => {
+    (sales || []).forEach(sale => {
       (sale.paymentMethods || []).forEach(method => {
         const methodName = method.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
         if (!methods[methodName]) {
@@ -279,14 +291,14 @@ export default function Dashboard() {
       });
     });
     return Object.entries(methods).map(([name, value]) => ({ name, value }));
-  }, [state?.sales]);
+  }, [sales]);
 
   // Top vendedores
   const topSellers = useMemo(() => {
     const sellerStats = {};
     
     // Initialize all active sellers with default values
-    (state?.employees || []).forEach(employee => {
+    (employees || []).forEach(employee => {
       if (employee.isActive && employee.isSeller) {
         sellerStats[employee.id] = {
           name: employee.name,
@@ -297,9 +309,9 @@ export default function Dashboard() {
       }
     });
     
-    (state?.sales || []).forEach(sale => {
+    (sales || []).forEach(sale => {
       if (sale.sellerId) {
-        const seller = (state?.employees || []).find(e => e.id === sale.sellerId);
+        const seller = (employees || []).find(e => e.id === sale.sellerId);
         if (seller && sellerStats[seller.id]) {
           sellerStats[seller.id].totalSales += 1;
           sellerStats[seller.id].totalValue += sale.totalValue;
@@ -308,8 +320,8 @@ export default function Dashboard() {
     });
     
     // Adicionar comissões
-    (state?.employeeCommissions || []).forEach(comm => {
-      const seller = (state?.employees || []).find(e => e.id === comm.employeeId);
+    (employeeCommissions || []).forEach(comm => {
+      const seller = (employees || []).find(e => e.id === comm.employeeId);
       if (seller && sellerStats[seller.id]) {
         sellerStats[seller.id].commissions += comm.commissionAmount;
       }
@@ -352,9 +364,9 @@ export default function Dashboard() {
         return bValue - aValue;
       })
       .slice(0, 5);
-  }, [state?.sales, state?.employees, state?.employeeCommissions]);
+  }, [sales, employees, employeeCommissions]);
 
-  if (state.isLoading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
@@ -381,13 +393,13 @@ export default function Dashboard() {
       </div>
 
       {/* Error Display */}
-      {state.error && (
+      {error && (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
           <div className="flex items-center gap-4">
             <AlertTriangle className="w-8 h-8 text-red-600" />
             <div>
               <h3 className="font-bold text-red-800">Aviso do Sistema</h3>
-              <p className="text-red-700">{state.error}</p>
+              <p className="text-red-700">{error}</p>
             </div>
           </div>
         </div>
@@ -406,7 +418,7 @@ export default function Dashboard() {
               <p className="text-2xl font-black text-green-700">
                 R$ {metrics.totalSalesToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-sm text-green-600">{(state?.sales || []).filter(s => s.date === today).length} vendas</p>
+              <p className="text-sm text-green-600">{(sales || []).filter(s => s.date === today).length} vendas</p>
             </div>
           </div>
         </div>
@@ -438,7 +450,7 @@ export default function Dashboard() {
               <p className="text-2xl font-black text-red-700">
                 R$ {metrics.totalDebtsToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-sm text-red-600">{(state?.debts || []).filter(d => d.date === today).length} dívidas</p>
+              <p className="text-sm text-red-600">{(debts || []).filter(d => d.date === today).length} dívidas</p>
             </div>
           </div>
         </div>
@@ -745,7 +757,7 @@ export default function Dashboard() {
                 {sale.sellerId && (
                   <div className="mt-4 p-3 bg-white rounded-lg border">
                     <p className="text-sm text-green-700">
-                      <strong>Vendedor:</strong> {(state?.employees || []).find(e => e.id === sale.sellerId)?.name || 'N/A'}
+                      <strong>Vendedor:</strong> {(employees || []).find(e => e.id === sale.sellerId)?.name || 'N/A'}
                     </p>
                   </div>
                 )}
@@ -877,8 +889,8 @@ export default function Dashboard() {
           
           <div className="space-y-3">
             {['pago', 'parcial', 'pendente'].map(status => {
-              const count = (state?.sales || []).filter(sale => sale.status === status).length;
-              const value = (state?.sales || []).filter(sale => sale.status === status).reduce((sum, sale) => sum + sale.totalValue, 0);
+              const count = (sales || []).filter(sale => sale.status === status).length;
+              const value = (sales || []).filter(sale => sale.status === status).reduce((sum, sale) => sum + sale.totalValue, 0);
               
               return (
                 <div key={status} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
@@ -909,7 +921,7 @@ export default function Dashboard() {
               <span className="font-medium text-slate-900">Pagas</span>
               <div className="text-right">
                 <p className="font-bold text-green-600">
-                  {(state?.debts || []).filter(debt => debt.isPaid).length} dívidas
+                  {(debts || []).filter(debt => debt.isPaid).length} dívidas
                 </p>
                 <p className="text-sm text-slate-600">
                   R$ {Number(metrics.totalPaidDebts || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -921,7 +933,7 @@ export default function Dashboard() {
               <span className="font-medium text-slate-900">Pendentes</span>
               <div className="text-right">
                 <p className="font-bold text-red-600">
-                  {(state?.debts || []).filter(debt => !debt.isPaid).length} dívidas
+                  {(debts || []).filter(debt => !debt.isPaid).length} dívidas
                 </p>
                 <p className="text-sm text-slate-600">
                   R$ {Number(metrics.totalPendingDebts || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -965,7 +977,7 @@ export default function Dashboard() {
                 <p className="font-bold text-blue-600">
                   R$ {Number(metrics.totalChecksValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
-                <p className="text-sm text-slate-600">{(state?.checks || []).length} cheques</p>
+                <p className="text-sm text-slate-600">{(checks || []).length} cheques</p>
               </div>
             </div>
             
@@ -975,7 +987,7 @@ export default function Dashboard() {
                 <p className="font-bold text-cyan-600">
                   R$ {Number(metrics.totalBoletosValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
-                <p className="text-sm text-slate-600">{(state?.boletos || []).length} boletos</p>
+                <p className="text-sm text-slate-600">{(boletos || []).length} boletos</p>
               </div>
             </div>
           </div>
@@ -996,7 +1008,7 @@ export default function Dashboard() {
             <div>
               <p className="text-green-600 font-semibold">Vendas</p>
               <p className="text-3xl font-black text-green-700">
-                {(state?.sales || []).filter(sale => {
+                {(sales || []).filter(sale => {
                   const saleDate = new Date(sale.date);
                   return saleDate.getMonth() === new Date().getMonth() && saleDate.getFullYear() === new Date().getFullYear();
                 }).length}
@@ -1029,14 +1041,14 @@ export default function Dashboard() {
           <div className="space-y-3 text-sm">
             <p><strong>Supabase Configurado:</strong> {checkSupabase() ? '✅ Sim' : '❌ Não'}</p>
             <p><strong>Modo de Operação:</strong> {checkSupabase() ? 'Conectado ao banco' : 'Local (dados não persistem)'}</p>
-            <p><strong>Vendas Carregadas:</strong> {(state?.sales || []).length}</p>
-            <p><strong>Dívidas Carregadas:</strong> {(state?.debts || []).length}</p>
-            <p><strong>Funcionários Carregados:</strong> {(state?.employees || []).length}</p>
-            <p><strong>Cheques Carregados:</strong> {(state?.checks || []).length}</p>
-            <p><strong>Boletos Carregados:</strong> {(state?.boletos || []).length}</p>
-            <p><strong>Comissões Carregadas:</strong> {(state?.employeeCommissions || []).length}</p>
-            <p><strong>Estado de Loading:</strong> {state.isLoading ? 'Carregando...' : 'Concluído'}</p>
-            {state.error && <p><strong>Erro:</strong> {state.error}</p>}
+            <p><strong>Vendas Carregadas:</strong> {(sales || []).length}</p>
+            <p><strong>Dívidas Carregadas:</strong> {(debts || []).length}</p>
+            <p><strong>Funcionários Carregados:</strong> {(employees || []).length}</p>
+            <p><strong>Cheques Carregados:</strong> {(checks || []).length}</p>
+            <p><strong>Boletos Carregados:</strong> {(boletos || []).length}</p>
+            <p><strong>Comissões Carregadas:</strong> {(employeeCommissions || []).length}</p>
+            <p><strong>Estado de Loading:</strong> {loading ? 'Carregando...' : 'Concluído'}</p>
+            {error && <p><strong>Erro:</strong> {error}</p>}
           </div>
           
           {checkSupabase() && (

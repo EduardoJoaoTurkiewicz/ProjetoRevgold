@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
+import { isSupabaseConfigured } from '../lib/supabase';
 import type { 
   Employee, 
   Sale, 
@@ -11,7 +12,8 @@ import type {
   EmployeeCommission, 
   EmployeeOvertime,
   CashTransaction,
-  PixFee
+  PixFee,
+  CashBalance
 } from '../types';
 
 interface AppContextType {
@@ -27,9 +29,15 @@ interface AppContextType {
   employeeOvertimes: EmployeeOvertime[];
   cashTransactions: CashTransaction[];
   pixFees: PixFee[];
+  cashBalance: CashBalance | null;
+  error: string | null;
   
   // Loading states
   loading: boolean;
+  
+  // Utility functions
+  loadAllData: () => Promise<void>;
+  isSupabaseConfigured: () => boolean;
   
   // Data fetching functions
   fetchEmployees: () => Promise<void>;
@@ -43,6 +51,7 @@ interface AppContextType {
   fetchEmployeeOvertimes: () => Promise<void>;
   fetchCashTransactions: () => Promise<void>;
   fetchPixFees: () => Promise<void>;
+  fetchCashBalance: () => Promise<void>;
   
   // CRUD operations
   addEmployee: (employee: Omit<Employee, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
@@ -88,6 +97,9 @@ interface AppContextType {
   addPixFee: (fee: Omit<PixFee, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
   updatePixFee: (id: string, fee: Partial<PixFee>) => Promise<void>;
   deletePixFee: (id: string) => Promise<void>;
+  
+  initializeCashBalance: (amount: number) => Promise<void>;
+  updateCashBalance: (balance: CashBalance) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -117,7 +129,38 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [employeeOvertimes, setEmployeeOvertimes] = useState<EmployeeOvertime[]>([]);
   const [cashTransactions, setCashTransactions] = useState<CashTransaction[]>([]);
   const [pixFees, setPixFees] = useState<PixFee[]>([]);
+  const [cashBalance, setCashBalance] = useState<CashBalance | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Utility functions
+  const checkSupabaseConfigured = () => isSupabaseConfigured();
+
+  const loadAllData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await Promise.all([
+        fetchEmployees(),
+        fetchSales(),
+        fetchDebts(),
+        fetchChecks(),
+        fetchBoletos(),
+        fetchEmployeePayments(),
+        fetchEmployeeAdvances(),
+        fetchEmployeeCommissions(),
+        fetchEmployeeOvertimes(),
+        fetchCashTransactions(),
+        fetchPixFees(),
+        fetchCashBalance()
+      ]);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setError('Erro ao carregar dados do sistema');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Fetch functions
   const fetchEmployees = async () => {
@@ -131,6 +174,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setEmployees(data || []);
     } catch (error) {
       console.error('Error fetching employees:', error);
+      setError('Erro ao carregar funcionários');
     }
   };
 
@@ -145,6 +189,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setSales(data || []);
     } catch (error) {
       console.error('Error fetching sales:', error);
+      setError('Erro ao carregar vendas');
     }
   };
 
@@ -159,6 +204,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setDebts(data || []);
     } catch (error) {
       console.error('Error fetching debts:', error);
+      setError('Erro ao carregar dívidas');
     }
   };
 
@@ -173,6 +219,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setChecks(data || []);
     } catch (error) {
       console.error('Error fetching checks:', error);
+      setError('Erro ao carregar cheques');
     }
   };
 
@@ -187,6 +234,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setBoletos(data || []);
     } catch (error) {
       console.error('Error fetching boletos:', error);
+      setError('Erro ao carregar boletos');
     }
   };
 
@@ -201,6 +249,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setEmployeePayments(data || []);
     } catch (error) {
       console.error('Error fetching employee payments:', error);
+      setError('Erro ao carregar pagamentos de funcionários');
     }
   };
 
@@ -215,6 +264,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setEmployeeAdvances(data || []);
     } catch (error) {
       console.error('Error fetching employee advances:', error);
+      setError('Erro ao carregar adiantamentos');
     }
   };
 
@@ -229,6 +279,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setEmployeeCommissions(data || []);
     } catch (error) {
       console.error('Error fetching employee commissions:', error);
+      setError('Erro ao carregar comissões');
     }
   };
 
@@ -243,6 +294,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setEmployeeOvertimes(data || []);
     } catch (error) {
       console.error('Error fetching employee overtimes:', error);
+      setError('Erro ao carregar horas extras');
     }
   };
 
@@ -257,6 +309,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setCashTransactions(data || []);
     } catch (error) {
       console.error('Error fetching cash transactions:', error);
+      setError('Erro ao carregar transações de caixa');
     }
   };
 
@@ -271,6 +324,50 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setPixFees(data || []);
     } catch (error) {
       console.error('Error fetching pix fees:', error);
+      setError('Erro ao carregar taxas PIX');
+    }
+  };
+
+  const fetchCashBalance = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('cash_balance')
+        .select('*')
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      setCashBalance(data || { currentBalance: 0 });
+    } catch (error) {
+      console.error('Error fetching cash balance:', error);
+      setCashBalance({ currentBalance: 0 });
+    }
+  };
+
+  const initializeCashBalance = async (amount: number) => {
+    try {
+      const { error } = await supabase
+        .from('cash_balance')
+        .insert([{ currentBalance: amount }]);
+      
+      if (error) throw error;
+      await fetchCashBalance();
+    } catch (error) {
+      console.error('Error initializing cash balance:', error);
+      throw error;
+    }
+  };
+
+  const updateCashBalance = async (balance: CashBalance) => {
+    try {
+      const { error } = await supabase
+        .from('cash_balance')
+        .upsert([balance]);
+      
+      if (error) throw error;
+      await fetchCashBalance();
+    } catch (error) {
+      console.error('Error updating cash balance:', error);
+      throw error;
     }
   };
 
@@ -771,30 +868,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // Load initial data
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        await Promise.all([
-          fetchEmployees(),
-          fetchSales(),
-          fetchDebts(),
-          fetchChecks(),
-          fetchBoletos(),
-          fetchEmployeePayments(),
-          fetchEmployeeAdvances(),
-          fetchEmployeeCommissions(),
-          fetchEmployeeOvertimes(),
-          fetchCashTransactions(),
-          fetchPixFees()
-        ]);
-      } catch (error) {
-        console.error('Error loading initial data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
+    loadAllData();
   }, []);
 
   const value: AppContextType = {
@@ -810,7 +884,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     employeeOvertimes,
     cashTransactions,
     pixFees,
+    cashBalance,
+    error,
     loading,
+    
+    // Utility functions
+    loadAllData,
+    isSupabaseConfigured: checkSupabaseConfigured,
     
     // Data fetching functions
     fetchEmployees,
@@ -824,6 +904,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     fetchEmployeeOvertimes,
     fetchCashTransactions,
     fetchPixFees,
+    fetchCashBalance,
     
     // CRUD operations
     addEmployee,
@@ -859,6 +940,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     addPixFee,
     updatePixFee,
     deletePixFee,
+    initializeCashBalance,
+    updateCashBalance,
   };
 
   return (
