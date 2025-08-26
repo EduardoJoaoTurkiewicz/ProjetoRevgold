@@ -315,6 +315,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       console.log('📊 Carregando dados do Supabase...');
 
+      // Test connection first
+      const { data: testData, error: testError } = await supabase
+        .from('employees')
+        .select('count')
+        .limit(1);
+      
+      if (testError) {
+        throw new Error(`Conexão com Supabase falhou: ${testError.message}`);
+      }
       // Carregar dados em paralelo
       const [
         salesData,
@@ -348,61 +357,91 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (salesData.status === 'fulfilled' && !salesData.value.error) {
         dispatch({ type: 'SET_SALES', payload: salesData.value.data || [] });
         console.log('✅ Vendas carregadas:', salesData.value.data?.length || 0);
+      } else if (salesData.status === 'rejected') {
+        console.warn('⚠️ Erro ao carregar vendas:', salesData.reason);
       }
       
       if (debtsData.status === 'fulfilled' && !debtsData.value.error) {
         dispatch({ type: 'SET_DEBTS', payload: debtsData.value.data || [] });
         console.log('✅ Dívidas carregadas:', debtsData.value.data?.length || 0);
+      } else if (debtsData.status === 'rejected') {
+        console.warn('⚠️ Erro ao carregar dívidas:', debtsData.reason);
       }
       
       if (checksData.status === 'fulfilled' && !checksData.value.error) {
         dispatch({ type: 'SET_CHECKS', payload: checksData.value.data || [] });
         console.log('✅ Cheques carregados:', checksData.value.data?.length || 0);
+      } else if (checksData.status === 'rejected') {
+        console.warn('⚠️ Erro ao carregar cheques:', checksData.reason);
       }
       
       if (boletosData.status === 'fulfilled' && !boletosData.value.error) {
         dispatch({ type: 'SET_BOLETOS', payload: boletosData.value.data || [] });
         console.log('✅ Boletos carregados:', boletosData.value.data?.length || 0);
+      } else if (boletosData.status === 'rejected') {
+        console.warn('⚠️ Erro ao carregar boletos:', boletosData.reason);
       }
       
       if (employeesData.status === 'fulfilled' && !employeesData.value.error) {
         dispatch({ type: 'SET_EMPLOYEES', payload: employeesData.value.data || [] });
         console.log('✅ Funcionários carregados:', employeesData.value.data?.length || 0);
+      } else if (employeesData.status === 'rejected') {
+        console.warn('⚠️ Erro ao carregar funcionários:', employeesData.reason);
       }
       
       if (employeePaymentsData.status === 'fulfilled' && !employeePaymentsData.value.error) {
         dispatch({ type: 'SET_EMPLOYEE_PAYMENTS', payload: employeePaymentsData.value.data || [] });
+      } else if (employeePaymentsData.status === 'rejected') {
+        console.warn('⚠️ Erro ao carregar pagamentos:', employeePaymentsData.reason);
       }
       
       if (employeeAdvancesData.status === 'fulfilled' && !employeeAdvancesData.value.error) {
         dispatch({ type: 'SET_EMPLOYEE_ADVANCES', payload: employeeAdvancesData.value.data || [] });
+      } else if (employeeAdvancesData.status === 'rejected') {
+        console.warn('⚠️ Erro ao carregar adiantamentos:', employeeAdvancesData.reason);
       }
       
       if (employeeOvertimesData.status === 'fulfilled' && !employeeOvertimesData.value.error) {
         dispatch({ type: 'SET_EMPLOYEE_OVERTIMES', payload: employeeOvertimesData.value.data || [] });
+      } else if (employeeOvertimesData.status === 'rejected') {
+        console.warn('⚠️ Erro ao carregar horas extras:', employeeOvertimesData.reason);
       }
       
       if (employeeCommissionsData.status === 'fulfilled' && !employeeCommissionsData.value.error) {
         dispatch({ type: 'SET_EMPLOYEE_COMMISSIONS', payload: employeeCommissionsData.value.data || [] });
+      } else if (employeeCommissionsData.status === 'rejected') {
+        console.warn('⚠️ Erro ao carregar comissões:', employeeCommissionsData.reason);
       }
       
       if (cashBalanceData.status === 'fulfilled' && !cashBalanceData.value.error) {
         dispatch({ type: 'SET_CASH_BALANCE', payload: cashBalanceData.value.data });
+      } else if (cashBalanceData.status === 'rejected') {
+        console.warn('⚠️ Erro ao carregar saldo do caixa:', cashBalanceData.reason);
       }
       
       if (cashTransactionsData.status === 'fulfilled' && !cashTransactionsData.value.error) {
         dispatch({ type: 'SET_CASH_TRANSACTIONS', payload: cashTransactionsData.value.data || [] });
+      } else if (cashTransactionsData.status === 'rejected') {
+        console.warn('⚠️ Erro ao carregar transações do caixa:', cashTransactionsData.reason);
       }
       
       if (pixFeesData.status === 'fulfilled' && !pixFeesData.value.error) {
         dispatch({ type: 'SET_PIX_FEES', payload: pixFeesData.value.data || [] });
+      } else if (pixFeesData.status === 'rejected') {
+        console.warn('⚠️ Erro ao carregar tarifas PIX:', pixFeesData.reason);
       }
 
       console.log('✅ Dados carregados com sucesso');
 
     } catch (error) {
       console.error('❌ Erro ao carregar dados:', error);
-      dispatch({ type: 'SET_ERROR', payload: `Erro ao carregar dados: ${error.message}` });
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      
+      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError') || errorMessage.includes('fetch')) {
+        dispatch({ type: 'SET_ERROR', payload: 'Erro de conexão com o banco de dados. Verifique sua conexão com a internet e as configurações do Supabase.' });
+      } else {
+        dispatch({ type: 'SET_ERROR', payload: `Erro ao carregar dados: ${errorMessage}` });
+      }
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
