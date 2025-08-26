@@ -321,14 +321,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         console.log('🔐 Usuário não autenticado, fazendo login automático...');
-        const { error: authError } = await supabase.auth.signInWithPassword({
-          email: 'admin@revgold.com',
-          password: 'revgold123'
-        });
-        
-        if (authError) {
-          console.warn('⚠️ Erro na autenticação automática:', authError.message);
-          // Continuar mesmo sem autenticação para permitir operações básicas
+        try {
+          const { error: authError } = await supabase.auth.signInWithPassword({
+            email: 'admin@revgold.com',
+            password: 'revgold123'
+          });
+          
+          if (authError) {
+            console.warn('⚠️ Login automático falhou (usuário pode não existir):', authError.message);
+            console.log('💡 Dica: Crie um usuário admin@revgold.com com senha revgold123 no Supabase Auth');
+          } else {
+            console.log('✅ Login automático realizado com sucesso');
+          }
+        } catch (authError) {
+          console.warn('⚠️ Erro no login automático, continuando sem auth:', authError);
         }
       }
 
@@ -453,10 +459,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       console.log('🔐 Fazendo login automático para operação...');
-      await supabase.auth.signInWithPassword({
-        email: 'admin@revgold.com',
-        password: 'revgold123'
-      });
+      try {
+        const { error: authError } = await supabase.auth.signInWithPassword({
+          email: 'admin@revgold.com',
+          password: 'revgold123'
+        });
+        
+        if (authError) {
+          console.warn('⚠️ Login automático falhou, continuando sem auth:', authError.message);
+        }
+      } catch (authError) {
+        console.warn('⚠️ Erro no login automático:', authError);
+      }
     }
 
     const { data, error } = await supabase.from('sales').insert([saleData]).select().single();

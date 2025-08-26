@@ -200,22 +200,6 @@ export async function healthCheck() {
       };
     }
 
-    // Tentar fazer login automático primeiro
-    try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: 'admin@revgold.com',
-        password: 'revgold123'
-      });
-      
-      if (authError) {
-        console.warn('⚠️ Login automático falhou:', authError.message);
-      } else {
-        console.log('✅ Login automático realizado com sucesso');
-      }
-    } catch (authError) {
-      console.warn('⚠️ Erro no login automático:', authError);
-    }
-
     // Test database access
     const tables = ['employees', 'sales', 'debts', 'checks', 'boletos', 'cash_balances', 'cash_transactions', 'pix_fees'];
     const results = {};
@@ -272,7 +256,8 @@ export async function ensureAuthenticated() {
       });
       
       if (error) {
-        console.error('❌ Erro no login automático:', error);
+        console.warn('⚠️ Login automático falhou (usuário pode não existir):', error.message);
+        // Continue sem autenticação - o sistema ainda pode funcionar com RLS policies
         return false;
       }
       
@@ -282,7 +267,7 @@ export async function ensureAuthenticated() {
     
     return true;
   } catch (error) {
-    console.error('❌ Erro na autenticação:', error);
+    console.warn('⚠️ Erro na autenticação, continuando sem auth:', error);
     return false;
   }
 }

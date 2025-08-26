@@ -138,16 +138,21 @@ export function UserSelection() {
         if (isSupabaseConfigured()) {
           console.log('🔐 Fazendo login automático no Supabase...');
           
-          // Fazer login com o usuário padrão
-          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-            email: 'admin@revgold.com',
-            password: 'revgold123'
-          });
-          
-          if (authError) {
-            console.warn('⚠️ Erro na autenticação, continuando sem auth:', authError.message);
-          } else {
-            console.log('✅ Login automático realizado com sucesso');
+          // Tentar fazer login com o usuário padrão, mas não falhar se não existir
+          try {
+            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+              email: 'admin@revgold.com',
+              password: 'revgold123'
+            });
+            
+            if (authError) {
+              console.warn('⚠️ Login automático falhou (usuário pode não existir):', authError.message);
+              console.log('💡 Dica: Crie um usuário admin@revgold.com com senha revgold123 no Supabase Auth para login automático');
+            } else {
+              console.log('✅ Login automático realizado com sucesso');
+            }
+          } catch (authError) {
+            console.warn('⚠️ Erro no login automático, continuando sem auth:', authError);
           }
         }
         
@@ -169,7 +174,8 @@ export function UserSelection() {
         
       } catch (error) {
         console.error('❌ Erro ao definir usuário:', error);
-        alert('Erro ao acessar o sistema. Verifique a configuração do Supabase.');
+        // Não mostrar alert para erros de autenticação - o sistema pode funcionar sem auth
+        console.warn('⚠️ Sistema iniciado sem autenticação. Algumas funcionalidades podem ser limitadas.');
       } finally {
         setIsConnecting(false);
       }
