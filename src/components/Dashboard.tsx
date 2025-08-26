@@ -822,29 +822,36 @@ export default function Dashboard() {
           </div>
           
           <div className="space-y-4">
-            {topSellers.map((seller, index) => (
-              <div key={`seller-${index}-${seller?.name || 'unknown'}`} className="p-4 bg-green-50 rounded-xl border border-green-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
-                      {index + 1}
+            {topSellers.map((seller, index) => {
+              const sellerName = seller?.name || 'Vendedor';
+              const totalSales = Number(seller?.totalSales) || 0;
+              const totalValue = Number(seller?.totalValue) || 0;
+              const commissions = Number(seller?.commissions) || 0;
+              
+              return (
+                <div key={`seller-${index}-${sellerName}`} className="p-4 bg-green-50 rounded-xl border border-green-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-green-900">{sellerName}</h4>
+                        <p className="text-sm text-green-700">{totalSales} vendas</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-green-900">{String(seller?.name || 'Vendedor')}</h4>
-                      <p className="text-sm text-green-700">{Number(seller?.totalSales || 0)} vendas</p>
+                    <div className="text-right">
+                      <p className="text-lg font-black text-green-600">
+                        R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-sm text-green-600 font-bold">
+                        Comissão: R$ {commissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-black text-green-600">
-                      R$ {(seller.totalValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-sm text-green-600 font-bold">
-                      Comissão: R$ {(seller.commissions || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
