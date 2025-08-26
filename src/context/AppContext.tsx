@@ -177,6 +177,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // Fetch functions
   const fetchEmployees = async () => {
+    if (!isSupabaseConfigured()) {
+      setEmployees([]);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('employees')
@@ -192,6 +197,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const fetchSales = async () => {
+    if (!isSupabaseConfigured()) {
+      setSales([]);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('sales')
@@ -207,6 +217,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const fetchDebts = async () => {
+    if (!isSupabaseConfigured()) {
+      setDebts([]);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('debts')
@@ -222,6 +237,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const fetchChecks = async () => {
+    if (!isSupabaseConfigured()) {
+      setChecks([]);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('checks')
@@ -237,6 +257,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const fetchBoletos = async () => {
+    if (!isSupabaseConfigured()) {
+      setBoletos([]);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('boletos')
@@ -252,6 +277,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const fetchEmployeePayments = async () => {
+    if (!isSupabaseConfigured()) {
+      setEmployeePayments([]);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('employee_payments')
@@ -267,6 +297,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const fetchEmployeeAdvances = async () => {
+    if (!isSupabaseConfigured()) {
+      setEmployeeAdvances([]);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('employee_advances')
@@ -282,6 +317,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const fetchEmployeeCommissions = async () => {
+    if (!isSupabaseConfigured()) {
+      setEmployeeCommissions([]);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('employee_commissions')
@@ -297,6 +337,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const fetchEmployeeOvertimes = async () => {
+    if (!isSupabaseConfigured()) {
+      setEmployeeOvertimes([]);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('employee_overtimes')
@@ -312,6 +357,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const fetchCashTransactions = async () => {
+    if (!isSupabaseConfigured()) {
+      setCashTransactions([]);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('cash_transactions')
@@ -327,6 +377,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const fetchPixFees = async () => {
+    if (!isSupabaseConfigured()) {
+      setPixFees([]);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('pix_fees')
@@ -342,30 +397,59 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const fetchCashBalance = async () => {
+    if (!isSupabaseConfigured()) {
+      setCashBalance({ 
+        currentBalance: 0, 
+        initialBalance: 0,
+        initialDate: new Date().toISOString().split('T')[0],
+        lastUpdated: new Date().toISOString() 
+      });
+      return;
+    }
+    
     try {
-      if (!isSupabaseConfigured()) {
-        setCashBalance({ currentBalance: 0, lastUpdated: new Date().toISOString() });
-        return;
-      }
-      
       const { data, error } = await supabase
-        .from('cash_balance')
+        .from('cash_balances')
         .select('*')
         .single();
       
       if (error && error.code !== 'PGRST116') throw error;
-      setCashBalance(data || { currentBalance: 0, lastUpdated: new Date().toISOString() });
+      setCashBalance(data || { 
+        currentBalance: 0, 
+        initialBalance: 0,
+        initialDate: new Date().toISOString().split('T')[0],
+        lastUpdated: new Date().toISOString() 
+      });
     } catch (error) {
       console.error('Error fetching cash balance:', error);
-      setCashBalance({ currentBalance: 0, lastUpdated: new Date().toISOString() });
+      setCashBalance({ 
+        currentBalance: 0, 
+        initialBalance: 0,
+        initialDate: new Date().toISOString().split('T')[0],
+        lastUpdated: new Date().toISOString() 
+      });
     }
   };
 
   const initializeCashBalance = async (amount: number) => {
+    if (!isSupabaseConfigured()) {
+      setCashBalance({
+        currentBalance: amount,
+        initialBalance: amount,
+        initialDate: new Date().toISOString().split('T')[0],
+        lastUpdated: new Date().toISOString()
+      });
+      return;
+    }
+    
     try {
       const { error } = await supabase
-        .from('cash_balance')
-        .insert([{ currentBalance: amount }]);
+        .from('cash_balances')
+        .insert([{ 
+          current_balance: amount,
+          initial_balance: amount,
+          initial_date: new Date().toISOString().split('T')[0]
+        }]);
       
       if (error) throw error;
       await fetchCashBalance();
@@ -376,9 +460,14 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const updateCashBalance = async (balance: CashBalance) => {
+    if (!isSupabaseConfigured()) {
+      setCashBalance(balance);
+      return;
+    }
+    
     try {
       const { error } = await supabase
-        .from('cash_balance')
+        .from('cash_balances')
         .upsert([balance]);
       
       if (error) throw error;
@@ -391,6 +480,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // CRUD operations for employees
   const addEmployee = async (employee: Omit<Employee, 'id' | 'created_at' | 'updated_at'>) => {
+    if (!isSupabaseConfigured()) {
+      const newEmployee: Employee = {
+        ...employee,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setEmployees(prev => [...prev, newEmployee]);
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('employees')
@@ -405,6 +505,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const updateEmployee = async (id: string, employee: Partial<Employee>) => {
+    if (!isSupabaseConfigured()) {
+      setEmployees(prev => prev.map(emp => 
+        emp.id === id ? { ...emp, ...employee, updatedAt: new Date().toISOString() } : emp
+      ));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('employees')
@@ -420,6 +527,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const deleteEmployee = async (id: string) => {
+    if (!isSupabaseConfigured()) {
+      setEmployees(prev => prev.filter(emp => emp.id !== id));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('employees')
@@ -436,6 +548,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // CRUD operations for sales
   const addSale = async (sale: Omit<Sale, 'id' | 'created_at' | 'updated_at'>) => {
+    if (!isSupabaseConfigured()) {
+      const newSale: Sale = {
+        ...sale,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setSales(prev => [...prev, newSale]);
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('sales')
@@ -450,6 +573,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const updateSale = async (id: string, sale: Partial<Sale>) => {
+    if (!isSupabaseConfigured()) {
+      setSales(prev => prev.map(s => 
+        s.id === id ? { ...s, ...sale, updatedAt: new Date().toISOString() } : s
+      ));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('sales')
@@ -465,6 +595,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const deleteSale = async (id: string) => {
+    if (!isSupabaseConfigured()) {
+      setSales(prev => prev.filter(s => s.id !== id));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('sales')
@@ -481,6 +616,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // CRUD operations for debts
   const addDebt = async (debt: Omit<Debt, 'id' | 'created_at' | 'updated_at'>) => {
+    if (!isSupabaseConfigured()) {
+      const newDebt: Debt = {
+        ...debt,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setDebts(prev => [...prev, newDebt]);
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('debts')
@@ -495,6 +641,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const updateDebt = async (id: string, debt: Partial<Debt>) => {
+    if (!isSupabaseConfigured()) {
+      setDebts(prev => prev.map(d => 
+        d.id === id ? { ...d, ...debt, updatedAt: new Date().toISOString() } : d
+      ));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('debts')
@@ -510,6 +663,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const deleteDebt = async (id: string) => {
+    if (!isSupabaseConfigured()) {
+      setDebts(prev => prev.filter(d => d.id !== id));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('debts')
@@ -526,6 +684,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // CRUD operations for checks
   const addCheck = async (check: Omit<Check, 'id' | 'created_at' | 'updated_at'>) => {
+    if (!isSupabaseConfigured()) {
+      const newCheck: Check = {
+        ...check,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setChecks(prev => [...prev, newCheck]);
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('checks')
@@ -540,6 +709,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const updateCheck = async (id: string, check: Partial<Check>) => {
+    if (!isSupabaseConfigured()) {
+      setChecks(prev => prev.map(c => 
+        c.id === id ? { ...c, ...check, updatedAt: new Date().toISOString() } : c
+      ));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('checks')
@@ -555,6 +731,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const deleteCheck = async (id: string) => {
+    if (!isSupabaseConfigured()) {
+      setChecks(prev => prev.filter(c => c.id !== id));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('checks')
@@ -571,6 +752,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // CRUD operations for boletos
   const addBoleto = async (boleto: Omit<Boleto, 'id' | 'created_at' | 'updated_at'>) => {
+    if (!isSupabaseConfigured()) {
+      const newBoleto: Boleto = {
+        ...boleto,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setBoletos(prev => [...prev, newBoleto]);
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('boletos')
@@ -585,6 +777,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const updateBoleto = async (id: string, boleto: Partial<Boleto>) => {
+    if (!isSupabaseConfigured()) {
+      setBoletos(prev => prev.map(b => 
+        b.id === id ? { ...b, ...boleto, updatedAt: new Date().toISOString() } : b
+      ));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('boletos')
@@ -600,6 +799,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const deleteBoleto = async (id: string) => {
+    if (!isSupabaseConfigured()) {
+      setBoletos(prev => prev.filter(b => b.id !== id));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('boletos')
@@ -616,6 +820,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // CRUD operations for employee payments
   const addEmployeePayment = async (payment: Omit<EmployeePayment, 'id' | 'created_at' | 'updated_at'>) => {
+    if (!isSupabaseConfigured()) {
+      const newPayment: EmployeePayment = {
+        ...payment,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setEmployeePayments(prev => [...prev, newPayment]);
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('employee_payments')
@@ -630,6 +845,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const updateEmployeePayment = async (id: string, payment: Partial<EmployeePayment>) => {
+    if (!isSupabaseConfigured()) {
+      setEmployeePayments(prev => prev.map(p => 
+        p.id === id ? { ...p, ...payment, updatedAt: new Date().toISOString() } : p
+      ));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('employee_payments')
@@ -645,6 +867,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const deleteEmployeePayment = async (id: string) => {
+    if (!isSupabaseConfigured()) {
+      setEmployeePayments(prev => prev.filter(p => p.id !== id));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('employee_payments')
@@ -661,6 +888,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // CRUD operations for employee advances
   const addEmployeeAdvance = async (advance: Omit<EmployeeAdvance, 'id' | 'created_at' | 'updated_at'>) => {
+    if (!isSupabaseConfigured()) {
+      const newAdvance: EmployeeAdvance = {
+        ...advance,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setEmployeeAdvances(prev => [...prev, newAdvance]);
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('employee_advances')
@@ -675,6 +913,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const updateEmployeeAdvance = async (id: string, advance: Partial<EmployeeAdvance>) => {
+    if (!isSupabaseConfigured()) {
+      setEmployeeAdvances(prev => prev.map(a => 
+        a.id === id ? { ...a, ...advance, updatedAt: new Date().toISOString() } : a
+      ));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('employee_advances')
@@ -690,6 +935,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const deleteEmployeeAdvance = async (id: string) => {
+    if (!isSupabaseConfigured()) {
+      setEmployeeAdvances(prev => prev.filter(a => a.id !== id));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('employee_advances')
@@ -706,6 +956,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // CRUD operations for employee commissions
   const addEmployeeCommission = async (commission: Omit<EmployeeCommission, 'id' | 'created_at' | 'updated_at'>) => {
+    if (!isSupabaseConfigured()) {
+      const newCommission: EmployeeCommission = {
+        ...commission,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setEmployeeCommissions(prev => [...prev, newCommission]);
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('employee_commissions')
@@ -720,6 +981,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const updateEmployeeCommission = async (id: string, commission: Partial<EmployeeCommission>) => {
+    if (!isSupabaseConfigured()) {
+      setEmployeeCommissions(prev => prev.map(c => 
+        c.id === id ? { ...c, ...commission, updatedAt: new Date().toISOString() } : c
+      ));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('employee_commissions')
@@ -735,6 +1003,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const deleteEmployeeCommission = async (id: string) => {
+    if (!isSupabaseConfigured()) {
+      setEmployeeCommissions(prev => prev.filter(c => c.id !== id));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('employee_commissions')
@@ -751,6 +1024,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // CRUD operations for employee overtimes
   const addEmployeeOvertime = async (overtime: Omit<EmployeeOvertime, 'id' | 'created_at' | 'updated_at'>) => {
+    if (!isSupabaseConfigured()) {
+      const newOvertime: EmployeeOvertime = {
+        ...overtime,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setEmployeeOvertimes(prev => [...prev, newOvertime]);
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('employee_overtimes')
@@ -765,6 +1049,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const updateEmployeeOvertime = async (id: string, overtime: Partial<EmployeeOvertime>) => {
+    if (!isSupabaseConfigured()) {
+      setEmployeeOvertimes(prev => prev.map(o => 
+        o.id === id ? { ...o, ...overtime, updatedAt: new Date().toISOString() } : o
+      ));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('employee_overtimes')
@@ -780,6 +1071,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const deleteEmployeeOvertime = async (id: string) => {
+    if (!isSupabaseConfigured()) {
+      setEmployeeOvertimes(prev => prev.filter(o => o.id !== id));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('employee_overtimes')
@@ -796,6 +1092,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // CRUD operations for cash transactions
   const addCashTransaction = async (transaction: Omit<CashTransaction, 'id' | 'created_at' | 'updated_at'>) => {
+    if (!isSupabaseConfigured()) {
+      const newTransaction: CashTransaction = {
+        ...transaction,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setCashTransactions(prev => [...prev, newTransaction]);
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('cash_transactions')
@@ -810,6 +1117,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const updateCashTransaction = async (id: string, transaction: Partial<CashTransaction>) => {
+    if (!isSupabaseConfigured()) {
+      setCashTransactions(prev => prev.map(t => 
+        t.id === id ? { ...t, ...transaction, updatedAt: new Date().toISOString() } : t
+      ));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('cash_transactions')
@@ -825,6 +1139,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const deleteCashTransaction = async (id: string) => {
+    if (!isSupabaseConfigured()) {
+      setCashTransactions(prev => prev.filter(t => t.id !== id));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('cash_transactions')
@@ -841,6 +1160,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // CRUD operations for pix fees
   const addPixFee = async (fee: Omit<PixFee, 'id' | 'created_at' | 'updated_at'>) => {
+    if (!isSupabaseConfigured()) {
+      const newFee: PixFee = {
+        ...fee,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setPixFees(prev => [...prev, newFee]);
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('pix_fees')
@@ -855,6 +1185,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const updatePixFee = async (id: string, fee: Partial<PixFee>) => {
+    if (!isSupabaseConfigured()) {
+      setPixFees(prev => prev.map(f => 
+        f.id === id ? { ...f, ...fee, updatedAt: new Date().toISOString() } : f
+      ));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('pix_fees')
@@ -870,6 +1207,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const deletePixFee = async (id: string) => {
+    if (!isSupabaseConfigured()) {
+      setPixFees(prev => prev.filter(f => f.id !== id));
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('pix_fees')
