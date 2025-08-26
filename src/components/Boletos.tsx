@@ -6,23 +6,23 @@ import { BoletoForm } from './forms/BoletoForm';
 import { OverdueBoletoForm } from './forms/OverdueBoletoForm';
 
 export function Boletos() {
-  const { state, createBoleto, updateBoleto, deleteBoleto, updateDebt, createCashTransaction } = useApp();
+  const { boletos, sales, debts, employees, isLoading, error, createBoleto, updateBoleto, deleteBoleto, updateDebt, createCashTransaction } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBoleto, setEditingBoleto] = useState<Boleto | null>(null);
   const [viewingBoleto, setViewingBoleto] = useState<Boleto | null>(null);
   const [managingOverdueBoleto, setManagingOverdueBoleto] = useState<Boleto | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
-  const dueToday = state.boletos.filter(boleto => boleto.dueDate === today);
-  const overdue = state.boletos.filter(boleto => boleto.dueDate < today && boleto.status === 'pendente');
-  const overdueManaged = state.boletos.filter(boleto => boleto.dueDate < today && boleto.overdueAction);
+  const dueToday = boletos.filter(boleto => boleto.dueDate === today);
+  const overdue = boletos.filter(boleto => boleto.dueDate < today && boleto.status === 'pendente');
+  const overdueManaged = boletos.filter(boleto => boleto.dueDate < today && boleto.overdueAction);
   
   // Novos cálculos para widgets
-  const notDueYet = state.boletos.filter(boleto => boleto.dueDate > today && boleto.status === 'pendente');
+  const notDueYet = boletos.filter(boleto => boleto.dueDate > today && boleto.status === 'pendente');
   const totalNotDueYet = notDueYet.reduce((sum, boleto) => sum + boleto.value, 0);
   
   // Boletos que a empresa tem para pagar (simulando - você pode ajustar conforme sua lógica de negócio)
-  const companyPayableBoletos = state.debts.filter(debt => 
+  const companyPayableBoletos = debts.filter(debt => 
     debt.paymentMethods.some(method => method.type === 'boleto') && !debt.isPaid
   );
   const totalCompanyPayableBoletos = companyPayableBoletos.reduce((sum, debt) => {
@@ -78,7 +78,7 @@ export function Boletos() {
   };
 
   const updateBoletoStatus = (boletoId: string, status: Boleto['status']) => {
-    const boleto = state.boletos.find(b => b.id === boletoId);
+    const boleto = boletos.find(b => b.id === boletoId);
     if (boleto) {
       let updatedBoleto = { ...boleto, status };
       
@@ -175,7 +175,7 @@ export function Boletos() {
     }
   };
 
-  if (state.isLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
@@ -210,13 +210,13 @@ export function Boletos() {
       </div>
 
       {/* Error Display */}
-      {state.error && (
+      {error && (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
           <div className="flex items-center gap-4">
             <AlertCircle className="w-8 h-8 text-red-600" />
             <div>
               <h3 className="font-bold text-red-800">Erro no Sistema</h3>
-              <p className="text-red-700">{state.error}</p>
+              <p className="text-red-700">{error}</p>
             </div>
           </div>
         </div>
@@ -310,7 +310,7 @@ export function Boletos() {
 
       {/* Boletos List */}
       <div className="card modern-shadow-xl">
-        {state.boletos.length > 0 ? (
+        {boletos.length > 0 ? (
           <div className="overflow-x-auto modern-scrollbar">
             <table className="min-w-full table-auto">
               <thead>
@@ -326,7 +326,7 @@ export function Boletos() {
                 </tr>
               </thead>
               <tbody>
-                {state.boletos.map(boleto => (
+                {boletos.map(boleto => (
                   <tr key={boleto.id} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-all duration-300">
                     <td className="py-4 px-6 text-sm font-bold text-slate-900">{boleto.client}</td>
                     <td className="py-4 px-6 text-sm font-black text-blue-600">
@@ -409,7 +409,7 @@ export function Boletos() {
                     <td className="py-4 px-6 text-sm">
                       {boleto.saleId ? (
                         (() => {
-                          const sale = state.sales.find(s => s.id === boleto.saleId);
+                          const sale = sales.find(s => s.id === boleto.saleId);
                           return sale ? (
                             <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">
                               Venda: {sale.client}
@@ -711,7 +711,7 @@ export function Boletos() {
                 <div className="mb-8">
                   <label className="form-label">Informações da Venda</label>
                   {(() => {
-                    const sale = state.sales.find(s => s.id === viewingBoleto.saleId);
+                    const sale = sales.find(s => s.id === viewingBoleto.saleId);
                     return sale ? (
                       <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -723,7 +723,7 @@ export function Boletos() {
                             <p><strong>Data de Entrega:</strong> {new Date(sale.deliveryDate).toLocaleDateString('pt-BR')}</p>
                           )}
                           {sale.sellerId && (
-                            <p><strong>Vendedor:</strong> {state.employees.find(e => e.id === sale.sellerId)?.name || 'N/A'}</p>
+                            <p><strong>Vendedor:</strong> {employees.find(e => e.id === sale.sellerId)?.name || 'N/A'}</p>
                           )}
                         </div>
                         {sale.observations && (

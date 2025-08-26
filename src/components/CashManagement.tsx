@@ -6,7 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4'];
 
 export function CashManagement() {
-  const { state, initializeCashBalance, updateCashBalance } = useApp();
+  const { cashBalance, sales, checks, boletos, pixFees, debts, isLoading, error, initializeCashBalance, updateCashBalance } = useApp();
   const [isInitializing, setIsInitializing] = useState(false);
   const [initialAmount, setInitialAmount] = useState(0);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -18,7 +18,7 @@ export function CashManagement() {
     const transactions = [];
     
     // Vendas recebidas no dia
-    state.sales.forEach(sale => {
+    sales.forEach(sale => {
       if (sale.date === selectedDate) {
         (sale.paymentMethods || []).forEach(method => {
           if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
@@ -38,7 +38,7 @@ export function CashManagement() {
     });
 
     // Cheques compensados no dia
-    state.checks.forEach(check => {
+    checks.forEach(check => {
       if (check.dueDate === selectedDate && check.status === 'compensado') {
         transactions.push({
           id: `check-${check.id}`,
@@ -53,7 +53,7 @@ export function CashManagement() {
     });
 
     // Boletos pagos no dia
-    state.boletos.forEach(boleto => {
+    boletos.forEach(boleto => {
       if (boleto.dueDate === selectedDate && boleto.status === 'compensado') {
         // Calcular valor líquido (valor final menos custos de cartório)
         const finalAmount = boleto.finalAmount || boleto.value;
@@ -86,7 +86,7 @@ export function CashManagement() {
     });
 
     // Tarifas PIX do dia
-    state.pixFees.forEach(pixFee => {
+    pixFees.forEach(pixFee => {
       if (pixFee.date === selectedDate) {
         transactions.push({
           id: `pix-fee-${pixFee.id}`,
@@ -101,7 +101,7 @@ export function CashManagement() {
     });
 
     // Dívidas pagas no dia
-    state.debts.forEach(debt => {
+    debts.forEach(debt => {
       if (debt.date === selectedDate && debt.isPaid) {
         (debt.paymentMethods || []).forEach(method => {
           if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type)) {
@@ -120,7 +120,7 @@ export function CashManagement() {
     });
 
     return transactions.sort((a, b) => a.time.localeCompare(b.time));
-  }, [state, selectedDate]);
+  }, [sales, checks, boletos, pixFees, debts, selectedDate]);
 
   // Calcular totais do dia
   const dayTotals = useMemo(() => {
@@ -145,7 +145,7 @@ export function CashManagement() {
       let saida = 0;
       
       // Calcular entradas do dia
-      state.sales.forEach(sale => {
+      sales.forEach(sale => {
         if (sale.date === dateStr) {
           (sale.paymentMethods || []).forEach(method => {
             if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
@@ -157,14 +157,14 @@ export function CashManagement() {
       });
       
       // Cheques compensados
-      state.checks.forEach(check => {
+      checks.forEach(check => {
         if (check.dueDate === dateStr && check.status === 'compensado') {
           entrada += check.value;
         }
       });
       
       // Boletos pagos
-      state.boletos.forEach(boleto => {
+      boletos.forEach(boleto => {
         if (boleto.dueDate === dateStr && boleto.status === 'compensado') {
           // Calcular valor líquido (valor final menos custos de cartório)
           const finalAmount = boleto.finalAmount || boleto.value;
@@ -180,7 +180,7 @@ export function CashManagement() {
       });
       
       // Calcular saídas do dia
-      state.debts.forEach(debt => {
+      debts.forEach(debt => {
         if (debt.date === dateStr && debt.isPaid) {
           (debt.paymentMethods || []).forEach(method => {
             if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type)) {
@@ -191,7 +191,7 @@ export function CashManagement() {
       });
       
       // Tarifas PIX do dia
-      state.pixFees.forEach(pixFee => {
+      pixFees.forEach(pixFee => {
         if (pixFee.date === dateStr) {
           saida += pixFee.amount;
         }
@@ -206,7 +206,7 @@ export function CashManagement() {
     }
     
     return last30Days;
-  }, [state]);
+  }, [sales, checks, boletos, debts, pixFees]);
 
   // Distribuição por categoria
   const categoryData = useMemo(() => {
@@ -247,7 +247,7 @@ export function CashManagement() {
   };
 
   // Se não há saldo inicial, mostrar formulário de inicialização
-  if (!state.cashBalance || state.cashBalance.currentBalance === 0) {
+  if (!cashBalance || cashBalance.currentBalance === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center p-8">
         <div className="card modern-shadow-xl max-w-2xl w-full">
@@ -256,7 +256,7 @@ export function CashManagement() {
               <Wallet className="w-12 h-12 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-slate-900 mb-4">
-              {!state.cashBalance ? 'Inicializar Caixa' : 'Definir Saldo Inicial'}
+              {!cashBalance ? 'Inicializar Caixa' : 'Definir Saldo Inicial'}
             </h1>
             <p className="text-slate-600 text-lg">
               Para começar a usar o sistema de caixa, informe o valor atual em caixa da empresa.
@@ -298,7 +298,7 @@ export function CashManagement() {
               className="btn-primary w-full"
             >
               {isInitializing ? 'Inicializando...' : 
-               !state.cashBalance ? 'Inicializar Caixa' : 'Atualizar Saldo Inicial'}
+               !cashBalance ? 'Inicializar Caixa' : 'Atualizar Saldo Inicial'}
             </button>
           </form>
         </div>
@@ -323,10 +323,10 @@ export function CashManagement() {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-green-900 mb-4">Saldo Atual em Caixa</h2>
           <p className="text-6xl font-black text-green-700 mb-4">
-            R$ {state.cashBalance.currentBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            R$ {cashBalance.currentBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </p>
           <p className="text-green-600 font-semibold">
-            Última atualização: {new Date(state.cashBalance.lastUpdated).toLocaleString('pt-BR')}
+            Última atualização: {new Date(cashBalance.lastUpdated).toLocaleString('pt-BR')}
           </p>
         </div>
       </div>

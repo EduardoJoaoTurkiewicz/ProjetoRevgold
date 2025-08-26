@@ -13,7 +13,7 @@ interface CalendarEvent {
 }
 
 export function Agenda() {
-  const { state } = useApp();
+  const { debts, checks, boletos, sales, employees } = useApp();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [viewingEvent, setViewingEvent] = useState<CalendarEvent | null>(null);
@@ -71,7 +71,7 @@ export function Agenda() {
     const events: CalendarEvent[] = [];
 
     // Dívidas da empresa (que a empresa deve pagar)
-    state.debts.forEach(debt => {
+    debts.forEach(debt => {
       (debt.paymentMethods || []).forEach((method, index) => {
         if (method.installments && method.installments > 1) {
           for (let i = 0; i < method.installments; i++) {
@@ -105,7 +105,7 @@ export function Agenda() {
     });
 
     // Cheques (que a empresa vai receber)
-    state.checks.filter(check => check.dueDate === dateStr).forEach(check => {
+    checks.filter(check => check.dueDate === dateStr).forEach(check => {
       events.push({
         id: `check-${check.id}`,
         type: 'check',
@@ -120,7 +120,7 @@ export function Agenda() {
     });
 
     // Boletos (que a empresa vai receber)
-    state.boletos.filter(boleto => boleto.dueDate === dateStr).forEach(boleto => {
+    boletos.filter(boleto => boleto.dueDate === dateStr).forEach(boleto => {
       events.push({
         id: `boleto-${boleto.id}`,
         type: 'boleto',
@@ -135,7 +135,7 @@ export function Agenda() {
     });
 
     // Vendas a receber (parcelas pendentes)
-    state.sales.forEach(sale => {
+    sales.forEach(sale => {
       // Adicionar evento para data de entrega se existir
       if (sale.deliveryDate && sale.deliveryDate === dateStr) {
         events.push({
@@ -179,7 +179,7 @@ export function Agenda() {
     if (!selectedDay) return [];
     const selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), selectedDay);
     return getEventsForDay(selectedDate);
-  }, [selectedDay, currentDate, state]);
+  }, [selectedDay, currentDate, debts, checks, boletos, sales]);
 
   const days = getDaysInMonth();
   const today = new Date();
