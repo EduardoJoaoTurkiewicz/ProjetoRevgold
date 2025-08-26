@@ -543,10 +543,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Verificar autenticação
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      await supabase.auth.signInWithPassword({
-        email: 'admin@revgold.com',
-        password: 'revgold123'
-      });
+      try {
+        const { error: authError } = await supabase.auth.signInWithPassword({
+          email: 'admin@revgold.com',
+          password: 'revgold123'
+        });
+        
+        if (authError) {
+          console.warn('⚠️ Login automático falhou, continuando sem auth:', authError.message);
+        }
+      } catch (authError) {
+        console.warn('⚠️ Erro no login automático:', authError);
+      }
     }
 
     const { data, error } = await supabase.from('debts').insert([debtData]).select().single();
@@ -681,10 +689,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Verificar autenticação
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      await supabase.auth.signInWithPassword({
-        email: 'admin@revgold.com',
-        password: 'revgold123'
-      });
+      try {
+        const { error: authError } = await supabase.auth.signInWithPassword({
+          email: 'admin@revgold.com',
+          password: 'revgold123'
+        });
+        
+        if (authError) {
+          console.warn('⚠️ Login automático falhou, continuando sem auth:', authError.message);
+        }
+      } catch (authError) {
+        console.warn('⚠️ Erro no login automático:', authError);
+      }
     }
 
     const { data, error } = await supabase.from('employees').insert([employeeData]).select().single();
