@@ -113,7 +113,7 @@ export function UserSelection() {
       } catch (error) {
         setConnectionStatus('error');
         setConnectionDetails({ error: error.message });
-        console.error('❌ Erro ao testar conexão:', error);
+        console.warn('❌ Erro ao testar conexão:', error);
       }
     };
 
