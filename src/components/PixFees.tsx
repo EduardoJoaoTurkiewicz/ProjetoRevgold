@@ -5,7 +5,7 @@ import { PixFee } from '../types';
 import { PixFeeForm } from './forms/PixFeeForm';
 
 export function PixFees() {
-  const { state, createPixFee, updatePixFee, deletePixFee } = useApp();
+  const { pixFees, isLoading, error, createPixFee, updatePixFee, deletePixFee } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPixFee, setEditingPixFee] = useState<PixFee | null>(null);
   const [viewingPixFee, setViewingPixFee] = useState<PixFee | null>(null);
@@ -15,16 +15,16 @@ export function PixFees() {
   const thisYear = new Date().getFullYear();
 
   // Calcular totais
-  const monthlyFees = state.pixFees.filter(fee => {
+  const monthlyFees = pixFees.filter(fee => {
     const feeDate = new Date(fee.date);
     return feeDate.getMonth() === thisMonth && feeDate.getFullYear() === thisYear;
   });
 
   const totalMonthlyFees = monthlyFees.reduce((sum, fee) => sum + fee.amount, 0);
-  const totalAllFees = state.pixFees.reduce((sum, fee) => sum + fee.amount, 0);
+  const totalAllFees = pixFees.reduce((sum, fee) => sum + fee.amount, 0);
 
   // Agrupar por banco
-  const feesByBank = state.pixFees.reduce((acc, fee) => {
+  const feesByBank = pixFees.reduce((acc, fee) => {
     if (!acc[fee.bank]) {
       acc[fee.bank] = { count: 0, total: 0 };
     }
@@ -86,7 +86,7 @@ export function PixFees() {
     }
   };
 
-  if (state.isLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
@@ -121,13 +121,13 @@ export function PixFees() {
       </div>
 
       {/* Error Display */}
-      {state.error && (
+      {error && (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
           <div className="flex items-center gap-4">
             <AlertCircle className="w-8 h-8 text-red-600" />
             <div>
               <h3 className="font-bold text-red-800">Erro no Sistema</h3>
-              <p className="text-red-700">{state.error}</p>
+              <p className="text-red-700">{error}</p>
             </div>
           </div>
         </div>
@@ -157,7 +157,7 @@ export function PixFees() {
             </div>
             <div>
               <h3 className="font-bold text-red-900 text-lg">Total Geral</h3>
-              <p className="text-red-700 font-medium">{state.pixFees.length} tarifa(s)</p>
+              <p className="text-red-700 font-medium">{pixFees.length} tarifa(s)</p>
               <p className="text-sm text-red-600 font-semibold">
                 Total: R$ {totalAllFees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
@@ -174,7 +174,7 @@ export function PixFees() {
               <h3 className="font-bold text-purple-900 text-lg">Bancos</h3>
               <p className="text-purple-700 font-medium">{Object.keys(feesByBank).length} banco(s)</p>
               <p className="text-sm text-purple-600 font-semibold">
-                Média: R$ {(totalAllFees / Math.max(state.pixFees.length, 1)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                Média: R$ {(totalAllFees / Math.max(pixFees.length, 1)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
           </div>
@@ -226,7 +226,7 @@ export function PixFees() {
 
       {/* PIX Fees List */}
       <div className="card modern-shadow-xl">
-        {state.pixFees.length > 0 ? (
+        {pixFees.length > 0 ? (
           <div className="overflow-x-auto modern-scrollbar">
             <table className="min-w-full table-auto">
               <thead>
@@ -240,7 +240,7 @@ export function PixFees() {
                 </tr>
               </thead>
               <tbody>
-                {state.pixFees.map(pixFee => (
+                {pixFees.map(pixFee => (
                   <tr key={pixFee.id} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-all duration-300">
                     <td className="py-4 px-6 text-sm font-semibold text-slate-900">
                       {new Date(pixFee.date).toLocaleDateString('pt-BR')}
