@@ -145,7 +145,7 @@ export function UserSelection() {
               password: 'revgold123'
             });
             
-            if (error) {
+            if (error && error.message === 'Invalid login credentials') {
               console.log('🔐 Usuário não existe, tentando criar...');
               
               // Tentar criar usuário se não existir
@@ -163,11 +163,14 @@ export function UserSelection() {
               } else {
                 console.log('✅ Usuário criado com sucesso');
               }
+            } else if (error) {
+              console.warn('⚠️ Erro de autenticação:', error.message);
+              console.log('💡 Sistema funcionará sem autenticação');
             } else {
               console.log('✅ Login realizado com sucesso');
             }
           } catch (authError) {
-            console.warn('⚠️ Erro na autenticação:', authError);
+            // Silently handle authentication errors to avoid console spam
             console.log('💡 Sistema funcionará sem autenticação');
           }
         }
