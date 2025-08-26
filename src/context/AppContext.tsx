@@ -312,7 +312,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('your-project') || supabaseAnonKey.includes('your-anon-key')) {
         console.warn('Supabase not configured. Using demo data.');
-        setLoading(false);
+        dispatch({ type: 'SET_LOADING', payload: false });
         return;
       }
       dispatch({ type: 'SET_ERROR', payload: null });

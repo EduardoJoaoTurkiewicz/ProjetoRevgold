@@ -15,6 +15,7 @@ import Reports from './components/Reports';
 import { CashManagement } from './components/CashManagement';
 import { Agenda } from './components/Agenda';
 import { Employees } from './components/Employees';
+import { UserSelection } from './components/UserSelection';
 import { useApp } from './context/AppContext';
 
 function App() {
