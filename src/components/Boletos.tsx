@@ -640,7 +640,7 @@ export function Boletos() {
                   <p className="text-sm text-slate-900">
                     {viewingBoleto.saleId ? (
                       (() => {
-                        const sale = state.sales.find(s => s.id === viewingBoleto.saleId);
+                        const sale = sales.find(s => s.id === viewingBoleto.saleId);
                         return sale ? `Venda: ${sale.client} (${new Date(sale.date).toLocaleDateString('pt-BR')})` : 'Venda não encontrada';
                       })()
                     ) : (

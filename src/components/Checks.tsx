@@ -6,7 +6,7 @@ import { CheckForm } from './forms/CheckForm';
 import { getCheckImageUrl } from '../lib/supabase';
 
 export function Checks() {
-  const { state, createCheck, updateCheck, deleteCheck } = useApp();
+  const { checks, sales, debts, createCheck, updateCheck, deleteCheck } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCheck, setEditingCheck] = useState<Check | null>(null);
   const [viewingCheck, setViewingCheck] = useState<Check | null>(null);
@@ -14,33 +14,33 @@ export function Checks() {
   const [expandedDebts, setExpandedDebts] = useState<Set<string>>(new Set());
 
   const today = new Date().toISOString().split('T')[0];
-  const dueToday = state.checks.filter(check => check.dueDate === today);
-  const overdue = state.checks.filter(check => check.dueDate < today && check.status === 'pendente');
+  const dueToday = checks.filter(check => check.dueDate === today);
+  const overdue = checks.filter(check => check.dueDate < today && check.status === 'pendente');
   
   // Novos cálculos para widgets
-  const notDueYet = state.checks.filter(check => check.dueDate > today && check.status === 'pendente');
+  const notDueYet = checks.filter(check => check.dueDate > today && check.status === 'pendente');
   const totalNotDueYet = notDueYet.reduce((sum, check) => sum + check.value, 0);
   const totalOverdue = overdue.reduce((sum, check) => sum + check.value, 0);
   
   // Cheques próprios que a empresa tem para pagar
-  const companyPayableChecks = state.checks.filter(check => 
+  const companyPayableChecks = checks.filter(check => 
     check.isOwnCheck && check.status === 'pendente'
   );
   const totalCompanyPayableChecks = companyPayableChecks.reduce((sum, check) => sum + check.value, 0);
 
   // Group checks by sales and debts
-  const salesWithChecks = state.sales.filter(sale => 
-    state.checks.some(check => check.saleId === sale.id)
+  const salesWithChecks = sales.filter(sale => 
+    checks.some(check => check.saleId === sale.id)
   ).map(sale => ({
     ...sale,
-    checks: state.checks.filter(check => check.saleId === sale.id)
+    checks: checks.filter(check => check.saleId === sale.id)
   }));
 
-  const debtsWithChecks = state.debts.filter(debt => 
+  const debtsWithChecks = debts.filter(debt => 
     debt.checksUsed && debt.checksUsed.length > 0
   ).map(debt => ({
     ...debt,
-    checks: state.checks.filter(check => 
+    checks: checks.filter(check => 
       debt.checksUsed?.includes(check.id)
     )
   }));
@@ -77,7 +77,7 @@ export function Checks() {
   };
 
   const updateCheckStatus = (checkId: string, status: Check['status']) => {
-    const check = state.checks.find(c => c.id === checkId);
+    const check = checks.find(c => c.id === checkId);
     if (check) {
       const updatedCheck = { ...check, status };
       updateCheck(updatedCheck).catch(error => {
