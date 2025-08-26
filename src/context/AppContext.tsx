@@ -936,9 +936,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateEmployeeCommission,
     createPixFee,
     updatePixFee,
-    deletePixFee,
-    updateDebt,
-    createCashTransaction
+    deletePixFee
   };
 
   return (

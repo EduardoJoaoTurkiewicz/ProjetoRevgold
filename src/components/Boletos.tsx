@@ -6,7 +6,7 @@ import { BoletoForm } from './forms/BoletoForm';
 import { OverdueBoletoForm } from './forms/OverdueBoletoForm';
 
 export function Boletos() {
-  const { state, createBoleto, updateBoleto, deleteBoleto } = useApp();
+  const { state, createBoleto, updateBoleto, deleteBoleto, updateDebt, createCashTransaction } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBoleto, setEditingBoleto] = useState<Boleto | null>(null);
   const [viewingBoleto, setViewingBoleto] = useState<Boleto | null>(null);
@@ -501,7 +501,6 @@ export function Boletos() {
                       onClick={() => {
                         if (window.confirm('Marcar esta dívida como paga?')) {
                           const updatedDebt = { ...debt, isPaid: true, paidAmount: debt.totalValue, pendingAmount: 0 };
-                          const { updateDebt, createCashTransaction } = useApp();
                           updateDebt(updatedDebt).then(() => {
                             // Criar transação de caixa para reduzir o saldo
                             createCashTransaction({
