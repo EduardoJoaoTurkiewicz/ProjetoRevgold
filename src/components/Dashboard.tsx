@@ -319,9 +319,9 @@ export default function Dashboard() {
       .filter(seller => seller && typeof seller === 'object')
       .map(seller => ({
         name: seller.name || 'Vendedor',
-        totalSales: seller.totalSales || 0,
-        totalValue: seller.totalValue || 0,
-        commissions: seller.commissions || 0
+        totalSales: Number(seller.totalSales) || 0,
+        totalValue: Number(seller.totalValue) || 0,
+        commissions: Number(seller.commissions) || 0
       }))
       .sort((a, b) => b.totalValue - a.totalValue)
       .slice(0, 5);
