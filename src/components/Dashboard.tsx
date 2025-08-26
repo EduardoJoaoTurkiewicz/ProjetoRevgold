@@ -285,18 +285,22 @@ export default function Dashboard() {
   const topSellers = useMemo(() => {
     const sellerStats = {};
     
+    // Initialize all active sellers with default values
+    (state?.employees || []).forEach(employee => {
+      if (employee.isActive && employee.isSeller) {
+        sellerStats[employee.id] = {
+          name: employee.name,
+          totalSales: 0,
+          totalValue: 0,
+          commissions: 0
+        };
+      }
+    });
+    
     (state?.sales || []).forEach(sale => {
       if (sale.sellerId) {
         const seller = (state?.employees || []).find(e => e.id === sale.sellerId);
         if (seller) {
-          if (!sellerStats[seller.id]) {
-            sellerStats[seller.id] = {
-              name: seller.name,
-              totalSales: 0,
-              totalValue: 0,
-              commissions: 0
-            };
-          }
           sellerStats[seller.id].totalSales += 1;
           sellerStats[seller.id].totalValue += sale.totalValue;
         }
