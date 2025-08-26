@@ -13,8 +13,8 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  const totalSales = sales.reduce((sum, sale) => sum + sale.totalValue, 0);
-  const pendingDebts = debts.filter(debt => !debt.isPaid).length;
+  const totalSales = sales.reduce((sum, sale) => sum + sale.amount, 0);
+  const pendingDebts = debts.filter(debt => debt.status === 'pending').length;
   const upcomingChecks = checks.filter(check => {
     const dueDate = new Date(check.dueDate);
     const today = new Date();
@@ -86,11 +86,11 @@ const Dashboard: React.FC = () => {
             {sales.slice(0, 5).map((sale) => (
               <div key={sale.id} className="flex justify-between items-center py-2 border-b border-gray-100">
                 <div>
-                  <p className="font-medium text-gray-900">{sale.client}</p>
+                  <p className="font-medium text-gray-900">{sale.customerName}</p>
                   <p className="text-sm text-gray-600">{new Date(sale.date).toLocaleDateString('pt-BR')}</p>
                 </div>
                 <p className="font-semibold text-green-600">
-                  R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {sale.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             ))}
@@ -106,19 +106,19 @@ const Dashboard: React.FC = () => {
                 const today = new Date();
                 const diffTime = dueDate.getTime() - today.getTime();
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                return diffDays <= 7 && diffDays >= 0 && boleto.status === 'pendente';
+                return diffDays <= 7 && diffDays >= 0 && boleto.status === 'pending';
               })
               .slice(0, 5)
               .map((boleto) => (
                 <div key={boleto.id} className="flex justify-between items-center py-2 border-b border-gray-100">
                   <div>
-                    <p className="font-medium text-gray-900">{boleto.client}</p>
+                    <p className="font-medium text-gray-900">{boleto.description}</p>
                     <p className="text-sm text-gray-600">
                       Vence em {new Date(boleto.dueDate).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
                   <p className="font-semibold text-red-600">
-                    R$ {boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {boleto.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
               ))}
