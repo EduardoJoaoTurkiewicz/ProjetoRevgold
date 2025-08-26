@@ -100,6 +100,19 @@ interface AppContextType {
   
   initializeCashBalance: (amount: number) => Promise<void>;
   updateCashBalance: (balance: CashBalance) => Promise<void>;
+  
+  // Legacy aliases for backward compatibility
+  createEmployee: (employee: Omit<Employee, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  createSale: (sale: Omit<Sale, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  createDebt: (debt: Omit<Debt, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  createCheck: (check: Omit<Check, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  createBoleto: (boleto: Omit<Boleto, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  createEmployeePayment: (payment: Omit<EmployeePayment, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  createEmployeeAdvance: (advance: Omit<EmployeeAdvance, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  createEmployeeCommission: (commission: Omit<EmployeeCommission, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  createEmployeeOvertime: (overtime: Omit<EmployeeOvertime, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  createCashTransaction: (transaction: Omit<CashTransaction, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  createPixFee: (fee: Omit<PixFee, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -336,10 +349,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         .single();
       
       if (error && error.code !== 'PGRST116') throw error;
-      setCashBalance(data || { currentBalance: 0 });
+      setCashBalance(data || { currentBalance: 0, lastUpdated: new Date().toISOString() });
     } catch (error) {
       console.error('Error fetching cash balance:', error);
-      setCashBalance({ currentBalance: 0 });
+      setCashBalance({ currentBalance: 0, lastUpdated: new Date().toISOString() });
     }
   };
 
@@ -942,6 +955,19 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     deletePixFee,
     initializeCashBalance,
     updateCashBalance,
+    
+    // Legacy aliases for backward compatibility
+    createEmployee: addEmployee,
+    createSale: addSale,
+    createDebt: addDebt,
+    createCheck: addCheck,
+    createBoleto: addBoleto,
+    createEmployeePayment: addEmployeePayment,
+    createEmployeeAdvance: addEmployeeAdvance,
+    createEmployeeCommission: addEmployeeCommission,
+    createEmployeeOvertime: addEmployeeOvertime,
+    createCashTransaction: addCashTransaction,
+    createPixFee: addPixFee,
   };
 
   return (

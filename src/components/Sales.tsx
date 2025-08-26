@@ -5,14 +5,14 @@ import { Sale, PaymentMethod, EmployeeCommission } from '../types';
 import { SaleForm } from './forms/SaleForm';
 
 export function Sales() {
-  const { state, createSale, updateSale, deleteSale } = useApp();
+  const { loading, error, sales, employees, employeeCommissions, addSale, updateSale, deleteSale } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [viewingSale, setViewingSale] = useState<Sale | null>(null);
   const [viewingObservations, setViewingObservations] = useState<Sale | null>(null);
 
   const handleAddSale = (sale: Omit<Sale, 'id' | 'createdAt'>) => {
-    createSale(sale).then(() => {
+    addSale(sale).then(() => {
       setIsFormOpen(false);
     }).catch(error => {
       alert('Erro ao criar venda: ' + error.message);
@@ -26,7 +26,7 @@ export function Sales() {
         id: editingSale.id,
         createdAt: editingSale.createdAt
       };
-      updateSale(updatedSale).then(() => {
+      updateSale(editingSale.id, sale).then(() => {
         setEditingSale(null);
       }).catch(error => {
         alert('Erro ao atualizar venda: ' + error.message);
@@ -42,7 +42,7 @@ export function Sales() {
     }
   };
 
-  if (state.isLoading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
@@ -77,13 +77,13 @@ export function Sales() {
       </div>
 
       {/* Error Display */}
-      {state.error && (
+      {error && (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
           <div className="flex items-center gap-4">
             <AlertCircle className="w-8 h-8 text-red-600" />
             <div>
               <h3 className="font-bold text-red-800">Erro no Sistema</h3>
-              <p className="text-red-700">{state.error}</p>
+              <p className="text-red-700">{error}</p>
             </div>
           </div>
         </div>
@@ -91,7 +91,7 @@ export function Sales() {
 
       {/* Sales List */}
       <div className="card modern-shadow-xl">
-        {state.sales.length > 0 ? (
+        {sales.length > 0 ? (
           <div className="overflow-x-auto modern-scrollbar">
             <table className="min-w-full">
               <thead>
@@ -109,7 +109,7 @@ export function Sales() {
                 </tr>
               </thead>
               <tbody>
-                {state.sales.map(sale => (
+                {sales.map(sale => (
                   <tr key={sale.id} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-green-50/50 hover:to-emerald-50/50 transition-all duration-300">
                     <td className="py-4 px-6 text-sm font-semibold text-slate-900">
                       {new Date(sale.date).toLocaleDateString('pt-BR')}
@@ -127,7 +127,7 @@ export function Sales() {
                     <td className="py-4 px-6 text-sm">
                       {sale.sellerId ? (
                         (() => {
-                          const seller = state.employees.find(e => e.id === sale.sellerId);
+                          const seller = employees.find(e => e.id === sale.sellerId);
                           return seller ? (
                             <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold border border-green-200">
                               {seller.name}
@@ -274,7 +274,7 @@ export function Sales() {
                   <p className="text-base text-green-700 font-semibold">
                     {viewingSale.sellerId ? (
                       (() => {
-                        const seller = state.employees.find(e => e.id === viewingSale.sellerId);
+                        const seller = employees.find(e => e.id === viewingSale.sellerId);
                         return seller ? seller.name : 'Funcionário não encontrado';
                       })()
                     ) : (
@@ -282,8 +282,8 @@ export function Sales() {
                     )}
                   </p>
                   {viewingSale.sellerId && (() => {
-                    const seller = state.employees.find(e => e.id === viewingSale.sellerId);
-                    const commission = state.employeeCommissions.find(c => c.saleId === viewingSale.id);
+                    const seller = employees.find(e => e.id === viewingSale.sellerId);
+                    const commission = employeeCommissions.find(c => c.saleId === viewingSale.id);
                     return seller && seller.isSeller && commission ? (
                       <p className="text-sm text-green-600 font-bold mt-1">
                         Comissão: R$ {commission.commissionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({commission.commissionRate}%)
@@ -399,8 +399,8 @@ export function Sales() {
                   <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
                     <h3 className="text-xl font-bold text-green-900 mb-4">Informações do Vendedor</h3>
                     {(() => {
-                      const seller = state.employees.find(e => e.id === viewingObservations.sellerId);
-                      const commission = state.employeeCommissions.find(c => c.saleId === viewingObservations.id);
+                      const seller = employees.find(e => e.id === viewingObservations.sellerId);
+                      const commission = employeeCommissions.find(c => c.saleId === viewingObservations.id);
                       return seller ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <p><strong className="text-green-800">Nome:</strong> <span className="text-green-700 font-bold">{seller.name}</span></p>

@@ -23,7 +23,7 @@ const PAYMENT_TYPES = [
 const INSTALLMENT_TYPES = ['cartao_credito', 'cheque', 'boleto'];
 
 export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
-  const { state } = useApp();
+  const { employees } = useApp();
   const [formData, setFormData] = useState({
     date: sale?.date || new Date().toISOString().split('T')[0],
     deliveryDate: sale?.deliveryDate || '',
@@ -40,7 +40,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   });
 
   // Filtrar apenas vendedores ativos
-  const sellers = state.employees.filter(emp => emp.isActive && emp.isSeller);
+  const sellers = employees.filter(emp => emp.isActive && emp.isSeller);
 
   const addPaymentMethod = () => {
     setFormData(prev => ({

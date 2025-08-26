@@ -10,7 +10,7 @@ interface BoletoFormProps {
 }
 
 export function BoletoForm({ boleto, onSubmit, onCancel }: BoletoFormProps) {
-  const { state } = useApp();
+  const { sales } = useApp();
   const [formData, setFormData] = useState({
     saleId: boleto?.saleId || '',
     client: boleto?.client || '',
@@ -31,7 +31,7 @@ export function BoletoForm({ boleto, onSubmit, onCancel }: BoletoFormProps) {
   });
 
   const handleSaleSelection = (saleId: string) => {
-    const sale = state.sales.find(s => s.id === saleId);
+    const sale = sales.find(s => s.id === saleId);
     if (sale) {
       setFormData(prev => ({
         ...prev,
@@ -77,7 +77,7 @@ export function BoletoForm({ boleto, onSubmit, onCancel }: BoletoFormProps) {
                   className="input-field"
                 >
                   <option value="">Boleto manual (sem venda associada)</option>
-                  {state.sales.map(sale => (
+                  {sales.map(sale => (
                     <option key={sale.id} value={sale.id}>
                       {sale.client} - R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} 
                       ({new Date(sale.date).toLocaleDateString('pt-BR')})

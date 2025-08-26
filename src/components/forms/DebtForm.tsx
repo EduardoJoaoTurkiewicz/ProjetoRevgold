@@ -22,7 +22,7 @@ const PAYMENT_TYPES = [
 const INSTALLMENT_TYPES = ['cartao_credito', 'cheque', 'boleto'];
 
 export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
-  const { state } = useApp();
+  const { checks } = useApp();
   const [formData, setFormData] = useState({
     date: debt?.date || new Date().toISOString().split('T')[0],
     description: debt?.description || '',
@@ -38,7 +38,7 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
   });
 
   // Get available checks from sales that have check payment method
-  const availableChecks = state.checks.filter(check => 
+  const availableChecks = checks.filter(check => 
     !check.usedInDebt && // Não usado em outras dívidas
     !formData.checksUsed.includes(check.id)
   );
@@ -112,7 +112,7 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
     
     // Adicionar valor dos cheques selecionados (se houver)
     const checksValue = formData.checksUsed.reduce((sum, checkId) => {
-      const check = state.checks.find(c => c.id === checkId);
+      const check = checks.find(c => c.id === checkId);
       return sum + (check ? check.value : 0);
     }, 0);
     

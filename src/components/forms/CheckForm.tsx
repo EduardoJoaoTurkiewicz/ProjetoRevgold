@@ -11,7 +11,7 @@ interface CheckFormProps {
 }
 
 export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
-  const { state } = useApp();
+  const { sales, checks } = useApp();
   const [formData, setFormData] = useState({
     saleId: check?.saleId || '',
     debtId: check?.debtId || '',
@@ -32,7 +32,7 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
   });
 
   // Get available checks that are not already used
-  const availableChecks = state.checks.filter(existingCheck => 
+  const availableChecks = checks.filter(existingCheck => 
     existingCheck.id !== check?.id && // Don't include the current check being edited
     existingCheck.status === 'pendente' &&
     !existingCheck.usedFor?.includes('Usado para pagamento') &&
@@ -40,7 +40,7 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
   );
 
   const handleSaleSelection = (saleId: string) => {
-    const sale = state.sales.find(s => s.id === saleId);
+    const sale = sales.find(s => s.id === saleId);
     if (sale) {
       setFormData(prev => ({
         ...prev,
@@ -99,7 +99,7 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
                   className="input-field"
                 >
                   <option value="">Selecionar venda...</option>
-                  {state.sales.map(sale => (
+                  {sales.map(sale => (
                     <option key={sale.id} value={sale.id}>
                       {sale.client} - R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} 
                       ({new Date(sale.date).toLocaleDateString('pt-BR')})
