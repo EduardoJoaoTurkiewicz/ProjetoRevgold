@@ -239,53 +239,33 @@ export async function healthCheck() {
   }
 }
 
-// Função para garantir autenticação
-export async function ensureAuthenticated() {
-  if (!isSupabaseConfigured()) {
-    return false;
-  }
-
+export const ensureAuthenticated = async () => {
   try {
-    // Tentar fazer login automático simples
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: 'admin@revgold.com',
-      password: 'revgold123'
-    });
+    // Check if Supabase is properly configured
+    if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('your-project') || supabaseAnonKey.includes('your-anon-key')) {
+      console.warn('Supabase not configured. Please connect to Supabase to enable authentication.');
+      return null;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
     
-    if (error && error.message === 'Invalid login credentials') {
-      // Tentar criar usuário se não existir
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: 'admin@revgold.com',
-        password: 'revgold123',
-        options: {
-          emailRedirectTo: undefined
-        }
+    if (!user) {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: 'admin@example.com',
+        password: 'admin123'
       });
       
-      if (signUpError) {
-        console.log('⚠️ Erro ao criar usuário, continuando sem auth:', signUpError.message);
-        return false;
+      if (error) {
+        console.warn('Authentication failed:', error.message);
+        return null;
       }
       
-      console.log('✅ Usuário criado, tentando login novamente...');
-      const { error: loginError } = await supabase.auth.signInWithPassword({
-        email: 'admin@revgold.com',
-        password: 'revgold123'
-      });
-      
-      if (loginError) {
-        console.log('⚠️ Erro no segundo login, continuando sem auth:', loginError.message);
-        return false;
-      }
-    } else if (error) {
-      console.log('⚠️ Erro de autenticação, continuando sem auth:', error.message);
-      return false;
+      return data.user;
     }
     
-    console.log('✅ Autenticação realizada com sucesso');
-    return true;
+    return user;
   } catch (error) {
-    console.log('⚠️ Erro na autenticação, continuando sem auth:', error);
-    return false;
+    console.warn('Supabase connection failed. Please check your configuration.');
+    return null;
   }
-}
+};

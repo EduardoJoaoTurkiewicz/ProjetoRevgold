@@ -3,7 +3,7 @@ import { DollarSign } from 'lucide-react';
 
 import { useAuthInitialization } from './hooks/useAuthInitialization';
 import { AppProvider } from './context/AppContext';
-import { UserSelection } from './components/UserSelection';
+import { Users, Database } from 'lucide-react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import { Sales } from './components/Sales';

@@ -305,6 +305,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const loadAllData = async () => {
     if (!isSupabaseConfigured()) {
       console.log('⚠️ Supabase não configurado, usando dados locais');
+      
+      // Check if Supabase is properly configured
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('your-project') || supabaseAnonKey.includes('your-anon-key')) {
+        console.warn('Supabase not configured. Using demo data.');
+        setLoading(false);
+        return;
+      }
       dispatch({ type: 'SET_ERROR', payload: null });
       return;
     }
