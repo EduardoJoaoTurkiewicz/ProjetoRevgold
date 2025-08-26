@@ -506,6 +506,7 @@ export function Checks() {
                       onClick={() => {
                         if (window.confirm('Marcar este cheque como pago?')) {
                           const updatedCheck = { ...check, status: 'compensado' as const };
+                          const { updateCheck, createCashTransaction } = useApp();
                           updateCheck(updatedCheck).then(() => {
                             // Criar transação de caixa para reduzir o saldo
                             createCashTransaction({

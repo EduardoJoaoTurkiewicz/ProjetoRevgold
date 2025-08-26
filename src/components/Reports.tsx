@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { FileText, Calendar, Download, Filter, DollarSign, TrendingUp, TrendingDown, BarChart3, PieChart, Users, CreditCard, Receipt, Clock, AlertTriangle, CheckCircle, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { FileText, Calendar, Download, Filter, DollarSign, TrendingUp, TrendingDown, BarChart3, PieChart, Users, CreditCard, Receipt, Clock, AlertTriangle, CheckCircle, ArrowUpCircle, ArrowDownCircle, Eye, Search, Info } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import jsPDF from 'jspdf';
@@ -16,6 +16,7 @@ export function Reports() {
   });
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [activeTab, setActiveTab] = useState('summary');
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -164,7 +165,265 @@ export function Reports() {
       });
     });
     return Object.entries(methods).map(([name, value]) => ({ name, value }));
+  // Dados detalhados para a nova seção
+  const detailedData = useMemo(() => {
+    // 1. Vendas do período
+    const salesInPeriod = filteredData.sales.map(sale => {
+      const seller = state.employees.find(e => e.id === sale.sellerId);
+      const commission = state.employeeCommissions.find(c => c.saleId === sale.id);
+      
+      return {
+        ...sale,
+        sellerName: seller?.name || 'Não informado',
+        commissionAmount: commission?.commissionAmount || 0,
+        commissionRate: commission?.commissionRate || 0,
+        paymentMethodsDetails: sale.paymentMethods.map(method => ({
+          ...method,
+          typeName: method.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          isInstantPayment: ['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
+                           (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))
+        }))
+      };
+    });
+    
+    const totalSalesValue = salesInPeriod.reduce((sum, sale) => sum + sale.totalValue, 0);
+
+    // 2. Valores efetivamente recebidos no período
+    const receivedValues = [];
+    
+    // Vendas com pagamento instantâneo no período
+    salesInPeriod.forEach(sale => {
+      sale.paymentMethodsDetails.forEach(method => {
+        if (method.isInstantPayment) {
+          receivedValues.push({
+            id: `sale-${sale.id}-${method.type}`,
+            date: sale.date,
+            type: 'Venda',
+            description: `Venda para ${sale.client}`,
+            paymentMethod: method.typeName,
+            amount: method.amount,
+            details: {
+              client: sale.client,
+              seller: sale.sellerName,
+              products: sale.products,
+              totalSaleValue: sale.totalValue,
+              observations: sale.observations
+            }
+          });
+        }
+      });
+    });
+    
+    // Cheques compensados no período
+    state.checks.forEach(check => {
+      if (check.dueDate >= startDate && check.dueDate <= endDate && check.status === 'compensado') {
+        const sale = state.sales.find(s => s.id === check.saleId);
+        receivedValues.push({
+          id: `check-${check.id}`,
+          date: check.dueDate,
+          type: 'Cheque',
+          description: `Cheque de ${check.client}`,
+          paymentMethod: 'Cheque',
+          amount: check.value,
+          details: {
+            client: check.client,
+            dueDate: check.dueDate,
+            installment: check.installmentNumber ? `${check.installmentNumber}/${check.totalInstallments}` : '1/1',
+            isOwnCheck: check.isOwnCheck,
+            usedFor: check.usedFor,
+            saleReference: sale ? `Venda: ${sale.client} (${new Date(sale.date).toLocaleDateString('pt-BR')})` : 'Cheque manual',
+            observations: check.observations
+          }
+        });
+      }
+    });
+    
+    // Boletos compensados no período
+    state.boletos.forEach(boleto => {
+      if (boleto.dueDate >= startDate && boleto.dueDate <= endDate && boleto.status === 'compensado') {
+        const sale = state.sales.find(s => s.id === boleto.saleId);
+        const finalAmount = boleto.finalAmount || boleto.value;
+        const notaryCosts = boleto.notaryCosts || 0;
+        const netReceived = finalAmount - notaryCosts;
+        
+        receivedValues.push({
+          id: `boleto-${boleto.id}`,
+          date: boleto.dueDate,
+          type: 'Boleto',
+          description: `Boleto de ${boleto.client}`,
+          paymentMethod: 'Boleto',
+          amount: netReceived,
+          details: {
+            client: boleto.client,
+            originalValue: boleto.value,
+            finalAmount: finalAmount,
+            notaryCosts: notaryCosts,
+            netReceived: netReceived,
+            installment: `${boleto.installmentNumber}/${boleto.totalInstallments}`,
+            overdueAction: boleto.overdueAction,
+            saleReference: sale ? `Venda: ${sale.client} (${new Date(sale.date).toLocaleDateString('pt-BR')})` : 'Boleto manual',
+            observations: boleto.observations,
+            overdueNotes: boleto.overdueNotes
+          }
+        });
+      }
+    });
+    
+    const totalReceivedValue = receivedValues.reduce((sum, item) => sum + item.amount, 0);
+
+    // 3. Dívidas feitas no período
+    const debtsInPeriod = filteredData.debts.map(debt => {
+      const checksUsedDetails = (debt.checksUsed || []).map(checkId => {
+        const check = state.checks.find(c => c.id === checkId);
+        return check ? {
+          client: check.client,
+          value: check.value,
+          dueDate: check.dueDate,
+          status: check.status,
+          installment: check.installmentNumber ? `${check.installmentNumber}/${check.totalInstallments}` : '1/1'
+        } : null;
+      }).filter(Boolean);
+      
+      return {
+        ...debt,
+        paymentMethodsDetails: debt.paymentMethods.map(method => ({
+          ...method,
+          typeName: method.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          isInstantPayment: ['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(method.type)
+        })),
+        checksUsedDetails
+      };
+    });
+    
+    const totalDebtsValue = debtsInPeriod.reduce((sum, debt) => sum + debt.totalValue, 0);
   }, [filteredData.sales]);
+    // 4. Valores efetivamente pagos no período
+    const paidValues = [];
+    
+    // Dívidas pagas no período
+    debtsInPeriod.forEach(debt => {
+      if (debt.isPaid) {
+        debt.paymentMethodsDetails.forEach(method => {
+          if (method.isInstantPayment) {
+            paidValues.push({
+              id: `debt-${debt.id}-${method.type}`,
+              date: debt.date,
+              type: 'Dívida',
+              description: `Pagamento para ${debt.company}`,
+              paymentMethod: method.typeName,
+              amount: method.amount,
+              details: {
+                company: debt.company,
+                description: debt.description,
+                totalDebtValue: debt.totalValue,
+                paymentDescription: debt.paymentDescription,
+                debtPaymentDescription: debt.debtPaymentDescription,
+                observations: debt.observations
+              }
+            });
+          }
+        });
+        
+        // Cheques utilizados para pagamento de dívidas
+        debt.checksUsedDetails.forEach(checkDetail => {
+          if (checkDetail && checkDetail.status === 'compensado') {
+            paidValues.push({
+              id: `debt-check-${debt.id}-${checkDetail.client}`,
+              date: checkDetail.dueDate,
+              type: 'Cheque para Dívida',
+              description: `Cheque de ${checkDetail.client} usado para pagar ${debt.company}`,
+              paymentMethod: 'Cheque',
+              amount: checkDetail.value,
+              details: {
+                company: debt.company,
+                checkClient: checkDetail.client,
+                checkInstallment: checkDetail.installment,
+                debtDescription: debt.description
+              }
+            });
+          }
+        });
+      }
+    });
+    
+    // Cheques próprios pagos no período
+    state.checks.forEach(check => {
+      if (check.isOwnCheck && check.dueDate >= startDate && check.dueDate <= endDate && check.status === 'compensado') {
+        paidValues.push({
+          id: `own-check-${check.id}`,
+          date: check.dueDate,
+          type: 'Cheque Próprio',
+          description: `Cheque próprio para ${check.client}`,
+          paymentMethod: 'Cheque Próprio',
+          amount: check.value,
+          details: {
+            client: check.client,
+            usedFor: check.usedFor,
+            installment: check.installmentNumber ? `${check.installmentNumber}/${check.totalInstallments}` : '1/1',
+            observations: check.observations
+          }
+        });
+      }
+    });
+    
+    // Tarifas PIX pagas no período
+    state.pixFees.forEach(fee => {
+      if (fee.date >= startDate && fee.date <= endDate) {
+        paidValues.push({
+          id: `pix-fee-${fee.id}`,
+          date: fee.date,
+          type: 'Tarifa PIX',
+          description: `Tarifa PIX - ${fee.bank}`,
+          paymentMethod: 'PIX',
+          amount: fee.amount,
+          details: {
+            bank: fee.bank,
+            transactionType: fee.transactionType,
+            description: fee.description,
+            relatedTransactionId: fee.relatedTransactionId
+          }
+        });
+      }
+    });
+    
+    // Salários pagos no período
+    state.employeePayments.forEach(payment => {
+      if (payment.paymentDate >= startDate && payment.paymentDate <= endDate) {
+        const employee = state.employees.find(e => e.id === payment.employeeId);
+        paidValues.push({
+          id: `salary-${payment.id}`,
+          date: payment.paymentDate,
+          type: 'Salário',
+          description: `Salário de ${employee?.name || 'Funcionário não encontrado'}`,
+          paymentMethod: 'Dinheiro',
+          amount: payment.amount,
+          details: {
+            employeeName: employee?.name,
+            employeePosition: employee?.position,
+            observations: payment.observations,
+            receipt: payment.receipt
+          }
+        });
+      }
+    });
+    
+    const totalPaidValue = paidValues.reduce((sum, item) => sum + item.amount, 0);
+
+    // 5. Saldo final do caixa
+    const finalCashBalance = state.cashBalance?.currentBalance || 0;
+
+    return {
+      salesInPeriod,
+      totalSalesValue,
+      receivedValues,
+      totalReceivedValue,
+      debtsInPeriod,
+      totalDebtsValue,
+      paidValues,
+      totalPaidValue,
+      finalCashBalance
+    };
+  }, [state, startDate, endDate, filteredData]);
 
   const generatePDF = async () => {
     setIsGeneratingPDF(true);
@@ -645,6 +904,38 @@ export function Reports() {
         </div>
       </div>
 
+      {/* Tabs para diferentes visualizações */}
+      <div className="card modern-shadow-xl">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="p-3 rounded-xl bg-indigo-600">
+            <Search className="w-6 h-6 text-white" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-900">Análise Detalhada</h3>
+        </div>
+        
+        {/* Tab Navigation */}
+        <div className="flex flex-wrap gap-2 mb-8 p-2 bg-slate-100 rounded-2xl">
+          <button
+            onClick={() => setActiveTab('summary')}
+            className={`px-6 py-3 rounded-xl font-bold transition-all duration-300 ${
+              activeTab === 'summary' 
+                ? 'bg-white text-indigo-600 shadow-lg' 
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+            }`}
+          >
+            Resumo Geral
+          </button>
+          <button
+            onClick={() => setActiveTab('detailed')}
+            className={`px-6 py-3 rounded-xl font-bold transition-all duration-300 ${
+              activeTab === 'detailed' 
+                ? 'bg-white text-indigo-600 shadow-lg' 
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+            }`}
+          >
+            Observação Detalhada
+          </button>
+        </div>
       {/* Informações Logísticas */}
       <div className="card modern-shadow-xl">
         <div className="flex items-center gap-4 mb-6">

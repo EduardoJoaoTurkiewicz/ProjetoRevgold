@@ -272,6 +272,8 @@ interface AppContextType {
   createPixFee: (pixFee: Omit<PixFee, 'id' | 'createdAt'>) => Promise<PixFee>;
   updatePixFee: (pixFee: PixFee) => Promise<void>;
   deletePixFee: (id: string) => Promise<void>;
+  updateDebt: (debt: Debt) => Promise<void>;
+  createCashTransaction: (transaction: Omit<CashTransaction, 'id' | 'createdAt'>) => Promise<CashTransaction>;
 }
 
 // Criar contexto
@@ -894,7 +896,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateEmployeeCommission,
     createPixFee,
     updatePixFee,
-    deletePixFee
+    deletePixFee,
+    updateDebt,
+    createCashTransaction
   };
 
   return (

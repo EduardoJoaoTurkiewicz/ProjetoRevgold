@@ -91,6 +91,7 @@ export function Boletos() {
         
         // Criar transação de entrada no caixa para o valor líquido
         if (netReceived > 0) {
+          const { createCashTransaction } = useApp();
           createCashTransaction({
             date: new Date().toISOString().split('T')[0],
             type: 'entrada',
