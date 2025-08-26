@@ -84,42 +84,8 @@ const UserAvatar = () => (
 
 export function UserSelection() {
   const { dispatch } = useApp();
-  const [connectionStatus, setConnectionStatus] = React.useState<'checking' | 'connected' | 'error'>('checking');
-  const [connectionDetails, setConnectionDetails] = React.useState<any>(null);
   const [isConnecting, setIsConnecting] = React.useState(false);
 
-  // Test connection on component mount
-  React.useEffect(() => {
-    const testConnection = async () => {
-      console.log('🔍 Testando conexão com Supabase...');
-      
-      if (!isSupabaseConfigured()) {
-        setConnectionStatus('error');
-        setConnectionDetails({ error: 'Supabase não configurado' });
-        return;
-      }
-
-      try {
-        const health = await healthCheck();
-        setConnectionDetails(health);
-        
-        if (health.connected) {
-          setConnectionStatus('connected');
-          console.log('✅ Conexão com Supabase estabelecida');
-        } else {
-          setConnectionStatus('error');
-          console.log('❌ Falha na conexão com Supabase');
-        }
-      } catch (error) {
-        setConnectionStatus('error');
-        setConnectionDetails({ error: error.message });
-        console.warn('❌ Erro ao testar conexão:', error);
-      }
-    };
-
-    testConnection();
-  }, [isSupabaseConfigured]);
-  
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Bom dia';
@@ -130,9 +96,14 @@ export function UserSelection() {
   const handleUserSelect = (user: typeof USERS[0]) => {
     console.log('🎯 handleUserSelect chamado para:', user.name);
     
+    if (!isSupabaseConfigured()) {
+      alert('Supabase não configurado. Configure as variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env');
+      return;
+    }
+    
     setIsConnecting(true);
     
-    // Definir usuário diretamente sem autenticação complexa
+    // Definir usuário diretamente
     setTimeout(() => {
       console.log('📤 Despachando ação SET_USER...');
       const userData = { 
@@ -181,7 +152,7 @@ export function UserSelection() {
       <div className="w-full max-w-6xl">
         {/* Header Section */}
         <div className="text-center mb-20 revgold-animate-fade-in">
-          {connectionStatus === 'error' && (
+          {!isSupabaseConfigured() && (
             <div className="mb-12 p-8 bg-gradient-to-r from-red-100 to-red-200 border-2 border-red-300 rounded-3xl shadow-2xl">
               <div className="flex items-center justify-center gap-4 mb-4">
                 <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center">
@@ -189,7 +160,7 @@ export function UserSelection() {
                 </div>
                 <div className="text-left">
                   <h3 className="text-2xl font-black text-red-800">⚠️ Configuração Necessária</h3>
-                  <p className="text-red-700 font-bold">{connectionDetails?.error || 'Problema na conexão'}</p>
+                  <p className="text-red-700 font-bold">Supabase não configurado</p>
                 </div>
               </div>
               <div className="text-red-800 space-y-2 text-left max-w-2xl mx-auto">
@@ -204,35 +175,6 @@ export function UserSelection() {
                 <p className="text-red-700 font-bold mt-4 text-center">
                   ⚠️ Sem isso, NENHUM DADO será salvo no banco!
                 </p>
-                {connectionDetails?.tables && (
-                  <div className="mt-6 p-4 bg-white/50 rounded-xl">
-                    <h4 className="font-bold text-red-800 mb-2">Status das Tabelas:</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      {Object.entries(connectionDetails.tables).map(([table, status]) => (
-                        <div key={table} className="flex justify-between">
-                          <span className="text-red-700">{table}:</span>
-                          <span className={status.includes('✅') ? 'text-green-600' : 'text-red-600'}>
-                            {status}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {connectionStatus === 'checking' && (
-            <div className="mb-12 p-8 bg-gradient-to-r from-blue-100 to-indigo-200 border-2 border-blue-300 rounded-3xl shadow-2xl">
-              <div className="flex items-center justify-center gap-4">
-                <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center animate-pulse">
-                  <Zap className="w-8 h-8 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-black text-blue-800">🔍 Verificando Conexão</h3>
-                  <p className="text-blue-700 font-bold">Testando conexão com o banco de dados...</p>
-                </div>
               </div>
             </div>
           )}
@@ -353,7 +295,7 @@ export function UserSelection() {
             <div className="bg-white/10 backdrop-blur-xl border border-green-300/30 rounded-3xl p-10 max-w-2xl mx-auto shadow-2xl">
               <div className="flex items-center justify-center space-x-8 mb-8">
                 <div className="w-20 h-20 bg-gradient-to-br from-green-600 to-emerald-700 rounded-3xl flex items-center justify-center shadow-xl revgold-animate-floating">
-                  {connectionStatus === 'connected' ? (
+                  {isSupabaseConfigured() ? (
                     <Zap className="w-10 h-10 text-white" />
                   ) : (
                     <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
@@ -366,7 +308,7 @@ export function UserSelection() {
                     Sistema RevGold
                   </p>
                   <p className="text-base text-green-200 font-bold uppercase tracking-wider">
-                    {connectionStatus === 'connected' ? 'Gestão Empresarial Profissional' : 'Configure o Supabase'}
+                    {isSupabaseConfigured() ? 'Gestão Empresarial Profissional' : 'Configure o Supabase'}
                   </p>
                 </div>
               </div>
@@ -377,12 +319,12 @@ export function UserSelection() {
               
               <div className="flex items-center justify-center space-x-4">
                 <div className={`w-4 h-4 rounded-full shadow-lg ${
-                  connectionStatus === 'connected' ? 'bg-green-400 revgold-animate-pulse-glow' : 'bg-red-400 animate-pulse'
+                  isSupabaseConfigured() ? 'bg-green-400 revgold-animate-pulse-glow' : 'bg-red-400 animate-pulse'
                 }`}></div>
                 <span className={`text-base font-bold uppercase tracking-wide ${
-                  connectionStatus === 'connected' ? 'text-green-300' : 'text-red-300'
+                  isSupabaseConfigured() ? 'text-green-300' : 'text-red-300'
                 }`}>
-                  {connectionStatus === 'connected' ? 'Sistema Online' : connectionStatus === 'checking' ? 'Verificando...' : 'Configuração Necessária'}
+                  {isSupabaseConfigured() ? 'Sistema Online' : 'Configuração Necessária'}
                 </span>
                 <Sparkles className="w-5 h-5 text-green-400 revgold-animate-floating" />
               </div>

@@ -200,33 +200,16 @@ export async function healthCheck() {
       };
     }
 
-    // Test database access
-    const tables = ['employees', 'sales', 'debts', 'checks', 'boletos', 'cash_balances', 'cash_transactions', 'pix_fees'];
-    const results = {};
-
-    for (const table of tables) {
-      try {
-        const { data, error } = await supabase
-          .from(table)
-          .select('id')
-          .limit(1);
-        
-        if (error) {
-          results[table] = `❌ Erro: ${error.message}`;
-        } else {
-          results[table] = `✅ Conectado`;
-        }
-      } catch (error) {
-        results[table] = `❌ Erro: ${error.message}`;
-      }
+    // Teste simples de conexão
+    const { data, error } = await supabase.from('employees').select('count').limit(1);
+    
+    if (error) {
+      throw new Error(`Erro de conexão: ${error.message}`);
     }
-
-    console.log('📊 Status das tabelas:', results);
     
     return {
       configured: true,
-      connected: true,
-      tables: results
+      connected: true
     };
     
   } catch (error) {
@@ -240,19 +223,16 @@ export async function healthCheck() {
 }
 
 export const ensureAuthenticated = async () => {
-  try {
-    // Check if Supabase is properly configured
-    if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('your-project') || supabaseAnonKey.includes('your-anon-key')) {
-      console.warn('Supabase not configured. Please connect to Supabase to enable authentication.');
-      return null;
-    }
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase não configurado.');
+    return null;
+  }
 
+  try {
     const { data: { user } } = await supabase.auth.getUser();
-    
-    // Return the current user (null if not authenticated)
     return user;
   } catch (error) {
-    console.warn('Supabase connection failed. Please check your configuration.');
+    console.warn('Falha na autenticação Supabase:', error);
     return null;
   }
 };

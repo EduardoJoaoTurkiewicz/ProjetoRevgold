@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { User, Sale, Debt, Check, Boleto, Employee, EmployeePayment, EmployeeAdvance, EmployeeOvertime, EmployeeCommission, CashBalance, CashTransaction, PixFee } from '../types';
-import { supabase, isSupabaseConfigured, testSupabaseConnection } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 // Estado da aplicação
 interface AppState {
@@ -301,21 +301,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return isSupabaseConfigured();
   };
 
-  // Carregar todos os dados
+  // Carregar todos os dados - APENAS DO SUPABASE
   const loadAllData = async () => {
     if (!isSupabaseConfigured()) {
-      console.log('⚠️ Supabase não configurado, usando dados locais');
-      
-      // Check if Supabase is properly configured
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('your-project') || supabaseAnonKey.includes('your-anon-key')) {
-        console.warn('Supabase not configured. Using demo data.');
-        dispatch({ type: 'SET_LOADING', payload: false });
-        return;
-      }
-      dispatch({ type: 'SET_ERROR', payload: null });
+      console.error('❌ Supabase não configurado - sistema não pode funcionar');
+      dispatch({ type: 'SET_ERROR', payload: 'Supabase não configurado. Configure as variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' });
+      dispatch({ type: 'SET_LOADING', payload: false });
       return;
     }
 
@@ -358,78 +349,78 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (salesData.status === 'fulfilled' && !salesData.value.error) {
         dispatch({ type: 'SET_SALES', payload: salesData.value.data || [] });
         console.log('✅ Vendas carregadas:', salesData.value.data?.length || 0);
-      } else if (salesData.status === 'rejected') {
-        console.warn('⚠️ Erro ao carregar vendas:', salesData.reason);
+      } else {
+        console.warn('⚠️ Erro ao carregar vendas:', salesData.status === 'rejected' ? salesData.reason : salesData.value.error);
       }
       
       if (debtsData.status === 'fulfilled' && !debtsData.value.error) {
         dispatch({ type: 'SET_DEBTS', payload: debtsData.value.data || [] });
         console.log('✅ Dívidas carregadas:', debtsData.value.data?.length || 0);
-      } else if (debtsData.status === 'rejected') {
-        console.warn('⚠️ Erro ao carregar dívidas:', debtsData.reason);
+      } else {
+        console.warn('⚠️ Erro ao carregar dívidas:', debtsData.status === 'rejected' ? debtsData.reason : debtsData.value.error);
       }
       
       if (checksData.status === 'fulfilled' && !checksData.value.error) {
         dispatch({ type: 'SET_CHECKS', payload: checksData.value.data || [] });
         console.log('✅ Cheques carregados:', checksData.value.data?.length || 0);
-      } else if (checksData.status === 'rejected') {
-        console.warn('⚠️ Erro ao carregar cheques:', checksData.reason);
+      } else {
+        console.warn('⚠️ Erro ao carregar cheques:', checksData.status === 'rejected' ? checksData.reason : checksData.value.error);
       }
       
       if (boletosData.status === 'fulfilled' && !boletosData.value.error) {
         dispatch({ type: 'SET_BOLETOS', payload: boletosData.value.data || [] });
         console.log('✅ Boletos carregados:', boletosData.value.data?.length || 0);
-      } else if (boletosData.status === 'rejected') {
-        console.warn('⚠️ Erro ao carregar boletos:', boletosData.reason);
+      } else {
+        console.warn('⚠️ Erro ao carregar boletos:', boletosData.status === 'rejected' ? boletosData.reason : boletosData.value.error);
       }
       
       if (employeesData.status === 'fulfilled' && !employeesData.value.error) {
         dispatch({ type: 'SET_EMPLOYEES', payload: employeesData.value.data || [] });
         console.log('✅ Funcionários carregados:', employeesData.value.data?.length || 0);
-      } else if (employeesData.status === 'rejected') {
-        console.warn('⚠️ Erro ao carregar funcionários:', employeesData.reason);
+      } else {
+        console.warn('⚠️ Erro ao carregar funcionários:', employeesData.status === 'rejected' ? employeesData.reason : employeesData.value.error);
       }
       
       if (employeePaymentsData.status === 'fulfilled' && !employeePaymentsData.value.error) {
         dispatch({ type: 'SET_EMPLOYEE_PAYMENTS', payload: employeePaymentsData.value.data || [] });
-      } else if (employeePaymentsData.status === 'rejected') {
-        console.warn('⚠️ Erro ao carregar pagamentos:', employeePaymentsData.reason);
+      } else {
+        console.warn('⚠️ Erro ao carregar pagamentos:', employeePaymentsData.status === 'rejected' ? employeePaymentsData.reason : employeePaymentsData.value.error);
       }
       
       if (employeeAdvancesData.status === 'fulfilled' && !employeeAdvancesData.value.error) {
         dispatch({ type: 'SET_EMPLOYEE_ADVANCES', payload: employeeAdvancesData.value.data || [] });
-      } else if (employeeAdvancesData.status === 'rejected') {
-        console.warn('⚠️ Erro ao carregar adiantamentos:', employeeAdvancesData.reason);
+      } else {
+        console.warn('⚠️ Erro ao carregar adiantamentos:', employeeAdvancesData.status === 'rejected' ? employeeAdvancesData.reason : employeeAdvancesData.value.error);
       }
       
       if (employeeOvertimesData.status === 'fulfilled' && !employeeOvertimesData.value.error) {
         dispatch({ type: 'SET_EMPLOYEE_OVERTIMES', payload: employeeOvertimesData.value.data || [] });
-      } else if (employeeOvertimesData.status === 'rejected') {
-        console.warn('⚠️ Erro ao carregar horas extras:', employeeOvertimesData.reason);
+      } else {
+        console.warn('⚠️ Erro ao carregar horas extras:', employeeOvertimesData.status === 'rejected' ? employeeOvertimesData.reason : employeeOvertimesData.value.error);
       }
       
       if (employeeCommissionsData.status === 'fulfilled' && !employeeCommissionsData.value.error) {
         dispatch({ type: 'SET_EMPLOYEE_COMMISSIONS', payload: employeeCommissionsData.value.data || [] });
-      } else if (employeeCommissionsData.status === 'rejected') {
-        console.warn('⚠️ Erro ao carregar comissões:', employeeCommissionsData.reason);
+      } else {
+        console.warn('⚠️ Erro ao carregar comissões:', employeeCommissionsData.status === 'rejected' ? employeeCommissionsData.reason : employeeCommissionsData.value.error);
       }
       
       if (cashBalanceData.status === 'fulfilled' && !cashBalanceData.value.error) {
         dispatch({ type: 'SET_CASH_BALANCE', payload: cashBalanceData.value.data });
-      } else if (cashBalanceData.status === 'rejected') {
-        console.warn('⚠️ Erro ao carregar saldo do caixa:', cashBalanceData.reason);
+      } else {
+        console.warn('⚠️ Erro ao carregar saldo do caixa:', cashBalanceData.status === 'rejected' ? cashBalanceData.reason : cashBalanceData.value.error);
       }
       
       if (cashTransactionsData.status === 'fulfilled' && !cashTransactionsData.value.error) {
         dispatch({ type: 'SET_CASH_TRANSACTIONS', payload: cashTransactionsData.value.data || [] });
-      } else if (cashTransactionsData.status === 'rejected') {
-        console.warn('⚠️ Erro ao carregar transações do caixa:', cashTransactionsData.reason);
+      } else {
+        console.warn('⚠️ Erro ao carregar transações do caixa:', cashTransactionsData.status === 'rejected' ? cashTransactionsData.reason : cashTransactionsData.value.error);
       }
       
       if (pixFeesData.status === 'fulfilled' && !pixFeesData.value.error) {
         dispatch({ type: 'SET_PIX_FEES', payload: pixFeesData.value.data || [] });
-      } else if (pixFeesData.status === 'rejected') {
-        console.warn('⚠️ Erro ao carregar tarifas PIX:', pixFeesData.reason);
+      } else {
+        console.warn('⚠️ Erro ao carregar tarifas PIX:', pixFeesData.status === 'rejected' ? pixFeesData.reason : pixFeesData.value.error);
       }
 
       console.log('✅ Dados carregados com sucesso');
@@ -437,44 +428,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('❌ Erro ao carregar dados:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      
-      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError') || errorMessage.includes('fetch')) {
-        dispatch({ type: 'SET_ERROR', payload: 'Erro de conexão com o banco de dados. Verifique sua conexão com a internet e as configurações do Supabase.' });
-      } else {
-        dispatch({ type: 'SET_ERROR', payload: `Erro ao carregar dados: ${errorMessage}` });
-      }
+      dispatch({ type: 'SET_ERROR', payload: `Erro ao carregar dados: ${errorMessage}` });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
   };
 
-  // Funções CRUD para Sales
+  // Funções CRUD para Sales - APENAS SUPABASE
   const createSale = async (saleData: Omit<Sale, 'id' | 'createdAt'>): Promise<Sale> => {
     if (!isSupabaseConfigured()) {
-      const newSale: Sale = {
-        ...saleData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString()
-      };
-      dispatch({ type: 'ADD_SALE', payload: newSale });
-      
-      // Criar comissão se há vendedor
-      if (saleData.sellerId) {
-        const commission: EmployeeCommission = {
-          id: Date.now().toString() + '_comm',
-          employeeId: saleData.sellerId,
-          saleId: newSale.id,
-          saleValue: saleData.totalValue,
-          commissionRate: saleData.customCommissionRate || 5,
-          commissionAmount: (saleData.totalValue * (saleData.customCommissionRate || 5)) / 100,
-          date: saleData.date,
-          status: 'pendente',
-          createdAt: new Date().toISOString()
-        };
-        dispatch({ type: 'ADD_EMPLOYEE_COMMISSION', payload: commission });
-      }
-      
-      return newSale;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { data, error } = await supabase.from('sales').insert([saleData]).select().single();
@@ -510,8 +473,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateSale = async (sale: Sale): Promise<void> => {
     if (!isSupabaseConfigured()) {
-      dispatch({ type: 'UPDATE_SALE', payload: sale });
-      return;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { error } = await supabase.from('sales').update(sale).eq('id', sale.id);
@@ -522,8 +484,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteSale = async (id: string): Promise<void> => {
     if (!isSupabaseConfigured()) {
-      dispatch({ type: 'DELETE_SALE', payload: id });
-      return;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { error } = await supabase.from('sales').delete().eq('id', id);
@@ -532,16 +493,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'DELETE_SALE', payload: id });
   };
 
-  // Funções CRUD para Debts
+  // Funções CRUD para Debts - APENAS SUPABASE
   const createDebt = async (debtData: Omit<Debt, 'id' | 'createdAt'>): Promise<Debt> => {
     if (!isSupabaseConfigured()) {
-      const newDebt: Debt = {
-        ...debtData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString()
-      };
-      dispatch({ type: 'ADD_DEBT', payload: newDebt });
-      return newDebt;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { data, error } = await supabase.from('debts').insert([debtData]).select().single();
@@ -553,8 +508,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateDebt = async (debt: Debt): Promise<void> => {
     if (!isSupabaseConfigured()) {
-      dispatch({ type: 'UPDATE_DEBT', payload: debt });
-      return;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { error } = await supabase.from('debts').update(debt).eq('id', debt.id);
@@ -565,8 +519,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteDebt = async (id: string): Promise<void> => {
     if (!isSupabaseConfigured()) {
-      dispatch({ type: 'DELETE_DEBT', payload: id });
-      return;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { error } = await supabase.from('debts').delete().eq('id', id);
@@ -575,16 +528,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'DELETE_DEBT', payload: id });
   };
 
-  // Funções CRUD para Checks
+  // Funções CRUD para Checks - APENAS SUPABASE
   const createCheck = async (checkData: Omit<Check, 'id' | 'createdAt'>): Promise<Check> => {
     if (!isSupabaseConfigured()) {
-      const newCheck: Check = {
-        ...checkData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString()
-      };
-      dispatch({ type: 'ADD_CHECK', payload: newCheck });
-      return newCheck;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { data, error } = await supabase.from('checks').insert([checkData]).select().single();
@@ -596,8 +543,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateCheck = async (check: Check): Promise<void> => {
     if (!isSupabaseConfigured()) {
-      dispatch({ type: 'UPDATE_CHECK', payload: check });
-      return;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { error } = await supabase.from('checks').update(check).eq('id', check.id);
@@ -608,8 +554,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteCheck = async (id: string): Promise<void> => {
     if (!isSupabaseConfigured()) {
-      dispatch({ type: 'DELETE_CHECK', payload: id });
-      return;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { error } = await supabase.from('checks').delete().eq('id', id);
@@ -618,16 +563,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'DELETE_CHECK', payload: id });
   };
 
-  // Funções CRUD para Boletos
+  // Funções CRUD para Boletos - APENAS SUPABASE
   const createBoleto = async (boletoData: Omit<Boleto, 'id' | 'createdAt'>): Promise<Boleto> => {
     if (!isSupabaseConfigured()) {
-      const newBoleto: Boleto = {
-        ...boletoData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString()
-      };
-      dispatch({ type: 'ADD_BOLETO', payload: newBoleto });
-      return newBoleto;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { data, error } = await supabase.from('boletos').insert([boletoData]).select().single();
@@ -639,8 +578,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateBoleto = async (boleto: Boleto): Promise<void> => {
     if (!isSupabaseConfigured()) {
-      dispatch({ type: 'UPDATE_BOLETO', payload: boleto });
-      return;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { error } = await supabase.from('boletos').update(boleto).eq('id', boleto.id);
@@ -651,8 +589,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteBoleto = async (id: string): Promise<void> => {
     if (!isSupabaseConfigured()) {
-      dispatch({ type: 'DELETE_BOLETO', payload: id });
-      return;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { error } = await supabase.from('boletos').delete().eq('id', id);
@@ -661,16 +598,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'DELETE_BOLETO', payload: id });
   };
 
-  // Funções CRUD para Employees
+  // Funções CRUD para Employees - APENAS SUPABASE
   const createEmployee = async (employeeData: Omit<Employee, 'id' | 'createdAt'>): Promise<Employee> => {
     if (!isSupabaseConfigured()) {
-      const newEmployee: Employee = {
-        ...employeeData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString()
-      };
-      dispatch({ type: 'ADD_EMPLOYEE', payload: newEmployee });
-      return newEmployee;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { data, error } = await supabase.from('employees').insert([employeeData]).select().single();
@@ -682,8 +613,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateEmployee = async (employee: Employee): Promise<void> => {
     if (!isSupabaseConfigured()) {
-      dispatch({ type: 'UPDATE_EMPLOYEE', payload: employee });
-      return;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { error } = await supabase.from('employees').update(employee).eq('id', employee.id);
@@ -694,8 +624,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteEmployee = async (id: string): Promise<void> => {
     if (!isSupabaseConfigured()) {
-      dispatch({ type: 'DELETE_EMPLOYEE', payload: id });
-      return;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { error } = await supabase.from('employees').delete().eq('id', id);
@@ -704,25 +633,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'DELETE_EMPLOYEE', payload: id });
   };
 
-  // Funções para Cash Management
+  // Funções para Cash Management - APENAS SUPABASE
   const initializeCashBalance = async (initialAmount: number): Promise<void> => {
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
+    }
+
     const balanceData = {
       current_balance: initialAmount,
       initial_balance: initialAmount,
       initial_date: new Date().toISOString().split('T')[0],
       last_updated: new Date().toISOString()
     };
-
-    if (!isSupabaseConfigured()) {
-      const newBalance: CashBalance = {
-        ...balanceData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      dispatch({ type: 'SET_CASH_BALANCE', payload: newBalance });
-      return;
-    }
 
     const { data, error } = await supabase.from('cash_balances').insert([balanceData]).select().single();
     if (error) throw error;
@@ -732,8 +654,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateCashBalance = async (balance: CashBalance): Promise<void> => {
     if (!isSupabaseConfigured()) {
-      dispatch({ type: 'SET_CASH_BALANCE', payload: balance });
-      return;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { error } = await supabase.from('cash_balances').update(balance).eq('id', balance.id);
@@ -744,13 +665,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const createCashTransaction = async (transactionData: Omit<CashTransaction, 'id' | 'createdAt'>): Promise<CashTransaction> => {
     if (!isSupabaseConfigured()) {
-      const newTransaction: CashTransaction = {
-        ...transactionData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString()
-      };
-      dispatch({ type: 'ADD_CASH_TRANSACTION', payload: newTransaction });
-      return newTransaction;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { data, error } = await supabase.from('cash_transactions').insert([transactionData]).select().single();
@@ -760,16 +675,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return data;
   };
 
-  // Funções CRUD para PIX Fees
+  // Funções CRUD para PIX Fees - APENAS SUPABASE
   const createPixFee = async (pixFeeData: Omit<PixFee, 'id' | 'createdAt'>): Promise<PixFee> => {
     if (!isSupabaseConfigured()) {
-      const newPixFee: PixFee = {
-        ...pixFeeData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString()
-      };
-      dispatch({ type: 'ADD_PIX_FEE', payload: newPixFee });
-      return newPixFee;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { data, error } = await supabase.from('pix_fees').insert([pixFeeData]).select().single();
@@ -781,8 +690,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updatePixFee = async (pixFee: PixFee): Promise<void> => {
     if (!isSupabaseConfigured()) {
-      dispatch({ type: 'UPDATE_PIX_FEE', payload: pixFee });
-      return;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { error } = await supabase.from('pix_fees').update(pixFee).eq('id', pixFee.id);
@@ -793,8 +701,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deletePixFee = async (id: string): Promise<void> => {
     if (!isSupabaseConfigured()) {
-      dispatch({ type: 'DELETE_PIX_FEE', payload: id });
-      return;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { error } = await supabase.from('pix_fees').delete().eq('id', id);
@@ -803,16 +710,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'DELETE_PIX_FEE', payload: id });
   };
 
-  // Employee Advance functions
+  // Employee Advance functions - APENAS SUPABASE
   const createEmployeeAdvance = async (advanceData: Omit<EmployeeAdvance, 'id' | 'createdAt'>): Promise<EmployeeAdvance> => {
     if (!isSupabaseConfigured()) {
-      const newAdvance: EmployeeAdvance = {
-        ...advanceData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString()
-      };
-      dispatch({ type: 'ADD_EMPLOYEE_ADVANCE', payload: newAdvance });
-      return newAdvance;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { data, error } = await supabase.from('employee_advances').insert([advanceData]).select().single();
@@ -824,8 +725,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateEmployeeAdvance = async (advance: EmployeeAdvance): Promise<void> => {
     if (!isSupabaseConfigured()) {
-      dispatch({ type: 'UPDATE_EMPLOYEE_ADVANCE', payload: advance });
-      return;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { error } = await supabase.from('employee_advances').update(advance).eq('id', advance.id);
@@ -834,16 +734,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'UPDATE_EMPLOYEE_ADVANCE', payload: advance });
   };
 
-  // Employee Overtime functions
+  // Employee Overtime functions - APENAS SUPABASE
   const createEmployeeOvertime = async (overtimeData: Omit<EmployeeOvertime, 'id' | 'createdAt'>): Promise<EmployeeOvertime> => {
     if (!isSupabaseConfigured()) {
-      const newOvertime: EmployeeOvertime = {
-        ...overtimeData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString()
-      };
-      dispatch({ type: 'ADD_EMPLOYEE_OVERTIME', payload: newOvertime });
-      return newOvertime;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { data, error } = await supabase.from('employee_overtimes').insert([overtimeData]).select().single();
@@ -855,8 +749,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateEmployeeOvertime = async (overtime: EmployeeOvertime): Promise<void> => {
     if (!isSupabaseConfigured()) {
-      dispatch({ type: 'UPDATE_EMPLOYEE_OVERTIME', payload: overtime });
-      return;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { error } = await supabase.from('employee_overtimes').update(overtime).eq('id', overtime.id);
@@ -865,16 +758,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'UPDATE_EMPLOYEE_OVERTIME', payload: overtime });
   };
 
-  // Employee Payment functions
+  // Employee Payment functions - APENAS SUPABASE
   const createEmployeePayment = async (paymentData: Omit<EmployeePayment, 'id' | 'createdAt'>): Promise<EmployeePayment> => {
     if (!isSupabaseConfigured()) {
-      const newPayment: EmployeePayment = {
-        ...paymentData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString()
-      };
-      dispatch({ type: 'ADD_EMPLOYEE_PAYMENT', payload: newPayment });
-      return newPayment;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { data, error } = await supabase.from('employee_payments').insert([paymentData]).select().single();
@@ -886,8 +773,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateEmployeeCommission = async (commission: EmployeeCommission): Promise<void> => {
     if (!isSupabaseConfigured()) {
-      dispatch({ type: 'UPDATE_EMPLOYEE_COMMISSION', payload: commission });
-      return;
+      throw new Error('Supabase não configurado. Configure as variáveis de ambiente.');
     }
 
     const { error } = await supabase.from('employee_commissions').update(commission).eq('id', commission.id);
@@ -896,11 +782,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'UPDATE_EMPLOYEE_COMMISSION', payload: commission });
   };
 
-  // Carregar dados na inicialização
+  // Carregar dados apenas se Supabase estiver configurado
   useEffect(() => {
     console.log('🚀 AppProvider useEffect executado');
-    // Sempre tentar carregar dados, mesmo se Supabase não estiver configurado
-    loadAllData();
+    if (isSupabaseConfigured()) {
+      loadAllData();
+    } else {
+      dispatch({ type: 'SET_ERROR', payload: 'Supabase não configurado. Configure as variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.' });
+    }
   }, []);
 
   const contextValue: AppContextType = {
