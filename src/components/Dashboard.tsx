@@ -836,10 +836,10 @@ export default function Dashboard() {
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-black text-green-600">
-                      R$ {Number(seller?.totalValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {(seller && typeof seller.totalValue === 'number' && isFinite(seller.totalValue) ? seller.totalValue : 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                     <p className="text-sm text-green-600 font-bold">
-                      Comissão: R$ {Number(seller?.commissions || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      Comissão: R$ {(seller && typeof seller.commissions === 'number' && isFinite(seller.commissions) ? seller.commissions : 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
