@@ -138,22 +138,10 @@ export function UserSelection() {
         if (isSupabaseConfigured()) {
           console.log('🔐 Fazendo login automático no Supabase...');
           
-          // Tentar fazer login com o usuário padrão, mas não falhar se não existir
-          try {
-            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-              email: 'admin@revgold.com',
-              password: 'revgold123'
-            });
-            
-            if (authError) {
-              console.warn('⚠️ Login automático falhou (usuário pode não existir):', authError.message);
-              console.log('💡 Dica: Crie um usuário admin@revgold.com com senha revgold123 no Supabase Auth para login automático');
-            } else {
-              console.log('✅ Login automático realizado com sucesso');
-            }
-          } catch (authError) {
-            console.warn('⚠️ Erro no login automático, continuando sem auth:', authError);
-          }
+          // Sistema funcionará sem autenticação automática
+          // As RLS policies devem permitir acesso anônimo ou você pode criar um usuário manualmente
+          console.log('💡 Sistema iniciado sem autenticação automática');
+          console.log('💡 Para usar autenticação, crie um usuário no Supabase Auth ou configure RLS policies adequadas');
         }
         
         console.log('📤 Despachando ação SET_USER...');
