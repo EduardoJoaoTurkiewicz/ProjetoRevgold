@@ -794,7 +794,8 @@ export default function Dashboard() {
           
           <div className="space-y-4">
             {topSellers.map((seller, index) => (
-              <div key={seller.name} className="p-4 bg-green-50 rounded-xl border border-green-200">
+              seller ? (
+              <div key={seller.name || index} className="p-4 bg-green-50 rounded-xl border border-green-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
@@ -807,14 +808,15 @@ export default function Dashboard() {
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-black text-green-600">
-                      R$ {seller.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {(seller.totalValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                     <p className="text-sm text-green-600 font-bold">
-                      Comissão: R$ {seller.commissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      Comissão: R$ {(seller.commissions || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
               </div>
+              ) : null
             ))}
           </div>
         </div>
