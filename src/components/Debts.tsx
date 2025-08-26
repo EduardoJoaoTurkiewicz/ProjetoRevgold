@@ -5,7 +5,7 @@ import { Debt } from '../types';
 import { DebtForm } from './forms/DebtForm';
 
 export function Debts() {
-  const { state, createDebt, updateDebt, deleteDebt } = useApp();
+  const { debts, checks, isLoading, error, createDebt, updateDebt, deleteDebt } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
   const [viewingDebt, setViewingDebt] = useState<Debt | null>(null);
@@ -42,7 +42,7 @@ export function Debts() {
     }
   };
 
-  if (state.isLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
@@ -77,13 +77,13 @@ export function Debts() {
       </div>
 
       {/* Error Display */}
-      {state.error && (
+      {error && (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
           <div className="flex items-center gap-4">
             <AlertCircle className="w-8 h-8 text-red-600" />
             <div>
               <h3 className="font-bold text-red-800">Erro no Sistema</h3>
-              <p className="text-red-700">{state.error}</p>
+              <p className="text-red-700">{error}</p>
             </div>
           </div>
         </div>
@@ -91,7 +91,7 @@ export function Debts() {
 
       {/* Debts List */}
       <div className="card modern-shadow-xl">
-        {state.debts.length > 0 ? (
+        {debts.length > 0 ? (
           <div className="overflow-x-auto modern-scrollbar">
             <table className="min-w-full table-auto">
               <thead>
@@ -107,7 +107,7 @@ export function Debts() {
                 </tr>
               </thead>
               <tbody>
-                {state.debts.map(debt => (
+                {debts.map(debt => (
                   <tr key={debt.id} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-red-50/50 hover:to-rose-50/50 transition-all duration-300">
                     <td className="py-4 px-6 text-sm font-semibold text-slate-900">
                       {new Date(debt.date).toLocaleDateString('pt-BR')}
@@ -288,7 +288,7 @@ export function Debts() {
                   <h3 className="text-xl font-bold text-slate-900 mb-4">Cheques Utilizados</h3>
                   <div className="space-y-3">
                     {viewingDebt.checksUsed.map((checkId, index) => {
-                      const check = state.checks.find(c => c.id === checkId);
+                      const check = checks.find(c => c.id === checkId);
                       return (
                         <div key={index} className="p-4 bg-blue-50 rounded-xl border border-blue-200">
                           {check ? (
@@ -408,7 +408,7 @@ export function Debts() {
                     <h3 className="text-xl font-bold text-blue-900 mb-4">Cheques Utilizados</h3>
                     <div className="space-y-3">
                       {viewingObservations.checksUsed.map((checkId, index) => {
-                        const check = state.checks.find(c => c.id === checkId);
+                        const check = checks.find(c => c.id === checkId);
                         return (
                           <div key={index} className="p-4 bg-white rounded-xl border border-blue-100 shadow-sm">
                             {check ? (
