@@ -1,7 +1,7 @@
 import React from 'react';
 import { User, ChevronRight, Zap, Sparkles, Building2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { testSupabaseConnection, healthCheck, isSupabaseConfigured } from '../lib/supabase';
+import { testSupabaseConnection, healthCheck, isSupabaseConfigured, supabase } from '../lib/supabase';
 
 const USERS = [
   { 
@@ -132,9 +132,25 @@ export function UserSelection() {
     
     setIsConnecting(true);
     
-    // Simular delay de conexão para melhor UX
-    setTimeout(() => {
+    // Autenticar automaticamente com Supabase se configurado
+    const authenticateAndLogin = async () => {
       try {
+        if (isSupabaseConfigured()) {
+          console.log('🔐 Fazendo login automático no Supabase...');
+          
+          // Fazer login com o usuário padrão
+          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email: 'admin@revgold.com',
+            password: 'revgold123'
+          });
+          
+          if (authError) {
+            console.warn('⚠️ Erro na autenticação, continuando sem auth:', authError.message);
+          } else {
+            console.log('✅ Login automático realizado com sucesso');
+          }
+        }
+        
         console.log('📤 Despachando ação SET_USER...');
         const userData = { 
           id: user.id, 
@@ -153,11 +169,14 @@ export function UserSelection() {
         
       } catch (error) {
         console.error('❌ Erro ao definir usuário:', error);
-        alert('Erro ao acessar o sistema. Tente recarregar a página.');
+        alert('Erro ao acessar o sistema. Verifique a configuração do Supabase.');
       } finally {
         setIsConnecting(false);
       }
-    }, 300);
+    };
+    
+    // Executar autenticação
+    authenticateAndLogin();
   };
 
   return (

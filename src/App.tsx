@@ -19,13 +19,48 @@ import { useApp } from './context/AppContext';
 function AppContent() {
   const { currentUser } = useApp();
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [isInitializing, setIsInitializing] = useState(true);
   
   console.log('🔍 AppContent - Estado do usuário atual:', currentUser);
 
+  // Aguardar inicialização do sistema
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitializing(false);
+    }, 1000); // Dar tempo para o sistema carregar
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   // Verificar se o usuário está definido corretamente
-  if (!currentUser) {
+  if (!currentUser || isInitializing) {
     console.log('👤 AppContent - Usuário não válido, mostrando tela de seleção');
-    return <UserSelection />;
+    return isInitializing ? (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-emerald-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-24 h-24 bg-gradient-to-br from-green-600 to-emerald-700 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+            <img 
+              src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
+              alt="RevGold Logo" 
+              className="w-12 h-12 object-contain"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent && !parent.querySelector('.logo-fallback')) {
+                  const fallback = document.createElement('div');
+                  fallback.className = 'logo-fallback text-white font-black text-2xl';
+                  fallback.textContent = 'RG';
+                  parent.appendChild(fallback);
+                }
+              }}
+            />
+          </div>
+          <h2 className="text-3xl font-bold text-white mb-4">Inicializando Sistema RevGold</h2>
+          <p className="text-green-200 font-semibold">Carregando componentes...</p>
+        </div>
+      </div>
+    ) : <UserSelection />;
   }
   
   console.log('✅ AppContent - Usuário válido logado:', currentUser.username, 'Página atual:', currentPage);

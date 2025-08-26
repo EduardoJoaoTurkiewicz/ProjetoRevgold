@@ -20,13 +20,14 @@ export default function Dashboard() {
     employeesCount: state.employees.length
   });
 
-  // Forçar recarregamento se não há dados e não está carregando
+  // Carregar dados se necessário
   React.useEffect(() => {
-    if (!state.isLoading && checkSupabase()) {
-      console.log('🔄 Dashboard detectou falta de dados, recarregando...');
+    // Sempre tentar carregar dados quando o dashboard for montado
+    if (!state.isLoading) {
+      console.log('🔄 Dashboard carregando dados...');
       loadAllData();
     }
-  }, [checkSupabase, loadAllData]);
+  }, [loadAllData]);
   // Calcular métricas principais
   const metrics = useMemo(() => {
     const thisMonth = new Date().getMonth();

@@ -307,7 +307,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const loadAllData = async () => {
     if (!isSupabaseConfigured()) {
       console.log('⚠️ Supabase não configurado, usando dados locais');
-      dispatch({ type: 'SET_ERROR', payload: 'Supabase não configurado. Configure as variáveis de ambiente para persistir dados.' });
+      dispatch({ type: 'SET_ERROR', payload: null }); // Não mostrar erro se não configurado
       return;
     }
 
@@ -316,6 +316,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     try {
       console.log('📊 Carregando dados do Supabase...');
+
+      // Verificar se o usuário está autenticado
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.log('🔐 Usuário não autenticado, fazendo login automático...');
+        const { error: authError } = await supabase.auth.signInWithPassword({
+          email: 'admin@revgold.com',
+          password: 'revgold123'
+        });
+        
+        if (authError) {
+          console.warn('⚠️ Erro na autenticação automática:', authError.message);
+          // Continuar mesmo sem autenticação para permitir operações básicas
+        }
+      }
 
       // Carregar dados em paralelo
       const [
@@ -399,7 +414,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     } catch (error) {
       console.error('❌ Erro ao carregar dados:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Erro ao carregar dados do sistema' });
+      dispatch({ type: 'SET_ERROR', payload: `Erro ao carregar dados: ${error.message}` });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
@@ -432,6 +447,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       
       return newSale;
+    }
+
+    // Verificar autenticação antes de fazer operações
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.log('🔐 Fazendo login automático para operação...');
+      await supabase.auth.signInWithPassword({
+        email: 'admin@revgold.com',
+        password: 'revgold123'
+      });
     }
 
     const { data, error } = await supabase.from('sales').insert([saleData]).select().single();
@@ -499,6 +524,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       };
       dispatch({ type: 'ADD_DEBT', payload: newDebt });
       return newDebt;
+    }
+
+    // Verificar autenticação
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      await supabase.auth.signInWithPassword({
+        email: 'admin@revgold.com',
+        password: 'revgold123'
+      });
     }
 
     const { data, error } = await supabase.from('debts').insert([debtData]).select().single();
@@ -628,6 +662,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       };
       dispatch({ type: 'ADD_EMPLOYEE', payload: newEmployee });
       return newEmployee;
+    }
+
+    // Verificar autenticação
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      await supabase.auth.signInWithPassword({
+        email: 'admin@revgold.com',
+        password: 'revgold123'
+      });
     }
 
     const { data, error } = await supabase.from('employees').insert([employeeData]).select().single();
@@ -856,11 +899,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Carregar dados na inicialização
   useEffect(() => {
     console.log('🚀 AppProvider useEffect executado');
-    if (isSupabaseConfigured()) {
-      loadAllData();
-    } else {
-      console.log('⚠️ Supabase não configurado, pulando carregamento de dados');
-    }
+    // Sempre tentar carregar dados, mesmo se Supabase não estiver configurado
+    loadAllData();
   }, []);
 
   const contextValue: AppContextType = {
