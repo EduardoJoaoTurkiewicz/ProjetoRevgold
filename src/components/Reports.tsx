@@ -936,6 +936,7 @@ export function Reports() {
             Observação Detalhada
           </button>
         </div>
+      </div>
       {/* Informações Logísticas */}
       <div className="card modern-shadow-xl">
         <div className="flex items-center gap-4 mb-6">
