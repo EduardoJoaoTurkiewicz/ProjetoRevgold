@@ -316,9 +316,18 @@ export default function Dashboard() {
     });
     
     return Object.values(sellerStats)
-      .filter(seller => seller && typeof seller === 'object' && seller.name)
+      .filter(seller => {
+        // Verificar se o seller é um objeto válido com todas as propriedades necessárias
+        return seller && 
+               typeof seller === 'object' && 
+               seller.name && 
+               typeof seller.name === 'string' &&
+               typeof seller.totalSales === 'number' &&
+               typeof seller.totalValue === 'number' &&
+               typeof seller.commissions === 'number';
+      })
       .map(seller => {
-        // Ensure all values are properly defined and are numbers
+        // Garantir que todos os valores sejam números válidos
         const safeSeller = {
           name: String(seller.name || 'Vendedor'),
           totalSales: Number(seller.totalSales || 0),
@@ -326,14 +335,24 @@ export default function Dashboard() {
           commissions: Number(seller.commissions || 0)
         };
         
-        // Validate that all numeric values are valid numbers
+        // Validar que todos os valores numéricos são números válidos
         if (isNaN(safeSeller.totalSales)) safeSeller.totalSales = 0;
         if (isNaN(safeSeller.totalValue)) safeSeller.totalValue = 0;
         if (isNaN(safeSeller.commissions)) safeSeller.commissions = 0;
         
+        // Garantir que os valores são finitos (não Infinity ou -Infinity)
+        if (!isFinite(safeSeller.totalSales)) safeSeller.totalSales = 0;
+        if (!isFinite(safeSeller.totalValue)) safeSeller.totalValue = 0;
+        if (!isFinite(safeSeller.commissions)) safeSeller.commissions = 0;
+        
         return safeSeller;
       })
-      .sort((a, b) => b.totalValue - a.totalValue)
+      .sort((a, b) => {
+        // Verificação adicional de segurança para o sort
+        const aValue = Number(a?.totalValue || 0);
+        const bValue = Number(b?.totalValue || 0);
+        return bValue - aValue;
+      })
       .slice(0, 5);
   }, [state?.sales, state?.employees, state?.employeeCommissions]);
 
@@ -804,23 +823,23 @@ export default function Dashboard() {
           
           <div className="space-y-4">
             {topSellers.map((seller, index) => (
-              <div key={seller?.name || `seller-${index}`} className="p-4 bg-green-50 rounded-xl border border-green-200">
+              <div key={`seller-${index}-${seller?.name || 'unknown'}`} className="p-4 bg-green-50 rounded-xl border border-green-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
                       {index + 1}
                     </div>
                     <div>
-                      <h4 className="font-bold text-green-900">{seller?.name || 'Vendedor'}</h4>
-                      <p className="text-sm text-green-700">{seller?.totalSales || 0} vendas</p>
+                      <h4 className="font-bold text-green-900">{String(seller?.name || 'Vendedor')}</h4>
+                      <p className="text-sm text-green-700">{Number(seller?.totalSales || 0)} vendas</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-black text-green-600">
-                      R$ {(seller?.totalValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {Number(seller?.totalValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                     <p className="text-sm text-green-600 font-bold">
-                      Comissão: R$ {(seller?.commissions || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      Comissão: R$ {Number(seller?.commissions || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
@@ -878,7 +897,7 @@ export default function Dashboard() {
                   {(state?.debts || []).filter(debt => debt.isPaid).length} dívidas
                 </p>
                 <p className="text-sm text-slate-600">
-                  R$ {metrics.totalPaidDebts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {Number(metrics.totalPaidDebts || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
@@ -890,7 +909,7 @@ export default function Dashboard() {
                   {(state?.debts || []).filter(debt => !debt.isPaid).length} dívidas
                 </p>
                 <p className="text-sm text-slate-600">
-                  R$ {metrics.totalPendingDebts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {Number(metrics.totalPendingDebts || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
@@ -911,7 +930,7 @@ export default function Dashboard() {
               <span className="font-medium text-slate-900">Já Recebido</span>
               <div className="text-right">
                 <p className="font-bold text-emerald-600">
-                  R$ {metrics.totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {Number(metrics.totalReceived || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
@@ -920,7 +939,7 @@ export default function Dashboard() {
               <span className="font-medium text-slate-900">A Receber</span>
               <div className="text-right">
                 <p className="font-bold text-orange-600">
-                  R$ {metrics.totalPending.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {Number(metrics.totalPending || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
@@ -929,7 +948,7 @@ export default function Dashboard() {
               <span className="font-medium text-slate-900">Cheques</span>
               <div className="text-right">
                 <p className="font-bold text-blue-600">
-                  R$ {metrics.totalChecksValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {Number(metrics.totalChecksValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
                 <p className="text-sm text-slate-600">{(state?.checks || []).length} cheques</p>
               </div>
@@ -939,7 +958,7 @@ export default function Dashboard() {
               <span className="font-medium text-slate-900">Boletos</span>
               <div className="text-right">
                 <p className="font-bold text-cyan-600">
-                  R$ {metrics.totalBoletosValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {Number(metrics.totalBoletosValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
                 <p className="text-sm text-slate-600">{(state?.boletos || []).length} boletos</p>
               </div>
@@ -956,7 +975,7 @@ export default function Dashboard() {
             <div>
               <p className="text-green-600 font-semibold">Faturamento</p>
               <p className="text-3xl font-black text-green-700">
-                R$ {(metrics.monthlyRevenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {Number(metrics.monthlyRevenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
             <div>
@@ -971,13 +990,13 @@ export default function Dashboard() {
             <div>
               <p className="text-green-600 font-semibold">Comissões</p>
               <p className="text-3xl font-black text-green-700">
-                {metrics.monthlyCommissions || 0}
+                {Number(metrics.monthlyCommissions || 0)}
               </p>
             </div>
             <div>
               <p className="text-green-600 font-semibold">Lucro</p>
               <p className={`text-3xl font-black ${(metrics.netProfit || 0) >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                R$ {(metrics.netProfit || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {Number(metrics.netProfit || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
           </div>
