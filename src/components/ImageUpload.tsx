@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, Image as ImageIcon, Loader2, AlertCircle } from 'lucide-react';
-import { uploadCheckImage, deleteCheckImage, getCheckImageUrl } from '../lib/supabase';
+import { uploadCheckImage, deleteCheckImage, getCheckImageUrl } from '../lib/supabaseServices';
 
 interface ImageUploadProps {
   checkId: string;

@@ -3,7 +3,7 @@ import { Plus, Edit, Eye, Upload, Calendar, Trash2, ChevronDown, ChevronRight, F
 import { useApp } from '../context/AppContext';
 import { Check } from '../types';
 import { CheckForm } from './forms/CheckForm';
-import { getCheckImageUrl } from '../lib/supabase';
+import { getCheckImageUrl } from '../lib/supabaseServices';
 
 export function Checks() {
   const { checks, sales, debts, createCheck, updateCheck, deleteCheck, createCashTransaction } = useApp();

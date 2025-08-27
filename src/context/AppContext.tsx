@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '../lib/supabase';
-import { isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { 
+  employeesService, 
+  salesService, 
+  debtsService,
+  checksService,
+  boletosService
+} from '../lib/supabaseServices';
 import { AutomationService } from '../lib/automationService';
 import type { 
   Employee, 
@@ -16,6 +22,33 @@ import type {
   PixFee,
   CashBalance
 } from '../types';
+
+// Transform functions for database compatibility
+function transformToDatabase(obj: any): any {
+  if (!obj) return obj;
+  
+  const transformed = {};
+  for (const [key, value] of Object.entries(obj)) {
+    // Convert camelCase to snake_case
+    const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    transformed[snakeKey] = value;
+  }
+  
+  return transformed;
+}
+
+function transformFromDatabase<T>(row: any): T {
+  if (!row) return row;
+  
+  // Transform snake_case to camelCase
+  const transformed = {};
+  for (const [key, value] of Object.entries(row)) {
+    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    transformed[camelKey] = value;
+  }
+  
+  return transformed as T;
+}
 
 interface AppContextType {
   // Data state
@@ -160,13 +193,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      setEmployees(Array.isArray(data) ? data : []);
+      const employees = await employeesService.getAll();
+      setEmployees(employees);
     } catch (error) {
       console.error('Error fetching employees:', error);
       console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para employees');
@@ -182,13 +210,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
-      const { data, error } = await supabase
-        .from('sales')
-        .select('*')
-        .order('date', { ascending: false });
-      
-      if (error) throw error;
-      setSales(Array.isArray(data) ? data : []);
+      const sales = await salesService.getAll();
+      setSales(sales);
     } catch (error) {
       console.error('Error fetching sales:', error);
       console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para sales');
@@ -204,13 +227,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
-      const { data, error } = await supabase
-        .from('debts')
-        .select('*')
-        .order('date', { ascending: false });
-      
-      if (error) throw error;
-      setDebts(data || []);
+      const debts = await debtsService.getAll();
+      setDebts(debts);
     } catch (error) {
       console.error('Error fetching debts:', error);
       console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para debts');
@@ -229,10 +247,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       const { data, error } = await supabase
         .from('checks')
         .select('*')
-        .order('due_date');
+        .order('due_date', { ascending: true });
       
       if (error) throw error;
-      setChecks(data || []);
+      setChecks((data || []).map(transformFromDatabase<Check>));
     } catch (error) {
       console.error('Error fetching checks:', error);
       console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para checks');
@@ -251,10 +269,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       const { data, error } = await supabase
         .from('boletos')
         .select('*')
-        .order('due_date');
+        .order('due_date', { ascending: true });
       
       if (error) throw error;
-      setBoletos(data || []);
+      setBoletos((data || []).map(transformFromDatabase<Boleto>));
     } catch (error) {
       console.error('Error fetching boletos:', error);
       console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para boletos');
@@ -276,7 +294,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         .order('payment_date', { ascending: false });
       
       if (error) throw error;
-      setEmployeePayments(data || []);
+      setEmployeePayments((data || []).map(transformFromDatabase<EmployeePayment>));
     } catch (error) {
       console.error('Error fetching employee payments:', error);
       console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para employee payments');
@@ -298,7 +316,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         .order('date', { ascending: false });
       
       if (error) throw error;
-      setEmployeeAdvances(data || []);
+      setEmployeeAdvances((data || []).map(transformFromDatabase<EmployeeAdvance>));
     } catch (error) {
       console.error('Error fetching employee advances:', error);
       console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para employee advances');
@@ -320,7 +338,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         .order('date', { ascending: false });
       
       if (error) throw error;
-      setEmployeeCommissions(Array.isArray(data) ? data : []);
+      setEmployeeCommissions((data || []).map(transformFromDatabase<EmployeeCommission>));
     } catch (error) {
       console.error('Error fetching employee commissions:', error);
       console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para employee commissions');
@@ -342,7 +360,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         .order('date', { ascending: false });
       
       if (error) throw error;
-      setEmployeeOvertimes(data || []);
+      setEmployeeOvertimes((data || []).map(transformFromDatabase<EmployeeOvertime>));
     } catch (error) {
       console.error('Error fetching employee overtimes:', error);
       console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para employee overtimes');
@@ -364,7 +382,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         .order('date', { ascending: false });
       
       if (error) throw error;
-      setCashTransactions(data || []);
+      setCashTransactions((data || []).map(transformFromDatabase<CashTransaction>));
     } catch (error) {
       console.error('Error fetching cash transactions:', error);
       console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para cash transactions');
@@ -386,7 +404,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         .order('date', { ascending: false });
       
       if (error) throw error;
-      setPixFees(data || []);
+      setPixFees((data || []).map(transformFromDatabase<PixFee>));
     } catch (error) {
       console.error('Error fetching pix fees:', error);
       console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para pix fees');
@@ -410,15 +428,19 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       const { data, error } = await supabase
         .from('cash_balances')
         .select('*')
-        .single();
+        .limit(1)
+        .maybeSingle();
       
-      if (error && error.code !== 'PGRST116') throw error;
-      setCashBalance(data || { 
+      if (error) throw error;
+      
+      const balance = data ? transformFromDatabase<CashBalance>(data) : { 
         currentBalance: 0, 
         initialBalance: 0,
         initialDate: new Date().toISOString().split('T')[0],
         lastUpdated: new Date().toISOString() 
-      });
+      };
+      
+      setCashBalance(balance);
     } catch (error) {
       console.error('Error fetching cash balance:', error);
       console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para cash balance');
@@ -443,13 +465,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const balanceData = {
+        current_balance: amount,
+        initial_balance: amount,
+        initial_date: new Date().toISOString().split('T')[0]
+      };
+      
       const { error } = await supabase
         .from('cash_balances')
-        .insert([{ 
-          current_balance: amount,
-          initial_balance: amount,
-          initial_date: new Date().toISOString().split('T')[0]
-        }]);
+        .insert([balanceData]);
       
       if (error) throw error;
       await fetchCashBalance();
@@ -466,9 +490,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(balance);
       const { error } = await supabase
         .from('cash_balances')
-        .upsert([balance]);
+        .upsert([dbData]);
       
       if (error) throw error;
       await fetchCashBalance();
@@ -492,11 +517,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
-      const { error } = await supabase
-        .from('employees')
-        .insert([employee]);
-      
-      if (error) throw error;
+      await employeesService.create(employee);
       await fetchEmployees();
     } catch (error) {
       console.error('Error adding employee:', error);
@@ -513,12 +534,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
-      const { error } = await supabase
-        .from('employees')
-        .update(employee)
-        .eq('id', employee.id);
-      
-      if (error) throw error;
+      await employeesService.update(employee.id, employee);
       await fetchEmployees();
     } catch (error) {
       console.error('Error updating employee:', error);
@@ -533,12 +549,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
-      const { error } = await supabase
-        .from('employees')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
+      await employeesService.delete(id);
       await fetchEmployees();
     } catch (error) {
       console.error('Error deleting employee:', error);
@@ -588,29 +599,32 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(sale);
       const { data, error } = await supabase
         .from('sales')
-        .insert([sale])
+        .insert([dbData])
         .select()
         .single();
       
       if (error) throw error;
       
+      const transformedSale = transformFromDatabase<Sale>(data);
+      
       // Create commission for seller if applicable
-      if (data.seller_id) {
-        const seller = employees.find(e => e.id === data.seller_id);
+      if (transformedSale.sellerId) {
+        const seller = employees.find(e => e.id === transformedSale.sellerId);
         if (seller && seller.isSeller) {
-          const commission = {
-            employee_id: data.seller_id,
-            sale_id: data.id,
-            sale_value: data.total_value,
-            commission_rate: data.custom_commission_rate || 5,
-            commission_amount: (data.total_value * (data.custom_commission_rate || 5)) / 100,
-            date: data.date,
+          const commissionData = {
+            employee_id: transformedSale.sellerId,
+            sale_id: transformedSale.id,
+            sale_value: transformedSale.totalValue,
+            commission_rate: transformedSale.customCommissionRate || 5,
+            commission_amount: (transformedSale.totalValue * (transformedSale.customCommissionRate || 5)) / 100,
+            date: transformedSale.date,
             status: 'pendente'
           };
           
-          await supabase.from('employee_commissions').insert([commission]);
+          await supabase.from('employee_commissions').insert([commissionData]);
         }
       }
       
@@ -619,8 +633,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       
       // Create checks and boletos automatically for payment methods
       try {
-        await AutomationService.createChecksForSale(data);
-        await AutomationService.createBoletosForSale(data);
+        await AutomationService.createChecksForSale(transformedSale);
+        await AutomationService.createBoletosForSale(transformedSale);
         await fetchChecks();
         await fetchBoletos();
       } catch (error) {
@@ -641,9 +655,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(sale);
       const { error } = await supabase
         .from('sales')
-        .update(sale)
+        .update(dbData)
         .eq('id', id);
       
       if (error) throw error;
@@ -688,9 +703,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(debt);
       const { error } = await supabase
         .from('debts')
-        .insert([debt]);
+        .insert([dbData]);
       
       if (error) throw error;
       await fetchDebts();
@@ -709,9 +725,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(debt);
       const { error } = await supabase
         .from('debts')
-        .update(debt)
+        .update(dbData)
         .eq('id', debt.id);
       
       if (error) throw error;
@@ -756,9 +773,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(check);
       const { error } = await supabase
         .from('checks')
-        .insert([check]);
+        .insert([dbData]);
       
       if (error) throw error;
       await fetchChecks();
@@ -777,9 +795,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(check);
       const { error } = await supabase
         .from('checks')
-        .update(check)
+        .update(dbData)
         .eq('id', check.id);
       
       if (error) throw error;
@@ -824,9 +843,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(boleto);
       const { error } = await supabase
         .from('boletos')
-        .insert([boleto]);
+        .insert([dbData]);
       
       if (error) throw error;
       await fetchBoletos();
@@ -845,9 +865,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(boleto);
       const { error } = await supabase
         .from('boletos')
-        .update(boleto)
+        .update(dbData)
         .eq('id', boleto.id);
       
       if (error) throw error;
@@ -892,9 +913,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(payment);
       const { error } = await supabase
         .from('employee_payments')
-        .insert([payment]);
+        .insert([dbData]);
       
       if (error) throw error;
       await fetchEmployeePayments();
@@ -913,9 +935,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(payment);
       const { error } = await supabase
         .from('employee_payments')
-        .update(payment)
+        .update(dbData)
         .eq('id', payment.id);
       
       if (error) throw error;
@@ -960,9 +983,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(advance);
       const { error } = await supabase
         .from('employee_advances')
-        .insert([advance]);
+        .insert([dbData]);
       
       if (error) throw error;
       await fetchEmployeeAdvances();
@@ -981,9 +1005,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(advance);
       const { error } = await supabase
         .from('employee_advances')
-        .update(advance)
+        .update(dbData)
         .eq('id', advance.id);
       
       if (error) throw error;
@@ -1028,9 +1053,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(commission);
       const { error } = await supabase
         .from('employee_commissions')
-        .insert([commission]);
+        .insert([dbData]);
       
       if (error) throw error;
       await fetchEmployeeCommissions();
@@ -1049,9 +1075,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(commission);
       const { error } = await supabase
         .from('employee_commissions')
-        .update(commission)
+        .update(dbData)
         .eq('id', commission.id);
       
       if (error) throw error;
@@ -1096,9 +1123,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(overtime);
       const { error } = await supabase
         .from('employee_overtimes')
-        .insert([overtime]);
+        .insert([dbData]);
       
       if (error) throw error;
       await fetchEmployeeOvertimes();
@@ -1117,9 +1145,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(overtime);
       const { error } = await supabase
         .from('employee_overtimes')
-        .update(overtime)
+        .update(dbData)
         .eq('id', overtime.id);
       
       if (error) throw error;
@@ -1175,9 +1204,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(transaction);
       const { error } = await supabase
         .from('cash_transactions')
-        .insert([transaction]);
+        .insert([dbData]);
       
       if (error) throw error;
       
@@ -1208,9 +1238,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(transaction);
       const { error } = await supabase
         .from('cash_transactions')
-        .update(transaction)
+        .update(dbData)
         .eq('id', transaction.id);
       
       if (error) throw error;
@@ -1255,9 +1286,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(fee);
       const { error } = await supabase
         .from('pix_fees')
-        .insert([fee]);
+        .insert([dbData]);
       
       if (error) throw error;
       await fetchPixFees();
@@ -1276,9 +1308,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
     
     try {
+      const dbData = transformToDatabase(fee);
       const { error } = await supabase
         .from('pix_fees')
-        .update(fee)
+        .update(dbData)
         .eq('id', fee.id);
       
       if (error) throw error;

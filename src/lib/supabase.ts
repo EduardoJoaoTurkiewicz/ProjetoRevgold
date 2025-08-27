@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from './database.types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 // Only create client if environment variables are properly configured
-export const supabase = createClient(
+export const supabase = createClient<Database>(
   supabaseUrl || 'https://placeholder.supabase.co', 
   supabaseAnonKey || 'placeholder-key'
 );
@@ -17,7 +18,7 @@ export async function testSupabaseConnection() {
   }
   
   try {
-    const { data, error } = await supabase.from('employees').select('count').single();
+    const { data, error } = await supabase.from('employees').select('id').limit(1);
     if (error) throw error;
     console.log('✅ Conexão com Supabase estabelecida com sucesso');
     return true;
@@ -48,143 +49,6 @@ export function isSupabaseConfigured(): boolean {
   return isConfigured;
 }
 
-// Image handling functions for check images
-export async function uploadCheckImage(file: File, checkId: string, imageType: 'front' | 'back'): Promise<string> {
-  if (!isSupabaseConfigured()) {
-    throw new Error('Supabase não está configurado. Configure as variáveis de ambiente.');
-  }
-
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${checkId}-${imageType}-${Date.now()}.${fileExt}`;
-  const filePath = `check-images/${fileName}`;
-
-  const { error } = await supabase.storage
-    .from('check-images')
-    .upload(filePath, file, {
-      cacheControl: '3600',
-      upsert: false
-    });
-
-  if (error) {
-    console.error('Erro no upload:', error);
-    throw new Error(`Erro ao fazer upload: ${error.message}`);
-  }
-
-  console.log('✅ Upload realizado com sucesso:', filePath);
-  return filePath;
-}
-
-export async function deleteCheckImage(filePath: string): Promise<void> {
-  if (!isSupabaseConfigured()) {
-    throw new Error('Supabase não está configurado. Configure as variáveis de ambiente.');
-  }
-
-  const { error } = await supabase.storage
-    .from('check-images')
-    .remove([filePath]);
-
-  if (error) {
-    console.error('Erro ao deletar imagem:', error);
-    throw new Error(`Erro ao deletar imagem: ${error.message}`);
-  }
-
-  console.log('✅ Imagem deletada com sucesso:', filePath);
-}
-
-export function getCheckImageUrl(filePath: string): string {
-  if (!isSupabaseConfigured()) {
-    console.warn('Supabase não configurado, retornando URL de fallback');
-    return '/logo-fallback.svg';
-  }
-
-  const { data } = supabase.storage
-    .from('check-images')
-    .getPublicUrl(filePath);
-
-  return data.publicUrl;
-}
-
-// Database utility functions
-export async function executeQuery(query: string, params?: any[]) {
-  try {
-    const { data, error } = await supabase.rpc('execute_sql', { 
-      query, 
-      params: params || [] 
-    });
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Erro ao executar query:', error);
-    throw error;
-  }
-}
-
-// Service objects for automation
-export const checksService = {
-  async create(checkData: any) {
-    if (!isSupabaseConfigured()) {
-      // Return mock data for local development
-      return {
-        ...checkData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString()
-      };
-    }
-    const { data, error } = await supabase.from('checks').insert([checkData]).select().single();
-    if (error) throw error;
-    return data;
-  },
-  
-  async update(id: string, checkData: any) {
-    if (!isSupabaseConfigured()) {
-      return; // No-op for local development
-    }
-    const { error } = await supabase.from('checks').update(checkData).eq('id', id);
-    if (error) throw error;
-  },
-  
-  async delete(id: string) {
-    if (!isSupabaseConfigured()) {
-      return; // No-op for local development
-    }
-    const { error } = await supabase.from('checks').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const boletosService = {
-  async create(boletoData: any) {
-    if (!isSupabaseConfigured()) {
-      // Return mock data for local development
-      return {
-        ...boletoData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString()
-      };
-    }
-    const { data, error } = await supabase.from('boletos').insert([boletoData]).select().single();
-    if (error) throw error;
-    return data;
-  },
-  
-  async update(id: string, boletoData: any) {
-    if (!isSupabaseConfigured()) {
-      return; // No-op for local development
-    }
-    const { error } = await supabase.from('boletos').update(boletoData).eq('id', id);
-    if (error) throw error;
-  },
-  
-  async delete(id: string) {
-    if (!isSupabaseConfigured()) {
-      return; // No-op for local development
-    }
-    const { error } = await supabase.from('boletos').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
 // Health check function
 export async function healthCheck() {
   try {
@@ -199,7 +63,7 @@ export async function healthCheck() {
     }
 
     // Teste simples de conexão
-    const { data, error } = await supabase.from('employees').select('count').limit(1);
+    const { data, error } = await supabase.from('employees').select('id').limit(1);
     
     if (error) {
       throw new Error(`Erro de conexão: ${error.message}`);
@@ -215,22 +79,7 @@ export async function healthCheck() {
     return {
       configured: false,
       connected: false,
-      error: error.message || 'Erro desconhecido na conexão'
+      error: (error as Error).message || 'Erro desconhecido na conexão'
     };
   }
 }
-
-export const ensureAuthenticated = async () => {
-  if (!isSupabaseConfigured()) {
-    console.warn('Supabase não configurado.');
-    return null;
-  }
-
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    return user;
-  } catch (error) {
-    console.warn('Falha na autenticação Supabase:', error);
-    return null;
-  }
-};

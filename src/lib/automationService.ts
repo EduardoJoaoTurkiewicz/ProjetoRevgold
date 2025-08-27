@@ -1,5 +1,5 @@
 import { Sale, Check, Boleto, PaymentMethod } from '../types';
-import { checksService, boletosService } from './supabase';
+import { checksService, boletosService } from './supabaseServices';
 
 export class AutomationService {
   // Criar cheques automaticamente para vendas com pagamento em cheque
