@@ -778,13 +778,13 @@ const Dashboard: React.FC = () => {
                     <div>
                       <p className="text-yellow-700">Vendas: {seller.salesCount || 0}</p>
                       <p className="font-bold text-yellow-800">
-                        R$ {(isNaN(seller.totalSales) ? 0 : seller.totalSales || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {Number(seller.totalSales || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
                     <div>
                       <p className="text-yellow-700">Comissão:</p>
                       <p className="font-bold text-green-600">
-                        R$ {(isNaN(seller.totalCommissions) ? 0 : seller.totalCommissions || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {Number(seller.totalCommissions || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
                   </div>
