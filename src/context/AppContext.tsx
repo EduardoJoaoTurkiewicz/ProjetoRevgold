@@ -806,10 +806,33 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setDebts(prev => prev.map(d => 
         d.id === debt.id ? { ...debt, updatedAt: new Date().toISOString() } : d
       ));
+      
+      // Update cash balance for local development
+      const oldDebt = debts.find(d => d.id === debt.id);
+      if (oldDebt && !oldDebt.isPaid && debt.isPaid && cashBalance) {
+        // Calculate cash payment amount
+        const cashPaymentAmount = (debt.paymentMethods || []).reduce((sum, method) => {
+          if (['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(method.type)) {
+            return sum + method.amount;
+          }
+          return sum;
+        }, 0);
+        
+        if (cashPaymentAmount > 0) {
+          setCashBalance(prev => prev ? {
+            ...prev,
+            currentBalance: prev.currentBalance - cashPaymentAmount,
+            lastUpdated: new Date().toISOString()
+          } : null);
+        }
+      }
       return;
     }
     
     try {
+      // Get old debt state before update
+      const oldDebt = debts.find(d => d.id === debt.id);
+      
       const dbData = transformToDatabase(debt);
       const { error } = await supabase
         .from('debts')
@@ -817,6 +840,25 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         .eq('id', debt.id);
       
       if (error) throw error;
+      
+      // Update cash balance if debt was marked as paid
+      if (oldDebt && !oldDebt.isPaid && debt.isPaid) {
+        // Create cash transactions for cash payment methods
+        for (const method of debt.paymentMethods || []) {
+          if (['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(method.type)) {
+            await createCashTransaction({
+              date: debt.date,
+              type: 'saida',
+              amount: method.amount,
+              description: `Pagamento de dívida - ${debt.company} (${method.type.replace('_', ' ')})`,
+              category: 'divida',
+              relatedId: debt.id,
+              paymentMethod: method.type
+            });
+          }
+        }
+      }
+      
       await fetchDebts();
     } catch (error) {
       console.error('Error updating debt:', error);
@@ -876,10 +918,35 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setChecks(prev => prev.map(c => 
         c.id === check.id ? { ...check, updatedAt: new Date().toISOString() } : c
       ));
+      
+      // Update cash balance for local development
+      const oldCheck = checks.find(c => c.id === check.id);
+      if (oldCheck && oldCheck.status !== 'compensado' && check.status === 'compensado') {
+        if (cashBalance) {
+          if (!check.isOwnCheck) {
+            // Check received - add to cash
+            setCashBalance(prev => prev ? {
+              ...prev,
+              currentBalance: prev.currentBalance + check.value,
+              lastUpdated: new Date().toISOString()
+            } : null);
+          } else {
+            // Own check paid - subtract from cash
+            setCashBalance(prev => prev ? {
+              ...prev,
+              currentBalance: prev.currentBalance - check.value,
+              lastUpdated: new Date().toISOString()
+            } : null);
+          }
+        }
+      }
       return;
     }
     
     try {
+      // Get old check state before update
+      const oldCheck = checks.find(c => c.id === check.id);
+      
       const dbData = transformToDatabase(check);
       const { error } = await supabase
         .from('checks')
@@ -887,6 +954,34 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         .eq('id', check.id);
       
       if (error) throw error;
+      
+      // Update cash balance if check status changed to compensado
+      if (oldCheck && oldCheck.status !== 'compensado' && check.status === 'compensado') {
+        if (!check.isOwnCheck) {
+          // Check from third party was compensated - add to cash
+          await createCashTransaction({
+            date: check.dueDate,
+            type: 'entrada',
+            amount: check.value,
+            description: `Cheque compensado - ${check.client}`,
+            category: 'cheque',
+            relatedId: check.id,
+            paymentMethod: 'cheque'
+          });
+        } else {
+          // Own check was paid - subtract from cash
+          await createCashTransaction({
+            date: check.dueDate,
+            type: 'saida',
+            amount: check.value,
+            description: `Cheque próprio pago - ${check.client}`,
+            category: 'cheque',
+            relatedId: check.id,
+            paymentMethod: 'cheque'
+          });
+        }
+      }
+      
       await fetchChecks();
     } catch (error) {
       console.error('Error updating check:', error);
@@ -946,10 +1041,30 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setBoletos(prev => prev.map(b => 
         b.id === boleto.id ? { ...boleto, updatedAt: new Date().toISOString() } : b
       ));
+      
+      // Update cash balance for local development
+      const oldBoleto = boletos.find(b => b.id === boleto.id);
+      if (oldBoleto && oldBoleto.status !== 'compensado' && boleto.status === 'compensado') {
+        // Boleto was just marked as paid - add to cash
+        const finalAmount = boleto.finalAmount || boleto.value;
+        const notaryCosts = boleto.notaryCosts || 0;
+        const netReceived = finalAmount - notaryCosts;
+        
+        if (cashBalance && netReceived > 0) {
+          setCashBalance(prev => prev ? {
+            ...prev,
+            currentBalance: prev.currentBalance + netReceived,
+            lastUpdated: new Date().toISOString()
+          } : null);
+        }
+      }
       return;
     }
     
     try {
+      // Get old boleto state before update
+      const oldBoleto = boletos.find(b => b.id === boleto.id);
+      
       const dbData = transformToDatabase(boleto);
       const { error } = await supabase
         .from('boletos')
@@ -957,6 +1072,39 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         .eq('id', boleto.id);
       
       if (error) throw error;
+      
+      // Update cash balance if boleto status changed to compensado
+      if (oldBoleto && oldBoleto.status !== 'compensado' && boleto.status === 'compensado') {
+        const finalAmount = boleto.finalAmount || boleto.value;
+        const notaryCosts = boleto.notaryCosts || 0;
+        const netReceived = finalAmount - notaryCosts;
+        
+        if (netReceived > 0) {
+          await createCashTransaction({
+            date: boleto.dueDate,
+            type: 'entrada',
+            amount: netReceived,
+            description: `Boleto pago - ${boleto.client}${boleto.overdueAction ? ` (${boleto.overdueAction})` : ''}`,
+            category: 'boleto',
+            relatedId: boleto.id,
+            paymentMethod: 'boleto'
+          });
+        }
+        
+        // Create separate transaction for notary costs if any
+        if (notaryCosts > 0) {
+          await createCashTransaction({
+            date: boleto.dueDate,
+            type: 'saida',
+            amount: notaryCosts,
+            description: `Custos de cartório - Boleto ${boleto.client}`,
+            category: 'outro',
+            relatedId: boleto.id,
+            paymentMethod: 'outros'
+          });
+        }
+      }
+      
       await fetchBoletos();
     } catch (error) {
       console.error('Error updating boleto:', error);

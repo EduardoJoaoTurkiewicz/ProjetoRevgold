@@ -10,6 +10,7 @@ export function CashManagement() {
   const [isInitializing, setIsInitializing] = useState(false);
   const [initialAmount, setInitialAmount] = useState(0);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showRealTimeUpdates, setShowRealTimeUpdates] = useState(true);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -407,7 +408,15 @@ export function CashManagement() {
       </div>
 
       {/* Saldo Atual */}
-      <div className="card bg-gradient-to-br from-green-100 to-emerald-100 border-green-300 modern-shadow-xl">
+      <div className="card bg-gradient-to-br from-green-100 to-emerald-100 border-green-300 modern-shadow-xl relative overflow-hidden">
+        {/* Real-time indicator */}
+        <div className="absolute top-4 right-4">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+            <span className="text-green-700 text-sm font-bold">Atualização Automática</span>
+          </div>
+        </div>
+        
         <div className="text-center">
           <h2 className="text-2xl font-bold text-green-900 mb-4">Saldo Atual em Caixa</h2>
           <p className="text-6xl font-black text-green-700 mb-4">
@@ -416,6 +425,18 @@ export function CashManagement() {
           <p className="text-green-600 font-semibold">
             Última atualização: {new Date(cashBalance.lastUpdated).toLocaleString('pt-BR')}
           </p>
+          <div className="mt-4 p-4 bg-white/50 rounded-xl">
+            <p className="text-sm text-green-700 font-semibold">
+              💡 O saldo é atualizado automaticamente quando:
+            </p>
+            <div className="text-xs text-green-600 mt-2 space-y-1">
+              <p>• Vendas em dinheiro, PIX ou débito são registradas</p>
+              <p>• Cheques são marcados como "compensado"</p>
+              <p>• Boletos são marcados como "compensado"</p>
+              <p>• Dívidas são marcadas como "pago"</p>
+              <p>• Pagamentos de funcionários são registrados</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -532,7 +553,10 @@ export function CashManagement() {
             ))}
             
             {/* Total do Dia */}
-            <div className="p-6 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-2xl border-2 border-blue-300">
+            <div className="p-6 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-2xl border-2 border-blue-300 relative">
+              <div className="absolute top-2 right-2">
+                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+              </div>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
                   <p className="text-blue-600 font-semibold">Entradas</p>
@@ -552,6 +576,11 @@ export function CashManagement() {
                     {dayTotals.saldo >= 0 ? '+' : ''}R$ {dayTotals.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
+              </div>
+              <div className="mt-4 text-center">
+                <p className="text-xs text-blue-600 font-semibold">
+                  ⚡ Valores atualizados em tempo real conforme as operações
+                </p>
               </div>
             </div>
           </div>
