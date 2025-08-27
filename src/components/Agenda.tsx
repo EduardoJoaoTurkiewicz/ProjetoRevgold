@@ -100,8 +100,7 @@ export function Agenda() {
           }
          });
          
-         if (!isHandledAsInstallment && debt.date === dateStr) {
-          events.push({
+         if (!handledByPaymentMethod && debt.date === dateStr) {
             id: `debt-${debt.id}`,
             type: 'debt',
             title: debt.company,
