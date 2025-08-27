@@ -117,6 +117,18 @@ export const checksService = {
     return transformDatabaseRow<Check>(data);
   },
   
+  async getAll(): Promise<Check[]> {
+    if (!isSupabaseConfigured()) return [];
+    
+    const { data, error } = await supabase
+      .from('checks')
+      .select('*')
+      .order('due_date', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformDatabaseRow<Check>);
+  },
+
   async update(id: string, checkData: Partial<Check>) {
     if (!isSupabaseConfigured()) {
       return; // No-op for local development
@@ -154,6 +166,18 @@ export const boletosService = {
     return transformDatabaseRow<Boleto>(data);
   },
   
+  async getAll(): Promise<Boleto[]> {
+    if (!isSupabaseConfigured()) return [];
+    
+    const { data, error } = await supabase
+      .from('boletos')
+      .select('*')
+      .order('due_date', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformDatabaseRow<Boleto>);
+  },
+
   async update(id: string, boletoData: Partial<Boleto>) {
     if (!isSupabaseConfigured()) {
       return; // No-op for local development
@@ -173,7 +197,315 @@ export const boletosService = {
   }
 };
 
-// Generic service functions
+export const employeeCommissionsService = {
+  async getAll(): Promise<EmployeeCommission[]> {
+    if (!isSupabaseConfigured()) return [];
+    
+    const { data, error } = await supabase
+      .from('employee_commissions')
+      .select('*')
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformDatabaseRow<EmployeeCommission>);
+  },
+
+  async create(commission: Omit<EmployeeCommission, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeeCommission> {
+    if (!isSupabaseConfigured()) {
+      return {
+        ...commission,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
+    const dbData = transformToDatabase(commission);
+    const { data, error } = await supabase.from('employee_commissions').insert([dbData]).select().single();
+    if (error) throw error;
+    return transformDatabaseRow<EmployeeCommission>(data);
+  },
+
+  async update(id: string, commission: Partial<EmployeeCommission>): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const dbData = transformToDatabase(commission);
+    const { error } = await supabase.from('employee_commissions').update(dbData).eq('id', id);
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const { error } = await supabase.from('employee_commissions').delete().eq('id', id);
+    if (error) throw error;
+  }
+};
+
+export const employeePaymentsService = {
+  async getAll(): Promise<EmployeePayment[]> {
+    if (!isSupabaseConfigured()) return [];
+    
+    const { data, error } = await supabase
+      .from('employee_payments')
+      .select('*')
+      .order('payment_date', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformDatabaseRow<EmployeePayment>);
+  },
+
+  async create(payment: Omit<EmployeePayment, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeePayment> {
+    if (!isSupabaseConfigured()) {
+      return {
+        ...payment,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
+    const dbData = transformToDatabase(payment);
+    const { data, error } = await supabase.from('employee_payments').insert([dbData]).select().single();
+    if (error) throw error;
+    return transformDatabaseRow<EmployeePayment>(data);
+  },
+
+  async update(id: string, payment: Partial<EmployeePayment>): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const dbData = transformToDatabase(payment);
+    const { error } = await supabase.from('employee_payments').update(dbData).eq('id', id);
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const { error } = await supabase.from('employee_payments').delete().eq('id', id);
+    if (error) throw error;
+  }
+};
+
+export const employeeAdvancesService = {
+  async getAll(): Promise<EmployeeAdvance[]> {
+    if (!isSupabaseConfigured()) return [];
+    
+    const { data, error } = await supabase
+      .from('employee_advances')
+      .select('*')
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformDatabaseRow<EmployeeAdvance>);
+  },
+
+  async create(advance: Omit<EmployeeAdvance, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeeAdvance> {
+    if (!isSupabaseConfigured()) {
+      return {
+        ...advance,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
+    const dbData = transformToDatabase(advance);
+    const { data, error } = await supabase.from('employee_advances').insert([dbData]).select().single();
+    if (error) throw error;
+    return transformDatabaseRow<EmployeeAdvance>(data);
+  },
+
+  async update(id: string, advance: Partial<EmployeeAdvance>): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const dbData = transformToDatabase(advance);
+    const { error } = await supabase.from('employee_advances').update(dbData).eq('id', id);
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const { error } = await supabase.from('employee_advances').delete().eq('id', id);
+    if (error) throw error;
+  }
+};
+
+export const employeeOvertimesService = {
+  async getAll(): Promise<EmployeeOvertime[]> {
+    if (!isSupabaseConfigured()) return [];
+    
+    const { data, error } = await supabase
+      .from('employee_overtimes')
+      .select('*')
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformDatabaseRow<EmployeeOvertime>);
+  },
+
+  async create(overtime: Omit<EmployeeOvertime, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeeOvertime> {
+    if (!isSupabaseConfigured()) {
+      return {
+        ...overtime,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
+    const dbData = transformToDatabase(overtime);
+    const { data, error } = await supabase.from('employee_overtimes').insert([dbData]).select().single();
+    if (error) throw error;
+    return transformDatabaseRow<EmployeeOvertime>(data);
+  },
+
+  async update(id: string, overtime: Partial<EmployeeOvertime>): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const dbData = transformToDatabase(overtime);
+    const { error } = await supabase.from('employee_overtimes').update(dbData).eq('id', id);
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const { error } = await supabase.from('employee_overtimes').delete().eq('id', id);
+    if (error) throw error;
+  }
+};
+
+export const cashBalancesService = {
+  async get(): Promise<CashBalance | null> {
+    if (!isSupabaseConfigured()) return null;
+    
+    const { data, error } = await supabase
+      .from('cash_balances')
+      .select('*')
+      .limit(1)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') throw error;
+    return data ? transformDatabaseRow<CashBalance>(data) : null;
+  },
+
+  async create(balance: Omit<CashBalance, 'id' | 'createdAt' | 'updatedAt'>): Promise<CashBalance> {
+    if (!isSupabaseConfigured()) {
+      return {
+        ...balance,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
+    const dbData = transformToDatabase(balance);
+    const { data, error } = await supabase.from('cash_balances').insert([dbData]).select().single();
+    if (error) throw error;
+    return transformDatabaseRow<CashBalance>(data);
+  },
+
+  async update(id: string, balance: Partial<CashBalance>): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const dbData = transformToDatabase(balance);
+    const { error } = await supabase.from('cash_balances').update(dbData).eq('id', id);
+    if (error) throw error;
+  }
+};
+
+export const pixFeesService = {
+  async getAll(): Promise<PixFee[]> {
+    if (!isSupabaseConfigured()) return [];
+    
+    const { data, error } = await supabase
+      .from('pix_fees')
+      .select('*')
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformDatabaseRow<PixFee>);
+  },
+
+  async create(fee: Omit<PixFee, 'id' | 'createdAt' | 'updatedAt'>): Promise<PixFee> {
+    if (!isSupabaseConfigured()) {
+      return {
+        ...fee,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
+    const dbData = transformToDatabase(fee);
+    const { data, error } = await supabase.from('pix_fees').insert([dbData]).select().single();
+    if (error) throw error;
+    return transformDatabaseRow<PixFee>(data);
+  },
+
+  async update(id: string, fee: Partial<PixFee>): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const dbData = transformToDatabase(fee);
+    const { error } = await supabase.from('pix_fees').update(dbData).eq('id', id);
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const { error } = await supabase.from('pix_fees').delete().eq('id', id);
+    if (error) throw error;
+  }
+};
+
+export const cashTransactionsService = {
+  async getAll(): Promise<CashTransaction[]> {
+    if (!isSupabaseConfigured()) return [];
+    
+    const { data, error } = await supabase
+      .from('cash_transactions')
+      .select('*')
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformDatabaseRow<CashTransaction>);
+  },
+
+  async create(transaction: Omit<CashTransaction, 'id' | 'createdAt' | 'updatedAt'>): Promise<CashTransaction> {
+    if (!isSupabaseConfigured()) {
+      return {
+        ...transaction,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
+    const dbData = transformToDatabase(transaction);
+    const { data, error } = await supabase.from('cash_transactions').insert([dbData]).select().single();
+    if (error) throw error;
+    return transformDatabaseRow<CashTransaction>(data);
+  },
+
+  async update(id: string, transaction: Partial<CashTransaction>): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const dbData = transformToDatabase(transaction);
+    const { error } = await supabase.from('cash_transactions').update(dbData).eq('id', id);
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const { error } = await supabase.from('cash_transactions').delete().eq('id', id);
+    if (error) throw error;
+  }
+};
+
 export const employeesService = {
   async getAll(): Promise<Employee[]> {
     if (!isSupabaseConfigured()) return [];
