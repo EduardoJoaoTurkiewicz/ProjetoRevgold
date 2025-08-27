@@ -157,24 +157,7 @@ export function Agenda() {
       
       if (sale && Array.isArray(sale.paymentMethods)) {
         sale.paymentMethods.forEach((method, methodIndex) => {
-    // Eventos da agenda
-    agendaEvents.forEach(agendaEvent => {
-      if (agendaEvent.date === dateStr) {
-        events.push({
-          id: `agenda-${agendaEvent.id}`,
-          type: 'receivable',
-          title: agendaEvent.title,
-          amount: 0,
-          description: agendaEvent.description || '',
-          status: agendaEvent.status === 'concluido' ? 'Concluído' : 
-                 agendaEvent.status === 'cancelado' ? 'Cancelado' :
-                 agendaEvent.status === 'adiado' ? 'Adiado' : 'Pendente',
-          details: { ...agendaEvent, isAgendaEvent: true }
-        });
-      }
-    });
-
-        if (method.installments && method.installments > 1) {
+          if (method.installments && method.installments > 1) {
           for (let i = 0; i < method.installments; i++) {
             const dueDate = new Date(method.firstInstallmentDate || method.startDate || sale.date);
             dueDate.setDate(dueDate.getDate() + (i * (method.installmentInterval || 30)));
@@ -191,7 +174,23 @@ export function Agenda() {
               });
             }
           }
-        }
+        });
+      }
+    });
+
+    // Eventos da agenda
+    agendaEvents.forEach(agendaEvent => {
+      if (agendaEvent.date === dateStr) {
+        events.push({
+          id: `agenda-${agendaEvent.id}`,
+          type: 'receivable',
+          title: agendaEvent.title,
+          amount: 0,
+          description: agendaEvent.description || '',
+          status: agendaEvent.status === 'concluido' ? 'Concluído' : 
+                 agendaEvent.status === 'cancelado' ? 'Cancelado' :
+                 agendaEvent.status === 'adiado' ? 'Adiado' : 'Pendente',
+          details: { ...agendaEvent, isAgendaEvent: true }
         });
       }
     });
@@ -394,30 +393,6 @@ export function Agenda() {
                   </div>
                 );
 
-                {viewingEvent.details.isAgendaEvent && (
-                  <div>
-                    <h3 className="font-bold text-slate-900 mb-4">Detalhes do Evento</h3>
-                    <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
-                      <p><strong>Título:</strong> {viewingEvent.details.title}</p>
-                      <p><strong>Tipo:</strong> {viewingEvent.details.type}</p>
-                      <p><strong>Prioridade:</strong> {viewingEvent.details.priority}</p>
-                      <p><strong>Data:</strong> {new Date(viewingEvent.details.date + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
-                      {viewingEvent.details.time && (
-                        <p><strong>Horário:</strong> {viewingEvent.details.time}</p>
-                      )}
-                      {viewingEvent.details.description && (
-                        <p><strong>Descrição:</strong> {viewingEvent.details.description}</p>
-                      )}
-                      {viewingEvent.details.observations && (
-                        <p><strong>Observações:</strong> {viewingEvent.details.observations}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              })}
-            </div>
-          </div>
-        </div>
 
         {/* Detalhes do Dia Selecionado */}
         <div className="lg:col-span-1">
@@ -625,12 +600,28 @@ export function Agenda() {
                           <p><strong>Data de Entrega:</strong> {new Date(viewingEvent.details.deliveryDate).toLocaleDateString('pt-BR')}</p>
                           <p><strong>Valor Total da Venda:</strong> R$ {viewingEvent.details.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                         </>
+                      ) : viewingEvent.details.isAgendaEvent ? (
+                        <>
+                          <p><strong>Título:</strong> {viewingEvent.details.title}</p>
+                          <p><strong>Tipo:</strong> {viewingEvent.details.type}</p>
+                          <p><strong>Prioridade:</strong> {viewingEvent.details.priority}</p>
+                          <p><strong>Data:</strong> {new Date(viewingEvent.details.date + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                          {viewingEvent.details.time && (
+                            <p><strong>Horário:</strong> {viewingEvent.details.time}</p>
+                          )}
+                          {viewingEvent.details.description && (
+                            <p><strong>Descrição:</strong> {viewingEvent.details.description}</p>
+                          )}
+                          {viewingEvent.details.observations && (
+                            <p><strong>Observações:</strong> {viewingEvent.details.observations}</p>
+                          )}
+                        </>
                       ) : (
                         <>
-                      <p><strong>Cliente:</strong> {viewingEvent.details.client}</p>
-                      <p><strong>Data da Venda:</strong> {new Date(viewingEvent.details.date).toLocaleDateString('pt-BR')}</p>
-                      <p><strong>Parcela:</strong> {viewingEvent.details.installment}/{viewingEvent.details.totalInstallments}</p>
-                      <p><strong>Valor Total da Venda:</strong> R$ {viewingEvent.details.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                          <p><strong>Cliente:</strong> {viewingEvent.details.client}</p>
+                          <p><strong>Data da Venda:</strong> {new Date(viewingEvent.details.date).toLocaleDateString('pt-BR')}</p>
+                          <p><strong>Parcela:</strong> {viewingEvent.details.installment}/{viewingEvent.details.totalInstallments}</p>
+                          <p><strong>Valor Total da Venda:</strong> R$ {viewingEvent.details.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                         </>
                       )}
                     </div>
