@@ -763,31 +763,32 @@ const Dashboard: React.FC = () => {
               if (!seller) return null;
               return (
                 <div key={index} className="p-4 bg-yellow-50 rounded-xl border border-yellow-200">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
-                    index === 0 ? 'bg-yellow-500' :
-                    index === 1 ? 'bg-gray-400' :
-                    index === 2 ? 'bg-amber-600' : 'bg-slate-400'
-                  }`}>
-                    {index + 1}
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
+                      index === 0 ? 'bg-yellow-500' :
+                      index === 1 ? 'bg-gray-400' :
+                      index === 2 ? 'bg-amber-600' : 'bg-slate-400'
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <h4 className="font-bold text-yellow-900">{seller.name}</h4>
                   </div>
-                  <h4 className="font-bold text-yellow-900">{seller.name}</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-yellow-700">Vendas: {seller.salesCount}</p>
+                      <p className="font-bold text-yellow-800">
+                        R$ {(seller.totalSales || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-yellow-700">Comissão:</p>
+                      <p className="font-bold text-green-600">
+                        R$ {(seller.totalCommissions || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-yellow-700">Vendas: {seller.salesCount}</p>
-                    <p className="font-bold text-yellow-800">
-                      R$ {(Number(seller.totalSales) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-yellow-700">Comissão:</p>
-                    <p className="font-bold text-green-600">
-                      R$ {(Number(seller.totalCommissions) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              );
             })}
             {topSellers.length === 0 && (
               <div className="text-center py-8">
