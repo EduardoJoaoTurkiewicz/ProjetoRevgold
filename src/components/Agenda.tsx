@@ -76,7 +76,8 @@ export function Agenda() {
 
     // Dívidas da empresa (que a empresa deve pagar)
     debts.forEach(debt => {
-      (debt.paymentMethods || []).forEach((method, index) => {
+      if (debt && Array.isArray(debt.paymentMethods)) {
+        debt.paymentMethods.forEach((method, index) => {
         if (method.installments && method.installments > 1) {
           for (let i = 0; i < method.installments; i++) {
             const dueDate = new Date(method.startDate || debt.date);
@@ -105,7 +106,8 @@ export function Agenda() {
             details: debt
           });
         }
-      });
+        });
+      }
     });
 
     // Cheques (que a empresa vai receber)
@@ -153,7 +155,8 @@ export function Agenda() {
         });
       }
       
-      (sale.paymentMethods || []).forEach((method, methodIndex) => {
+      if (sale && Array.isArray(sale.paymentMethods)) {
+        sale.paymentMethods.forEach((method, methodIndex) => {
     // Eventos da agenda
     agendaEvents.forEach(agendaEvent => {
       if (agendaEvent.date === dateStr) {
@@ -189,7 +192,8 @@ export function Agenda() {
             }
           }
         }
-      });
+        });
+      }
     });
 
     return events.sort((a, b) => b.amount - a.amount);
