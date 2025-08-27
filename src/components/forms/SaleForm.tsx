@@ -35,8 +35,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     totalValue: sale?.totalValue || 0,
     paymentMethods: sale?.paymentMethods || [{ type: 'dinheiro' as const, amount: 0 }],
     paymentDescription: sale?.paymentDescription || '',
-    paymentObservations: sale?.paymentObservations || '',
-    thirdPartyChecks: [] as ThirdPartyCheckDetails[]
+    paymentObservations: sale?.paymentObservations || ''
   });
 
   // Filtrar apenas vendedores ativos
@@ -79,6 +78,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
             delete updatedMethod.startDate;
             delete updatedMethod.firstInstallmentDate;
             delete updatedMethod.isThirdPartyCheck;
+            delete updatedMethod.thirdPartyDetails;
           }
           
           return updatedMethod;
@@ -88,34 +88,59 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     }));
   };
 
-  const addThirdPartyCheck = () => {
+  const addThirdPartyCheck = (paymentMethodIndex: number) => {
     setFormData(prev => ({
       ...prev,
-      thirdPartyChecks: [...prev.thirdPartyChecks, {
-        bank: '',
-        agency: '',
-        account: '',
-        checkNumber: '',
-        issuer: '',
-        cpfCnpj: '',
-        observations: ''
-      }]
+      paymentMethods: prev.paymentMethods.map((method, i) => {
+        if (i === paymentMethodIndex && method.type === 'cheque' && method.isThirdPartyCheck) {
+          const thirdPartyDetails = method.thirdPartyDetails || [];
+          return {
+            ...method,
+            thirdPartyDetails: [...thirdPartyDetails, {
+              bank: '',
+              agency: '',
+              account: '',
+              checkNumber: '',
+              issuer: '',
+              cpfCnpj: '',
+              observations: ''
+            }]
+          };
+        }
+        return method;
+      })
     }));
   };
 
-  const updateThirdPartyCheck = (index: number, field: string, value: string) => {
+  const updateThirdPartyCheck = (paymentMethodIndex: number, checkIndex: number, field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      thirdPartyChecks: prev.thirdPartyChecks.map((check, i) => 
-        i === index ? { ...check, [field]: value } : check
-      )
+      paymentMethods: prev.paymentMethods.map((method, i) => {
+        if (i === paymentMethodIndex && method.thirdPartyDetails) {
+          return {
+            ...method,
+            thirdPartyDetails: method.thirdPartyDetails.map((check, j) => 
+              j === checkIndex ? { ...check, [field]: value } : check
+            )
+          };
+        }
+        return method;
+      })
     }));
   };
 
-  const removeThirdPartyCheck = (index: number) => {
+  const removeThirdPartyCheck = (paymentMethodIndex: number, checkIndex: number) => {
     setFormData(prev => ({
       ...prev,
-      thirdPartyChecks: prev.thirdPartyChecks.filter((_, i) => i !== index)
+      paymentMethods: prev.paymentMethods.map((method, i) => {
+        if (i === paymentMethodIndex && method.thirdPartyDetails) {
+          return {
+            ...method,
+            thirdPartyDetails: method.thirdPartyDetails.filter((_, j) => j !== checkIndex)
+          };
+        }
+        return method;
+      })
     }));
   };
 
@@ -478,29 +503,29 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                   </h4>
                                   <button
                                     type="button"
-                                    onClick={addThirdPartyCheck}
+                                    onClick={() => addThirdPartyCheck(index)}
                                     className="btn-secondary text-xs py-1 px-2"
                                   >
                                     Adicionar Cheque
                                   </button>
                                 </div>
                                 
-                                {formData.thirdPartyChecks.length < (method.installments || 1) && (
+                                {(!method.thirdPartyDetails || method.thirdPartyDetails.length < (method.installments || 1)) && (
                                   <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                                     <p className="text-sm text-yellow-700 font-medium">
-                                      ⚠️ Você precisa adicionar {(method.installments || 1) - formData.thirdPartyChecks.length} cheque(s) de terceiros
+                                      ⚠️ Você precisa adicionar {(method.installments || 1) - (method.thirdPartyDetails?.length || 0)} cheque(s) de terceiros
                                     </p>
                                   </div>
                                 )}
                                 
                                 <div className="space-y-4">
-                                  {formData.thirdPartyChecks.map((check, checkIndex) => (
+                                  {(method.thirdPartyDetails || []).map((check, checkIndex) => (
                                     <div key={checkIndex} className="p-4 bg-white rounded-lg border border-blue-100">
                                       <div className="flex justify-between items-center mb-3">
                                         <h5 className="font-bold text-blue-900">Cheque {checkIndex + 1}</h5>
                                         <button
                                           type="button"
-                                          onClick={() => removeThirdPartyCheck(checkIndex)}
+                                          onClick={() => removeThirdPartyCheck(index, checkIndex)}
                                           className="text-red-600 hover:text-red-800"
                                         >
                                           <Trash2 className="w-4 h-4" />
@@ -513,7 +538,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                           <input
                                             type="text"
                                             value={check.bank}
-                                            onChange={(e) => updateThirdPartyCheck(checkIndex, 'bank', e.target.value)}
+                                            onChange={(e) => updateThirdPartyCheck(index, checkIndex, 'bank', e.target.value)}
                                             className="input-field text-sm"
                                             placeholder="Nome do banco"
                                             required
@@ -524,7 +549,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                           <input
                                             type="text"
                                             value={check.agency}
-                                            onChange={(e) => updateThirdPartyCheck(checkIndex, 'agency', e.target.value)}
+                                            onChange={(e) => updateThirdPartyCheck(index, checkIndex, 'agency', e.target.value)}
                                             className="input-field text-sm"
                                             placeholder="0000"
                                             required
@@ -535,7 +560,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                           <input
                                             type="text"
                                             value={check.account}
-                                            onChange={(e) => updateThirdPartyCheck(checkIndex, 'account', e.target.value)}
+                                            onChange={(e) => updateThirdPartyCheck(index, checkIndex, 'account', e.target.value)}
                                             className="input-field text-sm"
                                             placeholder="00000-0"
                                             required
@@ -546,7 +571,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                           <input
                                             type="text"
                                             value={check.checkNumber}
-                                            onChange={(e) => updateThirdPartyCheck(checkIndex, 'checkNumber', e.target.value)}
+                                            onChange={(e) => updateThirdPartyCheck(index, checkIndex, 'checkNumber', e.target.value)}
                                             className="input-field text-sm"
                                             placeholder="000000"
                                             required
@@ -557,7 +582,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                           <input
                                             type="text"
                                             value={check.issuer}
-                                            onChange={(e) => updateThirdPartyCheck(checkIndex, 'issuer', e.target.value)}
+                                            onChange={(e) => updateThirdPartyCheck(index, checkIndex, 'issuer', e.target.value)}
                                             className="input-field text-sm"
                                             placeholder="Nome do emissor"
                                             required
@@ -568,7 +593,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                           <input
                                             type="text"
                                             value={check.cpfCnpj}
-                                            onChange={(e) => updateThirdPartyCheck(checkIndex, 'cpfCnpj', e.target.value)}
+                                            onChange={(e) => updateThirdPartyCheck(index, checkIndex, 'cpfCnpj', e.target.value)}
                                             className="input-field text-sm"
                                             placeholder="000.000.000-00"
                                             required
@@ -579,7 +604,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                           <input
                                             type="text"
                                             value={check.observations || ''}
-                                            onChange={(e) => updateThirdPartyCheck(checkIndex, 'observations', e.target.value)}
+                                            onChange={(e) => updateThirdPartyCheck(index, checkIndex, 'observations', e.target.value)}
                                             className="input-field text-sm"
                                             placeholder="Observações sobre o cheque"
                                           />
