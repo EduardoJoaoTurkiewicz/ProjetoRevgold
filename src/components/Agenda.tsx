@@ -95,6 +95,7 @@ export function Agenda() {
               });
             }
           }
+        }
         } else if (debt.date === dateStr) {
           events.push({
             id: `debt-${debt.id}`,
