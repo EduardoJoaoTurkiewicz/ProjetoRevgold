@@ -4,30 +4,6 @@ import type { Database } from './database.types';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Only create client if environment variables are properly configured
-export const supabase = createClient<Database>(
-  supabaseUrl || 'https://placeholder.supabase.co', 
-  supabaseAnonKey || 'placeholder-key'
-);
-
-// Test connection function
-export async function testSupabaseConnection() {
-  if (!isSupabaseConfigured()) {
-    console.log('❌ Supabase não configurado');
-    return false;
-  }
-  
-  try {
-    const { data, error } = await supabase.from('employees').select('id').limit(1);
-    if (error) throw error;
-    console.log('✅ Conexão com Supabase estabelecida com sucesso');
-    return true;
-  } catch (error) {
-    console.error('❌ Erro na conexão com Supabase:', error);
-    return false;
-  }
-}
-
 // Check if Supabase is properly configured
 export function isSupabaseConfigured(): boolean {
   const url = import.meta.env.VITE_SUPABASE_URL;
@@ -47,6 +23,29 @@ export function isSupabaseConfigured(): boolean {
   }
   
   return isConfigured;
+}
+
+// Only create client if environment variables are properly configured
+export const supabase = isSupabaseConfigured() 
+  ? createClient<Database>(supabaseUrl, supabaseAnonKey)
+  : createClient<Database>('https://placeholder.supabase.co', 'placeholder-key');
+
+// Test connection function
+export async function testSupabaseConnection() {
+  if (!isSupabaseConfigured()) {
+    console.log('❌ Supabase não configurado');
+    return false;
+  }
+  
+  try {
+    const { data, error } = await supabase.from('employees').select('id').limit(1);
+    if (error) throw error;
+    console.log('✅ Conexão com Supabase estabelecida com sucesso');
+    return true;
+  } catch (error) {
+    console.error('❌ Erro na conexão com Supabase:', error);
+    return false;
+  }
 }
 
 // Health check function
