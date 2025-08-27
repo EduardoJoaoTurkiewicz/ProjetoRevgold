@@ -3,17 +3,14 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 interface AppState {
   currentView: string;
   isLoading: boolean;
-  user: any;
-  notifications: any[];
+  error: string | null;
 }
 
 interface AppContextType {
   state: AppState;
   setCurrentView: (view: string) => void;
   setLoading: (loading: boolean) => void;
-  setUser: (user: any) => void;
-  addNotification: (notification: any) => void;
-  removeNotification: (id: string) => void;
+  setError: (error: string | null) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -26,8 +23,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [state, setState] = useState<AppState>({
     currentView: 'dashboard',
     isLoading: false,
-    user: null,
-    notifications: []
+    error: null,
   });
 
   const setCurrentView = (view: string) => {
@@ -38,31 +34,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setState(prev => ({ ...prev, isLoading: loading }));
   };
 
-  const setUser = (user: any) => {
-    setState(prev => ({ ...prev, user }));
-  };
-
-  const addNotification = (notification: any) => {
-    setState(prev => ({
-      ...prev,
-      notifications: [...prev.notifications, { ...notification, id: Date.now().toString() }]
-    }));
-  };
-
-  const removeNotification = (id: string) => {
-    setState(prev => ({
-      ...prev,
-      notifications: prev.notifications.filter(n => n.id !== id)
-    }));
+  const setError = (error: string | null) => {
+    setState(prev => ({ ...prev, error }));
   };
 
   const value: AppContextType = {
     state,
     setCurrentView,
     setLoading,
-    setUser,
-    addNotification,
-    removeNotification
+    setError,
   };
 
   return (
