@@ -332,6 +332,7 @@ const Dashboard: React.FC = () => {
     });
     
     return Object.values(sellerStats)
+      .filter(seller => seller && typeof seller === 'object')
       .sort((a, b) => b.totalSales - a.totalSales)
       .slice(0, 5);
   }, [sales, employees, employeeCommissions, currentMonth, currentYear]);
@@ -760,7 +761,7 @@ const Dashboard: React.FC = () => {
           
           <div className="space-y-4">
             {topSellers.map((seller, index) => {
-              if (!seller) return null;
+              if (!seller || typeof seller !== 'object' || !seller.name) return null;
               return (
                 <div key={index} className="p-4 bg-yellow-50 rounded-xl border border-yellow-200">
                   <div className="flex items-center gap-3 mb-2">
@@ -775,15 +776,15 @@ const Dashboard: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-yellow-700">Vendas: {seller.salesCount}</p>
+                      <p className="text-yellow-700">Vendas: {seller.salesCount || 0}</p>
                       <p className="font-bold text-yellow-800">
-                        R$ {(Number(seller.totalSales) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {(seller.totalSales || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
                     <div>
                       <p className="text-yellow-700">Comissão:</p>
                       <p className="font-bold text-green-600">
-                        R$ {(Number(seller.totalCommissions) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {(seller.totalCommissions || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
                   </div>

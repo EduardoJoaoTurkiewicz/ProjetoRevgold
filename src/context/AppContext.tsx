@@ -125,26 +125,27 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const checkSupabaseConfigured = () => isSupabaseConfigured();
 
   const loadAllData = async () => {
+    if (loading) return; // Evitar múltiplas chamadas simultâneas
+    
     setLoading(true);
     setError(null);
     try {
-      await Promise.all([
-        fetchEmployees(),
-        fetchSales(),
-        fetchDebts(),
-        fetchChecks(),
-        fetchBoletos(),
-        fetchEmployeePayments(),
-        fetchEmployeeAdvances(),
-        fetchEmployeeCommissions(),
-        fetchEmployeeOvertimes(),
-        fetchCashTransactions(),
-        fetchPixFees(),
-        fetchCashBalance()
-      ]);
+      // Carregar dados em sequência para evitar sobrecarga
+      await fetchEmployees();
+      await fetchSales();
+      await fetchDebts();
+      await fetchChecks();
+      await fetchBoletos();
+      await fetchEmployeePayments();
+      await fetchEmployeeAdvances();
+      await fetchEmployeeCommissions();
+      await fetchEmployeeOvertimes();
+      await fetchCashTransactions();
+      await fetchPixFees();
+      await fetchCashBalance();
     } catch (error) {
       console.error('Error loading data:', error);
-      setError('Erro ao carregar dados do sistema');
+      setError(`Erro ao carregar dados: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
     }
@@ -165,7 +166,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         .order('name');
       
       if (error) throw error;
-      setEmployees(data || []);
+      setEmployees(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching employees:', error);
       console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para employees');
@@ -187,7 +188,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         .order('date', { ascending: false });
       
       if (error) throw error;
-      setSales(data || []);
+      setSales(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching sales:', error);
       console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para sales');
@@ -319,7 +320,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         .order('date', { ascending: false });
       
       if (error) throw error;
-      setEmployeeCommissions(data || []);
+      setEmployeeCommissions(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching employee commissions:', error);
       console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para employee commissions');
@@ -1310,7 +1311,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // Load initial data
   useEffect(() => {
-    loadAllData();
+    // Adicionar delay para evitar múltiplas chamadas simultâneas
+    const timer = setTimeout(() => {
+      loadAllData();
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   const value: AppContextType = {
