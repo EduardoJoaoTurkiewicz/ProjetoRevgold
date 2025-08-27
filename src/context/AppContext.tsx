@@ -20,7 +20,9 @@ import type {
   EmployeeOvertime,
   CashTransaction,
   PixFee,
-  CashBalance
+  CashBalance,
+  Tax,
+  AgendaEvent
 } from '../types';
 
 // Transform functions for database compatibility
@@ -64,6 +66,8 @@ interface AppContextType {
   cashTransactions: CashTransaction[];
   pixFees: PixFee[];
   cashBalance: CashBalance | null;
+  taxes: Tax[];
+  agendaEvents: AgendaEvent[];
   error: string | null;
   
   // Loading states
@@ -119,6 +123,14 @@ interface AppContextType {
   updatePixFee: (fee: PixFee) => Promise<void>;
   deletePixFee: (id: string) => Promise<void>;
   
+  createTax: (tax: Omit<Tax, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateTax: (tax: Tax) => Promise<void>;
+  deleteTax: (id: string) => Promise<void>;
+  
+  createAgendaEvent: (event: Omit<AgendaEvent, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateAgendaEvent: (event: AgendaEvent) => Promise<void>;
+  deleteAgendaEvent: (id: string) => Promise<void>;
+  
   initializeCashBalance: (amount: number) => Promise<void>;
   updateCashBalance: (balance: CashBalance) => Promise<void>;
 }
@@ -151,6 +163,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [cashTransactions, setCashTransactions] = useState<CashTransaction[]>([]);
   const [pixFees, setPixFees] = useState<PixFee[]>([]);
   const [cashBalance, setCashBalance] = useState<CashBalance | null>(null);
+  const [taxes, setTaxes] = useState<Tax[]>([]);
+  const [agendaEvents, setAgendaEvents] = useState<AgendaEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -176,6 +190,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       await fetchCashTransactions();
       await fetchPixFees();
       await fetchCashBalance();
+      await fetchTaxes();
+      await fetchAgendaEvents();
     } catch (error) {
       console.error('Error loading data:', error);
       setError(`Erro ao carregar dados: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
@@ -503,6 +519,50 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
+  const fetchTaxes = async () => {
+    if (!isSupabaseConfigured()) {
+      setTaxes([]);
+      console.log('⚠️ Supabase não configurado - usando dados locais para taxes');
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('taxes')
+        .select('*')
+        .order('date', { ascending: false });
+      
+      if (error) throw error;
+      setTaxes((data || []).map(transformFromDatabase<Tax>));
+    } catch (error) {
+      console.error('Error fetching taxes:', error);
+      console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para taxes');
+      setTaxes([]);
+    }
+  };
+
+  const fetchAgendaEvents = async () => {
+    if (!isSupabaseConfigured()) {
+      setAgendaEvents([]);
+      console.log('⚠️ Supabase não configurado - usando dados locais para agenda events');
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('agenda_events')
+        .select('*')
+        .order('date', { ascending: true });
+      
+      if (error) throw error;
+      setAgendaEvents((data || []).map(transformFromDatabase<AgendaEvent>));
+    } catch (error) {
+      console.error('Error fetching agenda events:', error);
+      console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para agenda events');
+      setAgendaEvents([]);
+    }
+  };
+
   // CRUD operations for employees
   const createEmployee = async (employee: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (!isSupabaseConfigured()) {
@@ -627,6 +687,26 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           await supabase.from('employee_commissions').insert([commissionData]);
         }
       }
+      
+      // Create cash transaction for instant payments
+      (transformedSale.paymentMethods || []).forEach(async (method) => {
+        if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
+            (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
+          try {
+            await createCashTransaction({
+              date: transformedSale.date,
+              type: 'entrada',
+              amount: method.amount,
+              description: `Venda - ${transformedSale.client} (${method.type.replace('_', ' ')})`,
+              category: 'venda',
+              relatedId: transformedSale.id,
+              paymentMethod: method.type
+            });
+          } catch (error) {
+            console.error('Erro ao criar transação de caixa para venda:', error);
+          }
+        }
+      });
       
       await fetchSales();
       await fetchEmployeeCommissions();
@@ -1342,6 +1422,181 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
+  // CRUD operations for taxes
+  const createTax = async (tax: Omit<Tax, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!isSupabaseConfigured()) {
+      const newTax: Tax = {
+        ...tax,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setTaxes(prev => [...prev, newTax]);
+      
+      // Create cash transaction for tax payment
+      try {
+        await createCashTransaction({
+          date: tax.date,
+          type: 'saida',
+          amount: tax.amount,
+          description: `Pagamento de imposto - ${tax.description}`,
+          category: 'outro',
+          relatedId: newTax.id,
+          paymentMethod: tax.paymentMethod
+        });
+      } catch (error) {
+        console.error('Erro ao criar transação de caixa para imposto:', error);
+      }
+      return;
+    }
+    
+    try {
+      const dbData = transformToDatabase(tax);
+      const { data, error } = await supabase
+        .from('taxes')
+        .insert([dbData])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      const transformedTax = transformFromDatabase<Tax>(data);
+      
+      // Create cash transaction for tax payment
+      try {
+        await createCashTransaction({
+          date: tax.date,
+          type: 'saida',
+          amount: tax.amount,
+          description: `Pagamento de imposto - ${tax.description}`,
+          category: 'outro',
+          relatedId: transformedTax.id!,
+          paymentMethod: tax.paymentMethod
+        });
+      } catch (error) {
+        console.error('Erro ao criar transação de caixa para imposto:', error);
+      }
+      
+      await fetchTaxes();
+    } catch (error) {
+      console.error('Error adding tax:', error);
+      throw error;
+    }
+  };
+
+  const updateTax = async (tax: Tax) => {
+    if (!isSupabaseConfigured()) {
+      setTaxes(prev => prev.map(t => 
+        t.id === tax.id ? { ...tax, updatedAt: new Date().toISOString() } : t
+      ));
+      return;
+    }
+    
+    try {
+      const dbData = transformToDatabase(tax);
+      const { error } = await supabase
+        .from('taxes')
+        .update(dbData)
+        .eq('id', tax.id);
+      
+      if (error) throw error;
+      await fetchTaxes();
+    } catch (error) {
+      console.error('Error updating tax:', error);
+      throw error;
+    }
+  };
+
+  const deleteTax = async (id: string) => {
+    if (!isSupabaseConfigured()) {
+      setTaxes(prev => prev.filter(t => t.id !== id));
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('taxes')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      await fetchTaxes();
+    } catch (error) {
+      console.error('Error deleting tax:', error);
+      throw error;
+    }
+  };
+
+  // CRUD operations for agenda events
+  const createAgendaEvent = async (event: Omit<AgendaEvent, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!isSupabaseConfigured()) {
+      const newEvent: AgendaEvent = {
+        ...event,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setAgendaEvents(prev => [...prev, newEvent]);
+      return;
+    }
+    
+    try {
+      const dbData = transformToDatabase(event);
+      const { error } = await supabase
+        .from('agenda_events')
+        .insert([dbData]);
+      
+      if (error) throw error;
+      await fetchAgendaEvents();
+    } catch (error) {
+      console.error('Error adding agenda event:', error);
+      throw error;
+    }
+  };
+
+  const updateAgendaEvent = async (event: AgendaEvent) => {
+    if (!isSupabaseConfigured()) {
+      setAgendaEvents(prev => prev.map(e => 
+        e.id === event.id ? { ...event, updatedAt: new Date().toISOString() } : e
+      ));
+      return;
+    }
+    
+    try {
+      const dbData = transformToDatabase(event);
+      const { error } = await supabase
+        .from('agenda_events')
+        .update(dbData)
+        .eq('id', event.id);
+      
+      if (error) throw error;
+      await fetchAgendaEvents();
+    } catch (error) {
+      console.error('Error updating agenda event:', error);
+      throw error;
+    }
+  };
+
+  const deleteAgendaEvent = async (id: string) => {
+    if (!isSupabaseConfigured()) {
+      setAgendaEvents(prev => prev.filter(e => e.id !== id));
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('agenda_events')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      await fetchAgendaEvents();
+    } catch (error) {
+      console.error('Error deleting agenda event:', error);
+      throw error;
+    }
+  };
+
   // Load initial data
   useEffect(() => {
     // Adicionar delay para evitar múltiplas chamadas simultâneas
@@ -1366,6 +1621,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     cashTransactions,
     pixFees,
     cashBalance,
+    taxes,
+    agendaEvents,
     error,
     loading,
     isLoading: loading,
@@ -1408,6 +1665,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     createPixFee,
     updatePixFee,
     deletePixFee,
+    createTax,
+    updateTax,
+    deleteTax,
+    createAgendaEvent,
+    updateAgendaEvent,
+    deleteAgendaEvent,
     initializeCashBalance,
     updateCashBalance
   };

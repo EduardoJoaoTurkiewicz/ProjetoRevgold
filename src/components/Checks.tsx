@@ -80,6 +80,23 @@ export function Checks() {
     const check = checks.find(c => c.id === checkId);
     if (check) {
       const updatedCheck = { ...check, status };
+      
+      // Se o cheque foi marcado como compensado, atualizar o caixa
+      if (status === 'compensado' && check.status !== 'compensado' && !check.isOwnCheck) {
+        // Criar transação de entrada no caixa para cheques de terceiros
+        createCashTransaction({
+          date: check.dueDate,
+          type: 'entrada',
+          amount: check.value,
+          description: `Cheque compensado - ${check.client}`,
+          category: 'cheque',
+          relatedId: check.id,
+          paymentMethod: 'cheque'
+        }).catch(error => {
+          console.error('Erro ao criar transação de caixa para cheque:', error);
+        });
+      }
+      
       updateCheck(updatedCheck).catch(error => {
         alert('Erro ao atualizar status: ' + error.message);
       });
@@ -509,7 +526,7 @@ export function Checks() {
                           updateCheck(updatedCheck).then(() => {
                             // Criar transação de caixa para reduzir o saldo
                             createCashTransaction({
-                              date: new Date().toISOString().split('T')[0],
+                              date: check.dueDate,
                               type: 'saida',
                               amount: check.value,
                               description: `Pagamento de cheque próprio - ${check.client}`,

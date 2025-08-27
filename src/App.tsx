@@ -11,6 +11,7 @@ import Reports from './components/Reports';
 import { CashManagement } from './components/CashManagement';
 import { Agenda } from './components/Agenda';
 import { Employees } from './components/Employees';
+import { Taxes } from './components/Taxes';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -42,6 +43,8 @@ function renderPage(currentPage: string) {
       return <Employees />;
     case 'cash':
       return <CashManagement />;
+    case 'taxes':
+      return <Taxes />;
     case 'reports':
       return <Reports />;
     case 'agenda':

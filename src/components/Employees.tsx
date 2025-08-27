@@ -67,6 +67,19 @@ export function Employees() {
 
   const handleAddAdvance = (advance: Omit<EmployeeAdvance, 'id' | 'createdAt'>) => {
     createEmployeeAdvance(advance).then(() => {
+      // Criar transação de caixa para o adiantamento
+      createCashTransaction({
+        date: advance.date,
+        type: 'saida',
+        amount: advance.amount,
+        description: `Adiantamento - ${employees.find(e => e.id === advance.employeeId)?.name || 'Funcionário'}`,
+        category: 'adiantamento',
+        relatedId: advance.employeeId,
+        paymentMethod: advance.paymentMethod
+      }).catch(error => {
+        console.error('Erro ao criar transação de caixa para adiantamento:', error);
+      });
+      
       setAdvanceEmployee(null);
     }).catch(error => {
       alert('Erro ao criar adiantamento: ' + error.message);
@@ -85,7 +98,7 @@ export function Employees() {
       const newPayment: EmployeePayment = {
         employeeId: paymentEmployee.id,
         amount: payment.amount,
-        paymentDate: new Date().toISOString().split('T')[0],
+        paymentDate: new Date().toLocaleDateString('en-CA'), // Format: YYYY-MM-DD
         isPaid: true,
         receipt: payment.receipt,
         observations: payment.observations
@@ -94,7 +107,7 @@ export function Employees() {
       createEmployeePayment(newPayment).then(() => {
         // Criar transação de caixa para o pagamento
         createCashTransaction({
-          date: new Date().toISOString().split('T')[0],
+          date: new Date().toLocaleDateString('en-CA'),
           type: 'saida',
           amount: payment.amount,
           description: `Pagamento de salário - ${paymentEmployee.name}`,

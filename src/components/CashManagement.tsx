@@ -6,7 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4'];
 
 export function CashManagement() {
-  const { cashBalance, sales, checks, boletos, pixFees, debts, isLoading, error, initializeCashBalance, updateCashBalance } = useApp();
+  const { cashBalance, sales, checks, boletos, pixFees, debts, taxes, employeePayments, employeeAdvances, isLoading, error, initializeCashBalance, updateCashBalance } = useApp();
   const [isInitializing, setIsInitializing] = useState(false);
   const [initialAmount, setInitialAmount] = useState(0);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -29,7 +29,7 @@ export function CashManagement() {
               amount: method.amount,
               description: `Venda - ${sale.client} (${method.type.replace('_', ' ')})`,
               category: 'venda',
-              time: new Date(sale.createdAt).toLocaleTimeString('pt-BR'),
+              time: new Date(sale.createdAt || sale.date + 'T12:00:00').toLocaleTimeString('pt-BR'),
               relatedId: sale.id
             });
           }
@@ -39,14 +39,14 @@ export function CashManagement() {
 
     // Cheques compensados no dia
     checks.forEach(check => {
-      if (check.dueDate === selectedDate && check.status === 'compensado') {
+      if (check.dueDate === selectedDate && check.status === 'compensado' && !check.isOwnCheck) {
         transactions.push({
           id: `check-${check.id}`,
           type: 'entrada' as const,
           amount: check.value,
           description: `Cheque compensado - ${check.client}`,
           category: 'cheque',
-          time: new Date().toLocaleTimeString('pt-BR'),
+          time: new Date(check.updatedAt || check.dueDate + 'T12:00:00').toLocaleTimeString('pt-BR'),
           relatedId: check.id
         });
       }
@@ -66,7 +66,7 @@ export function CashManagement() {
           amount: netReceived,
           description: `Boleto pago - ${boleto.client}${boleto.overdueAction ? ` (${boleto.overdueAction})` : ''}`,
           category: 'boleto',
-          time: new Date().toLocaleTimeString('pt-BR'),
+          time: new Date(boleto.updatedAt || boleto.dueDate + 'T12:00:00').toLocaleTimeString('pt-BR'),
           relatedId: boleto.id
         });
         
@@ -78,10 +78,25 @@ export function CashManagement() {
             amount: notaryCosts,
             description: `Custos de cartório - Boleto ${boleto.client}`,
             category: 'outro',
-            time: new Date().toLocaleTimeString('pt-BR'),
+            time: new Date(boleto.updatedAt || boleto.dueDate + 'T12:00:00').toLocaleTimeString('pt-BR'),
             relatedId: boleto.id
           });
         }
+      }
+    });
+
+    // Cheques próprios pagos no dia
+    checks.forEach(check => {
+      if (check.dueDate === selectedDate && check.status === 'compensado' && check.isOwnCheck) {
+        transactions.push({
+          id: `own-check-${check.id}`,
+          type: 'saida' as const,
+          amount: check.value,
+          description: `Cheque próprio pago - ${check.client}`,
+          category: 'cheque',
+          time: new Date(check.updatedAt || check.dueDate + 'T12:00:00').toLocaleTimeString('pt-BR'),
+          relatedId: check.id
+        });
       }
     });
 
@@ -94,7 +109,7 @@ export function CashManagement() {
           amount: pixFee.amount,
           description: `Tarifa PIX - ${pixFee.bank}: ${pixFee.description}`,
           category: 'outro',
-          time: new Date().toLocaleTimeString('pt-BR'),
+          time: new Date(pixFee.createdAt || pixFee.date + 'T12:00:00').toLocaleTimeString('pt-BR'),
           relatedId: pixFee.id
         });
       }
@@ -111,7 +126,7 @@ export function CashManagement() {
               amount: method.amount,
               description: `Pagamento - ${debt.company} (${method.type.replace('_', ' ')})`,
               category: 'divida',
-              time: new Date(debt.createdAt).toLocaleTimeString('pt-BR'),
+              time: new Date(debt.createdAt || debt.date + 'T12:00:00').toLocaleTimeString('pt-BR'),
               relatedId: debt.id
             });
           }
@@ -119,8 +134,53 @@ export function CashManagement() {
       }
     });
 
+    // Pagamentos de funcionários no dia
+    employeePayments.forEach(payment => {
+      if (payment.paymentDate === selectedDate) {
+        transactions.push({
+          id: `employee-payment-${payment.id}`,
+          type: 'saida' as const,
+          amount: payment.amount,
+          description: `Pagamento de salário - ${payment.employeeId}`,
+          category: 'salario',
+          time: new Date(payment.createdAt || payment.paymentDate + 'T12:00:00').toLocaleTimeString('pt-BR'),
+          relatedId: payment.id
+        });
+      }
+    });
+
+    // Adiantamentos no dia
+    employeeAdvances.forEach(advance => {
+      if (advance.date === selectedDate) {
+        transactions.push({
+          id: `employee-advance-${advance.id}`,
+          type: 'saida' as const,
+          amount: advance.amount,
+          description: `Adiantamento - ${advance.employeeId}`,
+          category: 'adiantamento',
+          time: new Date(advance.createdAt || advance.date + 'T12:00:00').toLocaleTimeString('pt-BR'),
+          relatedId: advance.id
+        });
+      }
+    });
+
+    // Impostos pagos no dia
+    taxes.forEach(tax => {
+      if (tax.date === selectedDate) {
+        transactions.push({
+          id: `tax-${tax.id}`,
+          type: 'saida' as const,
+          amount: tax.amount,
+          description: `Imposto - ${tax.description}`,
+          category: 'outro',
+          time: new Date(tax.createdAt || tax.date + 'T12:00:00').toLocaleTimeString('pt-BR'),
+          relatedId: tax.id
+        });
+      }
+    });
+
     return transactions.sort((a, b) => a.time.localeCompare(b.time));
-  }, [sales, checks, boletos, pixFees, debts, selectedDate]);
+  }, [sales, checks, boletos, pixFees, debts, employeePayments, employeeAdvances, taxes, selectedDate]);
 
   // Calcular totais do dia
   const dayTotals = useMemo(() => {
@@ -158,7 +218,7 @@ export function CashManagement() {
       
       // Cheques compensados
       checks.forEach(check => {
-        if (check.dueDate === dateStr && check.status === 'compensado') {
+        if (check.dueDate === dateStr && check.status === 'compensado' && !check.isOwnCheck) {
           entrada += check.value;
         }
       });
@@ -190,10 +250,38 @@ export function CashManagement() {
         }
       });
       
+      // Cheques próprios pagos
+      checks.forEach(check => {
+        if (check.dueDate === dateStr && check.status === 'compensado' && check.isOwnCheck) {
+          saida += check.value;
+        }
+      });
+      
       // Tarifas PIX do dia
       pixFees.forEach(pixFee => {
         if (pixFee.date === dateStr) {
           saida += pixFee.amount;
+        }
+      });
+      
+      // Pagamentos de funcionários
+      employeePayments.forEach(payment => {
+        if (payment.paymentDate === dateStr) {
+          saida += payment.amount;
+        }
+      });
+      
+      // Adiantamentos
+      employeeAdvances.forEach(advance => {
+        if (advance.date === dateStr) {
+          saida += advance.amount;
+        }
+      });
+      
+      // Impostos
+      taxes.forEach(tax => {
+        if (tax.date === dateStr) {
+          saida += tax.amount;
         }
       });
       
@@ -206,7 +294,7 @@ export function CashManagement() {
     }
     
     return last30Days;
-  }, [sales, checks, boletos, debts, pixFees]);
+  }, [sales, checks, boletos, debts, pixFees, employeePayments, employeeAdvances, taxes]);
 
   // Distribuição por categoria
   const categoryData = useMemo(() => {

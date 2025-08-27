@@ -92,7 +92,7 @@ export function Boletos() {
         // Criar transação de entrada no caixa para o valor líquido
         if (netReceived > 0) {
           createCashTransaction({
-            date: new Date().toISOString().split('T')[0],
+            date: boleto.dueDate,
             type: 'entrada',
             amount: netReceived,
             description: `Boleto pago - ${boleto.client}${boleto.overdueAction ? ` (${getOverdueActionLabel(boleto.overdueAction)})` : ''}`,
@@ -107,7 +107,7 @@ export function Boletos() {
         // Se houve custos de cartório, criar transação de saída
         if (notaryCosts > 0) {
           createCashTransaction({
-            date: new Date().toISOString().split('T')[0],
+            date: boleto.dueDate,
             type: 'saida',
             amount: notaryCosts,
             description: `Custos de cartório - Boleto ${boleto.client}`,
@@ -503,7 +503,7 @@ export function Boletos() {
                           updateDebt(updatedDebt).then(() => {
                             // Criar transação de caixa para reduzir o saldo
                             createCashTransaction({
-                              date: new Date().toISOString().split('T')[0],
+                              date: debt.date,
                               type: 'saida',
                               amount: debt.totalValue,
                               description: `Pagamento de boleto - ${debt.company}`,

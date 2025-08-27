@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { Calendar, ChevronLeft, ChevronRight, Clock, AlertCircle, Receipt, FileText, CreditCard, Eye, X } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Clock, AlertCircle, Receipt, FileText, CreditCard, Eye, X, Plus, Edit, Trash2 } from 'lucide-react';
+import { AgendaEventForm } from './forms/AgendaEventForm';
 
 interface CalendarEvent {
   id: string;
@@ -13,10 +14,13 @@ interface CalendarEvent {
 }
 
 export function Agenda() {
-  const { debts, checks, boletos, sales, employees } = useApp();
+  const { debts, checks, boletos, sales, employees, agendaEvents, createAgendaEvent, updateAgendaEvent, deleteAgendaEvent } = useApp();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [viewingEvent, setViewingEvent] = useState<CalendarEvent | null>(null);
+  const [isEventFormOpen, setIsEventFormOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [selectedDate, setSelectedDate] = useState<string>('');
 
   // Navegar entre meses
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -150,6 +154,23 @@ export function Agenda() {
       }
       
       (sale.paymentMethods || []).forEach((method, methodIndex) => {
+    // Eventos da agenda
+    agendaEvents.forEach(agendaEvent => {
+      if (agendaEvent.date === dateStr) {
+        events.push({
+          id: `agenda-${agendaEvent.id}`,
+          type: 'receivable',
+          title: agendaEvent.title,
+          amount: 0,
+          description: agendaEvent.description || '',
+          status: agendaEvent.status === 'concluido' ? 'Concluído' : 
+                 agendaEvent.status === 'cancelado' ? 'Cancelado' :
+                 agendaEvent.status === 'adiado' ? 'Adiado' : 'Pendente',
+          details: { ...agendaEvent, isAgendaEvent: true }
+        });
+      }
+    });
+
         if (method.installments && method.installments > 1) {
           for (let i = 0; i < method.installments; i++) {
             const dueDate = new Date(method.firstInstallmentDate || method.startDate || sale.date);
@@ -174,12 +195,44 @@ export function Agenda() {
     return events.sort((a, b) => b.amount - a.amount);
   };
 
+  const handleAddEvent = (event: Omit<any, 'id' | 'createdAt'>) => {
+    createAgendaEvent(event).then(() => {
+      setIsEventFormOpen(false);
+      setSelectedDate('');
+    }).catch(error => {
+      alert('Erro ao criar evento: ' + error.message);
+    });
+  };
+
+  const handleEditEvent = (event: Omit<any, 'id' | 'createdAt'>) => {
+    if (editingEvent) {
+      const updatedEvent = {
+        ...event,
+        id: editingEvent.id,
+        createdAt: editingEvent.createdAt
+      };
+      updateAgendaEvent(updatedEvent).then(() => {
+        setEditingEvent(null);
+      }).catch(error => {
+        alert('Erro ao atualizar evento: ' + error.message);
+      });
+    }
+  };
+
+  const handleDeleteEvent = (id: string) => {
+    if (window.confirm('Tem certeza que deseja excluir este evento?')) {
+      deleteAgendaEvent(id).catch(error => {
+        alert('Erro ao excluir evento: ' + error.message);
+      });
+    }
+  };
+
   // Obter eventos do dia selecionado
   const selectedDayEvents = useMemo(() => {
     if (!selectedDay) return [];
     const selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), selectedDay);
     return getEventsForDay(selectedDate);
-  }, [selectedDay, currentDate, debts, checks, boletos, sales]);
+  }, [selectedDay, currentDate, debts, checks, boletos, sales, agendaEvents]);
 
   const days = getDaysInMonth();
   const today = new Date();
@@ -227,6 +280,16 @@ export function Agenda() {
           <h1 className="text-3xl font-bold text-slate-900">Agenda Financeira</h1>
           <p className="text-slate-600 text-lg">Calendário completo de compromissos financeiros</p>
         </div>
+        <button
+          onClick={() => {
+            setSelectedDate(new Date().toISOString().split('T')[0]);
+            setIsEventFormOpen(true);
+          }}
+          className="btn-primary flex items-center gap-2 modern-shadow-xl hover:modern-shadow-lg ml-auto"
+        >
+          <Plus className="w-5 h-5" />
+          Novo Evento
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -280,6 +343,12 @@ export function Agenda() {
                   <div
                     key={index}
                     onClick={() => day.isCurrentMonth ? setSelectedDay(day.date) : null}
+                    onDoubleClick={() => {
+                      if (day.isCurrentMonth) {
+                        setSelectedDate(day.fullDate.toISOString().split('T')[0]);
+                        setIsEventFormOpen(true);
+                      }
+                    }}
                     className={`
                       relative p-3 min-h-[100px] rounded-xl border-2 transition-all duration-300 cursor-pointer
                       ${day.isCurrentMonth ? 'bg-white hover:bg-blue-50' : 'bg-slate-50 text-slate-400'}
@@ -320,6 +389,27 @@ export function Agenda() {
                     )}
                   </div>
                 );
+
+                {viewingEvent.details.isAgendaEvent && (
+                  <div>
+                    <h3 className="font-bold text-slate-900 mb-4">Detalhes do Evento</h3>
+                    <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
+                      <p><strong>Título:</strong> {viewingEvent.details.title}</p>
+                      <p><strong>Tipo:</strong> {viewingEvent.details.type}</p>
+                      <p><strong>Prioridade:</strong> {viewingEvent.details.priority}</p>
+                      <p><strong>Data:</strong> {new Date(viewingEvent.details.date + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                      {viewingEvent.details.time && (
+                        <p><strong>Horário:</strong> {viewingEvent.details.time}</p>
+                      )}
+                      {viewingEvent.details.description && (
+                        <p><strong>Descrição:</strong> {viewingEvent.details.description}</p>
+                      )}
+                      {viewingEvent.details.observations && (
+                        <p><strong>Observações:</strong> {viewingEvent.details.observations}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               })}
             </div>
           </div>
@@ -366,14 +456,44 @@ export function Agenda() {
                            event.type === 'boleto' ? 'Boleto' : 'A Receber'}
                         </span>
                       </div>
-                      <Eye className="w-4 h-4" />
+                      <div className="flex items-center gap-1">
+                        {event.details.isAgendaEvent && (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingEvent(event.details);
+                              }}
+                              className="p-1 rounded text-blue-600 hover:bg-white/50"
+                              title="Editar evento"
+                            >
+                              <Edit className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteEvent(event.details.id);
+                              }}
+                              className="p-1 rounded text-red-600 hover:bg-white/50"
+                              title="Excluir evento"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </>
+                        )}
+                        <Eye className="w-4 h-4" />
+                      </div>
                     </div>
                     <h4 className="font-bold mb-1">{event.title}</h4>
                     <p className="text-sm mb-2">{event.description}</p>
                     <div className="flex justify-between items-center">
-                      <span className="font-black">
-                        R$ {event.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
+                      {event.amount > 0 ? (
+                        <span className="font-black">
+                          R$ {event.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      ) : (
+                        <span className="text-sm font-bold text-slate-600">Evento</span>
+                      )}
                       <span className="text-xs font-bold px-2 py-1 rounded-full bg-white/50">
                         {event.status}
                       </span>
@@ -525,6 +645,28 @@ export function Agenda() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Event Form Modal */}
+      {(isEventFormOpen || editingEvent) && (
+        <AgendaEventForm
+          event={editingEvent ? {
+            ...editingEvent,
+            date: editingEvent.date || selectedDate
+          } : {
+            date: selectedDate,
+            title: '',
+            type: 'evento',
+            priority: 'media',
+            status: 'pendente'
+          }}
+          onSubmit={editingEvent ? handleEditEvent : handleAddEvent}
+          onCancel={() => {
+            setIsEventFormOpen(false);
+            setEditingEvent(null);
+            setSelectedDate('');
+          }}
+        />
       )}
     </div>
   );

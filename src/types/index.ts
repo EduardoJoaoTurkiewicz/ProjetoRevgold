@@ -234,6 +234,39 @@ export interface PixFee {
   updatedAt?: string;
 }
 
+// Tax interface
+export interface Tax {
+  id?: string;
+  date: string;
+  taxType: 'irpj' | 'csll' | 'pis' | 'cofins' | 'icms' | 'iss' | 'simples_nacional' | 'inss' | 'fgts' | 'iptu' | 'ipva' | 'outros';
+  description: string;
+  amount: number;
+  dueDate?: string;
+  paymentMethod: 'dinheiro' | 'pix' | 'transferencia' | 'cartao_debito' | 'cartao_credito' | 'cheque' | 'boleto' | 'outros';
+  referencePeriod?: string;
+  documentNumber?: string;
+  observations?: string;
+  receiptFile?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Agenda Event interface
+export interface AgendaEvent {
+  id?: string;
+  title: string;
+  description?: string;
+  date: string;
+  time?: string;
+  type: 'evento' | 'reuniao' | 'pagamento' | 'cobranca' | 'entrega' | 'outros';
+  priority: 'baixa' | 'media' | 'alta' | 'urgente';
+  status: 'pendente' | 'concluido' | 'cancelado' | 'adiado';
+  reminderDate?: string;
+  observations?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // Installment interface
 export interface Installment {
   id?: string;
