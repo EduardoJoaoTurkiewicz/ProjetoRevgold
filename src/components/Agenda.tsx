@@ -77,10 +77,10 @@ export function Agenda() {
     // Dívidas da empresa (que a empresa deve pagar)
     debts.forEach(debt => {
       if (debt && Array.isArray(debt.paymentMethods)) {
-       let isHandledAsInstallment = false;
+        let handledByPaymentMethod = false;
         debt.paymentMethods.forEach((method, index) => {
-        if (method.installments && method.installments > 1) {
-         isHandledAsInstallment = true;
+          if (method.installments && method.installments > 1) {
+            handledByPaymentMethod = true;
           for (let i = 0; i < method.installments; i++) {
             const dueDate = new Date(method.startDate || debt.date);
             dueDate.setDate(dueDate.getDate() + (i * (method.installmentInterval || 30)));
@@ -97,10 +97,11 @@ export function Agenda() {
               });
             }
           }
-        }
-        } else if (debt.date === dateStr) {
-       
-       if (!isHandledAsInstallment && debt.date === dateStr) {
+          }
+        });
+        
+        if (!handledByPaymentMethod && debt.date === dateStr) {
+          events.push({
             id: `debt-${debt.id}`,
             type: 'debt',
             title: debt.company,
