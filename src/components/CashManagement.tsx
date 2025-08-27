@@ -336,7 +336,7 @@ export function CashManagement() {
   };
 
   // Se não há saldo inicial, mostrar formulário de inicialização
-  if (!cashBalance || cashBalance.currentBalance === 0) {
+  if (!cashBalance) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center p-8">
         <div className="card modern-shadow-xl max-w-2xl w-full">
@@ -345,7 +345,7 @@ export function CashManagement() {
               <Wallet className="w-12 h-12 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-slate-900 mb-4">
-              {!cashBalance ? 'Inicializar Caixa' : 'Definir Saldo Inicial'}
+              Inicializar Caixa
             </h1>
             <p className="text-slate-600 text-lg">
               Para começar a usar o sistema de caixa, informe o valor atual em caixa da empresa.
@@ -386,8 +386,7 @@ export function CashManagement() {
               disabled={isInitializing}
               className="btn-primary w-full"
             >
-              {isInitializing ? 'Inicializando...' : 
-               !cashBalance ? 'Inicializar Caixa' : 'Atualizar Saldo Inicial'}
+              {isInitializing ? 'Inicializando...' : 'Inicializar Caixa'}
             </button>
           </form>
         </div>

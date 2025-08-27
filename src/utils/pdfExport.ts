@@ -1,5 +1,4 @@
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 interface ReportData {
   sales: any[];
@@ -17,347 +16,411 @@ interface ReportData {
 
 export async function exportReportToPDF(data: ReportData, startDate: string, endDate: string) {
   try {
-    // Create a temporary container for the PDF content
-    const tempContainer = document.createElement('div');
-    tempContainer.style.position = 'absolute';
-    tempContainer.style.left = '-9999px';
-    tempContainer.style.top = '0';
-    tempContainer.style.width = '210mm'; // A4 width
-    tempContainer.style.backgroundColor = 'white';
-    tempContainer.style.padding = '20mm';
-    tempContainer.style.fontFamily = 'Arial, sans-serif';
+    console.log('🔄 Iniciando geração do PDF...');
     
-    // Create the PDF content
-    tempContainer.innerHTML = `
-      <div style="text-align: center; margin-bottom: 30px;">
-        <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 20px;">
-          <img src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
-               style="width: 60px; height: 60px; object-fit: contain;" 
-               onerror="this.style.display='none';" />
-          <div>
-            <h1 style="color: #16a34a; font-size: 32px; font-weight: bold; margin: 0;">RevGold</h1>
-            <p style="color: #059669; font-size: 16px; margin: 0;">Sistema de Gestão Empresarial</p>
-          </div>
-        </div>
-        <h2 style="color: #1f2937; font-size: 24px; font-weight: bold; margin: 20px 0;">
-          Relatório Financeiro Detalhado
-        </h2>
-        <p style="color: #6b7280; font-size: 16px; margin: 0;">
-          Período: ${new Date(startDate).toLocaleDateString('pt-BR')} até ${new Date(endDate).toLocaleDateString('pt-BR')}
-        </p>
-        <p style="color: #6b7280; font-size: 14px; margin: 5px 0 0 0;">
-          Gerado em: ${new Date().toLocaleString('pt-BR')}
-        </p>
-      </div>
-
-      <!-- Resumo Executivo -->
-      <div style="background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%); padding: 20px; border-radius: 15px; margin-bottom: 30px; border: 2px solid #3b82f6;">
-        <h3 style="color: #1e40af; font-size: 20px; font-weight: bold; margin: 0 0 20px 0; text-align: center;">
-          RESUMO EXECUTIVO DO PERÍODO
-        </h3>
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
-          <div style="text-align: center; padding: 15px; background: white; border-radius: 10px; border: 1px solid #3b82f6;">
-            <p style="color: #1e40af; font-weight: bold; margin: 0 0 5px 0;">Vendas Realizadas</p>
-            <p style="color: #16a34a; font-size: 24px; font-weight: bold; margin: 0;">
-              R$ ${data.totals.sales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-            <p style="color: #1e40af; font-size: 12px; margin: 5px 0 0 0;">${data.sales.length} venda(s)</p>
-          </div>
-          <div style="text-align: center; padding: 15px; background: white; border-radius: 10px; border: 1px solid #3b82f6;">
-            <p style="color: #1e40af; font-weight: bold; margin: 0 0 5px 0;">Valores Recebidos</p>
-            <p style="color: #059669; font-size: 24px; font-weight: bold; margin: 0;">
-              R$ ${data.totals.received.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-            <p style="color: #1e40af; font-size: 12px; margin: 5px 0 0 0;">${data.receivedValues.length} recebimento(s)</p>
-          </div>
-          <div style="text-align: center; padding: 15px; background: white; border-radius: 10px; border: 1px solid #3b82f6;">
-            <p style="color: #1e40af; font-weight: bold; margin: 0 0 5px 0;">Dívidas Feitas</p>
-            <p style="color: #dc2626; font-size: 24px; font-weight: bold; margin: 0;">
-              R$ ${data.totals.debts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-            <p style="color: #1e40af; font-size: 12px; margin: 5px 0 0 0;">${data.debts.length} dívida(s)</p>
-          </div>
-          <div style="text-align: center; padding: 15px; background: white; border-radius: 10px; border: 1px solid #3b82f6;">
-            <p style="color: #1e40af; font-weight: bold; margin: 0 0 5px 0;">Valores Pagos</p>
-            <p style="color: #ea580c; font-size: 24px; font-weight: bold; margin: 0;">
-              R$ ${data.totals.paid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-            <p style="color: #1e40af; font-size: 12px; margin: 5px 0 0 0;">${data.paidValues.length} pagamento(s)</p>
-          </div>
-        </div>
-        <div style="margin-top: 20px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
-          <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-radius: 15px; border: 2px solid #16a34a;">
-            <p style="color: #15803d; font-weight: bold; margin: 0 0 10px 0;">RESULTADO LÍQUIDO</p>
-            <p style="color: ${(data.totals.received - data.totals.paid) >= 0 ? '#15803d' : '#dc2626'}; font-size: 28px; font-weight: bold; margin: 0;">
-              ${(data.totals.received - data.totals.paid) >= 0 ? '+' : ''}R$ ${(data.totals.received - data.totals.paid).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-            <p style="color: #15803d; font-size: 12px; margin: 5px 0 0 0;">Recebido - Pago</p>
-          </div>
-          <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-radius: 15px; border: 2px solid #3b82f6;">
-            <p style="color: #1e40af; font-weight: bold; margin: 0 0 10px 0;">SALDO FINAL DO CAIXA</p>
-            <p style="color: #1e40af; font-size: 28px; font-weight: bold; margin: 0;">
-              R$ ${data.totals.cashBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </p>
-            <p style="color: #1e40af; font-size: 12px; margin: 5px 0 0 0;">
-              Em ${new Date(endDate).toLocaleDateString('pt-BR')}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Vendas Detalhadas -->
-      ${data.sales.length > 0 ? `
-      <div style="margin-top: 40px;">
-        <div style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 2px solid #16a34a;">
-          <h3 style="color: #15803d; font-size: 20px; font-weight: bold; margin: 0; text-align: center;">
-            1. VENDAS REALIZADAS (${data.sales.length} venda(s))
-          </h3>
-        </div>
-        ${data.sales.map(sale => `
-          <div style="background: #f0fdf4; padding: 20px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #16a34a;">
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 15px;">
-              <div>
-                <h4 style="color: #15803d; font-size: 18px; font-weight: bold; margin: 0 0 10px 0;">${sale.client}</h4>
-                <p style="color: #166534; margin: 5px 0;"><strong>Data:</strong> ${new Date(sale.date).toLocaleDateString('pt-BR')}</p>
-                ${sale.deliveryDate ? `<p style="color: #166534; margin: 5px 0;"><strong>Entrega:</strong> ${new Date(sale.deliveryDate).toLocaleDateString('pt-BR')}</p>` : ''}
-                <p style="color: #166534; margin: 5px 0;"><strong>Produtos:</strong> ${typeof sale.products === 'string' ? sale.products : 'Produtos vendidos'}</p>
-                <p style="color: #166534; margin: 5px 0;"><strong>Status:</strong> ${sale.status.toUpperCase()}</p>
-              </div>
-              <div style="text-align: right;">
-                <p style="color: #15803d; font-weight: bold; margin: 0 0 5px 0;">Valor Total</p>
-                <p style="color: #16a34a; font-size: 24px; font-weight: bold; margin: 0;">
-                  R$ ${sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-            </div>
-            <div>
-              <p style="color: #15803d; font-weight: bold; margin: 0 0 10px 0;">Formas de Pagamento:</p>
-              ${(sale.paymentMethods || []).map(method => `
-                <div style="background: white; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #bbf7d0;">
-                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="color: #15803d; font-weight: bold;">${method.type.replace('_', ' ').toUpperCase()}</span>
-                    <span style="color: #16a34a; font-weight: bold;">R$ ${method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  ${method.installments && method.installments > 1 ? `
-                    <p style="color: #166534; font-size: 12px; margin: 5px 0 0 0;">
-                      ${method.installments}x de R$ ${(method.installmentValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  ` : ''}
-                </div>
-              `).join('')}
-            </div>
-            ${sale.observations ? `
-              <div style="margin-top: 15px; padding: 10px; background: white; border-radius: 8px; border: 1px solid #bbf7d0;">
-                <p style="color: #15803d; font-weight: bold; margin: 0 0 5px 0;">Observações:</p>
-                <p style="color: #166534; margin: 0; font-size: 14px;">${sale.observations}</p>
-              </div>
-            ` : ''}
-          </div>
-        `).join('')}
-        <div style="background: linear-gradient(135deg, #16a34a 0%, #059669 100%); padding: 20px; border-radius: 15px; text-align: center; color: white; margin-top: 20px;">
-          <h4 style="font-size: 20px; font-weight: bold; margin: 0 0 10px 0;">TOTAL DE VENDAS</h4>
-          <p style="font-size: 32px; font-weight: bold; margin: 0;">
-            R$ ${data.totals.sales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </p>
-        </div>
-      </div>
-      ` : ''}
-
-      <!-- Valores Recebidos -->
-      ${data.receivedValues.length > 0 ? `
-      <div style="margin-top: 40px;">
-        <div style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 2px solid #059669;">
-          <h3 style="color: #047857; font-size: 20px; font-weight: bold; margin: 0; text-align: center;">
-            2. VALORES RECEBIDOS (${data.receivedValues.length} recebimento(s))
-          </h3>
-        </div>
-        ${data.receivedValues.map(item => `
-          <div style="background: #ecfdf5; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #059669;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-              <div>
-                <div style="margin-bottom: 5px;">
-                  <span style="background: ${item.type === 'Venda' ? '#dcfce7' : item.type === 'Cheque' ? '#fef3c7' : '#dbeafe'}; 
-                              color: ${item.type === 'Venda' ? '#166534' : item.type === 'Cheque' ? '#92400e' : '#1e40af'}; 
-                              padding: 4px 8px; border-radius: 20px; font-size: 10px; font-weight: bold; margin-right: 8px;">
-                    ${item.type}
-                  </span>
-                  <span style="background: #f3f4f6; color: #374151; padding: 4px 8px; border-radius: 20px; font-size: 10px; font-weight: bold;">
-                    ${item.paymentMethod}
-                  </span>
-                </div>
-                <h4 style="color: #047857; font-size: 16px; font-weight: bold; margin: 0;">${item.description}</h4>
-                <p style="color: #065f46; font-size: 12px; margin: 5px 0 0 0;">
-                  Data: ${new Date(item.date).toLocaleDateString('pt-BR')}
-                </p>
-              </div>
-              <div style="text-align: right;">
-                <p style="color: #059669; font-size: 20px; font-weight: bold; margin: 0;">
-                  R$ ${item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-            </div>
-          </div>
-        `).join('')}
-        <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 20px; border-radius: 15px; text-align: center; color: white; margin-top: 20px;">
-          <h4 style="font-size: 20px; font-weight: bold; margin: 0 0 10px 0;">TOTAL RECEBIDO</h4>
-          <p style="font-size: 32px; font-weight: bold; margin: 0;">
-            R$ ${data.totals.received.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </p>
-        </div>
-      </div>
-      ` : ''}
-
-      <!-- Dívidas -->
-      ${data.debts.length > 0 ? `
-      <div style="margin-top: 40px;">
-        <div style="background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 2px solid #dc2626;">
-          <h3 style="color: #991b1b; font-size: 20px; font-weight: bold; margin: 0; text-align: center;">
-            3. DÍVIDAS FEITAS (${data.debts.length} dívida(s))
-          </h3>
-        </div>
-        ${data.debts.map(debt => `
-          <div style="background: #fef2f2; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #dc2626;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-              <div>
-                <h4 style="color: #991b1b; font-size: 16px; font-weight: bold; margin: 0;">${debt.company}</h4>
-                <p style="color: #7f1d1d; font-size: 14px; margin: 5px 0;">${debt.description}</p>
-                <p style="color: #7f1d1d; font-size: 12px; margin: 5px 0 0 0;">
-                  Data: ${new Date(debt.date).toLocaleDateString('pt-BR')}
-                </p>
-                <p style="color: #7f1d1d; font-size: 12px; margin: 5px 0 0 0;">
-                  Status: ${debt.isPaid ? 'PAGO' : 'PENDENTE'}
-                </p>
-              </div>
-              <div style="text-align: right;">
-                <p style="color: #dc2626; font-size: 20px; font-weight: bold; margin: 0;">
-                  R$ ${debt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-            </div>
-            <div>
-              <p style="color: #991b1b; font-weight: bold; margin: 0 0 8px 0;">Como será/foi pago:</p>
-              ${(debt.paymentMethods || []).map(method => `
-                <div style="background: white; padding: 8px; border-radius: 6px; margin-bottom: 5px; border: 1px solid #fecaca;">
-                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="color: #991b1b; font-weight: bold; font-size: 12px;">${method.type.replace('_', ' ').toUpperCase()}</span>
-                    <span style="color: #dc2626; font-weight: bold; font-size: 12px;">R$ ${method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `).join('')}
-        <div style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 20px; border-radius: 15px; text-align: center; color: white; margin-top: 20px;">
-          <h4 style="font-size: 20px; font-weight: bold; margin: 0 0 10px 0;">TOTAL DE DÍVIDAS</h4>
-          <p style="font-size: 32px; font-weight: bold; margin: 0;">
-            R$ ${data.totals.debts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </p>
-        </div>
-      </div>
-      ` : ''}
-
-      <!-- Valores Pagos -->
-      ${data.paidValues.length > 0 ? `
-      <div style="margin-top: 40px;">
-        <div style="background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 2px solid #ea580c;">
-          <h3 style="color: #c2410c; font-size: 20px; font-weight: bold; margin: 0; text-align: center;">
-            4. VALORES PAGOS (${data.paidValues.length} pagamento(s))
-          </h3>
-        </div>
-        ${data.paidValues.map(item => `
-          <div style="background: #fff7ed; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #ea580c;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-              <div>
-                <div style="margin-bottom: 5px;">
-                  <span style="background: ${item.type === 'Dívida' ? '#fef2f2' : item.type === 'Cheque Próprio' ? '#fef3c7' : item.type === 'Salário' ? '#f3e8ff' : '#dbeafe'}; 
-                              color: ${item.type === 'Dívida' ? '#991b1b' : item.type === 'Cheque Próprio' ? '#92400e' : item.type === 'Salário' ? '#6b21a8' : '#1e40af'}; 
-                              padding: 4px 8px; border-radius: 20px; font-size: 10px; font-weight: bold; margin-right: 8px;">
-                    ${item.type}
-                  </span>
-                  <span style="background: #f3f4f6; color: #374151; padding: 4px 8px; border-radius: 20px; font-size: 10px; font-weight: bold;">
-                    ${item.paymentMethod}
-                  </span>
-                </div>
-                <h4 style="color: #c2410c; font-size: 16px; font-weight: bold; margin: 0;">${item.description}</h4>
-                <p style="color: #9a3412; font-size: 12px; margin: 5px 0 0 0;">
-                  Data: ${new Date(item.date).toLocaleDateString('pt-BR')}
-                </p>
-              </div>
-              <div style="text-align: right;">
-                <p style="color: #ea580c; font-size: 20px; font-weight: bold; margin: 0;">
-                  R$ ${item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-            </div>
-          </div>
-        `).join('')}
-        <div style="background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); padding: 20px; border-radius: 15px; text-align: center; color: white; margin-top: 20px;">
-          <h4 style="font-size: 20px; font-weight: bold; margin: 0 0 10px 0;">TOTAL PAGO</h4>
-          <p style="font-size: 32px; font-weight: bold; margin: 0;">
-            R$ ${data.totals.paid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </p>
-        </div>
-      </div>
-      ` : ''}
-
-      <!-- Footer -->
-      <div style="margin-top: 50px; text-align: center; padding: 20px; border-top: 2px solid #e5e7eb;">
-        <p style="color: #6b7280; font-size: 12px; margin: 0;">
-          Relatório gerado pelo Sistema RevGold em ${new Date().toLocaleString('pt-BR')}
-        </p>
-        <p style="color: #6b7280; font-size: 12px; margin: 5px 0 0 0;">
-          © ${new Date().getFullYear()} RevGold - Sistema de Gestão Empresarial
-        </p>
-      </div>
-    `;
-
-    document.body.appendChild(tempContainer);
-
-    // Generate PDF
-    const canvas = await html2canvas(tempContainer, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-      width: tempContainer.scrollWidth,
-      height: tempContainer.scrollHeight
-    });
-
-    // Remove temporary container
-    document.body.removeChild(tempContainer);
-
-    // Create PDF
+    // Criar PDF diretamente sem html2canvas
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4'
     });
 
-    const imgWidth = 210; // A4 width in mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    
-    // Add pages if content is too long
-    let position = 0;
-    const pageHeight = 297; // A4 height in mm
-    
-    while (position < imgHeight) {
-      if (position > 0) {
+    // Configurações
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 20;
+    const contentWidth = pageWidth - (2 * margin);
+    let currentY = margin;
+
+    // Função para adicionar nova página se necessário
+    const checkPageBreak = (neededHeight: number) => {
+      if (currentY + neededHeight > pageHeight - margin) {
         pdf.addPage();
+        currentY = margin;
+        return true;
       }
+      return false;
+    };
+
+    // Função para adicionar texto com quebra de linha
+    const addText = (text: string, x: number, y: number, options: any = {}) => {
+      const fontSize = options.fontSize || 10;
+      const maxWidth = options.maxWidth || contentWidth;
       
-      pdf.addImage(
-        canvas.toDataURL('image/png'),
-        'PNG',
-        0,
-        -position,
-        imgWidth,
-        imgHeight
+      pdf.setFontSize(fontSize);
+      if (options.fontStyle) pdf.setFont('helvetica', options.fontStyle);
+      
+      const lines = pdf.splitTextToSize(text, maxWidth);
+      pdf.text(lines, x, y);
+      
+      return y + (lines.length * fontSize * 0.35);
+    };
+
+    // Header do PDF
+    pdf.setFontSize(24);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(22, 163, 74); // Verde RevGold
+    currentY = addText('RevGold - Sistema de Gestão', margin, currentY);
+    
+    pdf.setFontSize(18);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(0, 0, 0);
+    currentY = addText('Relatório Financeiro Detalhado', margin, currentY + 10);
+    
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(100, 100, 100);
+    currentY = addText(
+      `Período: ${new Date(startDate).toLocaleDateString('pt-BR')} até ${new Date(endDate).toLocaleDateString('pt-BR')}`,
+      margin, currentY + 5
+    );
+    currentY = addText(
+      `Gerado em: ${new Date().toLocaleString('pt-BR')}`,
+      margin, currentY + 5
+    );
+
+    currentY += 15;
+
+    // Resumo Executivo
+    checkPageBreak(60);
+    
+    pdf.setFillColor(59, 130, 246); // Azul
+    pdf.rect(margin, currentY, contentWidth, 8, 'F');
+    
+    pdf.setFontSize(14);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(255, 255, 255);
+    pdf.text('RESUMO EXECUTIVO DO PERÍODO', margin + 5, currentY + 6);
+    
+    currentY += 15;
+    
+    // Grid de resumo
+    const summaryData = [
+      ['Vendas Realizadas', `R$ ${data.totals.sales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, `${data.sales.length} venda(s)`],
+      ['Valores Recebidos', `R$ ${data.totals.received.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, `${data.receivedValues.length} recebimento(s)`],
+      ['Dívidas Feitas', `R$ ${data.totals.debts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, `${data.debts.length} dívida(s)`],
+      ['Valores Pagos', `R$ ${data.totals.paid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, `${data.paidValues.length} pagamento(s)`]
+    ];
+
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(0, 0, 0);
+
+    summaryData.forEach((row, index) => {
+      const y = currentY + (index * 12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(row[0], margin, y);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(row[1], margin + 60, y);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(row[2], margin + 120, y);
+    });
+
+    currentY += 60;
+
+    // Resultado Líquido
+    checkPageBreak(25);
+    
+    const netResult = data.totals.received - data.totals.paid;
+    const resultColor = netResult >= 0 ? [22, 163, 74] : [220, 38, 38]; // Verde ou vermelho
+    
+    pdf.setFillColor(...resultColor);
+    pdf.rect(margin, currentY, contentWidth, 20, 'F');
+    
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(255, 255, 255);
+    pdf.text('RESULTADO LÍQUIDO DO PERÍODO', margin + 5, currentY + 8);
+    pdf.text(
+      `${netResult >= 0 ? '+' : ''}R$ ${netResult.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      margin + 5, currentY + 16
+    );
+
+    currentY += 30;
+
+    // Saldo Final do Caixa
+    checkPageBreak(25);
+    
+    pdf.setFillColor(59, 130, 246); // Azul
+    pdf.rect(margin, currentY, contentWidth, 20, 'F');
+    
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(255, 255, 255);
+    pdf.text('SALDO FINAL DO CAIXA', margin + 5, currentY + 8);
+    pdf.text(
+      `R$ ${data.totals.cashBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      margin + 5, currentY + 16
+    );
+
+    currentY += 40;
+
+    // Seção 1: VENDAS
+    if (data.sales.length > 0) {
+      checkPageBreak(30);
+      
+      pdf.setFillColor(22, 163, 74); // Verde
+      pdf.rect(margin, currentY, contentWidth, 10, 'F');
+      
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(`1. VENDAS REALIZADAS (${data.sales.length} venda(s))`, margin + 5, currentY + 7);
+      
+      currentY += 20;
+      
+      data.sales.forEach((sale, index) => {
+        checkPageBreak(40);
+        
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(0, 0, 0);
+        currentY = addText(`${index + 1}. ${sale.client}`, margin, currentY);
+        
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        currentY = addText(`Data: ${new Date(sale.date).toLocaleDateString('pt-BR')}`, margin + 5, currentY + 3);
+        
+        if (sale.deliveryDate) {
+          currentY = addText(`Entrega: ${new Date(sale.deliveryDate).toLocaleDateString('pt-BR')}`, margin + 5, currentY + 3);
+        }
+        
+        currentY = addText(`Produtos: ${typeof sale.products === 'string' ? sale.products : 'Produtos vendidos'}`, margin + 5, currentY + 3, { maxWidth: contentWidth - 10 });
+        
+        if (sale.sellerId) {
+          const seller = data.employees?.find(e => e.id === sale.sellerId);
+          if (seller) {
+            currentY = addText(`Vendedor: ${seller.name}`, margin + 5, currentY + 3);
+          }
+        }
+        
+        pdf.setFont('helvetica', 'bold');
+        currentY = addText(`Valor Total: R$ ${sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, margin + 5, currentY + 3);
+        
+        // Formas de pagamento
+        pdf.setFont('helvetica', 'normal');
+        currentY = addText('Formas de Pagamento:', margin + 5, currentY + 5);
+        
+        (sale.paymentMethods || []).forEach(method => {
+          currentY = addText(
+            `• ${method.type.replace('_', ' ').toUpperCase()}: R$ ${method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+            margin + 10, currentY + 3
+          );
+          
+          if (method.installments && method.installments > 1) {
+            currentY = addText(
+              `  ${method.installments}x de R$ ${(method.installmentValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+              margin + 15, currentY + 3
+            );
+          }
+        });
+        
+        if (sale.observations) {
+          currentY = addText(`Observações: ${sale.observations}`, margin + 5, currentY + 5, { maxWidth: contentWidth - 10 });
+        }
+        
+        currentY += 10;
+      });
+      
+      // Total de vendas
+      checkPageBreak(15);
+      pdf.setFillColor(34, 197, 94); // Verde claro
+      pdf.rect(margin, currentY, contentWidth, 12, 'F');
+      
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(
+        `TOTAL DE VENDAS: R$ ${data.totals.sales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        margin + 5, currentY + 8
       );
       
-      position += pageHeight;
+      currentY += 25;
     }
 
-    // Save the PDF
+    // Seção 2: VALORES RECEBIDOS
+    if (data.receivedValues.length > 0) {
+      checkPageBreak(30);
+      
+      pdf.setFillColor(5, 150, 105); // Verde escuro
+      pdf.rect(margin, currentY, contentWidth, 10, 'F');
+      
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(`2. VALORES RECEBIDOS (${data.receivedValues.length} recebimento(s))`, margin + 5, currentY + 7);
+      
+      currentY += 20;
+      
+      data.receivedValues.forEach((item, index) => {
+        checkPageBreak(25);
+        
+        pdf.setFontSize(11);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(0, 0, 0);
+        currentY = addText(`${index + 1}. ${item.description}`, margin, currentY);
+        
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+        currentY = addText(`Tipo: ${item.type} | Método: ${item.paymentMethod}`, margin + 5, currentY + 3);
+        currentY = addText(`Data: ${new Date(item.date).toLocaleDateString('pt-BR')}`, margin + 5, currentY + 3);
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(5, 150, 105);
+        currentY = addText(`Valor: R$ ${item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, margin + 5, currentY + 3);
+        
+        pdf.setTextColor(0, 0, 0);
+        currentY += 8;
+      });
+      
+      // Total recebido
+      checkPageBreak(15);
+      pdf.setFillColor(16, 185, 129);
+      pdf.rect(margin, currentY, contentWidth, 12, 'F');
+      
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(
+        `TOTAL RECEBIDO: R$ ${data.totals.received.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        margin + 5, currentY + 8
+      );
+      
+      currentY += 25;
+    }
+
+    // Seção 3: DÍVIDAS FEITAS
+    if (data.debts.length > 0) {
+      checkPageBreak(30);
+      
+      pdf.setFillColor(220, 38, 38); // Vermelho
+      pdf.rect(margin, currentY, contentWidth, 10, 'F');
+      
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(`3. DÍVIDAS FEITAS (${data.debts.length} dívida(s))`, margin + 5, currentY + 7);
+      
+      currentY += 20;
+      
+      data.debts.forEach((debt, index) => {
+        checkPageBreak(30);
+        
+        pdf.setFontSize(11);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(0, 0, 0);
+        currentY = addText(`${index + 1}. ${debt.company}`, margin, currentY);
+        
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+        currentY = addText(`Descrição: ${debt.description}`, margin + 5, currentY + 3, { maxWidth: contentWidth - 10 });
+        currentY = addText(`Data: ${new Date(debt.date).toLocaleDateString('pt-BR')}`, margin + 5, currentY + 3);
+        currentY = addText(`Status: ${debt.isPaid ? 'PAGO' : 'PENDENTE'}`, margin + 5, currentY + 3);
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(220, 38, 38);
+        currentY = addText(`Valor Total: R$ ${debt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, margin + 5, currentY + 3);
+        
+        // Métodos de pagamento
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(0, 0, 0);
+        currentY = addText('Formas de Pagamento:', margin + 5, currentY + 5);
+        
+        (debt.paymentMethods || []).forEach(method => {
+          currentY = addText(
+            `• ${method.type.replace('_', ' ').toUpperCase()}: R$ ${method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+            margin + 10, currentY + 3
+          );
+        });
+        
+        currentY += 8;
+      });
+      
+      // Total de dívidas
+      checkPageBreak(15);
+      pdf.setFillColor(239, 68, 68);
+      pdf.rect(margin, currentY, contentWidth, 12, 'F');
+      
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(
+        `TOTAL DE DÍVIDAS: R$ ${data.totals.debts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        margin + 5, currentY + 8
+      );
+      
+      currentY += 25;
+    }
+
+    // Seção 4: VALORES PAGOS
+    if (data.paidValues.length > 0) {
+      checkPageBreak(30);
+      
+      pdf.setFillColor(234, 88, 12); // Laranja
+      pdf.rect(margin, currentY, contentWidth, 10, 'F');
+      
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(`4. VALORES PAGOS (${data.paidValues.length} pagamento(s))`, margin + 5, currentY + 7);
+      
+      currentY += 20;
+      
+      data.paidValues.forEach((item, index) => {
+        checkPageBreak(25);
+        
+        pdf.setFontSize(11);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(0, 0, 0);
+        currentY = addText(`${index + 1}. ${item.description}`, margin, currentY);
+        
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+        currentY = addText(`Tipo: ${item.type} | Método: ${item.paymentMethod}`, margin + 5, currentY + 3);
+        currentY = addText(`Data: ${new Date(item.date).toLocaleDateString('pt-BR')}`, margin + 5, currentY + 3);
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(234, 88, 12);
+        currentY = addText(`Valor: R$ ${item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, margin + 5, currentY + 3);
+        
+        pdf.setTextColor(0, 0, 0);
+        currentY += 8;
+      });
+      
+      // Total pago
+      checkPageBreak(15);
+      pdf.setFillColor(251, 146, 60);
+      pdf.rect(margin, currentY, contentWidth, 12, 'F');
+      
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(
+        `TOTAL PAGO: R$ ${data.totals.paid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        margin + 5, currentY + 8
+      );
+      
+      currentY += 25;
+    }
+
+    // Footer
+    checkPageBreak(20);
+    
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(100, 100, 100);
+    
+    const footerY = pageHeight - 15;
+    pdf.text(
+      `Relatório gerado pelo Sistema RevGold em ${new Date().toLocaleString('pt-BR')}`,
+      pageWidth / 2, footerY, { align: 'center' }
+    );
+    pdf.text(
+      `© ${new Date().getFullYear()} RevGold - Sistema de Gestão Empresarial`,
+      pageWidth / 2, footerY + 5, { align: 'center' }
+    );
+
+    // Salvar o PDF
     const fileName = `Relatorio_RevGold_${new Date(startDate).toLocaleDateString('pt-BR').replace(/\//g, '-')}_ate_${new Date(endDate).toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
     pdf.save(fileName);
 
