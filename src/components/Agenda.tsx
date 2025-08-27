@@ -393,10 +393,11 @@ export function Agenda() {
                     )}
                   </div>
                 );
-
-
+              })}
+            </div>
           </div>
         </div>
+
         {/* Detalhes do Dia Selecionado */}
         <div className="lg:col-span-1">
           <div className="card modern-shadow-xl sticky top-6">
