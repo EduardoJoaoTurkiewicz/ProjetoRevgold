@@ -101,7 +101,6 @@ export function Agenda() {
          });
          
          if (!isHandledAsInstallment && debt.date === dateStr) {
-           events.push({
           events.push({
             id: `debt-${debt.id}`,
             type: 'debt',
