@@ -558,7 +558,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setAgendaEvents((data || []).map(transformFromDatabase<AgendaEvent>));
     } catch (error) {
       console.error('Error fetching agenda events:', error);
-      console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para agenda events');
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        console.log('⚠️ Erro de conexão com Supabase - verifique as configurações no arquivo .env');
+        setError('Erro de conexão: Verifique se o Supabase está configurado corretamente no arquivo .env');
+      } else {
+        console.log('⚠️ Erro ao conectar com Supabase - usando dados locais para agenda events');
+      }
       setAgendaEvents([]);
     }
   };
