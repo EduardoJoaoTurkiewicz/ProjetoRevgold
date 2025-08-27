@@ -98,9 +98,10 @@ export function Agenda() {
             }
           }
           }
-        });
-        
-        if (!handledByPaymentMethod && debt.date === dateStr) {
+         });
+         
+         if (!isHandledAsInstallment && debt.date === dateStr) {
+           events.push({
           events.push({
             id: `debt-${debt.id}`,
             type: 'debt',
@@ -111,7 +112,7 @@ export function Agenda() {
             details: debt
           });
         }
-      }
+       }
     });
 
     // Cheques (que a empresa vai receber)
