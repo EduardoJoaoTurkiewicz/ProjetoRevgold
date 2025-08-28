@@ -293,7 +293,16 @@ export function Boletos() {
       </div>
 
       {/* Boletos List */}
-      <div className="card modern-shadow-xl">
+      <div className="space-y-8">
+        {/* Boletos Recebíveis */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-green-600">
+              <FileText className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Boletos a Receber</h3>
+          </div>
+          
         {boletos.length > 0 ? (
           <div className="overflow-x-auto modern-scrollbar">
             <table className="min-w-full table-auto">
@@ -451,107 +460,182 @@ export function Boletos() {
             </button>
           </div>
         )}
-      </div>
+        </div>
 
-      {/* Boletos que a empresa tem para pagar */}
-      {companyPayableBoletos.length > 0 && (
+        {/* Boletos que a empresa tem para pagar */}
         <div className="card modern-shadow-xl">
           <div className="flex items-center gap-4 mb-6">
             <div className="p-3 rounded-xl bg-orange-600">
               <CreditCard className="w-6 h-6 text-white" />
             </div>
-            <h3 className="text-xl font-bold text-orange-900">Boletos para Pagar</h3>
+            <h3 className="text-xl font-bold text-orange-900">Boletos que a Empresa Deve Pagar</h3>
             <span className="text-orange-600 font-semibold">
               Total: R$ {totalCompanyPayableBoletos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
           
-          <div className="space-y-4">
-            {companyPayableBoletos.map(boleto => (
-              <div key={boleto.id} className="p-6 bg-orange-50 rounded-xl border border-orange-200">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h4 className="font-bold text-orange-900 text-lg">{boleto.companyName || boleto.client}</h4>
-                    <p className="text-orange-700">{boleto.observations || 'Boleto da empresa'}</p>
-                    <p className="text-sm text-orange-600">
-                      Vencimento: {new Date(boleto.dueDate).toLocaleDateString('pt-BR')}
-                    </p>
-                    {boleto.dueDate < today && (
-                      <p className="text-sm text-red-600 font-bold">
-                        Vencido há {Math.ceil((new Date().getTime() - new Date(boleto.dueDate).getTime()) / (1000 * 60 * 60 * 24))} dias
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-black text-orange-600">
-                      R$ {boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                    <div className="space-y-2">
-                      {boleto.dueDate < today && (
-                        <div>
-                          <label className="block text-xs text-orange-700 font-semibold mb-1">
-                            Juros Pagos (opcional)
-                          </label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder="0,00"
-                            className="w-full px-2 py-1 text-sm border border-orange-300 rounded"
-                            onChange={(e) => {
-                              const interestValue = parseFloat(e.target.value) || 0;
-                              boleto.interestPaid = interestValue;
-                            }}
-                          />
-                        </div>
-                      )}
-                      <button
-                        onClick={() => {
-                          const interestPaid = boleto.interestPaid || 0;
-                          const confirmMessage = interestPaid > 0 
-                            ? `Marcar este boleto como pago com R$ ${interestPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} de juros?`
-                            : 'Marcar este boleto como pago?';
-                            
-                          if (window.confirm(confirmMessage)) {
-                            const updatedBoleto = { 
-                              ...boleto, 
-                              status: 'compensado' as const,
-                              paymentDate: new Date().toISOString().split('T')[0],
-                              interestPaid: interestPaid
-                            };
-                            updateBoleto(updatedBoleto).catch(error => {
-                              alert('Erro ao marcar como pago: ' + error.message);
-                            });
-                          }
-                        }}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-bold"
-                      >
-                        Marcar como Pago
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p><strong>Valor:</strong> R$ {boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                    <p><strong>Status:</strong> {getStatusLabel(boleto.status)}</p>
-                    <p><strong>Parcela:</strong> {boleto.installmentNumber}/{boleto.totalInstallments}</p>
-                  </div>
-                  <div>
-                    {boleto.interestPaid && boleto.interestPaid > 0 && (
-                      <p><strong>Juros Pagos:</strong> R$ {boleto.interestPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                    )}
-                    {boleto.paymentDate && (
-                      <p><strong>Data do Pagamento:</strong> {new Date(boleto.paymentDate).toLocaleDateString('pt-BR')}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          {companyPayableBoletos.length > 0 ? (
+            <div className="overflow-x-auto modern-scrollbar">
+              <table className="min-w-full table-auto">
+                <thead>
+                  <tr className="border-b border-slate-200">
+                    <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-orange-50 to-red-50">Empresa/Fornecedor</th>
+                    <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-orange-50 to-red-50">Valor</th>
+                    <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-orange-50 to-red-50">Vencimento</th>
+                    <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-orange-50 to-red-50">Status</th>
+                    <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-orange-50 to-red-50">Parcela</th>
+                    <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-orange-50 to-red-50">Situação</th>
+                    <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-orange-50 to-red-50">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {companyPayableBoletos.map(boleto => {
+                    const daysOverdue = boleto.dueDate < today ? 
+                      Math.ceil((new Date().getTime() - new Date(boleto.dueDate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+                    
+                    return (
+                      <tr key={boleto.id} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-orange-50/50 hover:to-red-50/50 transition-all duration-300">
+                        <td className="py-4 px-6 text-sm font-bold text-slate-900">
+                          {boleto.companyName || boleto.client}
+                          {boleto.observations && (
+                            <div className="text-xs text-orange-600 mt-1">{boleto.observations}</div>
+                          )}
+                        </td>
+                        <td className="py-4 px-6 text-sm font-black text-orange-600">
+                          <div>
+                            <span>R$ {boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            {boleto.interestPaid && boleto.interestPaid > 0 && (
+                              <div className="text-xs text-red-600 font-bold">
+                                + Juros: R$ {boleto.interestPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6 text-sm">
+                          <span className={
+                            boleto.dueDate === today ? 'text-blue-600 font-medium' :
+                            boleto.dueDate < today ? 'text-red-600 font-medium' :
+                            'text-gray-900'
+                          }>
+                            {new Date(boleto.dueDate).toLocaleDateString('pt-BR')}
+                          </span>
+                          {daysOverdue > 0 && (
+                            <div className="text-xs text-red-500 font-bold">
+                              {daysOverdue} dias vencido
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-4 px-6 text-sm">
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(boleto.status)}`}>
+                            {getStatusLabel(boleto.status)}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-sm">
+                          <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-bold">
+                            {boleto.installmentNumber}/{boleto.totalInstallments}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-sm">
+                          {boleto.status === 'compensado' ? (
+                            <div className="space-y-1">
+                              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold">
+                                ✓ Pago
+                              </span>
+                              {boleto.paymentDate && (
+                                <div className="text-xs text-green-600">
+                                  {new Date(boleto.paymentDate).toLocaleDateString('pt-BR')}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {daysOverdue > 0 && (
+                                <div>
+                                  <label className="block text-xs text-orange-700 font-semibold mb-1">
+                                    Juros Pagos (opcional)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0,00"
+                                    className="w-full px-2 py-1 text-sm border border-orange-300 rounded"
+                                    onChange={(e) => {
+                                      const interestValue = parseFloat(e.target.value) || 0;
+                                      boleto.interestPaid = interestValue;
+                                    }}
+                                  />
+                                </div>
+                              )}
+                              <button
+                                onClick={() => {
+                                  const interestPaid = boleto.interestPaid || 0;
+                                  const totalToPay = boleto.value + interestPaid;
+                                  const confirmMessage = interestPaid > 0 
+                                    ? `Marcar este boleto como pago?\n\nValor original: R$ ${boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\nJuros: R$ ${interestPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\nTotal a pagar: R$ ${totalToPay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\nEste valor será descontado do caixa da empresa.`
+                                    : `Marcar este boleto como pago?\n\nValor: R$ ${boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\nEste valor será descontado do caixa da empresa.`;
+                                    
+                                  if (window.confirm(confirmMessage)) {
+                                    const updatedBoleto = { 
+                                      ...boleto, 
+                                      status: 'compensado' as const,
+                                      paymentDate: new Date().toISOString().split('T')[0],
+                                      interestPaid: interestPaid
+                                    };
+                                    updateBoleto(updatedBoleto).catch(error => {
+                                      alert('Erro ao marcar como pago: ' + error.message);
+                                    });
+                                  }
+                                }}
+                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-bold text-sm"
+                              >
+                                Marcar como Pago
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-4 px-6 text-sm">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setViewingBoleto(boleto)}
+                              className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-modern"
+                              title="Visualizar"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setEditingBoleto(boleto)}
+                              className="text-emerald-600 hover:text-emerald-800 p-2 rounded-lg hover:bg-emerald-50 transition-modern"
+                              title="Editar"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteBoleto(boleto.id)}
+                              className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-modern"
+                              title="Excluir"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <CreditCard className="w-16 h-16 mx-auto mb-4 text-orange-300" />
+              <p className="text-orange-600 font-medium">Nenhum boleto da empresa para pagar</p>
+              <p className="text-orange-500 text-sm mt-2">
+                Boletos que a empresa deve pagar aparecerão aqui
+              </p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Boleto Form Modal */}
       {(isFormOpen || editingBoleto) && (
