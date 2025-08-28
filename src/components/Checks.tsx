@@ -83,18 +83,8 @@ export function Checks() {
       
       // Se o cheque foi marcado como compensado, atualizar o caixa
       if (status === 'compensado' && check.status !== 'compensado' && !check.isOwnCheck) {
-        // Criar transação de entrada no caixa para cheques de terceiros
-        createCashTransaction({
-          date: check.dueDate,
-          type: 'entrada',
-          amount: check.value,
-          description: `Cheque compensado - ${check.client}`,
-          category: 'cheque',
-          relatedId: check.id,
-          paymentMethod: 'cheque'
-        }).catch(error => {
-          console.error('Erro ao criar transação de caixa para cheque:', error);
-        });
+        // Cash transactions will be handled automatically by database triggers
+        console.log('✅ Cheque marcado como compensado, transação de caixa será criada automaticamente');
       }
       
       updateCheck(updatedCheck).catch(error => {

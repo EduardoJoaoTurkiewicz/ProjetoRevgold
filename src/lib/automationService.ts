@@ -49,6 +49,22 @@ export class AutomationService {
           const dueDate = new Date(startDate);
           dueDate.setDate(dueDate.getDate() + (i * installmentInterval));
 
+          // Check if check already exists to prevent duplicates
+          const { data: existingCheck } = await supabase
+            .from('checks')
+            .select('id')
+            .eq('sale_id', sale.id)
+            .eq('client', sale.client)
+            .eq('value', installmentValue)
+            .eq('due_date', dueDate.toISOString().split('T')[0])
+            .eq('installment_number', i + 1)
+            .eq('total_installments', installments);
+          
+          if (existingCheck && existingCheck.length > 0) {
+            console.log(`⚠️ Cheque ${i + 1}/${installments} já existe para venda ${sale.id}`);
+            continue;
+          }
+
           const checkData = {
             sale_id: sale.id,
             client: sale.client,
@@ -64,7 +80,11 @@ export class AutomationService {
 
           const { error } = await supabase.from('checks').insert([checkData]);
           if (error) {
-            console.error('Erro ao criar cheque automático:', error);
+            if (error.code === '23505') {
+              console.log(`⚠️ Cheque ${i + 1}/${installments} já existe (constraint violation)`);
+            } else {
+              console.error('Erro ao criar cheque automático:', error);
+            }
           } else {
             console.log(`✅ Cheque ${i + 1}/${installments} criado para venda ${sale.id}`);
           }
@@ -128,6 +148,21 @@ export class AutomationService {
           const dueDate = new Date(startDate);
           dueDate.setDate(dueDate.getDate() + (i * installmentInterval));
 
+          // Check if boleto already exists to prevent duplicates
+          const { data: existingBoleto } = await supabase
+            .from('boletos')
+            .select('id')
+            .eq('sale_id', sale.id)
+            .eq('client', sale.client)
+            .eq('value', installmentValue)
+            .eq('due_date', dueDate.toISOString().split('T')[0])
+            .eq('installment_number', i + 1)
+            .eq('total_installments', installments);
+          
+          if (existingBoleto && existingBoleto.length > 0) {
+            console.log(`⚠️ Boleto ${i + 1}/${installments} já existe para venda ${sale.id}`);
+            continue;
+          }
           const boletoData = {
             sale_id: sale.id,
             client: sale.client,
@@ -141,7 +176,11 @@ export class AutomationService {
 
           const { error } = await supabase.from('boletos').insert([boletoData]);
           if (error) {
-            console.error('Erro ao criar boleto automático:', error);
+            if (error.code === '23505') {
+              console.log(`⚠️ Boleto ${i + 1}/${installments} já existe (constraint violation)`);
+            } else {
+              console.error('Erro ao criar boleto automático:', error);
+            }
           } else {
             console.log(`✅ Boleto ${i + 1}/${installments} criado para venda ${sale.id}`);
           }

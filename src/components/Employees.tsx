@@ -36,6 +36,23 @@ export function Employees() {
 
   const handleAddEmployee = (employee: Omit<Employee, 'id' | 'createdAt'>) => {
     console.log('🔄 Adicionando novo funcionário:', employee);
+    
+    // Validate employee data before submitting
+    if (!employee.name || !employee.name.trim()) {
+      alert('Por favor, informe o nome do funcionário.');
+      return;
+    }
+    
+    if (!employee.position || !employee.position.trim()) {
+      alert('Por favor, informe o cargo do funcionário.');
+      return;
+    }
+    
+    if (employee.salary <= 0) {
+      alert('O salário deve ser maior que zero.');
+      return;
+    }
+    
     createEmployee(employee).then(() => {
       console.log('✅ Funcionário adicionado com sucesso');
       setIsFormOpen(false);
@@ -69,20 +86,15 @@ export function Employees() {
   };
 
   const handleAddAdvance = (advance: Omit<EmployeeAdvance, 'id' | 'createdAt'>) => {
+    // Validate advance data
+    if (advance.amount <= 0) {
+      alert('O valor do adiantamento deve ser maior que zero.');
+      return;
+    }
+    
     createEmployeeAdvance(advance).then(() => {
-      // Criar transação de caixa para o adiantamento
-      createCashTransaction({
-        date: advance.date,
-        type: 'saida',
-        amount: advance.amount,
-        description: `Adiantamento - ${employees.find(e => e.id === advance.employeeId)?.name || 'Funcionário'}`,
-        category: 'adiantamento',
-        relatedId: advance.employeeId,
-        paymentMethod: advance.paymentMethod
-      }).catch(error => {
-        console.error('Erro ao criar transação de caixa para adiantamento:', error);
-      });
-      
+      // Cash transaction will be handled automatically by database trigger
+      console.log('✅ Adiantamento criado, transação de caixa será criada automaticamente');
       setAdvanceEmployee(null);
     }).catch(error => {
       alert('Erro ao criar adiantamento: ' + error.message);
@@ -108,18 +120,8 @@ export function Employees() {
       };
       
       createEmployeePayment(newPayment).then(() => {
-        // Criar transação de caixa para o pagamento
-        createCashTransaction({
-          date: new Date().toLocaleDateString('en-CA'),
-          type: 'saida',
-          amount: payment.amount,
-          description: `Pagamento de salário - ${paymentEmployee.name}`,
-          category: 'salario',
-          relatedId: paymentEmployee.id,
-          paymentMethod: 'dinheiro'
-        }).catch(error => {
-          console.error('Erro ao criar transação de caixa:', error);
-        });
+        // Cash transaction will be handled automatically by database trigger
+        console.log('✅ Pagamento registrado, transação de caixa será criada automaticamente');
         
         // Marcar adiantamentos como descontados
         const pendingAdvances = getEmployeeAdvances(paymentEmployee.id).filter(a => a.status === 'pendente');

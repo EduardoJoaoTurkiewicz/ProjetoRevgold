@@ -29,6 +29,23 @@ export function Boletos() {
 
   const handleAddBoleto = (boleto: Omit<Boleto, 'id' | 'createdAt'>) => {
     console.log('🔄 Adicionando novo boleto:', boleto);
+    
+    // Validate boleto data before submitting
+    if (!boleto.client || !boleto.client.trim()) {
+      alert('Por favor, informe o nome do cliente.');
+      return;
+    }
+    
+    if (boleto.value <= 0) {
+      alert('O valor do boleto deve ser maior que zero.');
+      return;
+    }
+    
+    if (boleto.installmentNumber > boleto.totalInstallments) {
+      alert('O número da parcela não pode ser maior que o total de parcelas.');
+      return;
+    }
+    
     createBoleto(boleto).then(() => {
       console.log('✅ Boleto adicionado com sucesso');
       setIsFormOpen(false);
@@ -83,40 +100,8 @@ export function Boletos() {
       
       // Se o boleto foi marcado como compensado, atualizar o caixa
       if (status === 'compensado' && boleto.status !== 'compensado') {
-        // Calcular valor líquido recebido (valor final menos custos de cartório)
-        const finalAmount = boleto.finalAmount || boleto.value;
-        const notaryCosts = boleto.notaryCosts || 0;
-        const netReceived = finalAmount - notaryCosts;
-        
-        // Criar transação de entrada no caixa para o valor líquido
-        if (netReceived > 0) {
-          createCashTransaction({
-            date: boleto.dueDate,
-            type: 'entrada',
-            amount: netReceived,
-            description: `Boleto pago - ${boleto.client}${boleto.overdueAction ? ` (${getOverdueActionLabel(boleto.overdueAction)})` : ''}`,
-            category: 'boleto',
-            relatedId: boleto.id,
-            paymentMethod: 'boleto'
-          }).catch(error => {
-            console.error('Erro ao criar transação de caixa para boleto:', error);
-          });
-        }
-        
-        // Se houve custos de cartório, criar transação de saída
-        if (notaryCosts > 0) {
-          createCashTransaction({
-            date: boleto.dueDate,
-            type: 'saida',
-            amount: notaryCosts,
-            description: `Custos de cartório - Boleto ${boleto.client}`,
-            category: 'outro',
-            relatedId: boleto.id,
-            paymentMethod: 'outros'
-          }).catch(error => {
-            console.error('Erro ao criar transação de custos de cartório:', error);
-          });
-        }
+        // Cash transactions will be handled automatically by database triggers
+        console.log('✅ Boleto marcado como compensado, transações de caixa serão criadas automaticamente');
       }
       
       updateBoleto(updatedBoleto).catch(error => {

@@ -13,6 +13,23 @@ export function Debts() {
 
   const handleAddDebt = (debt: Omit<Debt, 'id' | 'createdAt'>) => {
     console.log('🔄 Adicionando nova dívida:', debt);
+    
+    // Validate debt data before submitting
+    if (!debt.company || !debt.company.trim()) {
+      alert('Por favor, informe o nome da empresa/fornecedor.');
+      return;
+    }
+    
+    if (!debt.description || !debt.description.trim()) {
+      alert('Por favor, informe a descrição da dívida.');
+      return;
+    }
+    
+    if (debt.totalValue <= 0) {
+      alert('O valor total da dívida deve ser maior que zero.');
+      return;
+    }
+    
     createDebt(debt).then(() => {
       console.log('✅ Dívida adicionada com sucesso');
       setIsFormOpen(false);

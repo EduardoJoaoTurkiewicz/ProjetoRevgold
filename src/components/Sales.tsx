@@ -13,6 +13,34 @@ export function Sales() {
 
   const handleAddSale = (sale: Omit<Sale, 'id' | 'createdAt'>) => {
     console.log('🔄 Adicionando nova venda:', sale);
+    
+    // Validate sale data before submitting
+    if (!sale.client || !sale.client.trim()) {
+      alert('Por favor, informe o nome do cliente.');
+      return;
+    }
+    
+    if (sale.totalValue <= 0) {
+      alert('O valor total da venda deve ser maior que zero.');
+      return;
+    }
+    
+    if (!sale.paymentMethods || sale.paymentMethods.length === 0) {
+      alert('Por favor, adicione pelo menos um método de pagamento.');
+      return;
+    }
+    
+    const totalPaymentAmount = sale.paymentMethods.reduce((sum, method) => sum + method.amount, 0);
+    if (totalPaymentAmount === 0) {
+      alert('O valor total dos métodos de pagamento deve ser maior que zero.');
+      return;
+    }
+    
+    if (totalPaymentAmount > sale.totalValue) {
+      alert('O total dos métodos de pagamento não pode ser maior que o valor total da venda.');
+      return;
+    }
+    
     addSale(sale).then(() => {
       console.log('✅ Venda adicionada com sucesso');
       setIsFormOpen(false);

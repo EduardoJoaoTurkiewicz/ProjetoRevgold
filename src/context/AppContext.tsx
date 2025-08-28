@@ -280,20 +280,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const dbData = transformToDatabase(saleData);
-    const { data, error } = await supabase.from('sales').insert([dbData]).select().single();
-    
-    if (error) throw error;
-    
-    const newSale = transformFromDatabase(data);
-    setSales(prev => [newSale, ...prev]);
-    
-    // Create checks and boletos automatically
-    await AutomationService.createChecksForSale(newSale);
-    await AutomationService.createBoletosForSale(newSale);
-    
-    // Reload data to get the new checks and boletos
-    await loadAllData();
+    try {
+      // Check for duplicates before inserting
+      const { data: existingSales } = await supabase
+        .from('sales')
+        .select('id')
+        .eq('client', saleData.client)
+        .eq('date', saleData.date)
+        .eq('total_value', saleData.totalValue);
+      
+      if (existingSales && existingSales.length > 0) {
+        throw new Error('Uma venda idêntica já existe para este cliente na mesma data com o mesmo valor.');
+      }
+      
+      const dbData = transformToDatabase(saleData);
+      const { data, error } = await supabase.from('sales').insert([dbData]).select().single();
+      
+      if (error) {
+        console.error('Erro detalhado do Supabase:', error);
+        throw new Error(`Erro ao criar venda: ${error.message}`);
+      }
+      
+      const newSale = transformFromDatabase(data);
+      setSales(prev => [newSale, ...prev]);
+      
+      // Create checks and boletos automatically
+      await AutomationService.createChecksForSale(newSale);
+      await AutomationService.createBoletosForSale(newSale);
+      
+      // Reload data to get the new checks and boletos
+      await loadAllData();
+    } catch (error) {
+      console.error('❌ Erro ao adicionar venda:', error);
+      throw error;
+    }
   };
 
   const updateSale = async (id: string, saleData: Omit<Sale, 'id' | 'createdAt'>) => {
@@ -346,13 +366,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const dbData = transformToDatabase(debtData);
-    const { data, error } = await supabase.from('debts').insert([dbData]).select().single();
-    
-    if (error) throw error;
-    
-    const newDebt = transformFromDatabase(data);
-    setDebts(prev => [newDebt, ...prev]);
+    try {
+      // Check for duplicates before inserting
+      const { data: existingDebts } = await supabase
+        .from('debts')
+        .select('id')
+        .eq('company', debtData.company)
+        .eq('date', debtData.date)
+        .eq('total_value', debtData.totalValue)
+        .eq('description', debtData.description);
+      
+      if (existingDebts && existingDebts.length > 0) {
+        throw new Error('Uma dívida idêntica já existe para esta empresa na mesma data.');
+      }
+      
+      const dbData = transformToDatabase(debtData);
+      const { data, error } = await supabase.from('debts').insert([dbData]).select().single();
+      
+      if (error) {
+        console.error('Erro detalhado do Supabase:', error);
+        throw new Error(`Erro ao criar dívida: ${error.message}`);
+      }
+      
+      const newDebt = transformFromDatabase(data);
+      setDebts(prev => [newDebt, ...prev]);
+    } catch (error) {
+      console.error('❌ Erro ao criar dívida:', error);
+      throw error;
+    }
   };
 
   const updateDebt = async (debt: Debt) => {
@@ -361,12 +402,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const dbData = transformToDatabase(debt);
-    const { error } = await supabase.from('debts').update(dbData).eq('id', debt.id);
-    
-    if (error) throw error;
-    
-    setDebts(prev => prev.map(d => d.id === debt.id ? debt : d));
+    try {
+      const dbData = transformToDatabase(debt);
+      const { error } = await supabase.from('debts').update(dbData).eq('id', debt.id);
+      
+      if (error) {
+        console.error('Erro detalhado do Supabase:', error);
+        throw new Error(`Erro ao atualizar dívida: ${error.message}`);
+      }
+      
+      setDebts(prev => prev.map(d => d.id === debt.id ? debt : d));
+      
+      // Reload cash balance to reflect any payment status changes
+      await loadAllData();
+    } catch (error) {
+      console.error('❌ Erro ao atualizar dívida:', error);
+      throw error;
+    }
   };
 
   const deleteDebt = async (id: string) => {
@@ -393,13 +445,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const dbData = transformToDatabase(checkData);
-    const { data, error } = await supabase.from('checks').insert([dbData]).select().single();
-    
-    if (error) throw error;
-    
-    const newCheck = transformFromDatabase(data);
-    setChecks(prev => [newCheck, ...prev]);
+    try {
+      // Check for duplicates before inserting
+      const { data: existingChecks } = await supabase
+        .from('checks')
+        .select('id')
+        .eq('client', checkData.client)
+        .eq('value', checkData.value)
+        .eq('due_date', checkData.dueDate)
+        .eq('installment_number', checkData.installmentNumber || 1)
+        .eq('total_installments', checkData.totalInstallments || 1);
+      
+      if (existingChecks && existingChecks.length > 0) {
+        throw new Error('Um cheque idêntico já existe para este cliente.');
+      }
+      
+      const dbData = transformToDatabase(checkData);
+      const { data, error } = await supabase.from('checks').insert([dbData]).select().single();
+      
+      if (error) {
+        console.error('Erro detalhado do Supabase:', error);
+        throw new Error(`Erro ao criar cheque: ${error.message}`);
+      }
+      
+      const newCheck = transformFromDatabase(data);
+      setChecks(prev => [newCheck, ...prev]);
+    } catch (error) {
+      console.error('❌ Erro ao criar cheque:', error);
+      throw error;
+    }
   };
 
   const updateCheck = async (check: Check) => {
@@ -408,12 +482,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const dbData = transformToDatabase(check);
-    const { error } = await supabase.from('checks').update(dbData).eq('id', check.id);
-    
-    if (error) throw error;
-    
-    setChecks(prev => prev.map(c => c.id === check.id ? check : c));
+    try {
+      const dbData = transformToDatabase(check);
+      const { error } = await supabase.from('checks').update(dbData).eq('id', check.id);
+      
+      if (error) {
+        console.error('Erro detalhado do Supabase:', error);
+        throw new Error(`Erro ao atualizar cheque: ${error.message}`);
+      }
+      
+      setChecks(prev => prev.map(c => c.id === check.id ? check : c));
+      
+      // Reload cash balance to reflect any status changes
+      await loadAllData();
+    } catch (error) {
+      console.error('❌ Erro ao atualizar cheque:', error);
+      throw error;
+    }
   };
 
   const deleteCheck = async (id: string) => {
@@ -441,10 +526,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      // Check for duplicates before inserting
+      const { data: existingBoletos } = await supabase
+        .from('boletos')
+        .select('id')
+        .eq('client', boletoData.client)
+        .eq('value', boletoData.value)
+        .eq('due_date', boletoData.dueDate)
+        .eq('installment_number', boletoData.installmentNumber || 1)
+        .eq('total_installments', boletoData.totalInstallments || 1);
+      
+      if (existingBoletos && existingBoletos.length > 0) {
+        throw new Error('Um boleto idêntico já existe para este cliente.');
+      }
+      
       const dbData = transformToDatabase(boletoData);
       const { data, error } = await supabase.from('boletos').insert([dbData]).select().single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Erro detalhado do Supabase:', error);
+        throw new Error(`Erro ao criar boleto: ${error.message}`);
+      }
       
       const newBoleto = transformFromDatabase(data);
       setBoletos(prev => [newBoleto, ...prev]);
@@ -461,12 +563,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const dbData = transformToDatabase(boleto);
-    const { error } = await supabase.from('boletos').update(dbData).eq('id', boleto.id);
-    
-    if (error) throw error;
-    
-    setBoletos(prev => prev.map(b => b.id === boleto.id ? boleto : b));
+    try {
+      const dbData = transformToDatabase(boleto);
+      const { error } = await supabase.from('boletos').update(dbData).eq('id', boleto.id);
+      
+      if (error) {
+        console.error('Erro detalhado do Supabase:', error);
+        throw new Error(`Erro ao atualizar boleto: ${error.message}`);
+      }
+      
+      setBoletos(prev => prev.map(b => b.id === boleto.id ? boleto : b));
+      
+      // Reload cash balance to reflect any status changes
+      await loadAllData();
+    } catch (error) {
+      console.error('❌ Erro ao atualizar boleto:', error);
+      throw error;
+    }
   };
 
   const deleteBoleto = async (id: string) => {
@@ -493,13 +606,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const dbData = transformToDatabase(employeeData);
-    const { data, error } = await supabase.from('employees').insert([dbData]).select().single();
-    
-    if (error) throw error;
-    
-    const newEmployee = transformFromDatabase(data);
-    setEmployees(prev => [newEmployee, ...prev]);
+    try {
+      // Check for duplicates before inserting
+      const { data: existingEmployees } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('name', employeeData.name)
+        .eq('position', employeeData.position)
+        .eq('salary', employeeData.salary);
+      
+      if (existingEmployees && existingEmployees.length > 0) {
+        throw new Error('Um funcionário idêntico já existe com o mesmo nome, cargo e salário.');
+      }
+      
+      const dbData = transformToDatabase(employeeData);
+      const { data, error } = await supabase.from('employees').insert([dbData]).select().single();
+      
+      if (error) {
+        console.error('Erro detalhado do Supabase:', error);
+        throw new Error(`Erro ao criar funcionário: ${error.message}`);
+      }
+      
+      const newEmployee = transformFromDatabase(data);
+      setEmployees(prev => [newEmployee, ...prev]);
+    } catch (error) {
+      console.error('❌ Erro ao criar funcionário:', error);
+      throw error;
+    }
   };
 
   const updateEmployee = async (employee: Employee) => {
@@ -535,13 +668,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const dbData = transformToDatabase(paymentData);
-    const { data, error } = await supabase.from('employee_payments').insert([dbData]).select().single();
-    
-    if (error) throw error;
-    
-    const newPayment = transformFromDatabase(data);
-    setEmployeePayments(prev => [newPayment, ...prev]);
+    try {
+      const dbData = transformToDatabase(paymentData);
+      const { data, error } = await supabase.from('employee_payments').insert([dbData]).select().single();
+      
+      if (error) {
+        console.error('Erro detalhado do Supabase:', error);
+        throw new Error(`Erro ao criar pagamento: ${error.message}`);
+      }
+      
+      const newPayment = transformFromDatabase(data);
+      setEmployeePayments(prev => [newPayment, ...prev]);
+      
+      // Reload cash balance to reflect the new transaction
+      await loadAllData();
+    } catch (error) {
+      console.error('❌ Erro ao criar pagamento:', error);
+      throw error;
+    }
   };
 
   const createEmployeeAdvance = async (advanceData: Omit<EmployeeAdvance, 'id' | 'createdAt'>) => {
@@ -555,13 +699,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const dbData = transformToDatabase(advanceData);
-    const { data, error } = await supabase.from('employee_advances').insert([dbData]).select().single();
-    
-    if (error) throw error;
-    
-    const newAdvance = transformFromDatabase(data);
-    setEmployeeAdvances(prev => [newAdvance, ...prev]);
+    try {
+      const dbData = transformToDatabase(advanceData);
+      const { data, error } = await supabase.from('employee_advances').insert([dbData]).select().single();
+      
+      if (error) {
+        console.error('Erro detalhado do Supabase:', error);
+        throw new Error(`Erro ao criar adiantamento: ${error.message}`);
+      }
+      
+      const newAdvance = transformFromDatabase(data);
+      setEmployeeAdvances(prev => [newAdvance, ...prev]);
+      
+      // Reload cash balance to reflect the new transaction
+      await loadAllData();
+    } catch (error) {
+      console.error('❌ Erro ao criar adiantamento:', error);
+      throw error;
+    }
   };
 
   const updateEmployeeAdvance = async (advance: EmployeeAdvance) => {
@@ -696,13 +851,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const dbData = transformToDatabase(pixFeeData);
-    const { data, error } = await supabase.from('pix_fees').insert([dbData]).select().single();
-    
-    if (error) throw error;
-    
-    const newPixFee = transformFromDatabase(data);
-    setPixFees(prev => [newPixFee, ...prev]);
+    try {
+      const dbData = transformToDatabase(pixFeeData);
+      const { data, error } = await supabase.from('pix_fees').insert([dbData]).select().single();
+      
+      if (error) {
+        console.error('Erro detalhado do Supabase:', error);
+        throw new Error(`Erro ao criar tarifa PIX: ${error.message}`);
+      }
+      
+      const newPixFee = transformFromDatabase(data);
+      setPixFees(prev => [newPixFee, ...prev]);
+      
+      // Reload cash balance to reflect the new transaction
+      await loadAllData();
+    } catch (error) {
+      console.error('❌ Erro ao criar tarifa PIX:', error);
+      throw error;
+    }
   };
 
   const updatePixFee = async (pixFee: PixFee) => {
@@ -743,13 +909,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const dbData = transformToDatabase(taxData);
-    const { data, error } = await supabase.from('taxes').insert([dbData]).select().single();
-    
-    if (error) throw error;
-    
-    const newTax = transformFromDatabase(data);
-    setTaxes(prev => [newTax, ...prev]);
+    try {
+      const dbData = transformToDatabase(taxData);
+      const { data, error } = await supabase.from('taxes').insert([dbData]).select().single();
+      
+      if (error) {
+        console.error('Erro detalhado do Supabase:', error);
+        throw new Error(`Erro ao criar imposto: ${error.message}`);
+      }
+      
+      const newTax = transformFromDatabase(data);
+      setTaxes(prev => [newTax, ...prev]);
+      
+      // Reload cash balance to reflect the new transaction
+      await loadAllData();
+    } catch (error) {
+      console.error('❌ Erro ao criar imposto:', error);
+      throw error;
+    }
   };
 
   const updateTax = async (tax: Tax) => {
