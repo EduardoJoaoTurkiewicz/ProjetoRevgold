@@ -11,7 +11,10 @@ import type {
   EmployeeCommission,
   CashTransaction,
   PixFee,
-  CashBalance
+  CashBalance,
+  Tax
+  Tax
+  Tax
 } from '../types';
 import { 
   salesService,
@@ -25,7 +28,9 @@ import {
   employeeOvertimesService,
   cashBalancesService,
   pixFeesService,
-  cashTransactionsService
+  cashTransactionsService,
+  taxesService
+  taxesService
 } from '../lib/supabaseServices';
 
 interface AppState {
@@ -50,6 +55,9 @@ interface AppContextType {
   cashTransactions: CashTransaction[];
   pixFees: PixFee[];
   cashBalance: CashBalance | null;
+  taxes: Tax[];
+  taxes: Tax[];
+  taxes: any[];
   
   // State management
   setCurrentView: (view: string) => void;
@@ -58,24 +66,6 @@ interface AppContextType {
   
   // Data operations
   loadAllData: () => Promise<void>;
-  
-  // New operations with proper naming
-  createSale: addSale,
-  createDebt: addDebt,
-  createCheck: addCheck,
-  createBoleto: addBoleto,
-  createEmployee: addEmployee,
-  createEmployeeCommission: addEmployeeCommission,
-  createEmployeePayment: addEmployeePayment,
-  createEmployeeAdvance: addEmployeeAdvance,
-  createEmployeeOvertime: addEmployeeOvertime,
-  createCashTransaction: addCashTransaction,
-  createPixFee: addPixFee,
-  createTax: async () => { throw new Error('Tax service not implemented yet'); },
-  updateTax: async () => { throw new Error('Tax service not implemented yet'); },
-  deleteTax: async () => { throw new Error('Tax service not implemented yet'); },
-  taxes: [] as any[],
-  
   // Sales operations
   addSale: (sale: Omit<Sale, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateSale: (id: string, sale: Partial<Sale>) => Promise<void>;
@@ -160,6 +150,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [cashTransactions, setCashTransactions] = useState<CashTransaction[]>([]);
   const [pixFees, setPixFees] = useState<PixFee[]>([]);
   const [cashBalance, setCashBalance] = useState<CashBalance | null>(null);
+  const [taxes, setTaxes] = useState<any[]>([]);
 
   // State management functions
   const setCurrentView = (view: string) => {
