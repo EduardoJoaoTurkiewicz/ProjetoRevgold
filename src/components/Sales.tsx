@@ -12,9 +12,12 @@ export function Sales() {
   const [viewingObservations, setViewingObservations] = useState<Sale | null>(null);
 
   const handleAddSale = (sale: Omit<Sale, 'id' | 'createdAt'>) => {
+    console.log('🔄 Adicionando nova venda:', sale);
     addSale(sale).then(() => {
+      console.log('✅ Venda adicionada com sucesso');
       setIsFormOpen(false);
     }).catch(error => {
+      console.error('❌ Erro ao adicionar venda:', error);
       alert('Erro ao criar venda: ' + error.message);
     });
   };

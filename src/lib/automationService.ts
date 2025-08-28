@@ -44,10 +44,12 @@ export class AutomationService {
 
   // Criar boletos automaticamente para vendas com pagamento em boleto
   static async createBoletosForSale(sale: Sale): Promise<Boleto[]> {
+    console.log('🔄 Criando boletos para venda:', sale.id);
     const createdBoletos: Boleto[] = [];
     
     for (const [methodIndex, method] of sale.paymentMethods.entries()) {
       if (method.type === 'boleto') {
+        console.log(`📄 Processando método de pagamento ${methodIndex + 1}: boleto`);
         const installments = method.installments || 1;
         
         for (let i = 0; i < installments; i++) {
@@ -67,9 +69,15 @@ export class AutomationService {
           };
           
           try {
-            const boleto = await boletosService.create(boletoData);
-            createdBoletos.push(boleto);
-            console.log(`✅ Boleto ${i + 1}/${installments} criado para venda ${sale.id}`);
+            // Verificar se já existe um boleto idêntico para evitar duplicatas
+            const existingBoleto = await boletosService.findDuplicate(boletoData);
+            if (!existingBoleto) {
+              const boleto = await boletosService.create(boletoData);
+              createdBoletos.push(boleto);
+              console.log(`✅ Boleto ${i + 1}/${installments} criado para venda ${sale.id}`);
+            } else {
+              console.log(`⚠️ Boleto ${i + 1}/${installments} já existe para venda ${sale.id}`);
+            }
           } catch (error) {
             console.error(`❌ Erro ao criar boleto ${i + 1}/${installments}:`, error);
           }

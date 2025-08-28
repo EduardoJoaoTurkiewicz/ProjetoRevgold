@@ -28,9 +28,12 @@ export function Boletos() {
   const totalCompanyPayableBoletos = companyPayableBoletos.reduce((sum, boleto) => sum + boleto.value, 0);
 
   const handleAddBoleto = (boleto: Omit<Boleto, 'id' | 'createdAt'>) => {
+    console.log('🔄 Adicionando novo boleto:', boleto);
     createBoleto(boleto).then(() => {
+      console.log('✅ Boleto adicionado com sucesso');
       setIsFormOpen(false);
     }).catch(error => {
+      console.error('❌ Erro ao adicionar boleto:', error);
       alert('Erro ao criar boleto: ' + error.message);
     });
   };

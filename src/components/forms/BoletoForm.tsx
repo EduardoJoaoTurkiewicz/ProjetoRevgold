@@ -55,10 +55,29 @@ export function BoletoForm({ boleto, onSubmit, onCancel }: BoletoFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validações básicas
+    if (!formData.client.trim()) {
+      alert('Por favor, informe o nome do cliente.');
+      return;
+    }
+    
+    if (formData.value <= 0) {
+      alert('O valor do boleto deve ser maior que zero.');
+      return;
+    }
+    
+    if (formData.installmentNumber > formData.totalInstallments) {
+      alert('O número da parcela não pode ser maior que o total de parcelas.');
+      return;
+    }
+    
     const submitData = {
       ...formData,
       paymentDate: formData.paymentDate || null
     };
+    
+    console.log('📝 Enviando boleto:', submitData);
     onSubmit(submitData as Omit<Boleto, 'id' | 'createdAt'>);
   };
 

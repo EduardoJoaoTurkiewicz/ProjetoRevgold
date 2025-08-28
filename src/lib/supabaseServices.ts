@@ -166,6 +166,24 @@ export const boletosService = {
     return transformDatabaseRow<Boleto>(data);
   },
   
+  async findDuplicate(boletoData: Omit<Boleto, 'id' | 'createdAt' | 'updatedAt'>): Promise<Boleto | null> {
+    if (!isSupabaseConfigured()) return null;
+    
+    const { data, error } = await supabase
+      .from('boletos')
+      .select('*')
+      .eq('client', boletoData.client)
+      .eq('value', boletoData.value)
+      .eq('due_date', boletoData.dueDate)
+      .eq('installment_number', boletoData.installmentNumber || 1)
+      .eq('total_installments', boletoData.totalInstallments || 1)
+      .limit(1)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') throw error;
+    return data ? transformDatabaseRow<Boleto>(data) : null;
+  },
+  
   async getAll(): Promise<Boleto[]> {
     if (!isSupabaseConfigured()) return [];
     

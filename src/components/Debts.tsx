@@ -12,9 +12,12 @@ export function Debts() {
   const [viewingObservations, setViewingObservations] = useState<Debt | null>(null);
 
   const handleAddDebt = (debt: Omit<Debt, 'id' | 'createdAt'>) => {
+    console.log('🔄 Adicionando nova dívida:', debt);
     createDebt(debt).then(() => {
+      console.log('✅ Dívida adicionada com sucesso');
       setIsFormOpen(false);
     }).catch(error => {
+      console.error('❌ Erro ao adicionar dívida:', error);
       alert('Erro ao criar dívida: ' + error.message);
     });
   };

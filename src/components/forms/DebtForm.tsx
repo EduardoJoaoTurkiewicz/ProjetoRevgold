@@ -130,6 +130,18 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validar se há pelo menos um método de pagamento
+    if (formData.paymentMethods.length === 0) {
+      alert('Por favor, adicione pelo menos um método de pagamento.');
+      return;
+    }
+    
+    // Validar se o valor total é maior que zero
+    if (formData.totalValue <= 0) {
+      alert('O valor total da dívida deve ser maior que zero.');
+      return;
+    }
+    
     const amounts = calculateAmounts();
     
     // Only submit fields that exist in the database schema
@@ -145,6 +157,7 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
       ...amounts
     };
     
+    console.log('📝 Enviando dívida:', debtData);
     onSubmit(debtData as Omit<Debt, 'id' | 'createdAt'>);
   };
 

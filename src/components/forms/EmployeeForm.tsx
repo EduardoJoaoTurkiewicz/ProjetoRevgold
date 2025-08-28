@@ -32,6 +32,24 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validações básicas
+    if (!formData.name.trim()) {
+      alert('Por favor, informe o nome do funcionário.');
+      return;
+    }
+    
+    if (!formData.position.trim()) {
+      alert('Por favor, informe o cargo do funcionário.');
+      return;
+    }
+    
+    if (formData.salary <= 0) {
+      alert('O salário deve ser maior que zero.');
+      return;
+    }
+    
+    console.log('📝 Enviando funcionário:', formData);
     onSubmit(formData);
   };
 

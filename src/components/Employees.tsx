@@ -35,9 +35,12 @@ export function Employees() {
   const [viewingPayrollEmployee, setViewingPayrollEmployee] = useState<Employee | null>(null);
 
   const handleAddEmployee = (employee: Omit<Employee, 'id' | 'createdAt'>) => {
+    console.log('🔄 Adicionando novo funcionário:', employee);
     createEmployee(employee).then(() => {
+      console.log('✅ Funcionário adicionado com sucesso');
       setIsFormOpen(false);
     }).catch(error => {
+      console.error('❌ Erro ao adicionar funcionário:', error);
       alert('Erro ao criar funcionário: ' + error.message);
     });
   };

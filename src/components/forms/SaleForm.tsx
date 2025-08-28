@@ -171,6 +171,19 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validar se há pelo menos um método de pagamento com valor
+    const totalPaymentAmount = formData.paymentMethods.reduce((sum, method) => sum + method.amount, 0);
+    if (totalPaymentAmount === 0) {
+      alert('Por favor, informe pelo menos um método de pagamento com valor maior que zero.');
+      return;
+    }
+    
+    // Validar se o total dos métodos de pagamento não excede o valor total da venda
+    if (totalPaymentAmount > formData.totalValue) {
+      alert('O total dos métodos de pagamento não pode ser maior que o valor total da venda.');
+      return;
+    }
+    
     const amounts = calculateAmounts();
     
     // Adicionar descrição do pagamento às observações se fornecida
@@ -184,12 +197,15 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     // Convert empty sellerId to null for UUID field
     const sellerId = formData.sellerId === '' ? null : formData.sellerId;
     
-    onSubmit({
+    const saleToSubmit = {
       ...formData,
       sellerId,
       observations: finalObservations,
       ...amounts
-    } as Omit<Sale, 'id' | 'createdAt'>);
+    };
+    
+    console.log('📝 Enviando venda:', saleToSubmit);
+    onSubmit(saleToSubmit as Omit<Sale, 'id' | 'createdAt'>);
   };
 
   // Auto-update payment method amount when total value changes
