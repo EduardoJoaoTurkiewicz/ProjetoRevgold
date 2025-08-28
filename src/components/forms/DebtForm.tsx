@@ -130,15 +130,25 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validar se há pelo menos um método de pagamento
-    if (formData.paymentMethods.length === 0) {
-      alert('Por favor, adicione pelo menos um método de pagamento.');
+    // Validar dados obrigatórios
+    if (!formData.company.trim()) {
+      alert('Por favor, informe o nome da empresa/fornecedor.');
       return;
     }
     
-    // Validar se o valor total é maior que zero
+    if (!formData.description.trim()) {
+      alert('Por favor, informe a descrição da dívida.');
+      return;
+    }
+    
     if (formData.totalValue <= 0) {
       alert('O valor total da dívida deve ser maior que zero.');
+      return;
+    }
+    
+    // Validar se há pelo menos um método de pagamento
+    if (formData.paymentMethods.length === 0) {
+      alert('Por favor, adicione pelo menos um método de pagamento.');
       return;
     }
     

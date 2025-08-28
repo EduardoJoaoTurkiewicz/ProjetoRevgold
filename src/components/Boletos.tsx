@@ -51,7 +51,8 @@ export function Boletos() {
       setIsFormOpen(false);
     }).catch(error => {
       console.error('❌ Erro ao adicionar boleto:', error);
-      alert('Erro ao criar boleto: ' + error.message);
+      const errorMessage = error.message || 'Erro desconhecido ao criar boleto';
+      alert('Erro ao criar boleto: ' + errorMessage);
     });
   };
 

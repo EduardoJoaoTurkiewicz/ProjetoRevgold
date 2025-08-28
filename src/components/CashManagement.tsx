@@ -329,7 +329,7 @@ export function CashManagement() {
       await initializeCashBalance(initialAmount);
       console.log('✅ Caixa inicializado com sucesso');
       // Reload data to get the updated cash balance
-      window.location.reload();
+      await loadAllData();
     } catch (error) {
       alert('Erro ao inicializar caixa: ' + (error as Error).message);
     } finally {

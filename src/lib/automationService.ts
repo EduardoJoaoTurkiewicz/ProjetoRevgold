@@ -50,20 +50,6 @@ export class AutomationService {
           dueDate.setDate(dueDate.getDate() + (i * installmentInterval));
 
           // Check if check already exists to prevent duplicates
-          const { data: existingCheck } = await supabase
-            .from('checks')
-            .select('id')
-            .eq('sale_id', sale.id)
-            .eq('client', sale.client)
-            .eq('value', installmentValue)
-            .eq('due_date', dueDate.toISOString().split('T')[0])
-            .eq('installment_number', i + 1)
-            .eq('total_installments', installments);
-          
-          if (existingCheck && existingCheck.length > 0) {
-            console.log(`⚠️ Cheque ${i + 1}/${installments} já existe para venda ${sale.id}`);
-            continue;
-          }
 
           const checkData = {
             sale_id: sale.id,
@@ -149,20 +135,6 @@ export class AutomationService {
           dueDate.setDate(dueDate.getDate() + (i * installmentInterval));
 
           // Check if boleto already exists to prevent duplicates
-          const { data: existingBoleto } = await supabase
-            .from('boletos')
-            .select('id')
-            .eq('sale_id', sale.id)
-            .eq('client', sale.client)
-            .eq('value', installmentValue)
-            .eq('due_date', dueDate.toISOString().split('T')[0])
-            .eq('installment_number', i + 1)
-            .eq('total_installments', installments);
-          
-          if (existingBoleto && existingBoleto.length > 0) {
-            console.log(`⚠️ Boleto ${i + 1}/${installments} já existe para venda ${sale.id}`);
-            continue;
-          }
           const boletoData = {
             sale_id: sale.id,
             client: sale.client,

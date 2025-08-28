@@ -58,7 +58,8 @@ export function Employees() {
       setIsFormOpen(false);
     }).catch(error => {
       console.error('❌ Erro ao adicionar funcionário:', error);
-      alert('Erro ao criar funcionário: ' + error.message);
+      const errorMessage = error.message || 'Erro desconhecido ao criar funcionário';
+      alert('Erro ao criar funcionário: ' + errorMessage);
     });
   };
 

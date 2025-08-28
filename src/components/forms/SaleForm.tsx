@@ -184,6 +184,17 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       return;
     }
     
+    // Validar dados obrigatórios
+    if (!formData.client.trim()) {
+      alert('Por favor, informe o nome do cliente.');
+      return;
+    }
+    
+    if (formData.totalValue <= 0) {
+      alert('O valor total da venda deve ser maior que zero.');
+      return;
+    }
+    
     const amounts = calculateAmounts();
     
     // Adicionar descrição do pagamento às observações se fornecida

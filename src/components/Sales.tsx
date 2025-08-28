@@ -46,7 +46,8 @@ export function Sales() {
       setIsFormOpen(false);
     }).catch(error => {
       console.error('❌ Erro ao adicionar venda:', error);
-      alert('Erro ao criar venda: ' + error.message);
+      const errorMessage = error.message || 'Erro desconhecido ao criar venda';
+      alert('Erro ao criar venda: ' + errorMessage);
     });
   };
 

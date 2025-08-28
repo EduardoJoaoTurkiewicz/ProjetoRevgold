@@ -281,23 +281,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Check for duplicates before inserting
-      const { data: existingSales } = await supabase
-        .from('sales')
-        .select('id')
-        .eq('client', saleData.client)
-        .eq('date', saleData.date)
-        .eq('total_value', saleData.totalValue);
-      
-      if (existingSales && existingSales.length > 0) {
-        throw new Error('Uma venda idêntica já existe para este cliente na mesma data com o mesmo valor.');
-      }
-      
       const dbData = transformToDatabase(saleData);
       const { data, error } = await supabase.from('sales').insert([dbData]).select().single();
       
       if (error) {
-        console.error('Erro detalhado do Supabase:', error);
+        if (error.code === '23505') {
+          throw new Error('Uma venda idêntica já existe. Verifique se não há duplicação de dados.');
+        }
         throw new Error(`Erro ao criar venda: ${error.message}`);
       }
       
@@ -367,24 +357,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Check for duplicates before inserting
-      const { data: existingDebts } = await supabase
-        .from('debts')
-        .select('id')
-        .eq('company', debtData.company)
-        .eq('date', debtData.date)
-        .eq('total_value', debtData.totalValue)
-        .eq('description', debtData.description);
-      
-      if (existingDebts && existingDebts.length > 0) {
-        throw new Error('Uma dívida idêntica já existe para esta empresa na mesma data.');
-      }
-      
       const dbData = transformToDatabase(debtData);
       const { data, error } = await supabase.from('debts').insert([dbData]).select().single();
       
       if (error) {
-        console.error('Erro detalhado do Supabase:', error);
+        if (error.code === '23505') {
+          throw new Error('Uma dívida idêntica já existe. Verifique se não há duplicação de dados.');
+        }
         throw new Error(`Erro ao criar dívida: ${error.message}`);
       }
       
@@ -446,25 +425,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Check for duplicates before inserting
-      const { data: existingChecks } = await supabase
-        .from('checks')
-        .select('id')
-        .eq('client', checkData.client)
-        .eq('value', checkData.value)
-        .eq('due_date', checkData.dueDate)
-        .eq('installment_number', checkData.installmentNumber || 1)
-        .eq('total_installments', checkData.totalInstallments || 1);
-      
-      if (existingChecks && existingChecks.length > 0) {
-        throw new Error('Um cheque idêntico já existe para este cliente.');
-      }
-      
       const dbData = transformToDatabase(checkData);
       const { data, error } = await supabase.from('checks').insert([dbData]).select().single();
       
       if (error) {
-        console.error('Erro detalhado do Supabase:', error);
+        if (error.code === '23505') {
+          throw new Error('Um cheque idêntico já existe. Verifique se não há duplicação de dados.');
+        }
         throw new Error(`Erro ao criar cheque: ${error.message}`);
       }
       
@@ -526,25 +493,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Check for duplicates before inserting
-      const { data: existingBoletos } = await supabase
-        .from('boletos')
-        .select('id')
-        .eq('client', boletoData.client)
-        .eq('value', boletoData.value)
-        .eq('due_date', boletoData.dueDate)
-        .eq('installment_number', boletoData.installmentNumber || 1)
-        .eq('total_installments', boletoData.totalInstallments || 1);
-      
-      if (existingBoletos && existingBoletos.length > 0) {
-        throw new Error('Um boleto idêntico já existe para este cliente.');
-      }
-      
       const dbData = transformToDatabase(boletoData);
       const { data, error } = await supabase.from('boletos').insert([dbData]).select().single();
       
       if (error) {
-        console.error('Erro detalhado do Supabase:', error);
+        if (error.code === '23505') {
+          throw new Error('Um boleto idêntico já existe. Verifique se não há duplicação de dados.');
+        }
         throw new Error(`Erro ao criar boleto: ${error.message}`);
       }
       
@@ -607,23 +562,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Check for duplicates before inserting
-      const { data: existingEmployees } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('name', employeeData.name)
-        .eq('position', employeeData.position)
-        .eq('salary', employeeData.salary);
-      
-      if (existingEmployees && existingEmployees.length > 0) {
-        throw new Error('Um funcionário idêntico já existe com o mesmo nome, cargo e salário.');
-      }
-      
       const dbData = transformToDatabase(employeeData);
       const { data, error } = await supabase.from('employees').insert([dbData]).select().single();
       
       if (error) {
-        console.error('Erro detalhado do Supabase:', error);
+        if (error.code === '23505') {
+          throw new Error('Um funcionário idêntico já existe. Verifique se não há duplicação de dados.');
+        }
         throw new Error(`Erro ao criar funcionário: ${error.message}`);
       }
       

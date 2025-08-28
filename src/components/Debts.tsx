@@ -35,7 +35,8 @@ export function Debts() {
       setIsFormOpen(false);
     }).catch(error => {
       console.error('❌ Erro ao adicionar dívida:', error);
-      alert('Erro ao criar dívida: ' + error.message);
+      const errorMessage = error.message || 'Erro desconhecido ao criar dívida';
+      alert('Erro ao criar dívida: ' + errorMessage);
     });
   };
 
