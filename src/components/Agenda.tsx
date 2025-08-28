@@ -101,6 +101,7 @@ export function Agenda() {
          });
          
          if (!handledByPaymentMethod && debt.date === dateStr) {
+          events.push({
             id: `debt-${debt.id}`,
             type: 'debt',
             title: debt.company,
@@ -177,6 +178,7 @@ export function Agenda() {
               });
             }
           }
+        }
         });
       }
     });
