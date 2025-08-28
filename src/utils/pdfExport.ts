@@ -152,7 +152,7 @@ export async function exportReportToPDF(data: ReportData, startDate: string, end
     // Resultado Líquido com destaque
     checkPageBreak(30);
     
-    netResult = data.totals.received - data.totals.paid;
+    let netResult = data.totals.received - data.totals.paid;
     const resultColor = netResult >= 0 ? [22, 163, 74] : [220, 38, 38];
     
     pdf.setFillColor(...resultColor);
