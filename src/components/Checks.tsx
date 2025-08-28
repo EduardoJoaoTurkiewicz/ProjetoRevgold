@@ -220,10 +220,18 @@ export function Checks() {
           )}
       </div>
 
-      {/* Sales with Checks */}
-      <div className="card modern-shadow-xl">
+      <div className="space-y-8">
+        {/* Cheques Recebíveis */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-green-600">
+              <Calendar className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Cheques a Receber</h3>
+          </div>
+          
         <div className="mb-6">
-          <h2 className="text-xl font-bold text-slate-900 mb-2">Vendas com Cheques</h2>
+          <h4 className="text-lg font-bold text-slate-900 mb-2">Vendas com Cheques</h4>
           <p className="text-slate-600">Vendas que possuem cheques gerados</p>
         </div>
         
@@ -386,176 +394,252 @@ export function Checks() {
             </p>
           </div>
         )}
-      </div>
+        </div>
 
-      {/* Debts with Checks */}
-      {debtsWithChecks.length > 0 && (
-        <div className="card modern-shadow-xl">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-slate-900 mb-2">Dívidas com Cheques</h2>
-            <p className="text-slate-600">Dívidas que utilizaram cheques para pagamento</p>
-          </div>
-          
-          <div className="space-y-4">
-            {debtsWithChecks.map(debt => (
-              <div key={debt.id} className="border border-slate-200 rounded-2xl overflow-hidden">
-                <div 
-                  className="p-6 bg-gradient-to-r from-orange-50 to-transparent hover:from-orange-100 cursor-pointer transition-modern"
-                  onClick={() => toggleDebtExpansion(debt.id)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <button className="p-2 rounded-lg bg-orange-600 text-white modern-shadow">
-                        {expandedDebts.has(debt.id) ? 
-                          <ChevronDown className="w-5 h-5" /> : 
-                          <ChevronRight className="w-5 h-5" />
-                        }
-                      </button>
-                      <div>
-                        <h3 className="text-lg font-bold text-slate-900">{debt.company}</h3>
-                        <p className="text-sm text-slate-600">
-                          Data: {new Date(debt.date).toLocaleDateString('pt-BR')} • 
-                          {debt.checks.length} cheque(s) utilizados
+        {/* Debts with Checks */}
+        {debtsWithChecks.length > 0 && (
+          <div className="card modern-shadow-xl">
+            <div className="mb-6">
+              <h4 className="text-lg font-bold text-slate-900 mb-2">Dívidas com Cheques</h4>
+              <p className="text-slate-600">Dívidas que utilizaram cheques para pagamento</p>
+            </div>
+            
+            <div className="space-y-4">
+              {debtsWithChecks.map(debt => (
+                <div key={debt.id} className="border border-slate-200 rounded-2xl overflow-hidden">
+                  <div 
+                    className="p-6 bg-gradient-to-r from-orange-50 to-transparent hover:from-orange-100 cursor-pointer transition-modern"
+                    onClick={() => toggleDebtExpansion(debt.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <button className="p-2 rounded-lg bg-orange-600 text-white modern-shadow">
+                          {expandedDebts.has(debt.id) ? 
+                            <ChevronDown className="w-5 h-5" /> : 
+                            <ChevronRight className="w-5 h-5" />
+                          }
+                        </button>
+                        <div>
+                          <h3 className="text-lg font-bold text-slate-900">{debt.company}</h3>
+                          <p className="text-sm text-slate-600">
+                            Data: {new Date(debt.date).toLocaleDateString('pt-BR')} • 
+                            {debt.checks.length} cheque(s) utilizados
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-orange-600">
+                          R$ {debt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                          debt.isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {debt.isPaid ? 'Pago' : 'Pendente'}
+                        </span>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xl font-bold text-orange-600">
-                        R$ {debt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        debt.isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                      }`}>
-                        {debt.isPaid ? 'Pago' : 'Pendente'}
-                      </span>
-                    </div>
                   </div>
-                </div>
 
-                {expandedDebts.has(debt.id) && (
-                  <div className="border-t border-slate-200 bg-white">
-                    <div className="p-6">
-                      <h4 className="font-semibold text-slate-900 mb-4">Cheques Utilizados nesta Dívida</h4>
-                      <div className="space-y-3">
-                        {debt.checks.map(check => (
-                          <div key={check.id} className="p-4 bg-blue-50 rounded-xl border border-blue-200">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <span className="font-medium text-slate-900">{check.client}</span>
-                                <div className="text-sm text-slate-600 mt-1">
-                                  Status: {getStatusLabel(check.status)}
-                                  {check.status === 'compensado' && ' ✓'}
-                                </div>
-                                {check.installmentNumber && check.totalInstallments && (
-                                  <div className="text-sm text-slate-600">
-                                    Parcela {check.installmentNumber}/{check.totalInstallments}
+                  {expandedDebts.has(debt.id) && (
+                    <div className="border-t border-slate-200 bg-white">
+                      <div className="p-6">
+                        <h4 className="font-semibold text-slate-900 mb-4">Cheques Utilizados nesta Dívida</h4>
+                        <div className="space-y-3">
+                          {debt.checks.map(check => (
+                            <div key={check.id} className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <span className="font-medium text-slate-900">{check.client}</span>
+                                  <div className="text-sm text-slate-600 mt-1">
+                                    Status: {getStatusLabel(check.status)}
+                                    {check.status === 'compensado' && ' ✓'}
                                   </div>
-                                )}
-                                <div className="text-sm text-slate-600">
-                                  Usado para: {check.usedFor || 'Pagamento de dívida'}
+                                  {check.installmentNumber && check.totalInstallments && (
+                                    <div className="text-sm text-slate-600">
+                                      Parcela {check.installmentNumber}/{check.totalInstallments}
+                                    </div>
+                                  )}
+                                  <div className="text-sm text-slate-600">
+                                    Usado para: {check.usedFor || 'Pagamento de dívida'}
+                                  </div>
                                 </div>
-                              </div>
-                              <div className="text-right">
-                                <span className="font-medium text-blue-600">
-                                  R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </span>
-                                <div className="text-sm text-slate-600">
-                                  Vencimento: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
+                                <div className="text-right">
+                                  <span className="font-medium text-blue-600">
+                                    R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  </span>
+                                  <div className="text-sm text-slate-600">
+                                    Vencimento: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Cheques próprios que a empresa tem para pagar */}
-      {companyPayableChecks.length > 0 && (
+        {/* Cheques que a empresa tem para pagar */}
         <div className="card modern-shadow-xl">
           <div className="flex items-center gap-4 mb-6">
             <div className="p-3 rounded-xl bg-orange-600">
               <CreditCard className="w-6 h-6 text-white" />
             </div>
-            <h3 className="text-xl font-bold text-orange-900">Cheques Próprios para Pagar</h3>
+            <h3 className="text-xl font-bold text-orange-900">Cheques que a Empresa Deve Pagar</h3>
             <span className="text-orange-600 font-semibold">
               Total: R$ {totalCompanyPayableChecks.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
           
-          <div className="space-y-4">
-            {companyPayableChecks.map(check => (
-              <div key={check.id} className="p-6 bg-orange-50 rounded-xl border border-orange-200">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h4 className="font-bold text-orange-900 text-lg">{check.companyName || check.client}</h4>
-                    <p className="text-orange-700">{check.usedFor || (check.isCompanyPayable ? 'Cheque da empresa' : 'Cheque próprio')}</p>
-                    <p className="text-sm text-orange-600">
-                      Vencimento: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
-                    </p>
-                    {check.dueDate < today && (
-                      <p className="text-sm text-red-600 font-bold">
-                        Vencido há {Math.ceil((new Date().getTime() - new Date(check.dueDate).getTime()) / (1000 * 60 * 60 * 24))} dias
-                      </p>
-                    )}
-                    {check.installmentNumber && check.totalInstallments && (
-                      <p className="text-sm text-orange-600">
-                        Parcela: {check.installmentNumber}/{check.totalInstallments}
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-black text-orange-600">
-                      R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                    <button
-                      onClick={() => {
-                        if (window.confirm('Marcar este cheque como pago?')) {
-                          const updatedCheck = { 
-                            ...check, 
-                            status: 'compensado' as const,
-                            paymentDate: new Date().toISOString().split('T')[0]
-                          };
-                          updateCheck(updatedCheck).catch(error => {
-                            alert('Erro ao marcar como pago: ' + error.message);
-                          });
-                        }
-                      }}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-bold"
-                    >
-                      Marcar como Pago
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p><strong>Status:</strong> {getStatusLabel(check.status)}</p>
-                    <p><strong>Tipo:</strong> {check.isCompanyPayable ? 'Cheque da Empresa' : 'Cheque Próprio'}</p>
-                    {check.observations && (
-                      <p><strong>Observações:</strong> {check.observations}</p>
-                    )}
-                  </div>
-                  <div>
-                    {check.discountDate && (
-                      <p><strong>Data de Desconto:</strong> {new Date(check.discountDate).toLocaleDateString('pt-BR')}</p>
-                    )}
-                    {check.paymentDate && (
-                      <p><strong>Data do Pagamento:</strong> {new Date(check.paymentDate).toLocaleDateString('pt-BR')}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          {companyPayableChecks.length > 0 ? (
+            <div className="overflow-x-auto modern-scrollbar">
+              <table className="min-w-full table-auto">
+                <thead>
+                  <tr className="border-b border-slate-200">
+                    <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-orange-50 to-red-50">Empresa/Cliente</th>
+                    <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-orange-50 to-red-50">Valor</th>
+                    <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-orange-50 to-red-50">Vencimento</th>
+                    <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-orange-50 to-red-50">Status</th>
+                    <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-orange-50 to-red-50">Tipo</th>
+                    <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-orange-50 to-red-50">Parcela</th>
+                    <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-orange-50 to-red-50">Situação</th>
+                    <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-orange-50 to-red-50">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {companyPayableChecks.map(check => {
+                    const daysOverdue = check.dueDate < today ? 
+                      Math.ceil((new Date().getTime() - new Date(check.dueDate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+                    
+                    return (
+                      <tr key={check.id} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-orange-50/50 hover:to-red-50/50 transition-all duration-300">
+                        <td className="py-4 px-6 text-sm font-bold text-slate-900">
+                          {check.companyName || check.client}
+                          {check.usedFor && (
+                            <div className="text-xs text-orange-600 mt-1">{check.usedFor}</div>
+                          )}
+                        </td>
+                        <td className="py-4 px-6 text-sm font-black text-orange-600">
+                          R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-4 px-6 text-sm">
+                          <span className={
+                            check.dueDate === today ? 'text-blue-600 font-medium' :
+                            check.dueDate < today ? 'text-red-600 font-medium' :
+                            'text-gray-900'
+                          }>
+                            {new Date(check.dueDate).toLocaleDateString('pt-BR')}
+                          </span>
+                          {daysOverdue > 0 && (
+                            <div className="text-xs text-red-500 font-bold">
+                              {daysOverdue} dias vencido
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-4 px-6 text-sm">
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(check.status)}`}>
+                            {getStatusLabel(check.status)}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-sm">
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                            check.isOwnCheck ? 'bg-purple-100 text-purple-700' : 
+                            check.isCompanyPayable ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-700'
+                          }`}>
+                            {check.isOwnCheck ? 'Próprio' : 
+                             check.isCompanyPayable ? 'Empresa' : 'Terceiros'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-sm">
+                          {check.installmentNumber && check.totalInstallments ? (
+                            <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-bold">
+                              {check.installmentNumber}/{check.totalInstallments}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs">Único</span>
+                          )}
+                        </td>
+                        <td className="py-4 px-6 text-sm">
+                          {check.status === 'compensado' ? (
+                            <div className="space-y-1">
+                              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold">
+                                ✓ Pago
+                              </span>
+                              {check.paymentDate && (
+                                <div className="text-xs text-green-600">
+                                  {new Date(check.paymentDate).toLocaleDateString('pt-BR')}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                const confirmMessage = `Marcar este cheque como pago?\n\nValor: R$ ${check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\nEste valor será descontado do caixa da empresa.`;
+                                
+                                if (window.confirm(confirmMessage)) {
+                                  const updatedCheck = { 
+                                    ...check, 
+                                    status: 'compensado' as const,
+                                    paymentDate: new Date().toISOString().split('T')[0]
+                                  };
+                                  updateCheck(updatedCheck).catch(error => {
+                                    alert('Erro ao marcar como pago: ' + error.message);
+                                  });
+                                }
+                              }}
+                              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-bold text-sm"
+                            >
+                              Marcar como Pago
+                            </button>
+                          )}
+                        </td>
+                        <td className="py-4 px-6 text-sm">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setViewingCheck(check)}
+                              className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-modern"
+                              title="Visualizar"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setEditingCheck(check)}
+                              className="text-emerald-600 hover:text-emerald-800 p-2 rounded-lg hover:bg-emerald-50 transition-modern"
+                              title="Editar"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCheck(check.id)}
+                              className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-modern"
+                              title="Excluir"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <CreditCard className="w-16 h-16 mx-auto mb-4 text-orange-300" />
+              <p className="text-orange-600 font-medium">Nenhum cheque da empresa para pagar</p>
+              <p className="text-orange-500 text-sm mt-2">
+                Cheques que a empresa deve pagar aparecerão aqui
+              </p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Check Form Modal */}
       {(isFormOpen || editingCheck) && (
