@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Info } from 'lucide-react';
 import { Sale, PaymentMethod } from '../../types';
 import { ThirdPartyCheckDetails } from '../../types';
-import { useApp } from '../../context/AppContext';
+import { useAppContext } from '../../context/AppContext';
 
 interface SaleFormProps {
   sale?: Sale | null;
@@ -23,7 +23,7 @@ const PAYMENT_TYPES = [
 const INSTALLMENT_TYPES = ['cartao_credito', 'cheque', 'boleto'];
 
 export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
-  const { employees } = useApp();
+  const { employees } = useAppContext();
   const [formData, setFormData] = useState({
     date: sale?.date || new Date().toISOString().split('T')[0],
     deliveryDate: sale?.deliveryDate || '',
