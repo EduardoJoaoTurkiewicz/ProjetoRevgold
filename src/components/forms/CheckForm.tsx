@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { Check } from '../../types';
-import { useApp } from '../../context/AppContext';
+import { useAppContext } from '../../context/AppContext';
 import { ImageUpload } from '../ImageUpload';
 
 interface CheckFormProps {
@@ -11,7 +11,7 @@ interface CheckFormProps {
 }
 
 export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
-  const { sales, checks } = useApp();
+  const { sales, checks } = useAppContext();
   const [formData, setFormData] = useState({
     saleId: check?.saleId || '',
     debtId: check?.debtId || '',

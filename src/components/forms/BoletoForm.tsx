@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { Boleto } from '../../types';
-import { useApp } from '../../context/AppContext';
+import { useAppContext } from '../../context/AppContext';
 
 interface BoletoFormProps {
   boleto?: Boleto | null;
@@ -10,7 +10,7 @@ interface BoletoFormProps {
 }
 
 export function BoletoForm({ boleto, onSubmit, onCancel }: BoletoFormProps) {
-  const { sales } = useApp();
+  const { sales } = useAppContext();
   const [formData, setFormData] = useState({
     saleId: boleto?.saleId || '',
     client: boleto?.client || '',

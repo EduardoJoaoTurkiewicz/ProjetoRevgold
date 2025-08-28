@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { Debt, PaymentMethod } from '../../types';
-import { useApp } from '../../context/AppContext';
+import { useAppContext } from '../../context/AppContext';
 
 interface DebtFormProps {
   debt?: Debt | null;
@@ -22,7 +22,7 @@ const PAYMENT_TYPES = [
 const INSTALLMENT_TYPES = ['cartao_credito', 'cheque', 'boleto'];
 
 export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
-  const { checks } = useApp();
+  const { checks } = useAppContext();
   const [formData, setFormData] = useState({
     date: debt?.date || new Date().toISOString().split('T')[0],
     description: debt?.description || '',
