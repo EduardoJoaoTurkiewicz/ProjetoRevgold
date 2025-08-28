@@ -653,6 +653,9 @@ export const taxesService = {
     
     if (error) throw error;
     return (data || []).map(transformDatabaseRow<Tax>);
+    
+    if (error) throw error;
+    return (data || []).map(transformDatabaseRow<Tax>);
   },
     
     if (error) throw error;
@@ -751,4 +754,3 @@ export const taxesService = {
     const { error } = await supabase.from('taxes').delete().eq('id', id);
     if (error) throw error;
   }
-}
