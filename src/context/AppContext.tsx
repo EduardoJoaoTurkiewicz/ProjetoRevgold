@@ -59,6 +59,23 @@ interface AppContextType {
   // Data operations
   loadAllData: () => Promise<void>;
   
+  // New operations with proper naming
+  createSale: addSale,
+  createDebt: addDebt,
+  createCheck: addCheck,
+  createBoleto: addBoleto,
+  createEmployee: addEmployee,
+  createEmployeeCommission: addEmployeeCommission,
+  createEmployeePayment: addEmployeePayment,
+  createEmployeeAdvance: addEmployeeAdvance,
+  createEmployeeOvertime: addEmployeeOvertime,
+  createCashTransaction: addCashTransaction,
+  createPixFee: addPixFee,
+  createTax: async () => { throw new Error('Tax service not implemented yet'); },
+  updateTax: async () => { throw new Error('Tax service not implemented yet'); },
+  deleteTax: async () => { throw new Error('Tax service not implemented yet'); },
+  taxes: [] as any[],
+  
   // Sales operations
   addSale: (sale: Omit<Sale, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateSale: (id: string, sale: Partial<Sale>) => Promise<void>;

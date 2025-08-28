@@ -12,6 +12,7 @@ import { CashManagement } from './components/CashManagement';
 import { Agenda } from './components/Agenda';
 import { Employees } from './components/Employees';
 import { Taxes } from './components/Taxes';
+import { DatabaseCleanup } from './components/DatabaseCleanup';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -49,6 +50,8 @@ function renderPage(currentPage: string) {
       return <Reports />;
     case 'agenda':
       return <Agenda />;
+    case 'cleanup':
+      return <DatabaseCleanup />;
     default:
       return <Dashboard />;
   }

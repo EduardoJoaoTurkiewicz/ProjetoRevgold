@@ -10,7 +10,8 @@ import {
   DollarSign,
   Clock,
   TrendingUp,
-  Zap
+  Zap,
+  Database
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -32,6 +33,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
     { id: 'taxes', label: 'Impostos', icon: FileText, color: 'from-orange-600 to-red-700' },
     { id: 'reports', label: 'Relatórios', icon: TrendingUp, color: 'from-indigo-600 to-purple-700' },
     { id: 'agenda', label: 'Agenda', icon: Calendar, color: 'from-indigo-600 to-purple-700' },
+    { id: 'cleanup', label: 'Limpeza BD', icon: Database, color: 'from-red-600 to-orange-700' },
   ];
 
   return (
