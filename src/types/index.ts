@@ -102,6 +102,10 @@ export interface Check {
   discountDate?: string;
   createdAt: string;
   updatedAt?: string;
+  // Campos para cheques da empresa
+  isCompanyPayable?: boolean;
+  companyName?: string;
+  paymentDate?: string;
 }
 
 // Boleto interface
@@ -124,6 +128,11 @@ export interface Boleto {
   notaryCosts?: number;
   finalAmount?: number;
   overdueNotes?: string;
+  // Campos para boletos da empresa
+  isCompanyPayable?: boolean;
+  companyName?: string;
+  paymentDate?: string;
+  interestPaid?: number;
 }
 
 // Employee interface

@@ -21,15 +21,11 @@ export function Boletos() {
   const notDueYet = boletos.filter(boleto => boleto.dueDate > today && boleto.status === 'pendente');
   const totalNotDueYet = notDueYet.reduce((sum, boleto) => sum + boleto.value, 0);
   
-  // Boletos que a empresa tem para pagar (simulando - você pode ajustar conforme sua lógica de negócio)
-  const companyPayableBoletos = debts.filter(debt => 
-    debt.paymentMethods.some(method => method.type === 'boleto') && !debt.isPaid
+  // Boletos que a empresa tem para pagar
+  const companyPayableBoletos = boletos.filter(boleto => 
+    boleto.isCompanyPayable === true && boleto.status !== 'compensado'
   );
-  const totalCompanyPayableBoletos = companyPayableBoletos.reduce((sum, debt) => {
-    return sum + debt.paymentMethods
-      .filter(method => method.type === 'boleto')
-      .reduce((methodSum, method) => methodSum + method.amount, 0);
-  }, 0);
+  const totalCompanyPayableBoletos = companyPayableBoletos.reduce((sum, boleto) => sum + boleto.value, 0);
 
   const handleAddBoleto = (boleto: Omit<Boleto, 'id' | 'createdAt'>) => {
     createBoleto(boleto).then(() => {
@@ -482,62 +478,84 @@ export function Boletos() {
           </div>
           
           <div className="space-y-4">
-            {companyPayableBoletos.map(debt => (
-              <div key={debt.id} className="p-6 bg-orange-50 rounded-xl border border-orange-200">
+            {companyPayableBoletos.map(boleto => (
+              <div key={boleto.id} className="p-6 bg-orange-50 rounded-xl border border-orange-200">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h4 className="font-bold text-orange-900 text-lg">{debt.company}</h4>
-                    <p className="text-orange-700">{debt.description}</p>
+                    <h4 className="font-bold text-orange-900 text-lg">{boleto.companyName || boleto.client}</h4>
+                    <p className="text-orange-700">{boleto.observations || 'Boleto da empresa'}</p>
                     <p className="text-sm text-orange-600">
-                      Data: {new Date(debt.date).toLocaleDateString('pt-BR')}
+                      Vencimento: {new Date(boleto.dueDate).toLocaleDateString('pt-BR')}
                     </p>
+                    {boleto.dueDate < today && (
+                      <p className="text-sm text-red-600 font-bold">
+                        Vencido há {Math.ceil((new Date().getTime() - new Date(boleto.dueDate).getTime()) / (1000 * 60 * 60 * 24))} dias
+                      </p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-black text-orange-600">
-                      R$ {debt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
-                    <button
-                      onClick={() => {
-                        if (window.confirm('Marcar esta dívida como paga?')) {
-                          const updatedDebt = { ...debt, isPaid: true, paidAmount: debt.totalValue, pendingAmount: 0 };
-                          updateDebt(updatedDebt).then(() => {
-                            // Criar transação de caixa para reduzir o saldo
-                            createCashTransaction({
-                              date: debt.date,
-                              type: 'saida',
-                              amount: debt.totalValue,
-                              description: `Pagamento de boleto - ${debt.company}`,
-                              category: 'divida',
-                              relatedId: debt.id,
-                              paymentMethod: 'boleto'
-                            }).catch(error => {
-                              console.error('Erro ao criar transação de caixa:', error);
+                    <div className="space-y-2">
+                      {boleto.dueDate < today && (
+                        <div>
+                          <label className="block text-xs text-orange-700 font-semibold mb-1">
+                            Juros Pagos (opcional)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0,00"
+                            className="w-full px-2 py-1 text-sm border border-orange-300 rounded"
+                            onChange={(e) => {
+                              const interestValue = parseFloat(e.target.value) || 0;
+                              boleto.interestPaid = interestValue;
+                            }}
+                          />
+                        </div>
+                      )}
+                      <button
+                        onClick={() => {
+                          const interestPaid = boleto.interestPaid || 0;
+                          const confirmMessage = interestPaid > 0 
+                            ? `Marcar este boleto como pago com R$ ${interestPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} de juros?`
+                            : 'Marcar este boleto como pago?';
+                            
+                          if (window.confirm(confirmMessage)) {
+                            const updatedBoleto = { 
+                              ...boleto, 
+                              status: 'compensado' as const,
+                              paymentDate: new Date().toISOString().split('T')[0],
+                              interestPaid: interestPaid
+                            };
+                            updateBoleto(updatedBoleto).catch(error => {
+                              alert('Erro ao marcar como pago: ' + error.message);
                             });
-                          }).catch(error => {
-                            alert('Erro ao marcar como pago: ' + error.message);
-                          });
-                        }
-                      }}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-bold"
-                    >
-                      Marcar como Pago
-                    </button>
+                          }
+                        }}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-bold"
+                      >
+                        Marcar como Pago
+                      </button>
+                    </div>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p><strong>Valor Total:</strong> R$ {debt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                    <p><strong>Valor Pago:</strong> R$ {debt.paidAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                    <p><strong>Valor Pendente:</strong> R$ {debt.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    <p><strong>Valor:</strong> R$ {boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    <p><strong>Status:</strong> {getStatusLabel(boleto.status)}</p>
+                    <p><strong>Parcela:</strong> {boleto.installmentNumber}/{boleto.totalInstallments}</p>
                   </div>
                   <div>
-                    <p><strong>Métodos de Pagamento:</strong></p>
-                    {(debt.paymentMethods || []).map((method, index) => (
-                      <p key={index} className="text-orange-600 font-medium">
-                        • {method.type.replace('_', ' ')}: R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                    ))}
+                    {boleto.interestPaid && boleto.interestPaid > 0 && (
+                      <p><strong>Juros Pagos:</strong> R$ {boleto.interestPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    )}
+                    {boleto.paymentDate && (
+                      <p><strong>Data do Pagamento:</strong> {new Date(boleto.paymentDate).toLocaleDateString('pt-BR')}</p>
+                    )}
                   </div>
                 </div>
               </div>

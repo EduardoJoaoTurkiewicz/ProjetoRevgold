@@ -27,7 +27,11 @@ export function BoletoForm({ boleto, onSubmit, onCancel }: BoletoFormProps) {
     notaryCosts: boleto?.notaryCosts || 0,
     finalAmount: boleto?.finalAmount || 0,
     overdueNotes: boleto?.overdueNotes || '',
-    overdueAction: boleto?.overdueAction || ''
+    overdueAction: boleto?.overdueAction || '',
+    isCompanyPayable: boleto?.isCompanyPayable || false,
+    companyName: boleto?.companyName || '',
+    paymentDate: boleto?.paymentDate || '',
+    interestPaid: boleto?.interestPaid || 0
   });
 
   const handleSaleSelection = (saleId: string) => {
@@ -167,6 +171,35 @@ export function BoletoForm({ boleto, onSubmit, onCancel }: BoletoFormProps) {
                   required
                 />
               </div>
+
+              <div className="form-group md:col-span-2">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.isCompanyPayable}
+                    onChange={(e) => setFormData(prev => ({ ...prev, isCompanyPayable: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="form-label mb-0">Boleto que a empresa deve pagar</span>
+                </label>
+                <p className="text-xs text-slate-500 mt-1">
+                  Marque se este é um boleto que a empresa deve pagar para terceiros
+                </p>
+              </div>
+
+              {formData.isCompanyPayable && (
+                <div className="form-group">
+                  <label className="form-label">Nome da Empresa/Fornecedor *</label>
+                  <input
+                    type="text"
+                    value={formData.companyName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
+                    className="input-field"
+                    placeholder="Nome da empresa que deve receber o pagamento"
+                    required={formData.isCompanyPayable}
+                  />
+                </div>
+              )}
 
               <div className="form-group md:col-span-2">
                 <label className="form-label">Observações</label>

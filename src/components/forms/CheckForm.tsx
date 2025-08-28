@@ -28,7 +28,10 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
     backImage: check?.backImage || '',
     selectedAvailableChecks: check?.selectedAvailableChecks || [],
     usedInDebt: check?.usedInDebt || '',
-    discountDate: check?.discountDate || ''
+    discountDate: check?.discountDate || '',
+    isCompanyPayable: check?.isCompanyPayable || false,
+    companyName: check?.companyName || '',
+    paymentDate: check?.paymentDate || ''
   });
 
   // Get available checks that are not already used
@@ -197,7 +200,30 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
                   />
                   <span className="form-label mb-0">Cheque Próprio</span>
                 </label>
+                <label className="flex items-center gap-2 mt-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.isCompanyPayable}
+                    onChange={(e) => setFormData(prev => ({ ...prev, isCompanyPayable: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="form-label mb-0">Cheque que a empresa deve pagar</span>
+                </label>
               </div>
+
+              {formData.isCompanyPayable && (
+                <div className="form-group">
+                  <label className="form-label">Nome da Empresa/Fornecedor *</label>
+                  <input
+                    type="text"
+                    value={formData.companyName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
+                    className="input-field"
+                    placeholder="Nome da empresa que deve receber o pagamento"
+                    required={formData.isCompanyPayable}
+                  />
+                </div>
+              )}
 
               <div className="form-group md:col-span-2">
                 <label className="form-label">Utilizado em</label>

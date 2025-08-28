@@ -24,7 +24,7 @@ export function Checks() {
   
   // Cheques próprios que a empresa tem para pagar
   const companyPayableChecks = checks.filter(check => 
-    check.isOwnCheck && check.status === 'pendente'
+    (check.isOwnCheck || check.isCompanyPayable) && check.status === 'pendente'
   );
   const totalCompanyPayableChecks = companyPayableChecks.reduce((sum, check) => sum + check.value, 0);
 
@@ -504,11 +504,16 @@ export function Checks() {
               <div key={check.id} className="p-6 bg-orange-50 rounded-xl border border-orange-200">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h4 className="font-bold text-orange-900 text-lg">{check.client}</h4>
-                    <p className="text-orange-700">{check.usedFor || 'Cheque próprio'}</p>
+                    <h4 className="font-bold text-orange-900 text-lg">{check.companyName || check.client}</h4>
+                    <p className="text-orange-700">{check.usedFor || (check.isCompanyPayable ? 'Cheque da empresa' : 'Cheque próprio')}</p>
                     <p className="text-sm text-orange-600">
                       Vencimento: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
                     </p>
+                    {check.dueDate < today && (
+                      <p className="text-sm text-red-600 font-bold">
+                        Vencido há {Math.ceil((new Date().getTime() - new Date(check.dueDate).getTime()) / (1000 * 60 * 60 * 24))} dias
+                      </p>
+                    )}
                     {check.installmentNumber && check.totalInstallments && (
                       <p className="text-sm text-orange-600">
                         Parcela: {check.installmentNumber}/{check.totalInstallments}
@@ -522,21 +527,12 @@ export function Checks() {
                     <button
                       onClick={() => {
                         if (window.confirm('Marcar este cheque como pago?')) {
-                          const updatedCheck = { ...check, status: 'compensado' as const };
-                          updateCheck(updatedCheck).then(() => {
-                            // Criar transação de caixa para reduzir o saldo
-                            createCashTransaction({
-                              date: check.dueDate,
-                              type: 'saida',
-                              amount: check.value,
-                              description: `Pagamento de cheque próprio - ${check.client}`,
-                              category: 'cheque',
-                              relatedId: check.id,
-                              paymentMethod: 'cheque'
-                            }).catch(error => {
-                              console.error('Erro ao criar transação de caixa:', error);
-                            });
-                          }).catch(error => {
+                          const updatedCheck = { 
+                            ...check, 
+                            status: 'compensado' as const,
+                            paymentDate: new Date().toISOString().split('T')[0]
+                          };
+                          updateCheck(updatedCheck).catch(error => {
                             alert('Erro ao marcar como pago: ' + error.message);
                           });
                         }
@@ -551,7 +547,7 @@ export function Checks() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
                     <p><strong>Status:</strong> {getStatusLabel(check.status)}</p>
-                    <p><strong>Tipo:</strong> Cheque Próprio</p>
+                    <p><strong>Tipo:</strong> {check.isCompanyPayable ? 'Cheque da Empresa' : 'Cheque Próprio'}</p>
                     {check.observations && (
                       <p><strong>Observações:</strong> {check.observations}</p>
                     )}
@@ -560,8 +556,8 @@ export function Checks() {
                     {check.discountDate && (
                       <p><strong>Data de Desconto:</strong> {new Date(check.discountDate).toLocaleDateString('pt-BR')}</p>
                     )}
-                    {check.usedInDebt && (
-                      <p><strong>Usado em Dívida:</strong> Sim</p>
+                    {check.paymentDate && (
+                      <p><strong>Data do Pagamento:</strong> {new Date(check.paymentDate).toLocaleDateString('pt-BR')}</p>
                     )}
                   </div>
                 </div>
