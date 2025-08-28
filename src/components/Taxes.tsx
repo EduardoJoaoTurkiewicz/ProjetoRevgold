@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Eye, FileText, DollarSign, Calendar, AlertCircle, X, Building2, Receipt } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useAppContext } from '../context/AppContext';
 import { Tax } from '../types';
 import { TaxForm } from './forms/TaxForm';
 
 export function Taxes() {
-  const { taxes, isLoading, error, createTax, updateTax, deleteTax } = useApp();
+  const { taxes, isLoading, error, createTax, updateTax, deleteTax } = useAppContext();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTax, setEditingTax] = useState<Tax | null>(null);
   const [viewingTax, setViewingTax] = useState<Tax | null>(null);

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Eye, Upload, Calendar, Trash2, ChevronDown, ChevronRight, FileText, AlertTriangle, CreditCard, X } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useAppContext } from '../context/AppContext';
 import { Check } from '../types';
 import { CheckForm } from './forms/CheckForm';
 import { getCheckImageUrl } from '../lib/supabaseServices';
 
 export function Checks() {
-  const { checks, sales, debts, createCheck, updateCheck, deleteCheck, createCashTransaction } = useApp();
+  const { checks, sales, debts, createCheck, updateCheck, deleteCheck, createCashTransaction } = useAppContext();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCheck, setEditingCheck] = useState<Check | null>(null);
   const [viewingCheck, setViewingCheck] = useState<Check | null>(null);

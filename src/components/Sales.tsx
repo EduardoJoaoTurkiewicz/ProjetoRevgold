@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Eye, DollarSign, X, FileText, AlertCircle } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useAppContext } from '../context/AppContext';
 import { Sale, PaymentMethod, EmployeeCommission } from '../types';
 import { SaleForm } from './forms/SaleForm';
 
 export function Sales() {
-  const { loading, error, sales, employees, employeeCommissions, addSale, updateSale, deleteSale } = useApp();
+  const { loading, error, sales, employees, employeeCommissions, addSale, updateSale, deleteSale } = useAppContext();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [viewingSale, setViewingSale] = useState<Sale | null>(null);

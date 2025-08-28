@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Eye, FileText, Calendar, AlertCircle, X, Clock, DollarSign, AlertTriangle, CreditCard } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useAppContext } from '../context/AppContext';
 import { Boleto } from '../types';
 import { BoletoForm } from './forms/BoletoForm';
 import { OverdueBoletoForm } from './forms/OverdueBoletoForm';
 
 export function Boletos() {
-  const { boletos, sales, debts, employees, isLoading, error, createBoleto, updateBoleto, deleteBoleto, updateDebt, createCashTransaction } = useApp();
+  const { boletos, sales, debts, employees, isLoading, error, createBoleto, updateBoleto, deleteBoleto, updateDebt, createCashTransaction } = useAppContext();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBoleto, setEditingBoleto] = useState<Boleto | null>(null);
   const [viewingBoleto, setViewingBoleto] = useState<Boleto | null>(null);

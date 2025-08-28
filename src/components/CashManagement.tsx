@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { DollarSign, TrendingUp, TrendingDown, Calendar, ArrowUpCircle, ArrowDownCircle, PieChart, BarChart3, Activity, Wallet, Plus, Minus } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useAppContext } from '../context/AppContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
 const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4'];
 
 export function CashManagement() {
-  const { cashBalance, sales, checks, boletos, pixFees, debts, taxes, employeePayments, employeeAdvances, isLoading, error, initializeCashBalance, updateCashBalance } = useApp();
+  const { cashBalance, sales, checks, boletos, pixFees, debts, taxes, employeePayments, employeeAdvances, isLoading, error, initializeCashBalance, updateCashBalance } = useAppContext();
   const [isInitializing, setIsInitializing] = useState(false);
   const [initialAmount, setInitialAmount] = useState(0);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);

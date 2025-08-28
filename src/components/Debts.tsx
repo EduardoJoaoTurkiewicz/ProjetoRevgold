@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Eye, CreditCard, FileText, AlertCircle, X } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useAppContext } from '../context/AppContext';
 import { Debt } from '../types';
 import { DebtForm } from './forms/DebtForm';
 
 export function Debts() {
-  const { debts, checks, isLoading, error, createDebt, updateDebt, deleteDebt } = useApp();
+  const { debts, checks, isLoading, error, createDebt, updateDebt, deleteDebt } = useAppContext();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
   const [viewingDebt, setViewingDebt] = useState<Debt | null>(null);

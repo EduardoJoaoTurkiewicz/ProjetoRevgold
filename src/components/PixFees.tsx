@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Eye, Zap, DollarSign, Calendar, AlertCircle, X, Building2, CreditCard } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useAppContext } from '../context/AppContext';
 import { PixFee } from '../types';
 import { PixFeeForm } from './forms/PixFeeForm';
 
 export function PixFees() {
-  const { pixFees, isLoading, error, createPixFee, updatePixFee, deletePixFee } = useApp();
+  const { pixFees, isLoading, error, createPixFee, updatePixFee, deletePixFee } = useAppContext();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPixFee, setEditingPixFee] = useState<PixFee | null>(null);
   const [viewingPixFee, setViewingPixFee] = useState<PixFee | null>(null);

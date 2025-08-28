@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { FileText, TrendingUp, Calendar, DollarSign, Filter, Eye, ArrowUpCircle, ArrowDownCircle, CreditCard, Receipt, Users, Building2, Clock, CheckCircle, AlertTriangle, Download } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useAppContext } from '../context/AppContext';
 import { exportReportToPDF } from '../utils/pdfExport';
 
 export default function Reports() {
@@ -17,7 +17,7 @@ export default function Reports() {
     pixFees,
     cashBalance,
     cashTransactions
-  } = useApp();
+  } = useAppContext();
 
   const [startDate, setStartDate] = useState(() => {
     const date = new Date();

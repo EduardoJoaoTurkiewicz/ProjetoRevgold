@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useApp } from '../context/AppContext';
+import { useAppContext } from '../context/AppContext';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -58,7 +58,7 @@ const Dashboard: React.FC = () => {
     cashBalance,
     loading, 
     isLoading 
-  } = useApp();
+  } = useAppContext();
 
   const today = new Date().toISOString().split('T')[0];
   const currentMonth = new Date().getMonth();
