@@ -11,8 +11,7 @@ import type {
   EmployeeCommission,
   CashTransaction,
   PixFee,
-  CashBalance,
-  Tax
+  CashBalance
 } from '../types';
 
 // Utility function to transform database row to app type
