@@ -132,10 +132,20 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
     
     const amounts = calculateAmounts();
     
-    onSubmit({
-      ...formData,
+    // Only submit fields that exist in the database schema
+    const debtData = {
+      date: formData.date,
+      description: formData.description,
+      company: formData.company,
+      totalValue: formData.totalValue,
+      paymentMethods: formData.paymentMethods,
+      checksUsed: formData.checksUsed,
+      paymentDescription: formData.paymentDescription,
+      debtPaymentDescription: formData.debtPaymentDescription,
       ...amounts
-    } as Omit<Debt, 'id' | 'createdAt'>);
+    };
+    
+    onSubmit(debtData as Omit<Debt, 'id' | 'createdAt'>);
   };
 
   return (
