@@ -182,7 +182,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           products,
           observations,
           total_value,
-          payment_methods(type,amount,installments,installment_value,installment_interval,start_date,first_installment_date,is_own_check,is_third_party_check,third_party_details),
+          payment_methods,
           received_amount,
           pending_amount,
           status,
