@@ -30,7 +30,7 @@ export function BoletoForm({ boleto, onSubmit, onCancel }: BoletoFormProps) {
     overdueAction: boleto?.overdueAction || '',
     isCompanyPayable: boleto?.isCompanyPayable || false,
     companyName: boleto?.companyName || '',
-    paymentDate: boleto?.paymentDate || '',
+    paymentDate: boleto?.paymentDate || null,
     interestPaid: boleto?.interestPaid || 0
   });
 
@@ -55,7 +55,11 @@ export function BoletoForm({ boleto, onSubmit, onCancel }: BoletoFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData as Omit<Boleto, 'id' | 'createdAt'>);
+    const submitData = {
+      ...formData,
+      paymentDate: formData.paymentDate || null
+    };
+    onSubmit(submitData as Omit<Boleto, 'id' | 'createdAt'>);
   };
 
   return (

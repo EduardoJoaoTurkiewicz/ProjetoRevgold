@@ -42,12 +42,16 @@ export function PixFeeForm({ pixFee, onSubmit, onCancel }: PixFeeFormProps) {
     description: pixFee?.description || '',
     bank: pixFee?.bank || '',
     transactionType: pixFee?.transactionType || 'pix_out' as const,
-    relatedTransactionId: pixFee?.relatedTransactionId || ''
+    relatedTransactionId: pixFee?.relatedTransactionId || null
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData as Omit<PixFee, 'id' | 'createdAt'>);
+    const submitData = {
+      ...formData,
+      relatedTransactionId: formData.relatedTransactionId || null
+    };
+    onSubmit(submitData as Omit<PixFee, 'id' | 'createdAt'>);
   };
 
   return (
