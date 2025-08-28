@@ -654,7 +654,73 @@ export const taxesService = {
     if (error) throw error;
     return (data || []).map(transformDatabaseRow<Tax>);
   },
+    
+    if (error) throw error;
+    return (data || []).map(transformDatabaseRow<Tax>);
+  },
 
+  async create(tax: Omit<Tax, 'id' | 'createdAt' | 'updatedAt'>): Promise<Tax> {
+    if (!isSupabaseConfigured()) {
+      return {
+        ...tax,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
+    const dbData = transformToDatabase(tax);
+    const { data, error } = await supabase.from('taxes').insert([dbData]).select().single();
+    if (error) throw error;
+    return transformDatabaseRow<Tax>(data);
+  },
+
+  async update(id: string, tax: Partial<Tax>): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const dbData = transformToDatabase(tax);
+    const { error } = await supabase.from('taxes').update(dbData).eq('id', id);
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const { error } = await supabase.from('taxes').delete().eq('id', id);
+    if (error) throw error;
+  }
+    return (data || []).map(transformDatabaseRow<Tax>);
+  },
+
+  async create(tax: Omit<Tax, 'id' | 'createdAt' | 'updatedAt'>): Promise<Tax> {
+    if (!isSupabaseConfigured()) {
+      return {
+        ...tax,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
+    const dbData = transformToDatabase(tax);
+    const { data, error } = await supabase.from('taxes').insert([dbData]).select().single();
+    if (error) throw error;
+    return transformDatabaseRow<Tax>(data);
+  },
+
+  async update(id: string, tax: Partial<Tax>): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const dbData = transformToDatabase(tax);
+    const { error } = await supabase.from('taxes').update(dbData).eq('id', id);
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const { error } = await supabase.from('taxes').delete().eq('id', id);
+    if (error) throw error;
   async create(tax: Omit<Tax, 'id' | 'createdAt' | 'updatedAt'>): Promise<Tax> {
     if (!isSupabaseConfigured()) {
       return {
