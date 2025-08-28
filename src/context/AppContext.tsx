@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from './supabase';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { 
   Sale, 
   Debt, 
@@ -14,641 +14,709 @@ import type {
   CashBalance,
   Tax
 } from '../types';
+import { 
+  salesService,
+  debtsService,
+  checksService,
+  boletosService,
+  employeesService,
+  employeeCommissionsService,
+  employeePaymentsService,
+  employeeAdvancesService,
+  employeeOvertimesService,
+  cashBalancesService,
+  pixFeesService,
+  cashTransactionsService,
+  taxesService
+} from '../lib/supabaseServices';
 
-// Utility function to transform database row to app type
-function transformDatabaseRow<T>(row: any): T {
-  if (!row) return row;
-  
-  // Transform snake_case to camelCase
-  const transformed = {};
-  for (const [key, value] of Object.entries(row)) {
-    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-    transformed[camelKey] = value;
-  }
-  
-  return transformed as T;
+interface AppState {
+  currentView: string;
+  isLoading: boolean;
+  error: string | null;
 }
 
-// Transform app type to database format
-function transformToDatabase(obj: any): any {
-  if (!obj) return obj;
+interface AppContextType {
+  state: AppState;
   
-  const transformed = {};
-  for (const [key, value] of Object.entries(obj)) {
-    // Convert camelCase to snake_case
-    const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-    transformed[snakeKey] = value;
-  }
+  // Data arrays
+  sales: Sale[];
+  debts: Debt[];
+  checks: Check[];
+  boletos: Boleto[];
+  employees: Employee[];
+  employeeCommissions: EmployeeCommission[];
+  employeePayments: EmployeePayment[];
+  employeeAdvances: EmployeeAdvance[];
+  employeeOvertimes: EmployeeOvertime[];
+  cashTransactions: CashTransaction[];
+  pixFees: PixFee[];
+  cashBalance: CashBalance | null;
+  taxes: Tax[];
   
-  return transformed;
+  // State management
+  setCurrentView: (view: string) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  
+  // Data operations
+  loadAllData: () => Promise<void>;
+  
+  // Sales operations
+  addSale: (sale: Omit<Sale, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateSale: (id: string, sale: Partial<Sale>) => Promise<void>;
+  deleteSale: (id: string) => Promise<void>;
+  
+  // Debt operations
+  addDebt: (debt: Omit<Debt, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateDebt: (id: string, debt: Partial<Debt>) => Promise<void>;
+  deleteDebt: (id: string) => Promise<void>;
+  
+  // Check operations
+  addCheck: (check: Omit<Check, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateCheck: (id: string, check: Partial<Check>) => Promise<void>;
+  deleteCheck: (id: string) => Promise<void>;
+  
+  // Boleto operations
+  addBoleto: (boleto: Omit<Boleto, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateBoleto: (id: string, boleto: Partial<Boleto>) => Promise<void>;
+  deleteBoleto: (id: string) => Promise<void>;
+  
+  // Employee operations
+  addEmployee: (employee: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateEmployee: (id: string, employee: Partial<Employee>) => Promise<void>;
+  deleteEmployee: (id: string) => Promise<void>;
+  
+  // Commission operations
+  addEmployeeCommission: (commission: Omit<EmployeeCommission, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateEmployeeCommission: (id: string, commission: Partial<EmployeeCommission>) => Promise<void>;
+  deleteEmployeeCommission: (id: string) => Promise<void>;
+  
+  // Payment operations
+  addEmployeePayment: (payment: Omit<EmployeePayment, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateEmployeePayment: (id: string, payment: Partial<EmployeePayment>) => Promise<void>;
+  deleteEmployeePayment: (id: string) => Promise<void>;
+  
+  // Advance operations
+  addEmployeeAdvance: (advance: Omit<EmployeeAdvance, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateEmployeeAdvance: (id: string, advance: Partial<EmployeeAdvance>) => Promise<void>;
+  deleteEmployeeAdvance: (id: string) => Promise<void>;
+  
+  // Overtime operations
+  addEmployeeOvertime: (overtime: Omit<EmployeeOvertime, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateEmployeeOvertime: (id: string, overtime: Partial<EmployeeOvertime>) => Promise<void>;
+  deleteEmployeeOvertime: (id: string) => Promise<void>;
+  
+  // Cash operations
+  addCashTransaction: (transaction: Omit<CashTransaction, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateCashTransaction: (id: string, transaction: Partial<CashTransaction>) => Promise<void>;
+  deleteCashTransaction: (id: string) => Promise<void>;
+  initializeCashBalance: (initialBalance: number) => Promise<void>;
+  updateCashBalance: (newBalance: number) => Promise<void>;
+  
+  // PIX Fee operations
+  addPixFee: (fee: Omit<PixFee, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updatePixFee: (id: string, fee: Partial<PixFee>) => Promise<void>;
+  deletePixFee: (id: string) => Promise<void>;
+  
+  // Tax operations
+  addTax: (taxData: Omit<Tax, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateTax: (id: string, taxData: Partial<Tax>) => Promise<void>;
+  deleteTax: (id: string) => Promise<void>;
 }
 
-// Image handling functions for check images
-export async function uploadCheckImage(file: File, checkId: string, imageType: 'front' | 'back'): Promise<string> {
-  if (!isSupabaseConfigured()) {
-    throw new Error('Supabase não está configurado. Configure as variáveis de ambiente.');
-  }
+const AppContext = createContext<AppContextType | undefined>(undefined);
 
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${checkId}-${imageType}-${Date.now()}.${fileExt}`;
-  const filePath = `check-images/${fileName}`;
-
-  const { error } = await supabase.storage
-    .from('check-images')
-    .upload(filePath, file, {
-      cacheControl: '3600',
-      upsert: false
-    });
-
-  if (error) {
-    console.error('Erro no upload:', error);
-    throw new Error(`Erro ao fazer upload: ${error.message}`);
-  }
-
-  console.log('✅ Upload realizado com sucesso:', filePath);
-  return filePath;
+interface AppProviderProps {
+  children: ReactNode;
 }
 
-export async function deleteCheckImage(filePath: string): Promise<void> {
-  if (!isSupabaseConfigured()) {
-    throw new Error('Supabase não está configurado. Configure as variáveis de ambiente.');
-  }
+export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
+  const [state, setState] = useState<AppState>({
+    currentView: 'dashboard',
+    isLoading: false,
+    error: null,
+  });
 
-  const { error } = await supabase.storage
-    .from('check-images')
-    .remove([filePath]);
+  // Data state
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [debts, setDebts] = useState<Debt[]>([]);
+  const [checks, setChecks] = useState<Check[]>([]);
+  const [boletos, setBoletos] = useState<Boleto[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employeeCommissions, setEmployeeCommissions] = useState<EmployeeCommission[]>([]);
+  const [employeePayments, setEmployeePayments] = useState<EmployeePayment[]>([]);
+  const [employeeAdvances, setEmployeeAdvances] = useState<EmployeeAdvance[]>([]);
+  const [employeeOvertimes, setEmployeeOvertimes] = useState<EmployeeOvertime[]>([]);
+  const [cashTransactions, setCashTransactions] = useState<CashTransaction[]>([]);
+  const [pixFees, setPixFees] = useState<PixFee[]>([]);
+  const [cashBalance, setCashBalance] = useState<CashBalance | null>(null);
+  const [taxes, setTaxes] = useState<Tax[]>([]);
 
-  if (error) {
-    console.error('Erro ao deletar imagem:', error);
-    throw new Error(`Erro ao deletar imagem: ${error.message}`);
-  }
+  // State management functions
+  const setCurrentView = (view: string) => {
+    setState(prev => ({ ...prev, currentView: view }));
+  };
 
-  console.log('✅ Imagem deletada com sucesso:', filePath);
-}
+  const setLoading = (loading: boolean) => {
+    setState(prev => ({ ...prev, isLoading: loading }));
+  };
 
-export function getCheckImageUrl(filePath: string): string {
-  if (!isSupabaseConfigured()) {
-    console.warn('Supabase não configurado, retornando URL de fallback');
-    return '/logo-fallback.svg';
-  }
+  const setError = (error: string | null) => {
+    setState(prev => ({ ...prev, error }));
+  };
 
-  const { data } = supabase.storage
-    .from('check-images')
-    .getPublicUrl(filePath);
+  // Load all data function
+  const loadAllData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  return data.publicUrl;
-}
+      const [
+        salesData,
+        debtsData,
+        checksData,
+        boletosData,
+        employeesData,
+        commissionsData,
+        paymentsData,
+        advancesData,
+        overtimesData,
+        transactionsData,
+        feesData,
+        balanceData,
+        taxesData
+      ] = await Promise.all([
+        salesService.getAll(),
+        debtsService.getAll(),
+        checksService.getAll(),
+        boletosService.getAll(),
+        employeesService.getAll(),
+        employeeCommissionsService.getAll(),
+        employeePaymentsService.getAll(),
+        employeeAdvancesService.getAll(),
+        employeeOvertimesService.getAll(),
+        cashTransactionsService.getAll(),
+        pixFeesService.getAll(),
+        cashBalancesService.get(),
+        taxesService.getAll()
+      ]);
 
-// Service objects for automation
-export const checksService = {
-  async create(checkData: Omit<Check, 'id' | 'createdAt' | 'updatedAt'>) {
-    if (!isSupabaseConfigured()) {
-      // Return mock data for local development
-      return {
-        ...checkData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+      setSales(salesData);
+      setDebts(debtsData);
+      setChecks(checksData);
+      setBoletos(boletosData);
+      setEmployees(employeesData);
+      setEmployeeCommissions(commissionsData);
+      setEmployeePayments(paymentsData);
+      setEmployeeAdvances(advancesData);
+      setEmployeeOvertimes(overtimesData);
+      setCashTransactions(transactionsData);
+      setPixFees(feesData);
+      setCashBalance(balanceData);
+      setTaxes(taxesData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Sales operations
+  const addSale = async (saleData: Omit<Sale, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const newSale = await salesService.create(saleData);
+      setSales(prev => [newSale, ...prev]);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to create sale');
+      throw error;
+    }
+  };
+
+  const updateSale = async (id: string, saleData: Partial<Sale>) => {
+    try {
+      await salesService.update(id, saleData);
+      setSales(prev => prev.map(sale => sale.id === id ? { ...sale, ...saleData } : sale));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update sale');
+      throw error;
+    }
+  };
+
+  const deleteSale = async (id: string) => {
+    try {
+      await salesService.delete(id);
+      setSales(prev => prev.filter(sale => sale.id !== id));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to delete sale');
+      throw error;
+    }
+  };
+
+  // Debt operations
+  const addDebt = async (debtData: Omit<Debt, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const newDebt = await debtsService.create(debtData);
+      setDebts(prev => [newDebt, ...prev]);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to create debt');
+      throw error;
+    }
+  };
+
+  const updateDebt = async (id: string, debtData: Partial<Debt>) => {
+    try {
+      await debtsService.update(id, debtData);
+      setDebts(prev => prev.map(debt => debt.id === id ? { ...debt, ...debtData } : debt));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update debt');
+      throw error;
+    }
+  };
+
+  const deleteDebt = async (id: string) => {
+    try {
+      await debtsService.delete(id);
+      setDebts(prev => prev.filter(debt => debt.id !== id));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to delete debt');
+      throw error;
+    }
+  };
+
+  // Check operations
+  const addCheck = async (checkData: Omit<Check, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const newCheck = await checksService.create(checkData);
+      setChecks(prev => [newCheck, ...prev]);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to create check');
+      throw error;
+    }
+  };
+
+  const updateCheck = async (id: string, checkData: Partial<Check>) => {
+    try {
+      await checksService.update(id, checkData);
+      setChecks(prev => prev.map(check => check.id === id ? { ...check, ...checkData } : check));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update check');
+      throw error;
+    }
+  };
+
+  const deleteCheck = async (id: string) => {
+    try {
+      await checksService.delete(id);
+      setChecks(prev => prev.filter(check => check.id !== id));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to delete check');
+      throw error;
+    }
+  };
+
+  // Boleto operations
+  const addBoleto = async (boletoData: Omit<Boleto, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const newBoleto = await boletosService.create(boletoData);
+      setBoletos(prev => [newBoleto, ...prev]);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to create boleto');
+      throw error;
+    }
+  };
+
+  const updateBoleto = async (id: string, boletoData: Partial<Boleto>) => {
+    try {
+      await boletosService.update(id, boletoData);
+      setBoletos(prev => prev.map(boleto => boleto.id === id ? { ...boleto, ...boletoData } : boleto));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update boleto');
+      throw error;
+    }
+  };
+
+  const deleteBoleto = async (id: string) => {
+    try {
+      await boletosService.delete(id);
+      setBoletos(prev => prev.filter(boleto => boleto.id !== id));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to delete boleto');
+      throw error;
+    }
+  };
+
+  // Employee operations
+  const addEmployee = async (employeeData: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const newEmployee = await employeesService.create(employeeData);
+      setEmployees(prev => [newEmployee, ...prev]);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to create employee');
+      throw error;
+    }
+  };
+
+  const updateEmployee = async (id: string, employeeData: Partial<Employee>) => {
+    try {
+      await employeesService.update(id, employeeData);
+      setEmployees(prev => prev.map(employee => employee.id === id ? { ...employee, ...employeeData } : employee));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update employee');
+      throw error;
+    }
+  };
+
+  const deleteEmployee = async (id: string) => {
+    try {
+      await employeesService.delete(id);
+      setEmployees(prev => prev.filter(employee => employee.id !== id));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to delete employee');
+      throw error;
+    }
+  };
+
+  // Commission operations
+  const addEmployeeCommission = async (commissionData: Omit<EmployeeCommission, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const newCommission = await employeeCommissionsService.create(commissionData);
+      setEmployeeCommissions(prev => [newCommission, ...prev]);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to create commission');
+      throw error;
+    }
+  };
+
+  const updateEmployeeCommission = async (id: string, commissionData: Partial<EmployeeCommission>) => {
+    try {
+      await employeeCommissionsService.update(id, commissionData);
+      setEmployeeCommissions(prev => prev.map(commission => commission.id === id ? { ...commission, ...commissionData } : commission));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update commission');
+      throw error;
+    }
+  };
+
+  const deleteEmployeeCommission = async (id: string) => {
+    try {
+      await employeeCommissionsService.delete(id);
+      setEmployeeCommissions(prev => prev.filter(commission => commission.id !== id));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to delete commission');
+      throw error;
+    }
+  };
+
+  // Payment operations
+  const addEmployeePayment = async (paymentData: Omit<EmployeePayment, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const newPayment = await employeePaymentsService.create(paymentData);
+      setEmployeePayments(prev => [newPayment, ...prev]);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to create payment');
+      throw error;
+    }
+  };
+
+  const updateEmployeePayment = async (id: string, paymentData: Partial<EmployeePayment>) => {
+    try {
+      await employeePaymentsService.update(id, paymentData);
+      setEmployeePayments(prev => prev.map(payment => payment.id === id ? { ...payment, ...paymentData } : payment));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update payment');
+      throw error;
+    }
+  };
+
+  const deleteEmployeePayment = async (id: string) => {
+    try {
+      await employeePaymentsService.delete(id);
+      setEmployeePayments(prev => prev.filter(payment => payment.id !== id));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to delete payment');
+      throw error;
+    }
+  };
+
+  // Advance operations
+  const addEmployeeAdvance = async (advanceData: Omit<EmployeeAdvance, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const newAdvance = await employeeAdvancesService.create(advanceData);
+      setEmployeeAdvances(prev => [newAdvance, ...prev]);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to create advance');
+      throw error;
+    }
+  };
+
+  const updateEmployeeAdvance = async (id: string, advanceData: Partial<EmployeeAdvance>) => {
+    try {
+      await employeeAdvancesService.update(id, advanceData);
+      setEmployeeAdvances(prev => prev.map(advance => advance.id === id ? { ...advance, ...advanceData } : advance));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update advance');
+      throw error;
+    }
+  };
+
+  const deleteEmployeeAdvance = async (id: string) => {
+    try {
+      await employeeAdvancesService.delete(id);
+      setEmployeeAdvances(prev => prev.filter(advance => advance.id !== id));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to delete advance');
+      throw error;
+    }
+  };
+
+  // Overtime operations
+  const addEmployeeOvertime = async (overtimeData: Omit<EmployeeOvertime, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const newOvertime = await employeeOvertimesService.create(overtimeData);
+      setEmployeeOvertimes(prev => [newOvertime, ...prev]);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to create overtime');
+      throw error;
+    }
+  };
+
+  const updateEmployeeOvertime = async (id: string, overtimeData: Partial<EmployeeOvertime>) => {
+    try {
+      await employeeOvertimesService.update(id, overtimeData);
+      setEmployeeOvertimes(prev => prev.map(overtime => overtime.id === id ? { ...overtime, ...overtimeData } : overtime));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update overtime');
+      throw error;
+    }
+  };
+
+  const deleteEmployeeOvertime = async (id: string) => {
+    try {
+      await employeeOvertimesService.delete(id);
+      setEmployeeOvertimes(prev => prev.filter(overtime => overtime.id !== id));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to delete overtime');
+      throw error;
+    }
+  };
+
+  // Cash operations
+  const addCashTransaction = async (transactionData: Omit<CashTransaction, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const newTransaction = await cashTransactionsService.create(transactionData);
+      setCashTransactions(prev => [newTransaction, ...prev]);
+      
+      // Update cash balance
+      if (cashBalance) {
+        const balanceChange = transactionData.type === 'entrada' ? transactionData.amount : -transactionData.amount;
+        const newBalance = cashBalance.currentBalance + balanceChange;
+        await updateCashBalance(newBalance);
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to create transaction');
+      throw error;
+    }
+  };
+
+  const updateCashTransaction = async (id: string, transactionData: Partial<CashTransaction>) => {
+    try {
+      await cashTransactionsService.update(id, transactionData);
+      setCashTransactions(prev => prev.map(transaction => transaction.id === id ? { ...transaction, ...transactionData } : transaction));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update transaction');
+      throw error;
+    }
+  };
+
+  const deleteCashTransaction = async (id: string) => {
+    try {
+      await cashTransactionsService.delete(id);
+      setCashTransactions(prev => prev.filter(transaction => transaction.id !== id));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to delete transaction');
+      throw error;
+    }
+  };
+
+  const initializeCashBalance = async (initialBalance: number) => {
+    try {
+      const balanceData = {
+        currentBalance: initialBalance,
+        initialBalance: initialBalance,
+        initialDate: new Date().toISOString().split('T')[0],
+        lastUpdated: new Date().toISOString()
       };
+      const newBalance = await cashBalancesService.create(balanceData);
+      setCashBalance(newBalance);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to initialize cash balance');
+      throw error;
     }
-    
-    const dbData = transformToDatabase(checkData);
-    const { data, error } = await supabase.from('checks').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<Check>(data);
-  },
-  
-  async getAll(): Promise<Check[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('checks')
-      .select('*')
-      .order('due_date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<Check>);
-  },
+  };
 
-  async update(id: string, checkData: Partial<Check>) {
-    if (!isSupabaseConfigured()) {
-      return; // No-op for local development
+  const updateCashBalance = async (newBalance: number) => {
+    try {
+      if (cashBalance) {
+        const updatedData = {
+          currentBalance: newBalance,
+          lastUpdated: new Date().toISOString()
+        };
+        await cashBalancesService.update(cashBalance.id, updatedData);
+        setCashBalance(prev => prev ? { ...prev, ...updatedData } : null);
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update cash balance');
+      throw error;
     }
+  };
+
+  // PIX Fee operations
+  const addPixFee = async (feeData: Omit<PixFee, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const newFee = await pixFeesService.create(feeData);
+      setPixFees(prev => [newFee, ...prev]);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to create PIX fee');
+      throw error;
+    }
+  };
+
+  const updatePixFee = async (id: string, feeData: Partial<PixFee>) => {
+    try {
+      await pixFeesService.update(id, feeData);
+      setPixFees(prev => prev.map(fee => fee.id === id ? { ...fee, ...feeData } : fee));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update PIX fee');
+      throw error;
+    }
+  };
+
+  const deletePixFee = async (id: string) => {
+    try {
+      await pixFeesService.delete(id);
+      setPixFees(prev => prev.filter(fee => fee.id !== id));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to delete PIX fee');
+      throw error;
+    }
+  };
+
+  // Tax operations
+  const addTax = async (taxData: Omit<Tax, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const newTax = await taxesService.create(taxData);
+      setTaxes(prev => [newTax, ...prev]);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to create tax');
+      throw error;
+    }
+  };
+
+  const updateTax = async (id: string, taxData: Partial<Tax>) => {
+    try {
+      await taxesService.update(id, taxData);
+      setTaxes(prev => prev.map(tax => tax.id === id ? { ...tax, ...taxData } : tax));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update tax');
+      throw error;
+    }
+  };
+
+  const deleteTax = async (id: string) => {
+    try {
+      await taxesService.delete(id);
+      setTaxes(prev => prev.filter(tax => tax.id !== id));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to delete tax');
+      throw error;
+    }
+  };
+
+  // Load data on mount
+  useEffect(() => {
+    loadAllData();
+  }, []);
+
+  const value: AppContextType = {
+    state,
     
-    const dbData = transformToDatabase(checkData);
-    const { error } = await supabase.from('checks').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-  
-  async delete(id: string) {
-    if (!isSupabaseConfigured()) {
-      return; // No-op for local development
-    }
-    const { error } = await supabase.from('checks').delete().eq('id', id);
-    if (error) throw error;
-  }
+    // Data arrays
+    sales,
+    debts,
+    checks,
+    boletos,
+    employees,
+    employeeCommissions,
+    employeePayments,
+    employeeAdvances,
+    employeeOvertimes,
+    cashTransactions,
+    pixFees,
+    cashBalance,
+    taxes,
+    
+    // State management
+    setCurrentView,
+    setLoading,
+    setError,
+    
+    // Data operations
+    loadAllData,
+    
+    // CRUD operations
+    addSale,
+    updateSale,
+    deleteSale,
+    addDebt,
+    updateDebt,
+    deleteDebt,
+    addCheck,
+    updateCheck,
+    deleteCheck,
+    addBoleto,
+    updateBoleto,
+    deleteBoleto,
+    addEmployee,
+    updateEmployee,
+    deleteEmployee,
+    addEmployeeCommission,
+    updateEmployeeCommission,
+    deleteEmployeeCommission,
+    addEmployeePayment,
+    updateEmployeePayment,
+    deleteEmployeePayment,
+    addEmployeeAdvance,
+    updateEmployeeAdvance,
+    deleteEmployeeAdvance,
+    addEmployeeOvertime,
+    updateEmployeeOvertime,
+    deleteEmployeeOvertime,
+    addCashTransaction,
+    updateCashTransaction,
+    deleteCashTransaction,
+    initializeCashBalance,
+    updateCashBalance,
+    addPixFee,
+    updatePixFee,
+    deletePixFee,
+    addTax,
+    updateTax,
+    deleteTax,
+  };
+
+  return (
+    <AppContext.Provider value={value}>
+      {children}
+    </AppContext.Provider>
+  );
 };
 
-export const boletosService = {
-  async create(boletoData: Omit<Boleto, 'id' | 'createdAt' | 'updatedAt'>) {
-    if (!isSupabaseConfigured()) {
-      // Return mock data for local development
-      return {
-        ...boletoData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(boletoData);
-    const { data, error } = await supabase.from('boletos').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<Boleto>(data);
-  },
-  
-  async getAll(): Promise<Boleto[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('boletos')
-      .select('*')
-      .order('due_date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<Boleto>);
-  },
-
-  async update(id: string, boletoData: Partial<Boleto>) {
-    if (!isSupabaseConfigured()) {
-      return; // No-op for local development
-    }
-    
-    const dbData = transformToDatabase(boletoData);
-    const { error } = await supabase.from('boletos').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-  
-  async delete(id: string) {
-    if (!isSupabaseConfigured()) {
-      return; // No-op for local development
-    }
-    const { error } = await supabase.from('boletos').delete().eq('id', id);
-    if (error) throw error;
+export const useApp = (): AppContextType => {
+  const context = useContext(AppContext);
+  if (context === undefined) {
+    throw new Error('useApp must be used within an AppProvider');
   }
-};
-
-export const employeeCommissionsService = {
-  async getAll(): Promise<EmployeeCommission[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('employee_commissions')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<EmployeeCommission>);
-  },
-
-  async create(commission: Omit<EmployeeCommission, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeeCommission> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...commission,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(commission);
-    const { data, error } = await supabase.from('employee_commissions').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<EmployeeCommission>(data);
-  },
-
-  async update(id: string, commission: Partial<EmployeeCommission>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(commission);
-    const { error } = await supabase.from('employee_commissions').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('employee_commissions').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const employeePaymentsService = {
-  async getAll(): Promise<EmployeePayment[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('employee_payments')
-      .select('*')
-      .order('payment_date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<EmployeePayment>);
-  },
-
-  async create(payment: Omit<EmployeePayment, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeePayment> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...payment,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(payment);
-    const { data, error } = await supabase.from('employee_payments').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<EmployeePayment>(data);
-  },
-
-  async update(id: string, payment: Partial<EmployeePayment>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(payment);
-    const { error } = await supabase.from('employee_payments').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('employee_payments').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const employeeAdvancesService = {
-  async getAll(): Promise<EmployeeAdvance[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('employee_advances')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<EmployeeAdvance>);
-  },
-
-  async create(advance: Omit<EmployeeAdvance, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeeAdvance> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...advance,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(advance);
-    const { data, error } = await supabase.from('employee_advances').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<EmployeeAdvance>(data);
-  },
-
-  async update(id: string, advance: Partial<EmployeeAdvance>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(advance);
-    const { error } = await supabase.from('employee_advances').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('employee_advances').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const employeeOvertimesService = {
-  async getAll(): Promise<EmployeeOvertime[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('employee_overtimes')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<EmployeeOvertime>);
-  },
-
-  async create(overtime: Omit<EmployeeOvertime, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeeOvertime> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...overtime,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(overtime);
-    const { data, error } = await supabase.from('employee_overtimes').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<EmployeeOvertime>(data);
-  },
-
-  async update(id: string, overtime: Partial<EmployeeOvertime>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(overtime);
-    const { error } = await supabase.from('employee_overtimes').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('employee_overtimes').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const cashBalancesService = {
-  async get(): Promise<CashBalance | null> {
-    if (!isSupabaseConfigured()) return null;
-    
-    const { data, error } = await supabase
-      .from('cash_balances')
-      .select('*')
-      .limit(1)
-      .single();
-    
-    if (error && error.code !== 'PGRST116') throw error;
-    return data ? transformDatabaseRow<CashBalance>(data) : null;
-  },
-
-  async create(balance: Omit<CashBalance, 'id' | 'createdAt' | 'updatedAt'>): Promise<CashBalance> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...balance,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(balance);
-    const { data, error } = await supabase.from('cash_balances').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<CashBalance>(data);
-  },
-
-  async update(id: string, balance: Partial<CashBalance>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(balance);
-    const { error } = await supabase.from('cash_balances').update(dbData).eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const pixFeesService = {
-  async getAll(): Promise<PixFee[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('pix_fees')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<PixFee>);
-  },
-
-  async create(fee: Omit<PixFee, 'id' | 'createdAt' | 'updatedAt'>): Promise<PixFee> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...fee,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(fee);
-    const { data, error } = await supabase.from('pix_fees').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<PixFee>(data);
-  },
-
-  async update(id: string, fee: Partial<PixFee>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(fee);
-    const { error } = await supabase.from('pix_fees').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('pix_fees').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const cashTransactionsService = {
-  async getAll(): Promise<CashTransaction[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('cash_transactions')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<CashTransaction>);
-  },
-
-  async create(transaction: Omit<CashTransaction, 'id' | 'createdAt' | 'updatedAt'>): Promise<CashTransaction> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...transaction,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(transaction);
-    const { data, error } = await supabase.from('cash_transactions').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<CashTransaction>(data);
-  },
-
-  async update(id: string, transaction: Partial<CashTransaction>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(transaction);
-    const { error } = await supabase.from('cash_transactions').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('cash_transactions').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const employeesService = {
-  async getAll(): Promise<Employee[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('employees')
-      .select('*')
-      .order('name');
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<Employee>);
-  },
-
-  async create(employee: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>): Promise<Employee> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...employee,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(employee);
-    const { data, error } = await supabase.from('employees').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<Employee>(data);
-  },
-
-  async update(id: string, employee: Partial<Employee>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(employee);
-    const { error } = await supabase.from('employees').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('employees').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const salesService = {
-  async getAll(): Promise<Sale[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('sales')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<Sale>);
-  },
-
-  async create(sale: Omit<Sale, 'id' | 'createdAt' | 'updatedAt'>): Promise<Sale> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...sale,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(sale);
-    const { data, error } = await supabase.from('sales').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<Sale>(data);
-  },
-
-  async update(id: string, sale: Partial<Sale>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(sale);
-    const { error } = await supabase.from('sales').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('sales').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const debtsService = {
-  async getAll(): Promise<Debt[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('debts')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<Debt>);
-  },
-
-  async create(debt: Omit<Debt, 'id' | 'createdAt' | 'updatedAt'>): Promise<Debt> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...debt,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(debt);
-    const { data, error } = await supabase.from('debts').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<Debt>(data);
-  },
-
-  async update(id: string, debt: Partial<Debt>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(debt);
-    const { error } = await supabase.from('debts').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('debts').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const taxesService = {
-  async getAll(): Promise<Tax[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('taxes')
-      .select('*')
-      .order('date', { ascending: false });
-    
+  return context;
 };

@@ -11,7 +11,8 @@ import type {
   EmployeeCommission,
   CashTransaction,
   PixFee,
-  CashBalance
+  CashBalance,
+  Tax
 } from '../types';
 
 // Utility function to transform database row to app type
@@ -637,6 +638,51 @@ export const debtsService = {
     if (!isSupabaseConfigured()) return;
     
     const { error } = await supabase.from('debts').delete().eq('id', id);
+    if (error) throw error;
+  }
+};
+
+export const taxesService = {
+  async getAll(): Promise<Tax[]> {
+    if (!isSupabaseConfigured()) return [];
+    
+    const { data, error } = await supabase
+      .from('taxes')
+      .select('*')
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformDatabaseRow<Tax>);
+  },
+
+  async create(tax: Omit<Tax, 'id' | 'createdAt' | 'updatedAt'>): Promise<Tax> {
+    if (!isSupabaseConfigured()) {
+      return {
+        ...tax,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
+    const dbData = transformToDatabase(tax);
+    const { data, error } = await supabase.from('taxes').insert([dbData]).select().single();
+    if (error) throw error;
+    return transformDatabaseRow<Tax>(data);
+  },
+
+  async update(id: string, tax: Partial<Tax>): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const dbData = transformToDatabase(tax);
+    const { error } = await supabase.from('taxes').update(dbData).eq('id', id);
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const { error } = await supabase.from('taxes').delete().eq('id', id);
     if (error) throw error;
   }
 };
