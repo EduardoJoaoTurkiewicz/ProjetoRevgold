@@ -152,7 +152,7 @@ export async function exportReportToPDF(data: ReportData, startDate: string, end
     // Resultado Líquido com destaque
     checkPageBreak(30);
     
-    const netResult = data.totals.received - data.totals.paid;
+    netResult = data.totals.received - data.totals.paid;
     const resultColor = netResult >= 0 ? [22, 163, 74] : [220, 38, 38];
     
     pdf.setFillColor(...resultColor);
@@ -604,7 +604,7 @@ export async function exportReportToPDF(data: ReportData, startDate: string, end
     );
     
     // Resultado líquido
-    const netResult = data.totals.received - data.totals.paid;
+    netResult = data.totals.received - data.totals.paid;
     pdf.setFontSize(18);
     pdf.setTextColor(netResult >= 0 ? 34 : 239, netResult >= 0 ? 197 : 68, netResult >= 0 ? 94 : 68);
     pdf.text('RESULTADO LÍQUIDO:', margin + 5, currentY + 30);
