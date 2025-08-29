@@ -33,24 +33,52 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validações básicas
-    if (!formData.name.trim()) {
+    // Validações mais rigorosas
+    if (!formData.name || !formData.name.trim()) {
       alert('Por favor, informe o nome do funcionário.');
       return;
     }
     
-    if (!formData.position.trim()) {
+    if (!formData.position || !formData.position.trim()) {
       alert('Por favor, informe o cargo do funcionário.');
       return;
     }
     
-    if (formData.salary <= 0) {
+    if (!formData.salary || formData.salary <= 0) {
       alert('O salário deve ser maior que zero.');
       return;
     }
     
+    if (!formData.hireDate) {
+      alert('Por favor, informe a data de contratação.');
+      return;
+    }
+    
+    if (formData.paymentDay < 1 || formData.paymentDay > 31) {
+      alert('O dia do pagamento deve estar entre 1 e 31.');
+      return;
+    }
+    
+    // Validações básicas
+    // Validar se a data de contratação não é futura
+    const hireDate = new Date(formData.hireDate);
+    const today = new Date();
+    if (hireDate > today) {
+      alert('A data de contratação não pode ser no futuro.');
+      return;
+    }
+    
+    // Limpar dados antes de enviar
+    const cleanedData = {
+      ...formData,
+      name: formData.name.trim(),
+      position: formData.position.trim(),
+      observations: formData.observations?.trim() || null,
+      nextPaymentDate: formData.nextPaymentDate || null
+    };
+    
     console.log('📝 Enviando funcionário:', formData);
-    onSubmit(formData);
+    onSubmit(cleanedData);
   };
 
   return (

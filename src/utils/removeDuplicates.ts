@@ -18,6 +18,10 @@ export async function removeDuplicates(): Promise<DuplicateStats[]> {
   try {
     console.log('🔍 Iniciando remoção de duplicatas...');
 
+    // 0. LIMPAR TRANSAÇÕES DE CAIXA DUPLICADAS PRIMEIRO
+    console.log('💰 Limpando transações de caixa duplicadas...');
+    await cleanupCashTransactionsDuplicates();
+
     // 1. REMOVER DUPLICATAS DE VENDAS
     console.log('📊 Analisando vendas...');
     const salesStats = await removeSalesDuplicates();
@@ -48,6 +52,9 @@ export async function removeDuplicates(): Promise<DuplicateStats[]> {
     const commissionsStats = await removeCommissionsDuplicates();
     stats.push(commissionsStats);
 
+    // 7. RECALCULAR SALDO DO CAIXA APÓS LIMPEZA
+    console.log('💰 Recalculando saldo do caixa...');
+    await supabase.rpc('recalculate_cash_balance');
     console.log('✅ Remoção de duplicatas concluída!');
     return stats;
 
@@ -57,6 +64,31 @@ export async function removeDuplicates(): Promise<DuplicateStats[]> {
   }
 }
 
+async function cleanupCashTransactionsDuplicates(): Promise<void> {
+  try {
+    // Remover transações de caixa duplicadas
+    const { error } = await supabase.rpc('sql', {
+      query: `
+        DELETE FROM cash_transactions a USING cash_transactions b
+        WHERE a.id > b.id
+          AND a.date = b.date
+          AND a.type = b.type
+          AND a.amount = b.amount
+          AND a.description = b.description
+          AND a.category = b.category
+          AND COALESCE(a.related_id, '') = COALESCE(b.related_id, '');
+      `
+    });
+    
+    if (error) {
+      console.error('Erro ao limpar transações duplicadas:', error);
+    } else {
+      console.log('✅ Transações de caixa duplicadas removidas');
+    }
+  } catch (error) {
+    console.error('Erro na limpeza de transações de caixa:', error);
+  }
+}
 async function removeSalesDuplicates(): Promise<DuplicateStats> {
   const { data: allSales, error } = await supabase
     .from('sales')

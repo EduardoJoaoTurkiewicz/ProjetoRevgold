@@ -56,9 +56,12 @@ const Dashboard: React.FC = () => {
     employeeOvertimes,
     pixFees,
     cashBalance,
+    recalculateCashBalance,
     loading, 
     isLoading 
   } = useAppContext();
+  
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
   const currentMonth = new Date().getMonth();
@@ -456,9 +459,28 @@ const Dashboard: React.FC = () => {
               <p className="text-3xl font-black text-blue-700">
                 R$ {(cashBalance?.currentBalance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-sm text-blue-600 font-semibold">
-                Disponível agora
-              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <p className="text-sm text-blue-600 font-semibold">
+                  Disponível agora
+                </p>
+                <button
+                  onClick={async () => {
+                    setIsRecalculating(true);
+                    try {
+                      await recalculateCashBalance();
+                    } catch (error) {
+                      console.error('Erro ao recalcular:', error);
+                    } finally {
+                      setIsRecalculating(false);
+                    }
+                  }}
+                  disabled={isRecalculating}
+                  className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  title="Recalcular saldo"
+                >
+                  {isRecalculating ? '...' : '↻'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

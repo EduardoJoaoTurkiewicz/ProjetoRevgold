@@ -171,6 +171,22 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validações mais rigorosas
+    if (!formData.client || !formData.client.trim()) {
+      alert('Por favor, informe o nome do cliente.');
+      return;
+    }
+    
+    if (!formData.totalValue || formData.totalValue <= 0) {
+      alert('O valor total da venda deve ser maior que zero.');
+      return;
+    }
+    
+    if (!formData.paymentMethods || formData.paymentMethods.length === 0) {
+      alert('Por favor, adicione pelo menos um método de pagamento.');
+      return;
+    }
+    
     // Validar se há pelo menos um método de pagamento com valor
     const totalPaymentAmount = formData.paymentMethods.reduce((sum, method) => sum + method.amount, 0);
     if (totalPaymentAmount === 0) {
@@ -184,17 +200,6 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       return;
     }
     
-    // Validar dados obrigatórios
-    if (!formData.client.trim()) {
-      alert('Por favor, informe o nome do cliente.');
-      return;
-    }
-    
-    if (formData.totalValue <= 0) {
-      alert('O valor total da venda deve ser maior que zero.');
-      return;
-    }
-    
     // Validar estrutura dos métodos de pagamento
     for (const method of formData.paymentMethods) {
       if (!method.type || typeof method.type !== 'string') {
@@ -204,6 +209,18 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       if (typeof method.amount !== 'number' || method.amount < 0) {
         alert('Todos os métodos de pagamento devem ter um valor válido.');
         return;
+      }
+      
+      // Validar parcelas para métodos que suportam
+      if (INSTALLMENT_TYPES.includes(method.type) && method.installments && method.installments > 1) {
+        if (!method.installmentValue || method.installmentValue <= 0) {
+          alert(`Valor da parcela deve ser maior que zero para ${method.type}.`);
+          return;
+        }
+        if (!method.installmentInterval || method.installmentInterval <= 0) {
+          alert(`Intervalo entre parcelas deve ser maior que zero para ${method.type}.`);
+          return;
+        }
       }
       
       // Limpar campos undefined ou null que podem causar problemas
@@ -222,6 +239,11 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       if (method.firstInstallmentDate === undefined || method.firstInstallmentDate === null || method.firstInstallmentDate === '') {
         delete method.firstInstallmentDate;
       }
+    }
+    
+    // Validar produtos
+    if (!formData.products || (typeof formData.products === 'string' && !formData.products.trim())) {
+      setFormData(prev => ({ ...prev, products: 'Produtos vendidos' }));
     }
     
     const amounts = calculateAmounts();
@@ -251,6 +273,12 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       return cleaned;
     });
     
+    // Validar que os dados limpos ainda são válidos
+    if (cleanedPaymentMethods.length === 0) {
+      alert('Erro na validação dos métodos de pagamento.');
+      return;
+    }
+    
     const saleToSubmit = {
       ...formData,
       sellerId,
@@ -258,6 +286,12 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       observations: finalObservations,
       ...amounts
     };
+    
+    // Validação final antes do envio
+    if (!saleToSubmit.client || !saleToSubmit.totalValue || !saleToSubmit.paymentMethods) {
+      alert('Dados da venda incompletos. Verifique todos os campos obrigatórios.');
+      return;
+    }
     
     console.log('📝 Enviando venda:', saleToSubmit);
     onSubmit(saleToSubmit as Omit<Sale, 'id' | 'createdAt'>);

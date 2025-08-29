@@ -307,6 +307,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       console.log('🔄 Dados da venda antes da transformação:', saleData);
       
+      // Validar dados antes de enviar
+      if (!saleData.client?.trim()) {
+        throw new Error('Nome do cliente é obrigatório');
+      }
+      
+      if (!saleData.totalValue || saleData.totalValue <= 0) {
+        throw new Error('Valor total deve ser maior que zero');
+      }
+      
+      if (!saleData.paymentMethods || saleData.paymentMethods.length === 0) {
+        throw new Error('Pelo menos um método de pagamento é obrigatório');
+      }
+      
+      // Verificar se já existe uma venda similar (prevenção de duplicatas)
+      const existingSale = sales.find(sale => 
+        sale.client === saleData.client &&
+        sale.date === saleData.date &&
+        sale.totalValue === saleData.totalValue
+      );
+      
+      if (existingSale) {
+        throw new Error('Uma venda com os mesmos dados já existe. Verifique se não há duplicação.');
+      }
+      
       const dbData = transformToDatabase(saleData);
       console.log('🔄 Dados transformados para o banco:', dbData);
       
@@ -316,6 +340,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.error('❌ Erro detalhado do Supabase:', error);
         if (error.code === '23505') {
           throw new Error('Uma venda com os mesmos dados já existe (cliente, data e valor). Verifique se não há duplicação.');
+        }
+        if (error.code === '23514') {
+          throw new Error('Dados inválidos. Verifique os valores inseridos.');
         }
         if (error.code === '42703') {
           throw new Error('Erro na estrutura dos dados de pagamento. Verifique os métodos de pagamento.');
@@ -392,6 +419,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       console.log('🔄 Dados da dívida antes da transformação:', debtData);
       
+      // Validar dados antes de enviar
+      if (!debtData.company?.trim()) {
+        throw new Error('Nome da empresa é obrigatório');
+      }
+      
+      if (!debtData.description?.trim()) {
+        throw new Error('Descrição da dívida é obrigatória');
+      }
+      
+      if (!debtData.totalValue || debtData.totalValue <= 0) {
+        throw new Error('Valor total deve ser maior que zero');
+      }
+      
+      // Verificar se já existe uma dívida similar
+      const existingDebt = debts.find(debt => 
+        debt.company === debtData.company &&
+        debt.date === debtData.date &&
+        debt.totalValue === debtData.totalValue &&
+        debt.description === debtData.description
+      );
+      
+      if (existingDebt) {
+        throw new Error('Uma dívida com os mesmos dados já existe. Verifique se não há duplicação.');
+      }
+      
       const dbData = transformToDatabase(debtData);
       console.log('🔄 Dados transformados para o banco:', dbData);
       
@@ -401,6 +453,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.error('❌ Erro detalhado do Supabase:', error);
         if (error.code === '23505') {
           throw new Error('Uma dívida com os mesmos dados já existe (empresa, data, valor e descrição). Verifique se não há duplicação.');
+        }
+        if (error.code === '23514') {
+          throw new Error('Dados inválidos. Verifique os valores inseridos.');
         }
         throw new Error(`Erro ao criar dívida: ${error.message}`);
       }
@@ -614,6 +669,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       console.log('🔄 Dados do funcionário antes da transformação:', employeeData);
       
+      // Validar dados antes de enviar
+      if (!employeeData.name?.trim()) {
+        throw new Error('Nome do funcionário é obrigatório');
+      }
+      
+      if (!employeeData.position?.trim()) {
+        throw new Error('Cargo do funcionário é obrigatório');
+      }
+      
+      if (!employeeData.salary || employeeData.salary <= 0) {
+        throw new Error('Salário deve ser maior que zero');
+      }
+      
+      // Verificar se já existe um funcionário similar
+      const existingEmployee = employees.find(emp => 
+        emp.name === employeeData.name &&
+        emp.position === employeeData.position &&
+        emp.salary === employeeData.salary
+      );
+      
+      if (existingEmployee) {
+        throw new Error('Um funcionário com os mesmos dados já existe. Verifique se não há duplicação.');
+      }
+      
       const dbData = transformToDatabase(employeeData);
       console.log('🔄 Dados transformados para o banco:', dbData);
       
@@ -623,6 +702,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.error('❌ Erro detalhado do Supabase:', error);
         if (error.code === '23505') {
           throw new Error('Um funcionário com o mesmo nome e cargo já existe. Verifique se não há duplicação.');
+        }
+        if (error.code === '23514') {
+          throw new Error('Dados inválidos. Verifique os valores inseridos.');
         }
         throw new Error(`Erro ao criar funcionário: ${error.message}`);
       }
@@ -788,6 +870,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const newBalance = {
         id: '1',
         currentBalance: initialAmount,
+        initialBalance: initialAmount,
+        initialDate: new Date().toISOString().split('T')[0],
         lastUpdated: new Date().toISOString(),
         createdAt: new Date().toISOString()
       };
@@ -795,15 +879,86 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const { data, error } = await supabase.from('cash_balances').insert([{
-      current_balance: initialAmount,
-      last_updated: new Date().toISOString()
-    }]).select().single();
+    try {
+      // Verificar se já existe um saldo
+      const { data: existingBalance } = await supabase
+        .from('cash_balances')
+        .select('*')
+        .limit(1)
+        .single();
+      
+      if (existingBalance) {
+        // Atualizar saldo existente
+        const { data, error } = await supabase
+          .from('cash_balances')
+          .update({
+            current_balance: initialAmount,
+            initial_balance: initialAmount,
+            initial_date: new Date().toISOString().split('T')[0],
+            last_updated: new Date().toISOString()
+          })
+          .eq('id', existingBalance.id)
+          .select()
+          .single();
+        
+        if (error) throw error;
+        setCashBalance(transformFromDatabase(data));
+      } else {
+        // Criar novo saldo
+        const { data, error } = await supabase.from('cash_balances').insert([{
+          current_balance: initialAmount,
+          initial_balance: initialAmount,
+          initial_date: new Date().toISOString().split('T')[0],
+          last_updated: new Date().toISOString()
+        }]).select().single();
+        
+        if (error) throw error;
+        setCashBalance(transformFromDatabase(data));
+      }
+      
+      // Recalcular saldo baseado em todas as transações
+      await supabase.rpc('recalculate_cash_balance');
+      
+      // Recarregar dados
+      await loadAllData();
+      
+    } catch (error) {
+      console.error('❌ Erro ao inicializar caixa:', error);
+      throw error;
+    }
+  };
+
+  // Função para recalcular saldo do caixa
+  const recalculateCashBalance = async () => {
+    if (!isSupabaseConfigured()) return;
     
-    if (error) throw error;
+    try {
+      await supabase.rpc('recalculate_cash_balance');
+      await loadAllData();
+      console.log('✅ Saldo do caixa recalculado com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao recalcular saldo:', error);
+      throw error;
+    }
+  };
+
+  // Função para limpar duplicatas
+  const cleanupDuplicates = async () => {
+    if (!isSupabaseConfigured()) return;
     
-    const newBalance = transformFromDatabase(data);
-    setCashBalance(newBalance);
+    try {
+      console.log('🧹 Iniciando limpeza de duplicatas...');
+      
+      // Executar limpeza via SQL
+      const { error } = await supabase.rpc('check_system_integrity');
+      if (error) throw error;
+      
+      await loadAllData();
+      console.log('✅ Limpeza de duplicatas concluída');
+    } catch (error) {
+      console.error('❌ Erro na limpeza:', error);
+      throw error;
+    }
   };
 
   const updateCashBalance = async (balance: CashBalance) => {
@@ -1085,6 +1240,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     createAgendaEvent,
     updateAgendaEvent,
     deleteAgendaEvent,
+    
+    // System utilities
+    recalculateCashBalance,
+    cleanupDuplicates,
   };
 
   return (

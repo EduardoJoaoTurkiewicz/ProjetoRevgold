@@ -11,11 +11,13 @@ interface DuplicateStats {
 }
 
 export function DatabaseCleanup() {
+  const { recalculateCashBalance, cleanupDuplicates } = useAppContext();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
   const [stats, setStats] = useState<DuplicateStats[]>([]);
   const [cleanupComplete, setCleanupComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isRecalculatingCash, setIsRecalculatingCash] = useState(false);
 
   const handleAnalyze = async () => {
     setIsAnalyzing(true);
@@ -58,6 +60,21 @@ export function DatabaseCleanup() {
       setError(error instanceof Error ? error.message : 'Erro desconhecido na limpeza');
     } finally {
       setIsCleaning(false);
+    }
+  };
+
+  const handleRecalculateCash = async () => {
+    setIsRecalculatingCash(true);
+    setError(null);
+    
+    try {
+      await recalculateCashBalance();
+      console.log('✅ Saldo do caixa recalculado com sucesso!');
+    } catch (error) {
+      console.error('❌ Erro ao recalcular saldo:', error);
+      setError(error instanceof Error ? error.message : 'Erro desconhecido ao recalcular saldo');
+    } finally {
+      setIsRecalculatingCash(false);
     }
   };
 
@@ -145,6 +162,61 @@ export function DatabaseCleanup() {
                 {isCleaning ? 'Removendo...' : 'Remover Duplicatas'}
               </button>
             )}
+            
+            <button
+              onClick={handleRecalculateCash}
+              disabled={isRecalculatingCash}
+              className="btn-info flex items-center gap-2"
+            >
+              {isRecalculatingCash ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <RefreshCw className="w-5 h-5" />
+              )}
+              {isRecalculatingCash ? 'Recalculando...' : 'Recalcular Caixa'}
+            </button>
+          </div>
+        </div>
+
+        {/* Sistema de Caixa */}
+        <div className="card bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-blue-600">
+              <DollarSign className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-blue-900">Sistema de Caixa</h3>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="p-4 bg-white rounded-xl border border-blue-200">
+              <h4 className="font-bold text-blue-800 mb-2">Recalcular Saldo do Caixa</h4>
+              <p className="text-sm text-blue-700 mb-4">
+                Esta função recalcula o saldo do caixa baseado em TODAS as transações registradas no sistema.
+                Use se suspeitar que o saldo está incorreto.
+              </p>
+              <button
+                onClick={handleRecalculateCash}
+                disabled={isRecalculatingCash}
+                className="btn-info flex items-center gap-2"
+              >
+                {isRecalculatingCash ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-5 h-5" />
+                )}
+                {isRecalculatingCash ? 'Recalculando...' : 'Recalcular Saldo'}
+              </button>
+            </div>
+            
+            <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+              <h4 className="font-bold text-yellow-800 mb-2">⚠️ Como o Sistema de Caixa Funciona</h4>
+              <ul className="text-sm text-yellow-700 space-y-1">
+                <li>• <strong>Entradas automáticas:</strong> Vendas (dinheiro, PIX, débito), cheques compensados, boletos pagos</li>
+                <li>• <strong>Saídas automáticas:</strong> Dívidas pagas, salários, adiantamentos, tarifas PIX, impostos</li>
+                <li>• <strong>Atualização:</strong> O saldo é atualizado automaticamente a cada transação</li>
+                <li>• <strong>Integridade:</strong> Todas as operações são registradas em cash_transactions</li>
+              </ul>
+            </div>
           </div>
         </div>
 

@@ -130,26 +130,44 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validar dados obrigatórios
-    if (!formData.company.trim()) {
+    // Validações mais rigorosas
+    if (!formData.company || !formData.company.trim()) {
       alert('Por favor, informe o nome da empresa/fornecedor.');
       return;
     }
     
-    if (!formData.description.trim()) {
+    if (!formData.description || !formData.description.trim()) {
       alert('Por favor, informe a descrição da dívida.');
       return;
     }
     
-    if (formData.totalValue <= 0) {
+    if (!formData.totalValue || formData.totalValue <= 0) {
       alert('O valor total da dívida deve ser maior que zero.');
       return;
     }
     
-    // Validar se há pelo menos um método de pagamento
-    if (formData.paymentMethods.length === 0) {
+    if (!formData.paymentMethods || formData.paymentMethods.length === 0) {
       alert('Por favor, adicione pelo menos um método de pagamento.');
       return;
+    }
+    
+    // Validar dados obrigatórios
+    const totalPaymentAmount = formData.paymentMethods.reduce((sum, method) => sum + method.amount, 0);
+    if (totalPaymentAmount === 0) {
+      alert('Por favor, informe valores para os métodos de pagamento.');
+      return;
+    }
+    
+    // Validar estrutura dos métodos de pagamento
+    for (const method of formData.paymentMethods) {
+      if (!method.type || typeof method.type !== 'string') {
+        alert('Todos os métodos de pagamento devem ter um tipo válido.');
+        return;
+      }
+      if (typeof method.amount !== 'number' || method.amount < 0) {
+        alert('Todos os métodos de pagamento devem ter um valor válido.');
+        return;
+      }
     }
     
     const amounts = calculateAmounts();
@@ -166,6 +184,12 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
       debtPaymentDescription: formData.debtPaymentDescription,
       ...amounts
     };
+    
+    // Validação final
+    if (!debtData.company || !debtData.description || !debtData.totalValue) {
+      alert('Dados da dívida incompletos. Verifique todos os campos obrigatórios.');
+      return;
+    }
     
     console.log('📝 Enviando dívida:', debtData);
     onSubmit(debtData as Omit<Debt, 'id' | 'createdAt'>);

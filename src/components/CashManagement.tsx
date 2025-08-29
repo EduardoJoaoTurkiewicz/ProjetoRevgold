@@ -6,11 +6,12 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4'];
 
 export function CashManagement() {
-  const { cashBalance, sales, checks, boletos, pixFees, debts, taxes, employeePayments, employeeAdvances, isLoading, error, initializeCashBalance, updateCashBalance } = useAppContext();
+  const { cashBalance, sales, checks, boletos, pixFees, debts, taxes, employeePayments, employeeAdvances, isLoading, error, initializeCashBalance, updateCashBalance, recalculateCashBalance, loadAllData } = useAppContext();
   const [isInitializing, setIsInitializing] = useState(false);
   const [initialAmount, setInitialAmount] = useState(0);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showRealTimeUpdates, setShowRealTimeUpdates] = useState(true);
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -328,14 +329,22 @@ export function CashManagement() {
     try {
       await initializeCashBalance(initialAmount);
       console.log('✅ Caixa inicializado com sucesso');
-      // Recarregar dados para obter o saldo atualizado
-      setTimeout(async () => {
-        await loadAllData();
-      }, 500);
     } catch (error) {
       alert('Erro ao inicializar caixa: ' + (error as Error).message);
     } finally {
       setIsInitializing(false);
+    }
+  };
+
+  const handleRecalculateBalance = async () => {
+    setIsRecalculating(true);
+    try {
+      await recalculateCashBalance();
+      console.log('✅ Saldo recalculado com sucesso');
+    } catch (error) {
+      alert('Erro ao recalcular saldo: ' + (error as Error).message);
+    } finally {
+      setIsRecalculating(false);
     }
   };
 
@@ -414,7 +423,15 @@ export function CashManagement() {
       <div className="card bg-gradient-to-br from-green-100 to-emerald-100 border-green-300 modern-shadow-xl relative overflow-hidden">
         {/* Real-time indicator */}
         <div className="absolute top-4 right-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleRecalculateBalance}
+              disabled={isRecalculating}
+              className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-bold disabled:opacity-50"
+              title="Recalcular saldo baseado em todas as transações"
+            >
+              {isRecalculating ? 'Recalculando...' : 'Recalcular'}
+            </button>
             <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
             <span className="text-green-700 text-sm font-bold">Atualização Automática</span>
           </div>
@@ -428,6 +445,12 @@ export function CashManagement() {
           <p className="text-green-600 font-semibold">
             Última atualização: {new Date(cashBalance.lastUpdated).toLocaleString('pt-BR')}
           </p>
+          {cashBalance.initialBalance !== undefined && (
+            <p className="text-green-600 text-sm mt-2">
+              Saldo inicial: R$ {cashBalance.initialBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              {cashBalance.initialDate && ` (${new Date(cashBalance.initialDate).toLocaleDateString('pt-BR')})`}
+            </p>
+          )}
           <div className="mt-4 p-4 bg-white/50 rounded-xl">
             <p className="text-sm text-green-700 font-semibold">
               💡 O saldo é atualizado automaticamente quando:
@@ -438,6 +461,8 @@ export function CashManagement() {
               <p>• Boletos são marcados como "compensado"</p>
               <p>• Dívidas são marcadas como "pago"</p>
               <p>• Pagamentos de funcionários são registrados</p>
+              <p>• Tarifas PIX e impostos são pagos</p>
+              <p>• Adiantamentos são concedidos</p>
             </div>
           </div>
         </div>
