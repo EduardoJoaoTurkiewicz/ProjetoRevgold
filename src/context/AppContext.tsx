@@ -979,42 +979,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCashBalance(balance);
   };
 
-  // Função para recalcular saldo do caixa
-  const recalculateCashBalance = async () => {
-    if (!isSupabaseConfigured()) return;
-    
-    try {
-      const { error } = await supabase.rpc('recalculate_cash_balance');
-      if (error) throw error;
-      
-      // Recarregar dados após recálculo
-      await loadAllData();
-      console.log('✅ Saldo do caixa recalculado com sucesso');
-    } catch (error) {
-      console.error('❌ Erro ao recalcular saldo:', error);
-      throw error;
-    }
-  };
-
-  // Função para limpar duplicatas
-  const cleanupDuplicates = async () => {
-    if (!isSupabaseConfigured()) return;
-    
-    try {
-      console.log('🧹 Iniciando limpeza de duplicatas...');
-      
-      // Executar limpeza via SQL
-      const { error } = await supabase.rpc('check_system_integrity');
-      if (error) throw error;
-      
-      await loadAllData();
-      console.log('✅ Limpeza de duplicatas concluída');
-    } catch (error) {
-      console.error('❌ Erro na limpeza:', error);
-      throw error;
-    }
-  };
-
   const createCashTransaction = async (transactionData: Omit<CashTransaction, 'id' | 'createdAt'>) => {
     if (!isSupabaseConfigured()) {
       const newTransaction = {
@@ -1285,9 +1249,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // System utilities
     cleanupDuplicates,
     
-    // System utilities
-    recalculateCashBalance,
-    cleanupDuplicates,
   };
 
   return (

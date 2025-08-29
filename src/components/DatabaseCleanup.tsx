@@ -12,7 +12,6 @@ interface DuplicateStats {
 
 export function DatabaseCleanup() {
   const { recalculateCashBalance, cleanupDuplicates } = useAppContext();
-  const { recalculateCashBalance, cleanupDuplicates } = useAppContext();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
   const [stats, setStats] = useState<DuplicateStats[]>([]);
