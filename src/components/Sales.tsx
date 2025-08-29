@@ -71,6 +71,11 @@ export function Sales() {
       }
       
       alert('Erro ao criar venda: ' + errorMessage);
+    });
+  };
+
+  const handleEditSale = (sale: Omit<Sale, 'id' | 'createdAt'>) => {
+    if (editingSale) {
       updateSale(editingSale.id, sale).then(() => {
         setEditingSale(null);
       }).catch(error => {
