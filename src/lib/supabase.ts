@@ -38,12 +38,33 @@ export async function testSupabaseConnection() {
   }
   
   try {
-    const { data, error } = await supabase.from('employees').select('id').limit(1);
-    if (error) throw error;
+    // Test with a simple query and timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    const { data, error } = await supabase
+      .from('employees')
+      .select('id')
+      .limit(1)
+      .abortSignal(controller.signal);
+    
+    clearTimeout(timeoutId);
+    
+    if (error) {
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch')) {
+        throw new Error('Erro de conexão: Não foi possível conectar ao Supabase. Verifique sua conexão com a internet.');
+      }
+      throw error;
+    }
+    
     console.log('✅ Conexão com Supabase estabelecida com sucesso');
     return true;
   } catch (error) {
-    console.error('❌ Erro na conexão com Supabase:', error);
+    if (error.name === 'AbortError') {
+      console.error('❌ Timeout na conexão com Supabase');
+    } else {
+      console.error('❌ Erro na conexão com Supabase:', error);
+    }
     return false;
   }
 }
@@ -61,10 +82,22 @@ export async function healthCheck() {
       };
     }
 
-    // Teste simples de conexão
-    const { data, error } = await supabase.from('employees').select('id').limit(1);
+    // Test connection with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+    
+    const { data, error } = await supabase
+      .from('employees')
+      .select('id')
+      .limit(1)
+      .abortSignal(controller.signal);
+    
+    clearTimeout(timeoutId);
     
     if (error) {
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch')) {
+        throw new Error('Erro de conexão: Não foi possível conectar ao Supabase. Verifique sua conexão com a internet e as credenciais do Supabase.');
+      }
       throw new Error(`Erro de conexão: ${error.message}`);
     }
     
@@ -74,11 +107,19 @@ export async function healthCheck() {
     };
     
   } catch (error) {
-    console.error('❌ Erro na verificação de saúde:', error);
+    let errorMessage = 'Erro desconhecido na conexão';
+    
+    if (error.name === 'AbortError') {
+      errorMessage = 'Timeout na conexão com Supabase. Verifique sua conexão com a internet.';
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    
+    console.error('❌ Erro na verificação de saúde:', errorMessage);
     return {
       configured: false,
       connected: false,
-      error: (error as Error).message || 'Erro desconhecido na conexão'
+      error: errorMessage
     };
   }
 }

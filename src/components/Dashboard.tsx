@@ -349,6 +349,47 @@ const Dashboard: React.FC = () => {
           </div>
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Carregando Dashboard...</h2>
           <p className="text-slate-600">Preparando seus dados financeiros</p>
+          {error && (
+            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl max-w-md mx-auto">
+              <p className="text-red-700 text-sm font-medium">{error}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if there's an error but not loading
+  if (error && !loading && !isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center max-w-2xl mx-auto p-8">
+          <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertTriangle className="w-12 h-12 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Erro de Conexão</h2>
+          <div className="p-6 bg-red-50 border border-red-200 rounded-xl mb-6">
+            <p className="text-red-700 font-medium">{error}</p>
+          </div>
+          <div className="space-y-4">
+            <button
+              onClick={() => {
+                setError(null);
+                loadAllData();
+              }}
+              className="btn-primary"
+            >
+              Tentar Novamente
+            </button>
+            <div className="text-sm text-slate-600">
+              <p className="mb-2">Para resolver este problema:</p>
+              <ul className="text-left space-y-1">
+                <li>• Verifique sua conexão com a internet</li>
+                <li>• Confirme se as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY estão corretas no arquivo .env</li>
+                <li>• Verifique se o projeto Supabase está ativo e acessível</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     );
