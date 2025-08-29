@@ -69,6 +69,19 @@ export function Sales() {
           errorMessage = error.message;
         }
       }
+      let errorMessage = 'Erro desconhecido ao criar venda';
+      
+      if (error.message) {
+        if (error.message.includes('duplicate key') || error.message.includes('já existe')) {
+          errorMessage = 'Esta venda já existe no sistema. O sistema previne duplicatas automaticamente.';
+        } else if (error.message.includes('payment_method') || error.message.includes('field')) {
+          errorMessage = 'Erro na estrutura dos métodos de pagamento. Verifique os dados inseridos.';
+        } else if (error.message.includes('constraint')) {
+          errorMessage = 'Dados inválidos ou duplicados. Verifique as informações inseridas.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
       
       alert('Erro ao criar venda: ' + errorMessage);
     });

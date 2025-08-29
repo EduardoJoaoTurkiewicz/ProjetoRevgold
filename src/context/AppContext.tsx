@@ -324,15 +324,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         throw new Error('Pelo menos um método de pagamento é obrigatório');
       }
       
-      // Verificar se já existe uma venda similar (prevenção de duplicatas)
-      const existingSale = sales.find(sale => 
-        sale.client === saleData.client &&
-        sale.date === saleData.date &&
-        sale.totalValue === saleData.totalValue
-      );
-      
-      if (existingSale) {
-        throw new Error('Uma venda com os mesmos dados já existe. Verifique se não há duplicação.');
+      // Validar estrutura dos métodos de pagamento
+      for (const method of saleData.paymentMethods) {
+        if (!method.type || typeof method.type !== 'string') {
+          throw new Error('Todos os métodos de pagamento devem ter um tipo válido.');
+        }
+        if (typeof method.amount !== 'number' || method.amount < 0) {
+          throw new Error('Todos os métodos de pagamento devem ter um valor válido.');
+        }
       }
       
       const dbData = transformToDatabase(saleData);
@@ -343,13 +342,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.error('❌ Erro detalhado do Supabase:', error);
         if (error.code === '23505') {
-          throw new Error('Uma venda com os mesmos dados já existe (cliente, data e valor). Verifique se não há duplicação.');
+          throw new Error('Uma venda com os mesmos dados já existe. O sistema previne duplicatas automaticamente.');
         }
         if (error.code === '23514') {
           throw new Error('Dados inválidos. Verifique os valores inseridos.');
-        }
-        if (error.code === '42703') {
-          throw new Error('Erro na estrutura dos dados de pagamento. Verifique os métodos de pagamento.');
         }
         throw new Error(`Erro ao criar venda: ${error.message}`);
       }
@@ -437,15 +433,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       
       // Verificar se já existe uma dívida similar
-      const existingDebt = debts.find(debt => 
-        debt.company === debtData.company &&
-        debt.date === debtData.date &&
-        debt.totalValue === debtData.totalValue &&
-        debt.description === debtData.description
-      );
-      
-      if (existingDebt) {
-        throw new Error('Uma dívida com os mesmos dados já existe. Verifique se não há duplicação.');
+      // Validar estrutura dos métodos de pagamento
+      if (debtData.paymentMethods && debtData.paymentMethods.length > 0) {
+        for (const method of debtData.paymentMethods) {
+          if (!method.type || typeof method.type !== 'string') {
+            throw new Error('Todos os métodos de pagamento devem ter um tipo válido.');
+          }
+          if (typeof method.amount !== 'number' || method.amount < 0) {
+            throw new Error('Todos os métodos de pagamento devem ter um valor válido.');
+          }
+        }
       }
       
       const dbData = transformToDatabase(debtData);
@@ -456,7 +453,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.error('❌ Erro detalhado do Supabase:', error);
         if (error.code === '23505') {
-          throw new Error('Uma dívida com os mesmos dados já existe (empresa, data, valor e descrição). Verifique se não há duplicação.');
+          throw new Error('Uma dívida com os mesmos dados já existe. O sistema previne duplicatas automaticamente.');
         }
         if (error.code === '23514') {
           throw new Error('Dados inválidos. Verifique os valores inseridos.');
@@ -686,17 +683,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         throw new Error('Salário deve ser maior que zero');
       }
       
-      // Verificar se já existe um funcionário similar
-      const existingEmployee = employees.find(emp => 
-        emp.name === employeeData.name &&
-        emp.position === employeeData.position &&
-        emp.salary === employeeData.salary
-      );
-      
-      if (existingEmployee) {
-        throw new Error('Um funcionário com os mesmos dados já existe. Verifique se não há duplicação.');
-      }
-      
       const dbData = transformToDatabase(employeeData);
       console.log('🔄 Dados transformados para o banco:', dbData);
       
@@ -705,7 +691,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.error('❌ Erro detalhado do Supabase:', error);
         if (error.code === '23505') {
-          throw new Error('Um funcionário com o mesmo nome e cargo já existe. Verifique se não há duplicação.');
+          throw new Error('Um funcionário com os mesmos dados já existe. O sistema previne duplicatas automaticamente.');
         }
         if (error.code === '23514') {
           throw new Error('Dados inválidos. Verifique os valores inseridos.');

@@ -58,7 +58,18 @@ export function Employees() {
       setIsFormOpen(false);
     }).catch(error => {
       console.error('❌ Erro ao adicionar funcionário:', error);
-      const errorMessage = error.message || 'Erro desconhecido ao criar funcionário';
+      let errorMessage = 'Erro desconhecido ao criar funcionário';
+      
+      if (error.message) {
+        if (error.message.includes('duplicate key') || error.message.includes('já existe')) {
+          errorMessage = 'Este funcionário já existe no sistema. O sistema previne duplicatas automaticamente.';
+        } else if (error.message.includes('constraint')) {
+          errorMessage = 'Dados inválidos ou duplicados. Verifique as informações inseridas.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       alert('Erro ao criar funcionário: ' + errorMessage);
     });
   };

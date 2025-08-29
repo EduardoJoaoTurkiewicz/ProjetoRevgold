@@ -30,12 +30,37 @@ export function Debts() {
       return;
     }
     
+    // Validar estrutura dos métodos de pagamento
+    if (debt.paymentMethods && debt.paymentMethods.length > 0) {
+      for (const method of debt.paymentMethods) {
+        if (!method.type || typeof method.type !== 'string') {
+          alert('Todos os métodos de pagamento devem ter um tipo válido.');
+          return;
+        }
+        if (typeof method.amount !== 'number' || method.amount < 0) {
+          alert('Todos os métodos de pagamento devem ter um valor válido.');
+          return;
+        }
+      }
+    }
+    
     createDebt(debt).then(() => {
       console.log('✅ Dívida adicionada com sucesso');
       setIsFormOpen(false);
     }).catch(error => {
       console.error('❌ Erro ao adicionar dívida:', error);
-      const errorMessage = error.message || 'Erro desconhecido ao criar dívida';
+      let errorMessage = 'Erro desconhecido ao criar dívida';
+      
+      if (error.message) {
+        if (error.message.includes('duplicate key') || error.message.includes('já existe')) {
+          errorMessage = 'Esta dívida já existe no sistema. O sistema previne duplicatas automaticamente.';
+        } else if (error.message.includes('constraint')) {
+          errorMessage = 'Dados inválidos ou duplicados. Verifique as informações inseridas.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       alert('Erro ao criar dívida: ' + errorMessage);
     });
   };

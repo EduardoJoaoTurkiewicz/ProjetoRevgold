@@ -11,13 +11,14 @@ interface DuplicateStats {
 }
 
 export function DatabaseCleanup() {
-  const { recalculateCashBalance, cleanupDuplicates } = useAppContext();
+  const { recalculateCashBalance, cleanupDuplicates, loadAllData } = useAppContext();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
   const [stats, setStats] = useState<DuplicateStats[]>([]);
   const [cleanupComplete, setCleanupComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isRecalculatingCash, setIsRecalculatingCash] = useState(false);
+  const [isFixingSystem, setIsFixingSystem] = useState(false);
 
   const handleAnalyze = async () => {
     setIsAnalyzing(true);
@@ -60,6 +61,44 @@ export function DatabaseCleanup() {
       setError(error instanceof Error ? error.message : 'Erro desconhecido na limpeza');
     } finally {
       setIsCleaning(false);
+    }
+  };
+
+  const handleFixSystem = async () => {
+    if (!window.confirm('⚠️ ATENÇÃO: Esta ação irá executar uma correção completa do sistema, incluindo:\n\n• Remoção de TODAS as duplicatas\n• Reconstrução do sistema de caixa\n• Correção de inconsistências\n\nEsta operação pode demorar alguns minutos. Deseja continuar?')) {
+      return;
+    }
+
+    setIsFixingSystem(true);
+    setError(null);
+    
+    try {
+      console.log('🔧 Iniciando correção completa do sistema...');
+      
+      // Executar a migração de correção
+      const { error } = await supabase.rpc('sql', {
+        query: `
+          -- Executar limpeza completa
+          SELECT check_system_integrity();
+          SELECT recalculate_cash_balance();
+        `
+      });
+      
+      if (error) throw error;
+      
+      // Recarregar todos os dados
+      await loadAllData();
+      
+      // Recalcular saldo do caixa
+      await recalculateCashBalance();
+      
+      setCleanupComplete(true);
+      console.log('✅ Sistema corrigido com sucesso!');
+    } catch (error) {
+      console.error('❌ Erro na correção do sistema:', error);
+      setError(error instanceof Error ? error.message : 'Erro desconhecido na correção do sistema');
+    } finally {
+      setIsFixingSystem(false);
     }
   };
 
@@ -136,6 +175,19 @@ export function DatabaseCleanup() {
           <h3 className="text-xl font-bold text-slate-900">Controles de Limpeza</h3>
           <div className="flex gap-4">
             <button
+              onClick={handleFixSystem}
+              disabled={isFixingSystem || isAnalyzing || isCleaning}
+              className="btn-success flex items-center gap-2"
+            >
+              {isFixingSystem ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <CheckCircle className="w-5 h-5" />
+              )}
+              {isFixingSystem ? 'Corrigindo Sistema...' : 'Corrigir Sistema Completo'}
+            </button>
+            
+            <button
               onClick={handleAnalyze}
               disabled={isAnalyzing || isCleaning}
               className="btn-secondary flex items-center gap-2"
@@ -188,11 +240,23 @@ export function DatabaseCleanup() {
           </div>
           
           <div className="space-y-4">
+            <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+              <h4 className="font-bold text-green-800 mb-2">✅ Sistema de Caixa Automático</h4>
+              <p className="text-sm text-green-700 mb-4">
+                O sistema agora atualiza o saldo automaticamente para TODAS as operações:
+              </p>
+              <ul className="text-sm text-green-700 space-y-1">
+                <li>• <strong>Entradas automáticas:</strong> Vendas (dinheiro, PIX, débito), cheques compensados, boletos recebidos</li>
+                <li>• <strong>Saídas automáticas:</strong> Dívidas pagas, salários, adiantamentos, tarifas PIX, impostos, cheques próprios</li>
+                <li>• <strong>Controle rigoroso:</strong> Prevenção de duplicatas e validações automáticas</li>
+                <li>• <strong>Integridade:</strong> Todas as operações são registradas em cash_transactions</li>
+              </ul>
+            </div>
+            
             <div className="p-4 bg-white rounded-xl border border-blue-200">
               <h4 className="font-bold text-blue-800 mb-2">Recalcular Saldo do Caixa</h4>
               <p className="text-sm text-blue-700 mb-4">
-                Esta função recalcula o saldo do caixa baseado em TODAS as transações registradas no sistema.
-                Use se suspeitar que o saldo está incorreto.
+                Recalcula o saldo baseado em TODAS as transações. Use apenas se suspeitar de inconsistências.
               </p>
               <button
                 onClick={handleRecalculateCash}
@@ -208,14 +272,23 @@ export function DatabaseCleanup() {
               </button>
             </div>
             
-            <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-200">
-              <h4 className="font-bold text-yellow-800 mb-2">⚠️ Como o Sistema de Caixa Funciona</h4>
-              <ul className="text-sm text-yellow-700 space-y-1">
-                <li>• <strong>Entradas automáticas:</strong> Vendas (dinheiro, PIX, débito), cheques compensados, boletos pagos</li>
-                <li>• <strong>Saídas automáticas:</strong> Dívidas pagas, salários, adiantamentos, tarifas PIX, impostos</li>
-                <li>• <strong>Atualização:</strong> O saldo é atualizado automaticamente a cada transação</li>
-                <li>• <strong>Integridade:</strong> Todas as operações são registradas em cash_transactions</li>
-              </ul>
+            <div className="p-4 bg-red-50 rounded-xl border border-red-200">
+              <h4 className="font-bold text-red-800 mb-2">🚨 Correção Completa do Sistema</h4>
+              <p className="text-sm text-red-700 mb-4">
+                Use esta função se o sistema estiver com problemas graves como duplicatas ou inconsistências no caixa.
+              </p>
+              <button
+                onClick={handleFixSystem}
+                disabled={isFixingSystem}
+                className="btn-danger flex items-center gap-2"
+              >
+                {isFixingSystem ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <AlertTriangle className="w-5 h-5" />
+                )}
+                {isFixingSystem ? 'Corrigindo...' : 'Corrigir Sistema Completo'}
+              </button>
             </div>
           </div>
         </div>
