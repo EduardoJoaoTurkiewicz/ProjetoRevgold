@@ -135,10 +135,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const transformToDatabase = (obj: any) => {
     if (!obj) return obj;
     
+    const transformValue = (value: any): any => {
+      if (Array.isArray(value)) {
+        return value.map(item => transformValue(item));
+      } else if (value && typeof value === 'object' && value.constructor === Object) {
+        const transformed: any = {};
+        for (const [k, v] of Object.entries(value)) {
+          const snakeKey = k.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+          transformed[snakeKey] = transformValue(v);
+        }
+        return transformed;
+      }
+      return value;
+    };
+
     const transformed: any = {};
     for (const [key, value] of Object.entries(obj)) {
       const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-      transformed[snakeKey] = value;
+      transformed[snakeKey] = transformValue(value);
     }
     
     return transformed;
