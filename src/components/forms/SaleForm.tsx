@@ -195,6 +195,35 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       return;
     }
     
+    // Validar estrutura dos métodos de pagamento
+    for (const method of formData.paymentMethods) {
+      if (!method.type || typeof method.type !== 'string') {
+        alert('Todos os métodos de pagamento devem ter um tipo válido.');
+        return;
+      }
+      if (typeof method.amount !== 'number' || method.amount < 0) {
+        alert('Todos os métodos de pagamento devem ter um valor válido.');
+        return;
+      }
+      
+      // Limpar campos undefined ou null que podem causar problemas
+      if (method.installments === undefined || method.installments === null) {
+        delete method.installments;
+      }
+      if (method.installmentValue === undefined || method.installmentValue === null) {
+        delete method.installmentValue;
+      }
+      if (method.installmentInterval === undefined || method.installmentInterval === null) {
+        delete method.installmentInterval;
+      }
+      if (method.startDate === undefined || method.startDate === null || method.startDate === '') {
+        delete method.startDate;
+      }
+      if (method.firstInstallmentDate === undefined || method.firstInstallmentDate === null || method.firstInstallmentDate === '') {
+        delete method.firstInstallmentDate;
+      }
+    }
+    
     const amounts = calculateAmounts();
     
     // Adicionar descrição do pagamento às observações se fornecida
@@ -208,9 +237,24 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     // Convert empty sellerId to null for UUID field
     const sellerId = formData.sellerId === '' ? null : formData.sellerId;
     
+    // Limpar dados antes de enviar
+    const cleanedPaymentMethods = formData.paymentMethods.map(method => {
+      const cleaned = { ...method };
+      
+      // Remover campos vazios ou undefined
+      Object.keys(cleaned).forEach(key => {
+        if (cleaned[key] === undefined || cleaned[key] === null || cleaned[key] === '') {
+          delete cleaned[key];
+        }
+      });
+      
+      return cleaned;
+    });
+    
     const saleToSubmit = {
       ...formData,
       sellerId,
+      paymentMethods: cleanedPaymentMethods,
       observations: finalObservations,
       ...amounts
     };

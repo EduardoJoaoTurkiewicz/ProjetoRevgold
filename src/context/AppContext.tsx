@@ -135,22 +135,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const transformToDatabase = (obj: any) => {
     if (!obj) return obj;
     
+    // Função recursiva para transformar objetos aninhados
     const transformValue = (value: any): any => {
+      if (value === null || value === undefined) {
+        return value;
+      }
+      
       if (Array.isArray(value)) {
         return value.map(item => transformValue(item));
-      } else if (value && typeof value === 'object' && value.constructor === Object) {
+      }
+      
+      if (value && typeof value === 'object' && value.constructor === Object) {
         const transformed: any = {};
         for (const [k, v] of Object.entries(value)) {
+          // Converter camelCase para snake_case
           const snakeKey = k.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
           transformed[snakeKey] = transformValue(v);
         }
         return transformed;
       }
+      
       return value;
     };
 
     const transformed: any = {};
     for (const [key, value] of Object.entries(obj)) {
+      // Converter camelCase para snake_case
       const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
       transformed[snakeKey] = transformValue(value);
     }
@@ -295,18 +305,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      console.log('🔄 Dados da venda antes da transformação:', saleData);
+      
       const dbData = transformToDatabase(saleData);
+      console.log('🔄 Dados transformados para o banco:', dbData);
+      
       const { data, error } = await supabase.from('sales').insert([dbData]).select().single();
       
       if (error) {
+        console.error('❌ Erro detalhado do Supabase:', error);
         if (error.code === '23505') {
-          throw new Error('Uma venda idêntica já existe. Verifique se não há duplicação de dados.');
+          throw new Error('Uma venda com os mesmos dados já existe (cliente, data e valor). Verifique se não há duplicação.');
+        }
+        if (error.code === '42703') {
+          throw new Error('Erro na estrutura dos dados de pagamento. Verifique os métodos de pagamento.');
         }
         throw new Error(`Erro ao criar venda: ${error.message}`);
       }
       
       const newSale = transformFromDatabase(data);
       setSales(prev => [newSale, ...prev]);
+      console.log('✅ Venda criada com sucesso:', newSale.id);
       
       // Create checks and boletos automatically
       await AutomationService.createChecksForSale(newSale);
@@ -371,18 +390,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      console.log('🔄 Dados da dívida antes da transformação:', debtData);
+      
       const dbData = transformToDatabase(debtData);
+      console.log('🔄 Dados transformados para o banco:', dbData);
+      
       const { data, error } = await supabase.from('debts').insert([dbData]).select().single();
       
       if (error) {
+        console.error('❌ Erro detalhado do Supabase:', error);
         if (error.code === '23505') {
-          throw new Error('Uma dívida idêntica já existe. Verifique se não há duplicação de dados.');
+          throw new Error('Uma dívida com os mesmos dados já existe (empresa, data, valor e descrição). Verifique se não há duplicação.');
         }
         throw new Error(`Erro ao criar dívida: ${error.message}`);
       }
       
       const newDebt = transformFromDatabase(data);
       setDebts(prev => [newDebt, ...prev]);
+      console.log('✅ Dívida criada com sucesso:', newDebt.id);
     } catch (error) {
       console.error('❌ Erro ao criar dívida:', error);
       throw error;
@@ -439,18 +464,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      console.log('🔄 Dados do cheque antes da transformação:', checkData);
+      
       const dbData = transformToDatabase(checkData);
+      console.log('🔄 Dados transformados para o banco:', dbData);
+      
       const { data, error } = await supabase.from('checks').insert([dbData]).select().single();
       
       if (error) {
+        console.error('❌ Erro detalhado do Supabase:', error);
         if (error.code === '23505') {
-          throw new Error('Um cheque idêntico já existe. Verifique se não há duplicação de dados.');
+          throw new Error('Um cheque com os mesmos dados já existe (cliente, valor, vencimento e parcela). Verifique se não há duplicação.');
         }
         throw new Error(`Erro ao criar cheque: ${error.message}`);
       }
       
       const newCheck = transformFromDatabase(data);
       setChecks(prev => [newCheck, ...prev]);
+      console.log('✅ Cheque criado com sucesso:', newCheck.id);
     } catch (error) {
       console.error('❌ Erro ao criar cheque:', error);
       throw error;
@@ -507,12 +538,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      console.log('🔄 Dados do boleto antes da transformação:', boletoData);
+      
       const dbData = transformToDatabase(boletoData);
+      console.log('🔄 Dados transformados para o banco:', dbData);
+      
       const { data, error } = await supabase.from('boletos').insert([dbData]).select().single();
       
       if (error) {
+        console.error('❌ Erro detalhado do Supabase:', error);
         if (error.code === '23505') {
-          throw new Error('Um boleto idêntico já existe. Verifique se não há duplicação de dados.');
+          throw new Error('Um boleto com os mesmos dados já existe (cliente, valor, vencimento e parcela). Verifique se não há duplicação.');
         }
         throw new Error(`Erro ao criar boleto: ${error.message}`);
       }
@@ -576,18 +612,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      console.log('🔄 Dados do funcionário antes da transformação:', employeeData);
+      
       const dbData = transformToDatabase(employeeData);
+      console.log('🔄 Dados transformados para o banco:', dbData);
+      
       const { data, error } = await supabase.from('employees').insert([dbData]).select().single();
       
       if (error) {
+        console.error('❌ Erro detalhado do Supabase:', error);
         if (error.code === '23505') {
-          throw new Error('Um funcionário idêntico já existe. Verifique se não há duplicação de dados.');
+          throw new Error('Um funcionário com o mesmo nome e cargo já existe. Verifique se não há duplicação.');
         }
         throw new Error(`Erro ao criar funcionário: ${error.message}`);
       }
       
       const newEmployee = transformFromDatabase(data);
       setEmployees(prev => [newEmployee, ...prev]);
+      console.log('✅ Funcionário criado com sucesso:', newEmployee.id);
     } catch (error) {
       console.error('❌ Erro ao criar funcionário:', error);
       throw error;

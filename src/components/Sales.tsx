@@ -41,12 +41,35 @@ export function Sales() {
       return;
     }
     
+    // Validar estrutura dos métodos de pagamento
+    for (const method of sale.paymentMethods) {
+      if (!method.type || typeof method.type !== 'string') {
+        alert('Todos os métodos de pagamento devem ter um tipo válido.');
+        return;
+      }
+      if (typeof method.amount !== 'number' || method.amount < 0) {
+        alert('Todos os métodos de pagamento devem ter um valor válido.');
+        return;
+      }
+    }
+    
     addSale(sale).then(() => {
       console.log('✅ Venda adicionada com sucesso');
       setIsFormOpen(false);
     }).catch(error => {
       console.error('❌ Erro ao adicionar venda:', error);
-      const errorMessage = error.message || 'Erro desconhecido ao criar venda';
+      let errorMessage = 'Erro desconhecido ao criar venda';
+      
+      if (error.message) {
+        if (error.message.includes('duplicate key') || error.message.includes('já existe')) {
+          errorMessage = 'Uma venda com os mesmos dados já existe. Verifique se não há duplicação.';
+        } else if (error.message.includes('payment_method') || error.message.includes('field')) {
+          errorMessage = 'Erro na estrutura dos métodos de pagamento. Verifique os dados inseridos.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       alert('Erro ao criar venda: ' + errorMessage);
     });
   };
