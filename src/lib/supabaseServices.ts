@@ -11,7 +11,9 @@ import type {
   EmployeeCommission,
   CashTransaction,
   PixFee,
-  CashBalance
+  CashBalance,
+  Tax,
+  AgendaEvent
 } from '../types';
 
 // Utility function to transform database row to app type
@@ -700,6 +702,51 @@ export const taxesService = {
     if (!isSupabaseConfigured()) return;
     
     const { error } = await supabase.from('taxes').delete().eq('id', id);
+    if (error) throw error;
+  }
+};
+
+export const agendaEventsService = {
+  async getAll(): Promise<AgendaEvent[]> {
+    if (!isSupabaseConfigured()) return [];
+    
+    const { data, error } = await supabase
+      .from('agenda_events')
+      .select('*')
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformDatabaseRow<AgendaEvent>);
+  },
+
+  async create(event: Omit<AgendaEvent, 'id' | 'createdAt' | 'updatedAt'>): Promise<AgendaEvent> {
+    if (!isSupabaseConfigured()) {
+      return {
+        ...event,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
+    const dbData = transformToDatabase(event);
+    const { data, error } = await supabase.from('agenda_events').insert([dbData]).select().single();
+    if (error) throw error;
+    return transformDatabaseRow<AgendaEvent>(data);
+  },
+
+  async update(id: string, event: Partial<AgendaEvent>): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const dbData = transformToDatabase(event);
+    const { error } = await supabase.from('agenda_events').update(dbData).eq('id', id);
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const { error } = await supabase.from('agenda_events').delete().eq('id', id);
     if (error) throw error;
   }
 };
