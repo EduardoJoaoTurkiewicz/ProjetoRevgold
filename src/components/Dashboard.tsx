@@ -58,7 +58,10 @@ const Dashboard: React.FC = () => {
     cashBalance,
     recalculateCashBalance,
     loading, 
-    isLoading 
+    isLoading,
+    error,
+    setError,
+    loadAllData
   } = useAppContext();
   
   const [isRecalculating, setIsRecalculating] = useState(false);
