@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { Debt, PaymentMethod } from '../../types';
-import { useAppContext } from '../../context/AppContext';
 
 interface DebtFormProps {
   debt?: Debt | null;
@@ -19,29 +18,16 @@ const PAYMENT_TYPES = [
   { value: 'transferencia', label: 'Transferência' }
 ];
 
-const INSTALLMENT_TYPES = ['cartao_credito', 'cheque', 'boleto'];
-
 export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
-  const { checks } = useAppContext();
   const [formData, setFormData] = useState({
     date: debt?.date || new Date().toISOString().split('T')[0],
     description: debt?.description || '',
     company: debt?.company || '',
     totalValue: debt?.totalValue || 0,
     paymentMethods: debt?.paymentMethods || [{ type: 'dinheiro' as const, amount: 0 }],
-    isPaid: debt?.isPaid || false,
-    checksUsed: debt?.checksUsed || [],
     paymentDescription: debt?.paymentDescription || '',
-    debtPaymentDescription: debt?.debtPaymentDescription || '',
-    useOwnCheck: false,
-    ownCheckDiscountDate: new Date().toISOString().split('T')[0]
+    debtPaymentDescription: debt?.debtPaymentDescription || ''
   });
-
-  // Get available checks from sales that have check payment method
-  const availableChecks = checks.filter(check => 
-    !check.usedInDebt && // Não usado em outras dívidas
-    !formData.checksUsed.includes(check.id)
-  );
 
   const addPaymentMethod = () => {
     setFormData(prev => ({
@@ -60,63 +46,22 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
   const updatePaymentMethod = (index: number, field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
-      paymentMethods: prev.paymentMethods.map((method, i) => {
-        if (i === index) {
-          const updatedMethod = { ...method, [field]: value };
-          
-          if (field === 'installments' && value > 1) {
-            updatedMethod.installmentValue = method.amount / value;
-          }
-          
-          if (field === 'type' && !INSTALLMENT_TYPES.includes(value)) {
-            delete updatedMethod.installments;
-            delete updatedMethod.installmentValue;
-            delete updatedMethod.installmentInterval;
-            delete updatedMethod.startDate;
-          }
-          
-          return updatedMethod;
-        }
-        return method;
-      })
+      paymentMethods: prev.paymentMethods.map((method, i) => 
+        i === index ? { ...method, [field]: value } : method
+      )
     }));
   };
 
-  const toggleCheckUsed = (saleId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      checksUsed: prev.checksUsed.includes(saleId)
-        ? prev.checksUsed.filter(id => id !== saleId)
-        : [...prev.checksUsed, saleId]
-    }));
-  };
-
-  const hasCheckPayment = formData.paymentMethods.some(method => method.type === 'cheque');
-  
   const calculateAmounts = () => {
-    // Calcular valor pago baseado nos métodos de pagamento e cheques selecionados
-    let totalPaid = 0;
-    
-    // Calcular valor pago pelos métodos de pagamento
-    formData.paymentMethods.forEach(method => {
-      // Métodos que são pagos instantaneamente
-      if (['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(method.type)) {
-        totalPaid += method.amount;
+    const totalPaid = formData.paymentMethods.reduce((sum, method) => {
+      if (method.type === 'dinheiro' || method.type === 'pix' || method.type === 'cartao_debito') {
+        return sum + method.amount;
       }
-      // Métodos que são parciais (não pagos instantaneamente)
-      else if (['cartao_credito', 'cheque', 'boleto'].includes(method.type)) {
-        // Para estes métodos, não adicionar ao valor pago imediatamente
-        // Eles serão considerados como pendentes até serem efetivamente pagos
+      if (method.type === 'cartao_credito' && (!method.installments || method.installments === 1)) {
+        return sum + method.amount;
       }
-    });
-    
-    // Adicionar valor dos cheques selecionados (se houver)
-    const checksValue = formData.checksUsed.reduce((sum, checkId) => {
-      const check = checks.find(c => c.id === checkId);
-      return sum + (check ? check.value : 0);
+      return sum;
     }, 0);
-    
-    totalPaid += checksValue;
     
     const pending = formData.totalValue - totalPaid;
     
@@ -130,9 +75,8 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validações mais rigorosas
     if (!formData.company || !formData.company.trim()) {
-      alert('Por favor, informe o nome da empresa/fornecedor.');
+      alert('Por favor, informe o nome da empresa.');
       return;
     }
     
@@ -151,59 +95,61 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
       return;
     }
     
-    // Validar dados obrigatórios
     const totalPaymentAmount = formData.paymentMethods.reduce((sum, method) => sum + method.amount, 0);
     if (totalPaymentAmount === 0) {
-      alert('Por favor, informe valores para os métodos de pagamento.');
+      alert('Por favor, informe pelo menos um método de pagamento com valor maior que zero.');
       return;
     }
     
-    // Validar estrutura dos métodos de pagamento
-    for (const method of formData.paymentMethods) {
-      if (!method.type || typeof method.type !== 'string') {
-        alert('Todos os métodos de pagamento devem ter um tipo válido.');
-        return;
-      }
-      if (typeof method.amount !== 'number' || method.amount < 0) {
-        alert('Todos os métodos de pagamento devem ter um valor válido.');
-        return;
-      }
+    if (totalPaymentAmount > formData.totalValue) {
+      alert('O total dos métodos de pagamento não pode ser maior que o valor total da dívida.');
+      return;
     }
+    
+    // Clean payment methods data
+    const cleanedPaymentMethods = formData.paymentMethods.map(method => {
+      const cleaned = { ...method };
+      
+      // Remove empty or undefined fields
+      Object.keys(cleaned).forEach(key => {
+        if (cleaned[key] === undefined || cleaned[key] === null || cleaned[key] === '') {
+          delete cleaned[key];
+        }
+      });
+      
+      return cleaned;
+    });
     
     const amounts = calculateAmounts();
     
-    // Only submit fields that exist in the database schema
-    const debtData = {
-      date: formData.date,
-      description: formData.description,
-      company: formData.company,
-      totalValue: formData.totalValue,
-      paymentMethods: formData.paymentMethods,
-      checksUsed: formData.checksUsed,
-      paymentDescription: formData.paymentDescription,
-      debtPaymentDescription: formData.debtPaymentDescription,
+    // Add payment description to observations if provided
+    let finalPaymentDescription = formData.paymentDescription;
+    if (formData.debtPaymentDescription.trim()) {
+      finalPaymentDescription = finalPaymentDescription 
+        ? `${finalPaymentDescription}\n\nDescrição do Pagamento: ${formData.debtPaymentDescription}`
+        : `Descrição do Pagamento: ${formData.debtPaymentDescription}`;
+    }
+    
+    const debtToSubmit = {
+      ...formData,
+      paymentMethods: cleanedPaymentMethods,
+      paymentDescription: finalPaymentDescription,
       ...amounts
     };
     
-    // Validação final
-    if (!debtData.company || !debtData.description || !debtData.totalValue) {
-      alert('Dados da dívida incompletos. Verifique todos os campos obrigatórios.');
-      return;
-    }
-    
-    console.log('📝 Enviando dívida:', debtData);
-    onSubmit(debtData as Omit<Debt, 'id' | 'createdAt'>);
+    console.log('📝 Enviando dívida:', debtToSubmit);
+    onSubmit(debtToSubmit as Omit<Debt, 'id' | 'createdAt'>);
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[100] backdrop-blur-sm modal-overlay">
-      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
+      <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
+        <div className="p-8">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold">
+            <h2 className="text-3xl font-bold text-slate-900">
               {debt ? 'Editar Dívida' : 'Nova Dívida'}
             </h2>
-            <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
+            <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-all">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -222,14 +168,13 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Valor Total *</label>
+                <label className="form-label">Empresa *</label>
                 <input
-                  type="number"
-                  step="0.01"
-                  value={formData.totalValue}
-                  onChange={(e) => setFormData(prev => ({ ...prev, totalValue: parseFloat(e.target.value) || 0 }))}
+                  type="text"
+                  value={formData.company}
+                  onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
                   className="input-field"
-                  placeholder="0,00"
+                  placeholder="Nome da empresa"
                   required
                 />
               </div>
@@ -241,20 +186,33 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   className="input-field"
                   rows={3}
-                  placeholder="Descreva a dívida ou gasto"
+                  placeholder="Descrição da dívida..."
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Valor Total *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.totalValue}
+                  onChange={(e) => setFormData(prev => ({ ...prev, totalValue: parseFloat(e.target.value) || 0 }))}
+                  className="input-field"
+                  placeholder="0,00"
                   required
                 />
               </div>
 
               <div className="form-group md:col-span-2">
-                <label className="form-label">Empresa/Fornecedor *</label>
-                <input
-                  type="text"
-                  value={formData.company}
-                  onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
+                <label className="form-label">Descrição sobre o Pagamento (Opcional)</label>
+                <textarea
+                  value={formData.debtPaymentDescription}
+                  onChange={(e) => setFormData(prev => ({ ...prev, debtPaymentDescription: e.target.value }))}
                   className="input-field"
-                  placeholder="Nome da empresa ou fornecedor que vai ser pago"
-                  required
+                  rows={2}
+                  placeholder="Informações específicas sobre como será feito o pagamento (opcional)"
                 />
               </div>
             </div>
@@ -310,248 +268,59 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
                         <input
                           type="number"
                           step="0.01"
+                          min="0"
                           value={method.amount}
                           onChange={(e) => updatePaymentMethod(index, 'amount', parseFloat(e.target.value) || 0)}
                           className="input-field"
                           placeholder="0,00"
                         />
                       </div>
-
-                      {method.type === 'cheque' && (
-                        <div className="md:col-span-2">
-                          <label className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={method.isOwnCheck || false}
-                              onChange={(e) => updatePaymentMethod(index, 'isOwnCheck', e.target.checked)}
-                              className="rounded"
-                            />
-                            <span className="form-label mb-0">Cheque Próprio</span>
-                          </label>
-                        </div>
-                      )}
-
-                      {INSTALLMENT_TYPES.includes(method.type) && (
-                        <>
-                          <div>
-                            <label className="form-label">Número de Parcelas</label>
-                            <input
-                              type="number"
-                              min="1"
-                              value={method.installments || 1}
-                              onChange={(e) => updatePaymentMethod(index, 'installments', parseInt(e.target.value) || 1)}
-                              className="input-field"
-                            />
-                          </div>
-
-                          {method.installments && method.installments > 1 && (
-                            <>
-                              <div>
-                                <label className="form-label">Valor por Parcela</label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={method.installmentValue || 0}
-                                  onChange={(e) => updatePaymentMethod(index, 'installmentValue', parseFloat(e.target.value) || 0)}
-                                  className="input-field"
-                                  placeholder="0,00"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="form-label">Intervalo (dias)</label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={method.installmentInterval || 30}
-                                  onChange={(e) => updatePaymentMethod(index, 'installmentInterval', parseInt(e.target.value) || 30)}
-                                  className="input-field"
-                                  placeholder="30"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="form-label">Data de Início</label>
-                                <input
-                                  type="date"
-                                  value={method.startDate || formData.date}
-                                  onChange={(e) => updatePaymentMethod(index, 'startDate', e.target.value)}
-                                  className="input-field"
-                                />
-                              </div>
-                            </>
-                          )}
-
-                          {/* Campo para data de pagamento único para cheque e boleto */}
-                          {(method.type === 'cheque' || method.type === 'boleto') && (!method.installments || method.installments === 1) && (
-                            <div>
-                              <label className="form-label">Data de Vencimento/Pagamento *</label>
-                              <input
-                                type="date"
-                                value={method.startDate || formData.date}
-                                onChange={(e) => updatePaymentMethod(index, 'startDate', e.target.value)}
-                                className="input-field"
-                                required
-                              />
-                              <p className="text-xs text-gray-500 mt-1">
-                                Data em que o {method.type === 'cheque' ? 'cheque' : 'boleto'} será pago/vencerá
-                              </p>
-                            </div>
-                          )}
-                        </>
-                      )}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Check Payment Description - Required when check payment is selected */}
-            {hasCheckPayment && (
-              <div>
-                <div className="form-group">
-                  <label className="form-label">Descrição do Pagamento com Cheque *</label>
-                  <textarea
-                    value={formData.paymentDescription}
-                    onChange={(e) => setFormData(prev => ({ ...prev, paymentDescription: e.target.value }))}
-                    className="input-field"
-                    rows={3}
-                    placeholder="Descreva exatamente como será feito o pagamento com cheque (obrigatório)"
-                    required
-                  />
-                </div>
-
-                {/* Cheque Próprio Option */}
-                <div className="mb-6">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.useOwnCheck || false}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        useOwnCheck: e.target.checked,
-                        checksUsed: e.target.checked ? [] : prev.checksUsed
-                      }))}
-                      className="rounded"
-                    />
-                    <span className="form-label mb-0">Cheque Próprio</span>
-                  </label>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Marque esta opção se for usar um cheque próprio (desativa a seleção de cheques disponíveis)
-                  </p>
-                  
-                  {formData.useOwnCheck && (
-                    <div className="mt-4">
-                      <label className="form-label">Data de Desconto do Cheque Próprio *</label>
-                      <input
-                        type="date"
-                        value={formData.ownCheckDiscountDate}
-                        onChange={(e) => setFormData(prev => ({ ...prev, ownCheckDiscountDate: e.target.value }))}
-                        className="input-field"
-                        required
-                      />
-                      <p className="text-sm text-gray-600 mt-1">
-                        Data em que o cheque próprio será descontado
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Available Checks - Only show if not using own check */}
-                {!formData.useOwnCheck && availableChecks.length > 0 && (
-                  <div>
-                    <h4 className="text-md font-medium mb-3">Cheques Quitados Disponíveis para Pagamento</h4>
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {availableChecks.map(check => (
-                        <label key={check.id} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={formData.checksUsed.includes(check.id)}
-                            onChange={() => toggleCheckUsed(check.id)}
-                            className="rounded"
-                          />
-                          <div className="flex-1">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <span className="font-medium">{check.client}</span>
-                                <div className="text-sm text-gray-600">
-                                  Vencimento: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
-                                </div>
-                                <div className="text-sm text-gray-600">
-                                  {check.installmentNumber && check.totalInstallments && (
-                                    `Parcela ${check.installmentNumber}/${check.totalInstallments}`
-                                  )}
-                                </div>
-                                <div className={`text-sm font-medium ${
-                                  check.status === 'compensado' ? 'text-green-600' :
-                                  check.status === 'pendente' ? 'text-yellow-600' :
-                                  check.status === 'devolvido' ? 'text-red-600' :
-                                  'text-blue-600'
-                                }`}>
-                                  Status: {check.status === 'compensado' ? 'Compensado ✓' :
-                                          check.status === 'pendente' ? 'Pendente ⏳' :
-                                          check.status === 'devolvido' ? 'Devolvido ❌' :
-                                          'Reapresentado 🔄'}
-                                </div>
-                                <div className="text-sm text-gray-600">
-                                  Usado em: {check.usedFor || 'Não especificado'}
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <span className="font-medium">R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-              </div>
-            )}
-
             {/* Summary */}
-            <div className="p-6 bg-gradient-to-r from-red-50 to-rose-50 rounded-2xl border-2 border-red-200 modern-shadow-xl">
-              <h3 className="text-xl font-black text-red-800 mb-4">Resumo da Dívida</h3>
+            <div className="p-6 bg-gradient-to-r from-red-50 to-pink-50 rounded-2xl border-2 border-red-200 modern-shadow-xl">
+              <h3 className="text-xl font-black text-red-800 mb-4">
+                Resumo da Dívida
+              </h3>
               <div className="grid grid-cols-3 gap-6">
-                <div>
+                <div className="text-center">
                   <span className="text-red-600 font-semibold block mb-1">Total:</span>
                   <p className="text-2xl font-black text-red-800">
                     R$ {formData.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                <div>
+                <div className="text-center">
                   <span className="text-red-600 font-semibold block mb-1">Pago:</span>
                   <p className="text-2xl font-black text-green-600">
                     R$ {calculateAmounts().paidAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                <div>
+                <div className="text-center">
                   <span className="text-red-600 font-semibold block mb-1">Pendente:</span>
                   <p className="text-2xl font-black text-orange-600">
                     R$ {calculateAmounts().pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>
-              <div className="mt-4 text-center">
-                <span className={`px-4 py-2 rounded-full text-sm font-bold border ${
-                  calculateAmounts().isPaid ? 'bg-green-100 text-green-800 border-green-200' :
-                  calculateAmounts().paidAmount > 0 ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                  'bg-red-100 text-red-800 border-red-200'
-                }`}>
-                  Status: {calculateAmounts().isPaid ? 'Pago' : 
-                          calculateAmounts().paidAmount > 0 ? 'Parcial' : 'Pendente'}
-                </span>
-              </div>
             </div>
 
-            <div className="flex justify-end gap-4">
-              <button type="button" onClick={onCancel} className="btn-secondary">
+            <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="btn-secondary"
+              >
                 Cancelar
               </button>
-              <button type="submit" className="btn-primary">
-                {debt ? 'Atualizar' : 'Salvar'} Dívida
+              <button
+                type="submit"
+                className="btn-primary group"
+              >
+                {debt ? 'Atualizar Dívida' : 'Criar Dívida'}
               </button>
             </div>
           </form>

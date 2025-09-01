@@ -9,7 +9,7 @@ interface AgendaEventFormProps {
 }
 
 const EVENT_TYPES = [
-  { value: 'evento', label: 'Evento Geral' },
+  { value: 'evento', label: 'Evento' },
   { value: 'reuniao', label: 'Reunião' },
   { value: 'pagamento', label: 'Pagamento' },
   { value: 'cobranca', label: 'Cobrança' },
@@ -18,10 +18,10 @@ const EVENT_TYPES = [
 ];
 
 const PRIORITY_LEVELS = [
-  { value: 'baixa', label: 'Baixa', color: 'text-gray-600' },
-  { value: 'media', label: 'Média', color: 'text-blue-600' },
-  { value: 'alta', label: 'Alta', color: 'text-orange-600' },
-  { value: 'urgente', label: 'Urgente', color: 'text-red-600' }
+  { value: 'baixa', label: 'Baixa' },
+  { value: 'media', label: 'Média' },
+  { value: 'alta', label: 'Alta' },
+  { value: 'urgente', label: 'Urgente' }
 ];
 
 const STATUS_OPTIONS = [
@@ -37,23 +37,40 @@ export function AgendaEventForm({ event, onSubmit, onCancel }: AgendaEventFormPr
     description: event?.description || '',
     date: event?.date || new Date().toISOString().split('T')[0],
     time: event?.time || '',
-    type: event?.type || 'evento' as const,
-    priority: event?.priority || 'media' as const,
-    status: event?.status || 'pendente' as const,
+    type: event?.type || 'evento',
+    priority: event?.priority || 'media',
+    status: event?.status || 'pendente',
     reminderDate: event?.reminderDate || '',
     observations: event?.observations || ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData as Omit<AgendaEvent, 'id' | 'createdAt'>);
+    
+    if (!formData.title || !formData.title.trim()) {
+      alert('Por favor, informe o título do evento.');
+      return;
+    }
+    
+    // Clean data - ensure empty strings become null for optional fields
+    const cleanedData = {
+      ...formData,
+      title: formData.title.trim(),
+      description: !formData.description || formData.description.trim() === '' ? null : formData.description.trim(),
+      time: !formData.time || formData.time.trim() === '' ? null : formData.time,
+      reminderDate: !formData.reminderDate || formData.reminderDate.trim() === '' ? null : formData.reminderDate,
+      observations: !formData.observations || formData.observations.trim() === '' ? null : formData.observations.trim()
+    };
+    
+    console.log('📝 Enviando evento:', cleanedData);
+    onSubmit(cleanedData as Omit<AgendaEvent, 'id' | 'createdAt'>);
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[100] backdrop-blur-sm modal-overlay">
       <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
         <div className="p-8">
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex justify-between items-center mb-6">
             <h2 className="text-3xl font-bold text-slate-900">
               {event ? 'Editar Evento' : 'Novo Evento'}
             </h2>
@@ -63,15 +80,15 @@ export function AgendaEventForm({ event, onSubmit, onCancel }: AgendaEventFormPr
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="form-group md:col-span-2">
-                <label className="form-label">Título do Evento *</label>
+                <label className="form-label">Título *</label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                   className="input-field"
-                  placeholder="Ex: Reunião com cliente, Pagamento de fornecedor"
+                  placeholder="Título do evento"
                   required
                 />
               </div>
@@ -98,15 +115,17 @@ export function AgendaEventForm({ event, onSubmit, onCancel }: AgendaEventFormPr
               </div>
 
               <div className="form-group">
-                <label className="form-label">Tipo de Evento *</label>
+                <label className="form-label">Tipo *</label>
                 <select
                   value={formData.type}
-                  onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as AgendaEvent['type'] }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
                   className="input-field"
                   required
                 >
                   {EVENT_TYPES.map(type => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -115,25 +134,30 @@ export function AgendaEventForm({ event, onSubmit, onCancel }: AgendaEventFormPr
                 <label className="form-label">Prioridade *</label>
                 <select
                   value={formData.priority}
-                  onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as AgendaEvent['priority'] }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value }))}
                   className="input-field"
                   required
                 >
                   {PRIORITY_LEVELS.map(priority => (
-                    <option key={priority.value} value={priority.value}>{priority.label}</option>
+                    <option key={priority.value} value={priority.value}>
+                      {priority.label}
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Status</label>
+                <label className="form-label">Status *</label>
                 <select
                   value={formData.status}
-                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as AgendaEvent['status'] }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
                   className="input-field"
+                  required
                 >
                   {STATUS_OPTIONS.map(status => (
-                    <option key={status.value} value={status.value}>{status.label}</option>
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -146,9 +170,6 @@ export function AgendaEventForm({ event, onSubmit, onCancel }: AgendaEventFormPr
                   onChange={(e) => setFormData(prev => ({ ...prev, reminderDate: e.target.value }))}
                   className="input-field"
                 />
-                <p className="text-xs text-slate-500 mt-1">
-                  Data para receber lembrete sobre este evento
-                </p>
               </div>
 
               <div className="form-group md:col-span-2">
@@ -168,43 +189,25 @@ export function AgendaEventForm({ event, onSubmit, onCancel }: AgendaEventFormPr
                   value={formData.observations}
                   onChange={(e) => setFormData(prev => ({ ...prev, observations: e.target.value }))}
                   className="input-field"
-                  rows={3}
+                  rows={2}
                   placeholder="Observações adicionais..."
                 />
               </div>
             </div>
 
-            {/* Summary */}
-            <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border-2 border-blue-200 modern-shadow-xl">
-              <h3 className="text-xl font-black text-blue-800 mb-4">Resumo do Evento</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center">
-                  <span className="text-blue-600 font-semibold block mb-1">Data:</span>
-                  <p className="text-lg font-bold text-blue-800">
-                    {formData.date ? new Date(formData.date + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não definida'}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <span className="text-blue-600 font-semibold block mb-1">Tipo:</span>
-                  <p className="text-lg font-bold text-blue-800">
-                    {EVENT_TYPES.find(t => t.value === formData.type)?.label || 'Não selecionado'}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <span className="text-blue-600 font-semibold block mb-1">Prioridade:</span>
-                  <p className={`text-lg font-bold ${PRIORITY_LEVELS.find(p => p.value === formData.priority)?.color || 'text-blue-800'}`}>
-                    {PRIORITY_LEVELS.find(p => p.value === formData.priority)?.label || 'Não selecionada'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
             <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
-              <button type="button" onClick={onCancel} className="btn-secondary">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="btn-secondary"
+              >
                 Cancelar
               </button>
-              <button type="submit" className="btn-primary">
-                {event ? 'Atualizar' : 'Criar'} Evento
+              <button
+                type="submit"
+                className="btn-primary group"
+              >
+                {event ? 'Atualizar Evento' : 'Criar Evento'}
               </button>
             </div>
           </form>

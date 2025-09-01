@@ -11,29 +11,19 @@ interface EmployeeFormProps {
 export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps) {
   const [formData, setFormData] = useState({
     name: employee?.name || '',
-    position: employee?.position || (employee?.isSeller ? 'Vendedor' : ''),
+    position: employee?.position || '',
     isSeller: employee?.isSeller || false,
     salary: employee?.salary || 0,
     paymentDay: employee?.paymentDay || 5,
     nextPaymentDate: employee?.nextPaymentDate || '',
-    isActive: employee?.isActive ?? true,
+    isActive: employee?.isActive !== undefined ? employee.isActive : true,
     hireDate: employee?.hireDate || new Date().toISOString().split('T')[0],
     observations: employee?.observations || ''
   });
 
-  // Atualizar cargo quando "É Vendedor" for marcado/desmarcado
-  const handleSellerChange = (isSeller: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      isSeller,
-      position: isSeller ? 'Vendedor' : ''
-    }));
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validações mais rigorosas
     if (!formData.name || !formData.name.trim()) {
       alert('Por favor, informe o nome do funcionário.');
       return;
@@ -44,52 +34,36 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
       return;
     }
     
-    if (!formData.salary || formData.salary <= 0) {
-      alert('O salário deve ser maior que zero.');
+    if (!formData.salary || formData.salary < 0) {
+      alert('O salário deve ser maior ou igual a zero.');
       return;
     }
     
-    if (!formData.hireDate) {
-      alert('Por favor, informe a data de contratação.');
+    if (!formData.paymentDay || formData.paymentDay < 1 || formData.paymentDay > 31) {
+      alert('O dia de pagamento deve estar entre 1 e 31.');
       return;
     }
     
-    if (formData.paymentDay < 1 || formData.paymentDay > 31) {
-      alert('O dia do pagamento deve estar entre 1 e 31.');
-      return;
-    }
-    
-    // Validações básicas
-    // Validar se a data de contratação não é futura
-    const hireDate = new Date(formData.hireDate);
-    const today = new Date();
-    if (hireDate > today) {
-      alert('A data de contratação não pode ser no futuro.');
-      return;
-    }
-    
-    // Limpar dados antes de enviar
+    // Clean data - ensure empty strings become null for optional fields
     const cleanedData = {
       ...formData,
-      name: formData.name.trim(),
-      position: formData.position.trim(),
-      observations: formData.observations?.trim() || null,
-      nextPaymentDate: formData.nextPaymentDate || null
+      nextPaymentDate: !formData.nextPaymentDate || formData.nextPaymentDate.trim() === '' ? null : formData.nextPaymentDate,
+      observations: !formData.observations || formData.observations.trim() === '' ? null : formData.observations
     };
     
-    console.log('📝 Enviando funcionário:', formData);
-    onSubmit(cleanedData);
+    console.log('📝 Enviando funcionário:', cleanedData);
+    onSubmit(cleanedData as Omit<Employee, 'id' | 'createdAt'>);
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[100] backdrop-blur-sm modal-overlay">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
+      <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
+        <div className="p-8">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold">
+            <h2 className="text-3xl font-bold text-slate-900">
               {employee ? 'Editar Funcionário' : 'Novo Funcionário'}
             </h2>
-            <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
+            <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-all">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -97,13 +71,13 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="form-group">
-                <label className="form-label">Nome Completo *</label>
+                <label className="form-label">Nome *</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   className="input-field"
-                  placeholder="Nome do funcionário"
+                  placeholder="Nome completo"
                   required
                 />
               </div>
@@ -114,60 +88,38 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
                   type="text"
                   value={formData.position}
                   onChange={(e) => setFormData(prev => ({ ...prev, position: e.target.value }))}
-                  className={`input-field ${formData.isSeller ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                  placeholder="Ex: Vendedor, Gerente, Auxiliar"
-                  disabled={formData.isSeller}
+                  className="input-field"
+                  placeholder="Cargo/função"
                   required
                 />
-                {formData.isSeller && (
-                  <p className="text-xs text-blue-600 mt-1 font-medium">
-                    ✓ Cargo definido automaticamente como "Vendedor". Desmarque "É Vendedor" para alterar.
-                  </p>
-                )}
               </div>
 
-              <div className="form-group md:col-span-2">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.isSeller}
-                    onChange={(e) => handleSellerChange(e.target.checked)}
-                    className="rounded"
-                  />
-                  <span className="form-label mb-0">É Vendedor</span>
-                </label>
-                <p className="text-xs text-gray-500 mt-1">
-                  Marque esta opção se o funcionário é vendedor e deve receber comissões de 5% sobre as vendas. O cargo será definido automaticamente como "Vendedor".
-                </p>
-              </div>
               <div className="form-group">
                 <label className="form-label">Salário *</label>
                 <input
                   type="number"
                   step="0.01"
+                  min="0"
                   value={formData.salary}
                   onChange={(e) => setFormData(prev => ({ ...prev, salary: parseFloat(e.target.value) || 0 }))}
                   className="input-field"
                   placeholder="0,00"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Valor base do salário fixo. {formData.isSeller ? 'Comissões de 5% serão calculadas automaticamente.' : ''}
-                </p>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Dia do Pagamento *</label>
-                <select
+                <label className="form-label">Dia de Pagamento *</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
                   value={formData.paymentDay}
-                  onChange={(e) => setFormData(prev => ({ ...prev, paymentDay: parseInt(e.target.value) }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, paymentDay: parseInt(e.target.value) || 5 }))}
                   className="input-field"
+                  placeholder="5"
                   required
-                >
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                    <option key={day} value={day}>Dia {day}</option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div className="form-group">
@@ -182,16 +134,37 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
               </div>
 
               <div className="form-group">
-                <label className="form-label">Próximo Pagamento (Data Específica)</label>
+                <label className="form-label">Próximo Pagamento</label>
                 <input
                   type="date"
                   value={formData.nextPaymentDate}
                   onChange={(e) => setFormData(prev => ({ ...prev, nextPaymentDate: e.target.value }))}
                   className="input-field"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Data específica para o próximo pagamento. Esta informação será incluída nos relatórios para melhor controle gerencial.
-                </p>
+              </div>
+
+              <div className="form-group md:col-span-2">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.isSeller}
+                    onChange={(e) => setFormData(prev => ({ ...prev, isSeller: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="form-label mb-0">É Vendedor</span>
+                </label>
+              </div>
+
+              <div className="form-group md:col-span-2">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.isActive}
+                    onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="form-label mb-0">Funcionário Ativo</span>
+                </label>
               </div>
 
               <div className="form-group md:col-span-2">
@@ -201,17 +174,24 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
                   onChange={(e) => setFormData(prev => ({ ...prev, observations: e.target.value }))}
                   className="input-field"
                   rows={3}
-                  placeholder="Informações adicionais sobre o funcionário..."
+                  placeholder="Informações adicionais sobre o funcionário (opcional)"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-4">
-              <button type="button" onClick={onCancel} className="btn-secondary">
+            <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="btn-secondary"
+              >
                 Cancelar
               </button>
-              <button type="submit" className="btn-primary group">
-                {employee ? 'Atualizar' : 'Cadastrar'} Funcionário
+              <button
+                type="submit"
+                className="btn-primary group"
+              >
+                {employee ? 'Atualizar Funcionário' : 'Criar Funcionário'}
               </button>
             </div>
           </form>

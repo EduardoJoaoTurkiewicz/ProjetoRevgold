@@ -1,91 +1,104 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { EmployeeOvertime } from '../../types';
+import { useAppContext } from '../../context/AppContext';
 
 interface EmployeeOvertimeFormProps {
-  employeeId: string;
-  employeeName: string;
   overtime?: EmployeeOvertime | null;
   onSubmit: (overtime: Omit<EmployeeOvertime, 'id' | 'createdAt'>) => void;
   onCancel: () => void;
 }
 
-export function EmployeeOvertimeForm({ employeeId, employeeName, overtime, onSubmit, onCancel }: EmployeeOvertimeFormProps) {
+export function EmployeeOvertimeForm({ overtime, onSubmit, onCancel }: EmployeeOvertimeFormProps) {
+  const { employees } = useAppContext();
   const [formData, setFormData] = useState({
-    employeeId,
+    employeeId: overtime?.employeeId || '',
     hours: overtime?.hours || 0,
     hourlyRate: overtime?.hourlyRate || 0,
     totalAmount: overtime?.totalAmount || 0,
     date: overtime?.date || new Date().toISOString().split('T')[0],
     description: overtime?.description || '',
-    status: overtime?.status || 'pendente' as const
+    status: overtime?.status || 'pendente'
   });
 
-  // Calcular valor total automaticamente
-  const calculateTotal = (hours: number, rate: number) => {
-    const total = hours * rate;
+  const activeEmployees = employees.filter(emp => emp.isActive);
+
+  // Auto-calculate total amount when hours or hourly rate changes
+  React.useEffect(() => {
+    const total = formData.hours * formData.hourlyRate;
     setFormData(prev => ({ ...prev, totalAmount: total }));
-  };
-
-  const handleHoursChange = (hours: number) => {
-    setFormData(prev => ({ ...prev, hours }));
-    calculateTotal(hours, formData.hourlyRate);
-  };
-
-  const handleRateChange = (rate: number) => {
-    setFormData(prev => ({ ...prev, hourlyRate: rate }));
-    calculateTotal(formData.hours, rate);
-  };
+  }, [formData.hours, formData.hourlyRate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    
+    if (!formData.employeeId || formData.employeeId.trim() === '') {
+      alert('Por favor, selecione um funcionário.');
+      return;
+    }
+    
+    if (!formData.hours || formData.hours <= 0) {
+      alert('O número de horas deve ser maior que zero.');
+      return;
+    }
+    
+    if (!formData.hourlyRate || formData.hourlyRate <= 0) {
+      alert('O valor por hora deve ser maior que zero.');
+      return;
+    }
+    
+    if (!formData.description || !formData.description.trim()) {
+      alert('Por favor, informe a descrição das horas extras.');
+      return;
+    }
+    
+    // Clean UUID fields - ensure employeeId is valid
+    const cleanedData = {
+      ...formData,
+      employeeId: !formData.employeeId || formData.employeeId.trim() === '' ? null : formData.employeeId,
+      description: formData.description.trim()
+    };
+    
+    // Validate that employeeId is not null after cleaning
+    if (!cleanedData.employeeId) {
+      alert('Por favor, selecione um funcionário válido.');
+      return;
+    }
+    
+    console.log('📝 Enviando hora extra:', cleanedData);
+    onSubmit(cleanedData as Omit<EmployeeOvertime, 'id' | 'createdAt'>);
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[100] backdrop-blur-sm modal-overlay">
       <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
         <div className="p-8">
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex justify-between items-center mb-6">
             <h2 className="text-3xl font-bold text-slate-900">
-              {overtime ? 'Editar Horas Extras' : 'Registrar Horas Extras'}
+              {overtime ? 'Editar Hora Extra' : 'Nova Hora Extra'}
             </h2>
             <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-all">
               <X className="w-6 h-6" />
             </button>
           </div>
 
-          <div className="mb-8 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
-            <h3 className="text-xl font-bold text-green-900 mb-2">Funcionário</h3>
-            <p className="text-green-700 font-semibold">{employeeName}</p>
-          </div>
-
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="form-group">
-                <label className="form-label">Quantidade de Horas *</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={formData.hours}
-                  onChange={(e) => handleHoursChange(parseFloat(e.target.value) || 0)}
+                <label className="form-label">Funcionário *</label>
+                <select
+                  value={formData.employeeId}
+                  onChange={(e) => setFormData(prev => ({ ...prev, employeeId: e.target.value }))}
                   className="input-field"
-                  placeholder="0"
                   required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Valor por Hora *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.hourlyRate}
-                  onChange={(e) => handleRateChange(parseFloat(e.target.value) || 0)}
-                  className="input-field"
-                  placeholder="0,00"
-                  required
-                />
+                >
+                  <option value="">Selecionar funcionário...</option>
+                  {activeEmployees.map(employee => (
+                    <option key={employee.id} value={employee.id}>
+                      {employee.name} - {employee.position}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-group">
@@ -100,15 +113,45 @@ export function EmployeeOvertimeForm({ employeeId, employeeName, overtime, onSub
               </div>
 
               <div className="form-group">
-                <label className="form-label">Status</label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as EmployeeOvertime['status'] }))}
+                <label className="form-label">Horas Trabalhadas *</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={formData.hours}
+                  onChange={(e) => setFormData(prev => ({ ...prev, hours: parseFloat(e.target.value) || 0 }))}
                   className="input-field"
-                >
-                  <option value="pendente">Pendente</option>
-                  <option value="pago">Pago</option>
-                </select>
+                  placeholder="0"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Valor por Hora *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.hourlyRate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, hourlyRate: parseFloat(e.target.value) || 0 }))}
+                  className="input-field"
+                  placeholder="0,00"
+                  required
+                />
+              </div>
+
+              <div className="form-group md:col-span-2">
+                <label className="form-label">Valor Total</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.totalAmount}
+                  className="input-field bg-gray-50"
+                  readOnly
+                />
+                <p className="text-xs text-blue-600 mt-1 font-bold">
+                  ✓ Calculado automaticamente: {formData.hours} horas × R$ {formData.hourlyRate.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
               </div>
 
               <div className="form-group md:col-span-2">
@@ -118,42 +161,25 @@ export function EmployeeOvertimeForm({ employeeId, employeeName, overtime, onSub
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   className="input-field"
                   rows={3}
-                  placeholder="Descrição das horas extras realizadas..."
+                  placeholder="Descrição das horas extras trabalhadas..."
                   required
                 />
-              </div>
-
-              <div className="form-group md:col-span-2">
-                <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
-                  <h3 className="text-xl font-bold text-blue-900 mb-4">Cálculo Automático</h3>
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                      <p className="text-blue-600 font-semibold">Horas</p>
-                      <p className="text-2xl font-black text-blue-800">{formData.hours}</p>
-                    </div>
-                    <div>
-                      <p className="text-blue-600 font-semibold">Valor/Hora</p>
-                      <p className="text-2xl font-black text-blue-800">
-                        R$ {formData.hourlyRate.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-blue-600 font-semibold">Total</p>
-                      <p className="text-3xl font-black text-green-600">
-                        R$ {formData.totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 
             <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
-              <button type="button" onClick={onCancel} className="btn-secondary">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="btn-secondary"
+              >
                 Cancelar
               </button>
-              <button type="submit" className="btn-primary">
-                {overtime ? 'Atualizar' : 'Registrar'} Horas Extras
+              <button
+                type="submit"
+                className="btn-primary group"
+              >
+                {overtime ? 'Atualizar Hora Extra' : 'Criar Hora Extra'}
               </button>
             </div>
           </form>
