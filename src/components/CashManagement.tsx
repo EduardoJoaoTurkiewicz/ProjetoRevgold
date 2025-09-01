@@ -324,12 +324,19 @@ export function CashManagement() {
 
   const handleInitializeCash = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (initialAmount <= 0) {
+      alert('O valor inicial deve ser maior que zero.');
+      return;
+    }
+    
     setIsInitializing(true);
     
     try {
       await initializeCashBalance(initialAmount);
       console.log('✅ Caixa inicializado com sucesso');
     } catch (error) {
+      console.error('Erro ao inicializar caixa:', error);
       alert('Erro ao inicializar caixa: ' + (error as Error).message);
     } finally {
       setIsInitializing(false);
@@ -337,11 +344,17 @@ export function CashManagement() {
   };
 
   const handleRecalculateBalance = async () => {
+    if (!cashBalance) {
+      alert('Caixa não foi inicializado ainda.');
+      return;
+    }
+    
     setIsRecalculating(true);
     try {
       await recalculateCashBalance();
       console.log('✅ Saldo recalculado com sucesso');
     } catch (error) {
+      console.error('Erro ao recalcular saldo:', error);
       alert('Erro ao recalcular saldo: ' + (error as Error).message);
     } finally {
       setIsRecalculating(false);

@@ -222,28 +222,11 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
           return;
         }
       }
-      
-      // Limpar campos undefined ou null que podem causar problemas
-      if (method.installments === undefined || method.installments === null) {
-        delete method.installments;
-      }
-      if (method.installmentValue === undefined || method.installmentValue === null) {
-        delete method.installmentValue;
-      }
-      if (method.installmentInterval === undefined || method.installmentInterval === null) {
-        delete method.installmentInterval;
-      }
-      if (method.startDate === undefined || method.startDate === null || method.startDate === '') {
-        delete method.startDate;
-      }
-      if (method.firstInstallmentDate === undefined || method.firstInstallmentDate === null || method.firstInstallmentDate === '') {
-        delete method.firstInstallmentDate;
-      }
     }
     
     // Validar produtos
     if (!formData.products || (typeof formData.products === 'string' && !formData.products.trim())) {
-      setFormData(prev => ({ ...prev, products: 'Produtos vendidos' }));
+      formData.products = 'Produtos vendidos';
     }
     
     const amounts = calculateAmounts();
@@ -261,14 +244,19 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     
     // Limpar dados antes de enviar
     const cleanedPaymentMethods = formData.paymentMethods.map(method => {
-      const cleaned = { ...method };
+      const cleaned: any = { ...method };
       
       // Remover campos vazios ou undefined
       Object.keys(cleaned).forEach(key => {
-        if (cleaned[key] === undefined || cleaned[key] === null || cleaned[key] === '') {
+        if (cleaned[key] === undefined || cleaned[key] === null || 
+            (typeof cleaned[key] === 'string' && cleaned[key].trim() === '')) {
           delete cleaned[key];
         }
       });
+      
+      // Garantir que campos obrigatórios existam
+      if (!cleaned.type) cleaned.type = 'dinheiro';
+      if (typeof cleaned.amount !== 'number') cleaned.amount = 0;
       
       return cleaned;
     });
@@ -279,11 +267,16 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       return;
     }
     
+    // Garantir que deliveryDate seja null se vazio
+    const deliveryDate = !formData.deliveryDate || formData.deliveryDate.trim() === '' ? null : formData.deliveryDate;
+    
     const saleToSubmit = {
       ...formData,
       sellerId,
+      deliveryDate,
       paymentMethods: cleanedPaymentMethods,
       observations: finalObservations,
+      products: typeof formData.products === 'string' ? formData.products : 'Produtos vendidos',
       ...amounts
     };
     

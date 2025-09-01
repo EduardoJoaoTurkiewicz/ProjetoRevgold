@@ -184,12 +184,12 @@ export function Sales() {
                     <div className="max-w-xs truncate">
                       {Array.isArray(sale.products) && sale.products.length > 0
                         ? sale.products.map((p: any) => p.name).join(', ')
-                        : 'Sem produtos'
+                        : typeof sale.products === 'string' ? sale.products : 'Sem produtos'
                       }
                     </div>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {formatCurrency(sale.total_value)}
+                    {formatCurrency(sale.totalValue)}
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(sale.status)}`}>
@@ -197,7 +197,7 @@ export function Sales() {
                     </span>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {getSellerName(sale.seller_id)}
+                    {getSellerName(sale.sellerId)}
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">

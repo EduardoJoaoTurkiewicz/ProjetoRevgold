@@ -46,20 +46,20 @@ export interface ThirdPartyCheckDetails {
 export interface Sale {
   id: string;
   date: string;
-  deliveryDate?: string;
+  deliveryDate?: string | null;
   client: string;
   sellerId?: string | null;
   products: string | Product[];
-  observations?: string;
+  observations?: string | null;
   totalValue: number;
   paymentMethods: PaymentMethod[];
   receivedAmount: number;
   pendingAmount: number;
   status: 'pago' | 'pendente' | 'parcial';
-  paymentDescription?: string;
-  paymentObservations?: string;
+  paymentDescription?: string | null;
+  paymentObservations?: string | null;
   createdAt: string;
-  updatedAt?: string;
+  updatedAt?: string | null;
   customCommissionRate: number;
 }
 
@@ -74,65 +74,65 @@ export interface Debt {
   isPaid: boolean;
   paidAmount: number;
   pendingAmount: number;
-  checksUsed?: string[];
-  paymentDescription?: string;
-  debtPaymentDescription?: string;
+  checksUsed?: string[] | null;
+  paymentDescription?: string | null;
+  debtPaymentDescription?: string | null;
   createdAt: string;
-  updatedAt?: string;
+  updatedAt?: string | null;
 }
 
 // Check interface
 export interface Check {
   id: string;
-  saleId?: string;
-  debtId?: string;
+  saleId?: string | null;
+  debtId?: string | null;
   client: string;
   value: number;
   dueDate: string;
   status: 'pendente' | 'compensado' | 'devolvido' | 'reapresentado';
   isOwnCheck: boolean;
-  observations?: string;
-  usedFor?: string;
-  installmentNumber?: number;
-  totalInstallments?: number;
-  frontImage?: string;
-  backImage?: string;
-  selectedAvailableChecks?: string[];
-  usedInDebt?: string;
-  discountDate?: string;
+  observations?: string | null;
+  usedFor?: string | null;
+  installmentNumber?: number | null;
+  totalInstallments?: number | null;
+  frontImage?: string | null;
+  backImage?: string | null;
+  selectedAvailableChecks?: string[] | null;
+  usedInDebt?: string | null;
+  discountDate?: string | null;
   createdAt: string;
-  updatedAt?: string;
+  updatedAt?: string | null;
   // Campos para cheques da empresa
-  isCompanyPayable?: boolean;
-  companyName?: string;
-  paymentDate?: string;
+  isCompanyPayable?: boolean | null;
+  companyName?: string | null;
+  paymentDate?: string | null;
 }
 
 // Boleto interface
 export interface Boleto {
   id: string;
-  saleId?: string;
+  saleId?: string | null;
   client: string;
   value: number;
   dueDate: string;
   status: 'pendente' | 'compensado' | 'vencido' | 'cancelado' | 'nao_pago';
   installmentNumber: number;
   totalInstallments: number;
-  boletoFile?: string;
-  observations?: string;
+  boletoFile?: string | null;
+  observations?: string | null;
   createdAt: string;
-  updatedAt?: string;
-  overdueAction?: 'pago_com_juros' | 'pago_com_multa' | 'pago_integral' | 'protestado' | 'negativado' | 'acordo_realizado' | 'cancelado' | 'perda_total';
-  interestAmount?: number;
-  penaltyAmount?: number;
-  notaryCosts?: number;
-  finalAmount?: number;
-  overdueNotes?: string;
+  updatedAt?: string | null;
+  overdueAction?: 'pago_com_juros' | 'pago_com_multa' | 'pago_integral' | 'protestado' | 'negativado' | 'acordo_realizado' | 'cancelado' | 'perda_total' | null;
+  interestAmount?: number | null;
+  penaltyAmount?: number | null;
+  notaryCosts?: number | null;
+  finalAmount?: number | null;
+  overdueNotes?: string | null;
   // Campos para boletos da empresa
-  isCompanyPayable?: boolean;
-  companyName?: string;
-  paymentDate?: string;
-  interestPaid?: number;
+  isCompanyPayable?: boolean | null;
+  companyName?: string | null;
+  paymentDate?: string | null;
+  interestPaid?: number | null;
 }
 
 // Employee interface

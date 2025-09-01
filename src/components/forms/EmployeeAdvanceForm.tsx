@@ -4,7 +4,8 @@ import { EmployeeAdvance } from '../../types';
 import { useAppContext } from '../../context/AppContext';
 
 interface EmployeeAdvanceFormProps {
-  advance?: EmployeeAdvance | null;
+  employeeId?: string;
+  employeeName?: string;
   onSubmit: (advance: Omit<EmployeeAdvance, 'id' | 'createdAt'>) => void;
   onCancel: () => void;
 }
@@ -16,15 +17,15 @@ const PAYMENT_METHODS = [
   { value: 'desconto_folha', label: 'Desconto em Folha' }
 ];
 
-export function EmployeeAdvanceForm({ advance, onSubmit, onCancel }: EmployeeAdvanceFormProps) {
+export function EmployeeAdvanceForm({ employeeId, employeeName, onSubmit, onCancel }: EmployeeAdvanceFormProps) {
   const { employees } = useAppContext();
   const [formData, setFormData] = useState({
-    employeeId: advance?.employeeId || '',
-    amount: advance?.amount || 0,
-    date: advance?.date || new Date().toISOString().split('T')[0],
-    description: advance?.description || '',
-    paymentMethod: advance?.paymentMethod || 'dinheiro',
-    status: advance?.status || 'pendente'
+    employeeId: employeeId || '',
+    amount: 0,
+    date: new Date().toISOString().split('T')[0],
+    description: '',
+    paymentMethod: 'dinheiro' as const,
+    status: 'pendente' as const
   });
 
   const activeEmployees = employees.filter(emp => emp.isActive);
@@ -70,7 +71,12 @@ export function EmployeeAdvanceForm({ advance, onSubmit, onCancel }: EmployeeAdv
         <div className="p-8">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-3xl font-bold text-slate-900">
-              {advance ? 'Editar Adiantamento' : 'Novo Adiantamento'}
+              Novo Adiantamento
+              {employeeName && (
+                <span className="text-lg font-normal text-slate-600 block">
+                  para {employeeName}
+                </span>
+              )}
             </h2>
             <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-all">
               <X className="w-6 h-6" />
@@ -85,6 +91,7 @@ export function EmployeeAdvanceForm({ advance, onSubmit, onCancel }: EmployeeAdv
                   value={formData.employeeId}
                   onChange={(e) => setFormData(prev => ({ ...prev, employeeId: e.target.value }))}
                   className="input-field"
+                  disabled={!!employeeId}
                   required
                 >
                   <option value="">Selecionar funcionário...</option>
@@ -162,7 +169,7 @@ export function EmployeeAdvanceForm({ advance, onSubmit, onCancel }: EmployeeAdv
                 type="submit"
                 className="btn-primary group"
               >
-                {advance ? 'Atualizar Adiantamento' : 'Criar Adiantamento'}
+                Criar Adiantamento
               </button>
             </div>
           </form>

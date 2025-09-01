@@ -138,7 +138,7 @@ export function Employees() {
         // Marcar adiantamentos como descontados
         const pendingAdvances = getEmployeeAdvances(paymentEmployee.id).filter(a => a.status === 'pendente');
         pendingAdvances.forEach(advance => {
-          updateEmployeeAdvance({ ...advance, status: 'descontado' as const }).catch(error => {
+          updateEmployeeAdvance({ ...advance, status: 'descontado' as const } as EmployeeAdvance).catch(error => {
             console.error('Erro ao atualizar adiantamento:', error);
           });
         });
@@ -146,7 +146,7 @@ export function Employees() {
         // Marcar horas extras como pagas
         const pendingOvertimes = getEmployeeOvertimes(paymentEmployee.id).filter(o => o.status === 'pendente');
         pendingOvertimes.forEach(overtime => {
-          updateEmployeeOvertime({ ...overtime, status: 'pago' }).catch(error => {
+          updateEmployeeOvertime({ ...overtime, status: 'pago' } as EmployeeOvertime).catch(error => {
             console.error('Erro ao atualizar hora extra:', error);
           });
         });
@@ -154,7 +154,7 @@ export function Employees() {
         // Marcar comissões como pagas
         const pendingCommissions = getEmployeeCommissions(paymentEmployee.id).filter(c => c.status === 'pendente');
         pendingCommissions.forEach(commission => {
-          updateEmployeeCommission({ ...commission, status: 'pago' }).catch(error => {
+          updateEmployeeCommission({ ...commission, status: 'pago' } as EmployeeCommission).catch(error => {
             console.error('Erro ao atualizar comissão:', error);
           });
         });

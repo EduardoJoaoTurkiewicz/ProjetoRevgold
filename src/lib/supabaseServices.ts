@@ -34,12 +34,19 @@ function transformDatabaseRow<T>(row: any): T {
 function transformToDatabase(obj: any): any {
   if (!obj) return obj;
   
-  const transformed = {};
+  const transformed: any = {};
   for (const [key, value] of Object.entries(obj)) {
     // Convert camelCase to snake_case
     const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-    // Convert empty strings to null for UUID fields and other nullable fields
-    transformed[snakeKey] = value === '' ? null : value;
+    
+    // Handle different value types properly
+    if (value === '' || value === undefined) {
+      transformed[snakeKey] = null;
+    } else if (typeof value === 'string' && value.trim() === '') {
+      transformed[snakeKey] = null;
+    } else {
+      transformed[snakeKey] = value;
+    }
   }
   
   return transformed;
@@ -405,6 +412,7 @@ export const cashBalancesService = {
     const { data, error } = await supabase
       .from('cash_balances')
       .select('*')
+      .order('created_at', { ascending: false })
       .limit(1)
       .single();
     
@@ -422,7 +430,23 @@ export const cashBalancesService = {
       };
     }
     
+    // Validate required fields
+    if (typeof balance.currentBalance !== 'number') {
+      throw new Error('Saldo atual deve ser um número válido');
+    }
+    
+    if (typeof balance.initialBalance !== 'number') {
+      throw new Error('Saldo inicial deve ser um número válido');
+    }
+    
     const dbData = transformToDatabase(balance);
+    
+    // Ensure required fields are properly set
+    dbData.current_balance = balance.currentBalance;
+    dbData.initial_balance = balance.initialBalance;
+    dbData.initial_date = balance.initialDate || new Date().toISOString().split('T')[0];
+    dbData.last_updated = balance.lastUpdated || new Date().toISOString();
+    
     const { data, error } = await supabase.from('cash_balances').insert([dbData]).select().single();
     if (error) throw error;
     return transformDatabaseRow<CashBalance>(data);
@@ -432,6 +456,10 @@ export const cashBalancesService = {
     if (!isSupabaseConfigured()) return;
     
     const dbData = transformToDatabase(balance);
+    
+    // Ensure last_updated is always set
+    dbData.last_updated = new Date().toISOString();
+    
     const { error } = await supabase.from('cash_balances').update(dbData).eq('id', id);
     if (error) throw error;
   }
@@ -505,7 +533,28 @@ export const cashTransactionsService = {
       };
     }
     
+    // Validate required fields
+    if (!transaction.description || !transaction.description.trim()) {
+      throw new Error('Descrição é obrigatória');
+    }
+    
+    if (typeof transaction.amount !== 'number' || transaction.amount <= 0) {
+      throw new Error('Valor deve ser maior que zero');
+    }
+    
+    if (!['entrada', 'saida'].includes(transaction.type)) {
+      throw new Error('Tipo deve ser entrada ou saida');
+    }
+    
     const dbData = transformToDatabase(transaction);
+    
+    // Ensure required fields are properly set
+    dbData.description = transaction.description.trim();
+    dbData.amount = transaction.amount;
+    dbData.type = transaction.type;
+    dbData.category = transaction.category;
+    dbData.date = transaction.date || new Date().toISOString().split('T')[0];
+    
     const { data, error } = await supabase.from('cash_transactions').insert([dbData]).select().single();
     if (error) throw error;
     return transformDatabaseRow<CashTransaction>(data);
@@ -578,25 +627,7 @@ export const salesService = {
     
     const { data, error } = await supabase
       .from('sales')
-      .select(`
-        id,
-        date,
-        delivery_date,
-        client,
-        seller_id,
-        products,
-        observations,
-        total_value,
-        payment_methods,
-        received_amount,
-        pending_amount,
-        status,
-        payment_description,
-        payment_observations,
-        custom_commission_rate,
-        created_at,
-        updated_at
-      `)
+      .select('*')
       .order('date', { ascending: false });
     
     if (error) throw error;
@@ -613,7 +644,30 @@ export const salesService = {
       };
     }
     
+    // Validate required fields
+    if (!sale.client || !sale.client.trim()) {
+      throw new Error('Cliente é obrigatório');
+    }
+    
+    if (!sale.totalValue || sale.totalValue <= 0) {
+      throw new Error('Valor total deve ser maior que zero');
+    }
+    
+    if (!sale.paymentMethods || sale.paymentMethods.length === 0) {
+      throw new Error('Pelo menos um método de pagamento é obrigatório');
+    }
+    
     const dbData = transformToDatabase(sale);
+    
+    // Ensure required fields are properly set
+    dbData.client = sale.client.trim();
+    dbData.total_value = sale.totalValue;
+    dbData.payment_methods = sale.paymentMethods;
+    dbData.received_amount = sale.receivedAmount || 0;
+    dbData.pending_amount = sale.pendingAmount || 0;
+    dbData.status = sale.status || 'pendente';
+    dbData.custom_commission_rate = sale.customCommissionRate || 5;
+    
     const { data, error } = await supabase.from('sales').insert([dbData]).select().single();
     if (error) throw error;
     return transformDatabaseRow<Sale>(data);
@@ -658,7 +712,30 @@ export const debtsService = {
       };
     }
     
+    // Validate required fields
+    if (!debt.company || !debt.company.trim()) {
+      throw new Error('Empresa é obrigatória');
+    }
+    
+    if (!debt.description || !debt.description.trim()) {
+      throw new Error('Descrição é obrigatória');
+    }
+    
+    if (!debt.totalValue || debt.totalValue <= 0) {
+      throw new Error('Valor total deve ser maior que zero');
+    }
+    
     const dbData = transformToDatabase(debt);
+    
+    // Ensure required fields are properly set
+    dbData.company = debt.company.trim();
+    dbData.description = debt.description.trim();
+    dbData.total_value = debt.totalValue;
+    dbData.payment_methods = debt.paymentMethods || [];
+    dbData.is_paid = debt.isPaid || false;
+    dbData.paid_amount = debt.paidAmount || 0;
+    dbData.pending_amount = debt.pendingAmount || 0;
+    
     const { data, error } = await supabase.from('debts').insert([dbData]).select().single();
     if (error) throw error;
     return transformDatabaseRow<Debt>(data);

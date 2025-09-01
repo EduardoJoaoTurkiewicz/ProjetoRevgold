@@ -108,14 +108,19 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
     
     // Clean payment methods data
     const cleanedPaymentMethods = formData.paymentMethods.map(method => {
-      const cleaned = { ...method };
+      const cleaned: any = { ...method };
       
       // Remove empty or undefined fields
       Object.keys(cleaned).forEach(key => {
-        if (cleaned[key] === undefined || cleaned[key] === null || cleaned[key] === '') {
+        if (cleaned[key] === undefined || cleaned[key] === null || 
+            (typeof cleaned[key] === 'string' && cleaned[key].trim() === '')) {
           delete cleaned[key];
         }
       });
+      
+      // Garantir que campos obrigatórios existam
+      if (!cleaned.type) cleaned.type = 'dinheiro';
+      if (typeof cleaned.amount !== 'number') cleaned.amount = 0;
       
       return cleaned;
     });
@@ -130,10 +135,15 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
         : `Descrição do Pagamento: ${formData.debtPaymentDescription}`;
     }
     
+    // Garantir que campos opcionais sejam null se vazios
+    const paymentDescription = !finalPaymentDescription || finalPaymentDescription.trim() === '' ? null : finalPaymentDescription;
+    const debtPaymentDescription = !formData.debtPaymentDescription || formData.debtPaymentDescription.trim() === '' ? null : formData.debtPaymentDescription;
+    
     const debtToSubmit = {
       ...formData,
       paymentMethods: cleanedPaymentMethods,
-      paymentDescription: finalPaymentDescription,
+      paymentDescription,
+      debtPaymentDescription,
       ...amounts
     };
     

@@ -66,57 +66,57 @@ interface AppContextType {
   
   // CRUD operations
   createSale: (sale: Omit<Sale, 'id' | 'createdAt'>) => Promise<void>;
-  updateSale: (sale: Sale) => Promise<void>;
+  updateSale: (id: string, sale: Partial<Sale>) => Promise<void>;
   deleteSale: (id: string) => Promise<void>;
   
   createDebt: (debt: Omit<Debt, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateDebt: (id: string, debt: Partial<Debt>) => Promise<void>;
+  updateDebt: (debt: Debt) => Promise<void>;
   deleteDebt: (id: string) => Promise<void>;
   
   createCheck: (check: Omit<Check, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateCheck: (id: string, check: Partial<Check>) => Promise<void>;
+  updateCheck: (check: Check) => Promise<void>;
   deleteCheck: (id: string) => Promise<void>;
   
   createBoleto: (boleto: Omit<Boleto, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateBoleto: (id: string, boleto: Partial<Boleto>) => Promise<void>;
+  updateBoleto: (boleto: Boleto) => Promise<void>;
   deleteBoleto: (id: string) => Promise<void>;
   
   createEmployee: (employee: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateEmployee: (id: string, employee: Partial<Employee>) => Promise<void>;
+  updateEmployee: (employee: Employee) => Promise<void>;
   deleteEmployee: (id: string) => Promise<void>;
   
-  createEmployeePayment: (payment: Omit<EmployeePayment, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateEmployeePayment: (id: string, payment: Partial<EmployeePayment>) => Promise<void>;
+  createEmployeePayment: (payment: EmployeePayment) => Promise<void>;
+  updateEmployeePayment: (payment: EmployeePayment) => Promise<void>;
   deleteEmployeePayment: (id: string) => Promise<void>;
   
-  createEmployeeAdvance: (advance: Omit<EmployeeAdvance, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateEmployeeAdvance: (id: string, advance: Partial<EmployeeAdvance>) => Promise<void>;
+  createEmployeeAdvance: (advance: EmployeeAdvance) => Promise<void>;
+  updateEmployeeAdvance: (advance: EmployeeAdvance) => Promise<void>;
   deleteEmployeeAdvance: (id: string) => Promise<void>;
   
   createEmployeeOvertime: (overtime: Omit<EmployeeOvertime, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateEmployeeOvertime: (id: string, overtime: Partial<EmployeeOvertime>) => Promise<void>;
   deleteEmployeeOvertime: (id: string) => Promise<void>;
   
   createEmployeeCommission: (commission: Omit<EmployeeCommission, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateEmployeeCommission: (id: string, commission: Partial<EmployeeCommission>) => Promise<void>;
+  updateEmployeeCommission: (commission: EmployeeCommission) => Promise<void>;
   deleteEmployeeCommission: (id: string) => Promise<void>;
   
   createCashTransaction: (transaction: Omit<CashTransaction, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateCashTransaction: (id: string, transaction: Partial<CashTransaction>) => Promise<void>;
+  updateCashTransaction: (transaction: CashTransaction) => Promise<void>;
   deleteCashTransaction: (id: string) => Promise<void>;
   
   createPixFee: (fee: Omit<PixFee, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updatePixFee: (id: string, fee: Partial<PixFee>) => Promise<void>;
+  updatePixFee: (fee: PixFee) => Promise<void>;
   deletePixFee: (id: string) => Promise<void>;
   
   createTax: (tax: Omit<Tax, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateTax: (id: string, tax: Partial<Tax>) => Promise<void>;
+  updateTax: (tax: Tax) => Promise<void>;
   deleteTax: (id: string) => Promise<void>;
   
   // Utility functions
   initializeCashBalance: (initialAmount: number) => Promise<void>;
   recalculateCashBalance: () => Promise<void>;
   updateCashBalance: (amount: number, type: 'entrada' | 'saida', description: string, category: string, relatedId?: string) => Promise<void>;
+  setError: (error: string | null) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -257,211 +257,269 @@ export function AppProvider({ children }: AppProviderProps) {
 
   // Sales CRUD operations
   const createSale = async (sale: Omit<Sale, 'id' | 'createdAt'>) => {
-    await salesService.create(sale);
+    const newSale = await salesService.create(sale);
+    setSales(prev => [newSale, ...prev]);
     await loadAllData();
   };
 
-  const updateSale = async (sale: Sale) => {
-    await salesService.update(sale.id, sale);
+  const updateSale = async (id: string, saleData: Partial<Sale>) => {
+    await salesService.update(id, saleData);
+    setSales(prev => prev.map(s => s.id === id ? { ...s, ...saleData } : s));
     await loadAllData();
   };
 
   const deleteSale = async (id: string) => {
     await salesService.delete(id);
+    setSales(prev => prev.filter(s => s.id !== id));
     await loadAllData();
   };
 
   // Debts CRUD operations
   const createDebt = async (debt: Omit<Debt, 'id' | 'createdAt' | 'updatedAt'>) => {
-    await debtsService.create(debt);
+    const newDebt = await debtsService.create(debt);
+    setDebts(prev => [newDebt, ...prev]);
     await loadAllData();
   };
 
-  const updateDebt = async (id: string, debt: Partial<Debt>) => {
-    await debtsService.update(id, debt);
+  const updateDebt = async (debt: Debt) => {
+    await debtsService.update(debt.id, debt);
+    setDebts(prev => prev.map(d => d.id === debt.id ? debt : d));
     await loadAllData();
   };
 
   const deleteDebt = async (id: string) => {
     await debtsService.delete(id);
+    setDebts(prev => prev.filter(d => d.id !== id));
     await loadAllData();
   };
 
   // Checks CRUD operations
   const createCheck = async (check: Omit<Check, 'id' | 'createdAt' | 'updatedAt'>) => {
-    await checksService.create(check);
+    const newCheck = await checksService.create(check);
+    setChecks(prev => [newCheck, ...prev]);
     await loadAllData();
   };
 
-  const updateCheck = async (id: string, check: Partial<Check>) => {
-    await checksService.update(id, check);
+  const updateCheck = async (check: Check) => {
+    await checksService.update(check.id, check);
+    setChecks(prev => prev.map(c => c.id === check.id ? check : c));
     await loadAllData();
   };
 
   const deleteCheck = async (id: string) => {
     await checksService.delete(id);
+    setChecks(prev => prev.filter(c => c.id !== id));
     await loadAllData();
   };
 
   // Boletos CRUD operations
   const createBoleto = async (boleto: Omit<Boleto, 'id' | 'createdAt' | 'updatedAt'>) => {
-    await boletosService.create(boleto);
+    const newBoleto = await boletosService.create(boleto);
+    setBoletos(prev => [newBoleto, ...prev]);
     await loadAllData();
   };
 
-  const updateBoleto = async (id: string, boleto: Partial<Boleto>) => {
-    await boletosService.update(id, boleto);
+  const updateBoleto = async (boleto: Boleto) => {
+    await boletosService.update(boleto.id, boleto);
+    setBoletos(prev => prev.map(b => b.id === boleto.id ? boleto : b));
     await loadAllData();
   };
 
   const deleteBoleto = async (id: string) => {
     await boletosService.delete(id);
+    setBoletos(prev => prev.filter(b => b.id !== id));
     await loadAllData();
   };
 
   // Employees CRUD operations
   const createEmployee = async (employee: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>) => {
-    await employeesService.create(employee);
+    const newEmployee = await employeesService.create(employee);
+    setEmployees(prev => [newEmployee, ...prev]);
     await loadAllData();
   };
 
-  const updateEmployee = async (id: string, employee: Partial<Employee>) => {
-    await employeesService.update(id, employee);
+  const updateEmployee = async (employee: Employee) => {
+    await employeesService.update(employee.id, employee);
+    setEmployees(prev => prev.map(e => e.id === employee.id ? employee : e));
     await loadAllData();
   };
 
   const deleteEmployee = async (id: string) => {
     await employeesService.delete(id);
+    setEmployees(prev => prev.filter(e => e.id !== id));
     await loadAllData();
   };
 
   // Employee Payments CRUD operations
   const createEmployeePayment = async (payment: Omit<EmployeePayment, 'id' | 'createdAt' | 'updatedAt'>) => {
-    await employeePaymentsService.create(payment);
+    const newPayment = await employeePaymentsService.create(payment);
+    setEmployeePayments(prev => [newPayment, ...prev]);
     await loadAllData();
   };
 
-  const updateEmployeePayment = async (id: string, payment: Partial<EmployeePayment>) => {
-    await employeePaymentsService.update(id, payment);
+  const updateEmployeePayment = async (payment: EmployeePayment) => {
+    await employeePaymentsService.update(payment.id!, payment);
+    setEmployeePayments(prev => prev.map(p => p.id === payment.id ? payment : p));
     await loadAllData();
   };
 
   const deleteEmployeePayment = async (id: string) => {
     await employeePaymentsService.delete(id);
+    setEmployeePayments(prev => prev.filter(p => p.id !== id));
     await loadAllData();
   };
 
   // Employee Advances CRUD operations
   const createEmployeeAdvance = async (advance: Omit<EmployeeAdvance, 'id' | 'createdAt' | 'updatedAt'>) => {
-    await employeeAdvancesService.create(advance);
+    const newAdvance = await employeeAdvancesService.create(advance);
+    setEmployeeAdvances(prev => [newAdvance, ...prev]);
     await loadAllData();
   };
 
-  const updateEmployeeAdvance = async (id: string, advance: Partial<EmployeeAdvance>) => {
-    await employeeAdvancesService.update(id, advance);
+  const updateEmployeeAdvance = async (advance: EmployeeAdvance) => {
+    await employeeAdvancesService.update(advance.id!, advance);
+    setEmployeeAdvances(prev => prev.map(a => a.id === advance.id ? advance : a));
     await loadAllData();
   };
 
   const deleteEmployeeAdvance = async (id: string) => {
     await employeeAdvancesService.delete(id);
+    setEmployeeAdvances(prev => prev.filter(a => a.id !== id));
     await loadAllData();
   };
 
   // Employee Overtimes CRUD operations
   const createEmployeeOvertime = async (overtime: Omit<EmployeeOvertime, 'id' | 'createdAt' | 'updatedAt'>) => {
-    await employeeOvertimesService.create(overtime);
+    const newOvertime = await employeeOvertimesService.create(overtime);
+    setEmployeeOvertimes(prev => [newOvertime, ...prev]);
     await loadAllData();
   };
 
-  const updateEmployeeOvertime = async (id: string, overtime: Partial<EmployeeOvertime>) => {
-    await employeeOvertimesService.update(id, overtime);
+  const updateEmployeeOvertime = async (overtime: EmployeeOvertime) => {
+    await employeeOvertimesService.update(overtime.id!, overtime);
+    setEmployeeOvertimes(prev => prev.map(o => o.id === overtime.id ? overtime : o));
     await loadAllData();
   };
 
   const deleteEmployeeOvertime = async (id: string) => {
     await employeeOvertimesService.delete(id);
+    setEmployeeOvertimes(prev => prev.filter(o => o.id !== id));
     await loadAllData();
   };
 
   // Employee Commissions CRUD operations
   const createEmployeeCommission = async (commission: Omit<EmployeeCommission, 'id' | 'createdAt' | 'updatedAt'>) => {
-    await employeeCommissionsService.create(commission);
+    const newCommission = await employeeCommissionsService.create(commission);
+    setEmployeeCommissions(prev => [newCommission, ...prev]);
     await loadAllData();
   };
 
-  const updateEmployeeCommission = async (id: string, commission: Partial<EmployeeCommission>) => {
-    await employeeCommissionsService.update(id, commission);
+  const updateEmployeeCommission = async (commission: EmployeeCommission) => {
+    await employeeCommissionsService.update(commission.id!, commission);
+    setEmployeeCommissions(prev => prev.map(c => c.id === commission.id ? commission : c));
     await loadAllData();
   };
 
   const deleteEmployeeCommission = async (id: string) => {
     await employeeCommissionsService.delete(id);
+    setEmployeeCommissions(prev => prev.filter(c => c.id !== id));
     await loadAllData();
   };
 
   // Cash Transactions CRUD operations
   const createCashTransaction = async (transaction: Omit<CashTransaction, 'id' | 'createdAt' | 'updatedAt'>) => {
-    await cashTransactionsService.create(transaction);
+    const newTransaction = await cashTransactionsService.create(transaction);
+    setCashTransactions(prev => [newTransaction, ...prev]);
     await loadAllData();
   };
 
-  const updateCashTransaction = async (id: string, transaction: Partial<CashTransaction>) => {
-    await cashTransactionsService.update(id, transaction);
+  const updateCashTransaction = async (transaction: CashTransaction) => {
+    await cashTransactionsService.update(transaction.id!, transaction);
+    setCashTransactions(prev => prev.map(t => t.id === transaction.id ? transaction : t));
     await loadAllData();
   };
 
   const deleteCashTransaction = async (id: string) => {
     await cashTransactionsService.delete(id);
+    setCashTransactions(prev => prev.filter(t => t.id !== id));
     await loadAllData();
   };
 
   // PIX Fees CRUD operations
   const createPixFee = async (fee: Omit<PixFee, 'id' | 'createdAt' | 'updatedAt'>) => {
-    await pixFeesService.create(fee);
+    const newFee = await pixFeesService.create(fee);
+    setPixFees(prev => [newFee, ...prev]);
     await loadAllData();
   };
 
-  const updatePixFee = async (id: string, fee: Partial<PixFee>) => {
-    await pixFeesService.update(id, fee);
+  const updatePixFee = async (fee: PixFee) => {
+    await pixFeesService.update(fee.id!, fee);
+    setPixFees(prev => prev.map(f => f.id === fee.id ? fee : f));
     await loadAllData();
   };
 
   const deletePixFee = async (id: string) => {
     await pixFeesService.delete(id);
+    setPixFees(prev => prev.filter(f => f.id !== id));
     await loadAllData();
   };
 
   // Taxes CRUD operations
   const createTax = async (tax: Omit<Tax, 'id' | 'createdAt' | 'updatedAt'>) => {
-    await taxesService.create(tax);
+    const newTax = await taxesService.create(tax);
+    setTaxes(prev => [newTax, ...prev]);
     await loadAllData();
   };
 
-  const updateTax = async (id: string, tax: Partial<Tax>) => {
-    await taxesService.update(id, tax);
+  const updateTax = async (tax: Tax) => {
+    await taxesService.update(tax.id!, tax);
+    setTaxes(prev => prev.map(t => t.id === tax.id ? tax : t));
     await loadAllData();
   };
 
   const deleteTax = async (id: string) => {
     await taxesService.delete(id);
+    setTaxes(prev => prev.filter(t => t.id !== id));
     await loadAllData();
   };
 
   // Utility functions
   const initializeCashBalance = async (initialAmount: number) => {
-    const newBalance = await cashBalancesService.create({
-      currentBalance: initialAmount,
-      initialBalance: initialAmount,
-      initialDate: new Date().toISOString().split('T')[0],
-      lastUpdated: new Date().toISOString()
-    });
-    setCashBalance(newBalance);
+    try {
+      const newBalance = await cashBalancesService.create({
+        currentBalance: initialAmount,
+        initialBalance: initialAmount,
+        initialDate: new Date().toISOString().split('T')[0],
+        lastUpdated: new Date().toISOString()
+      });
+      setCashBalance(newBalance);
+      await loadAllData();
+    } catch (error) {
+      console.error('Erro ao inicializar caixa:', error);
+      throw error;
+    }
   };
 
   const recalculateCashBalance = async () => {
     try {
-      const { error } = await supabase.rpc('recalculate_cash_balance');
-      if (error) throw error;
+      // Recalcular saldo baseado em todas as transações
+      const balance = await cashBalancesService.get();
+      if (balance) {
+        const transactions = await cashTransactionsService.getAll();
+        const totalEntradas = transactions
+          .filter(t => t.type === 'entrada')
+          .reduce((sum, t) => sum + t.amount, 0);
+        const totalSaidas = transactions
+          .filter(t => t.type === 'saida')
+          .reduce((sum, t) => sum + t.amount, 0);
+        
+        const newBalance = balance.initialBalance + totalEntradas - totalSaidas;
+        
+        await cashBalancesService.update(balance.id!, {
+          currentBalance: newBalance,
+          lastUpdated: new Date().toISOString()
+        });
+      }
       await loadAllData();
     } catch (err) {
       console.error('Error recalculating cash balance:', err);
@@ -472,7 +530,7 @@ export function AppProvider({ children }: AppProviderProps) {
   const updateCashBalance = async (amount: number, type: 'entrada' | 'saida', description: string, category: string, relatedId?: string) => {
     try {
       // Create cash transaction
-      await cashTransactionsService.create({
+      const newTransaction = await cashTransactionsService.create({
         date: new Date().toISOString().split('T')[0],
         type,
         amount,
@@ -482,12 +540,32 @@ export function AppProvider({ children }: AppProviderProps) {
         paymentMethod: type === 'entrada' ? 'recebimento' : 'pagamento'
       });
       
-      // The cash balance will be updated automatically by database triggers
+      setCashTransactions(prev => [newTransaction, ...prev]);
+      
+      // Update cash balance manually
+      if (cashBalance) {
+        const newBalance = type === 'entrada' 
+          ? cashBalance.currentBalance + amount
+          : cashBalance.currentBalance - amount;
+        
+        await cashBalancesService.update(cashBalance.id!, {
+          currentBalance: newBalance,
+          lastUpdated: new Date().toISOString()
+        });
+        
+        setCashBalance(prev => prev ? { ...prev, currentBalance: newBalance, lastUpdated: new Date().toISOString() } : null);
+      }
+      
       await loadAllData();
     } catch (err) {
       console.error('Error updating cash balance:', err);
       throw err;
     }
+  };
+
+  // Add setError function to context
+  const setErrorState = (error: string | null) => {
+    setError(error);
   };
 
   const value: AppContextType = {
@@ -574,6 +652,7 @@ export function AppProvider({ children }: AppProviderProps) {
     initializeCashBalance,
     recalculateCashBalance,
     updateCashBalance,
+    setError: setErrorState,
   };
 
   return (
