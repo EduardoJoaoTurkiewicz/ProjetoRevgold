@@ -1,92 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Calendar, DollarSign, User, Package, FileText } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { SaleForm } from './forms/SaleForm';
-import type { Sale, Employee } from '../types';
+import { useAppContext } from '../context/AppContext';
+import type { Sale } from '../types';
 
 export function Sales() {
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { 
+    sales, 
+    employees, 
+    loading, 
+    createSale, 
+    updateSale, 
+    deleteSale 
+  } = useAppContext();
+  
   const [showForm, setShowForm] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  useEffect(() => {
-    loadSales();
-    loadEmployees();
-  }, []);
-
-  const loadSales = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('sales')
-        .select(`
-          id,
-          date,
-          delivery_date,
-          client,
-          seller_id,
-          products,
-          observations,
-          total_value,
-          payment_methods,
-          received_amount,
-          pending_amount,
-          status,
-          payment_description,
-          payment_observations,
-          custom_commission_rate,
-          created_at,
-          updated_at,
-          seller:employees(name)
-        `)
-        .order('date', { ascending: false });
-
-      if (error) throw error;
-      setSales(data || []);
-    } catch (error) {
-      console.error('Error loading sales:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadEmployees = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('is_seller', true)
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      setEmployees(data || []);
-    } catch (error) {
-      console.error('Error loading employees:', error);
-    }
-  };
-
   const handleSaleSubmit = async (saleData: Partial<Sale>) => {
     try {
       if (editingSale) {
-        const { error } = await supabase
-          .from('sales')
-          .update(saleData)
-          .eq('id', editingSale.id);
-
-        if (error) throw error;
+        await updateSale(editingSale.id, saleData);
       } else {
-        const { error } = await supabase
-          .from('sales')
-          .insert([saleData]);
-
-        if (error) throw error;
+        await createSale(saleData);
       }
 
-      await loadSales();
       setShowForm(false);
       setEditingSale(null);
     } catch (error) {
@@ -103,13 +43,7 @@ export function Sales() {
     if (!confirm('Tem certeza que deseja excluir esta venda?')) return;
 
     try {
-      const { error } = await supabase
-        .from('sales')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      await loadSales();
+      await deleteSale(id);
     } catch (error) {
       console.error('Error deleting sale:', error);
     }
@@ -117,7 +51,7 @@ export function Sales() {
 
   const filteredSales = sales.filter(sale => {
     const matchesSearch = sale.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         sale.description?.toLowerCase().includes(searchTerm.toLowerCase());
+                         sale.observations?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || sale.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -140,6 +74,12 @@ export function Sales() {
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('pt-BR');
+  };
+
+  const getSellerName = (sellerId: string | null) => {
+    if (!sellerId) return 'Sem vendedor';
+    const seller = employees.find(emp => emp.id === sellerId);
+    return seller?.name || 'Vendedor não encontrado';
   };
 
   if (loading) {
@@ -257,7 +197,7 @@ export function Sales() {
                     </span>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {(sale as any).seller?.name || 'Sem vendedor'}
+                    {getSellerName(sale.seller_id)}
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
@@ -298,7 +238,7 @@ export function Sales() {
       {showForm && (
         <SaleForm
           sale={editingSale}
-          employees={employees}
+          employees={employees.filter(emp => emp.is_seller && emp.is_active)}
           onSubmit={handleSaleSubmit}
           onCancel={() => {
             setShowForm(false);
