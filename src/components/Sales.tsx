@@ -5,7 +5,7 @@ import { SaleForm } from './forms/SaleForm';
 import type { Sale, Employee } from '../types';
 
 export function Sales() {
-  const { sales, employees, deleteSale, refreshData } = useAppContext();
+  const { sales, employees, deleteSale, refreshData, createSale, updateSale } = useAppContext();
   const [showForm, setShowForm] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,6 +38,15 @@ export function Sales() {
     setEditingSale(null);
   };
 
+  const handleSubmit = async (saleData: any) => {
+    if (editingSale) {
+      await updateSale(editingSale.id, saleData);
+    } else {
+      await createSale(saleData);
+    }
+    handleCloseForm();
+  };
+
   const getSellerName = (sellerId: string | null) => {
     if (!sellerId) return 'Sem vendedor';
     const seller = employees.find(emp => emp.id === sellerId);
@@ -68,7 +77,8 @@ export function Sales() {
     return (
       <SaleForm
         sale={editingSale}
-        onClose={handleCloseForm}
+        onSubmit={handleSubmit}
+        onCancel={handleCloseForm}
       />
     );
   }
