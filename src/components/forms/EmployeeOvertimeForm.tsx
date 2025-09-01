@@ -4,21 +4,22 @@ import { EmployeeOvertime } from '../../types';
 import { useAppContext } from '../../context/AppContext';
 
 interface EmployeeOvertimeFormProps {
-  overtime?: EmployeeOvertime | null;
+  employeeId?: string;
+  employeeName?: string;
   onSubmit: (overtime: Omit<EmployeeOvertime, 'id' | 'createdAt'>) => void;
   onCancel: () => void;
 }
 
-export function EmployeeOvertimeForm({ overtime, onSubmit, onCancel }: EmployeeOvertimeFormProps) {
+export function EmployeeOvertimeForm({ employeeId, employeeName, onSubmit, onCancel }: EmployeeOvertimeFormProps) {
   const { employees } = useAppContext();
   const [formData, setFormData] = useState({
-    employeeId: overtime?.employeeId || '',
-    hours: overtime?.hours || 0,
-    hourlyRate: overtime?.hourlyRate || 0,
-    totalAmount: overtime?.totalAmount || 0,
-    date: overtime?.date || new Date().toISOString().split('T')[0],
-    description: overtime?.description || '',
-    status: overtime?.status || 'pendente'
+    employeeId: employeeId || '',
+    hours: 0,
+    hourlyRate: 0,
+    totalAmount: 0,
+    date: new Date().toISOString().split('T')[0],
+    description: '',
+    status: 'pendente' as const
   });
 
   const activeEmployees = employees.filter(emp => emp.isActive);
@@ -75,7 +76,12 @@ export function EmployeeOvertimeForm({ overtime, onSubmit, onCancel }: EmployeeO
         <div className="p-8">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-3xl font-bold text-slate-900">
-              {overtime ? 'Editar Hora Extra' : 'Nova Hora Extra'}
+              Nova Hora Extra
+              {employeeName && (
+                <span className="text-lg font-normal text-slate-600 block">
+                  para {employeeName}
+                </span>
+              )}
             </h2>
             <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-all">
               <X className="w-6 h-6" />
@@ -90,6 +96,7 @@ export function EmployeeOvertimeForm({ overtime, onSubmit, onCancel }: EmployeeO
                   value={formData.employeeId}
                   onChange={(e) => setFormData(prev => ({ ...prev, employeeId: e.target.value }))}
                   className="input-field"
+                  disabled={!!employeeId}
                   required
                 >
                   <option value="">Selecionar funcionário...</option>
@@ -179,7 +186,7 @@ export function EmployeeOvertimeForm({ overtime, onSubmit, onCancel }: EmployeeO
                 type="submit"
                 className="btn-primary group"
               >
-                {overtime ? 'Atualizar Hora Extra' : 'Criar Hora Extra'}
+                Criar Hora Extra
               </button>
             </div>
           </form>
