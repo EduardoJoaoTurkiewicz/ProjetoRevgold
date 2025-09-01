@@ -105,7 +105,7 @@ export function Employees() {
     }
     
     createEmployeeAdvance(advance).then(() => {
-      // Cash transaction will be handled automatically by database trigger
+      // Cash transaction is handled automatically by database trigger
       console.log('✅ Adiantamento criado, transação de caixa será criada automaticamente');
       setAdvanceEmployee(null);
     }).catch(error => {

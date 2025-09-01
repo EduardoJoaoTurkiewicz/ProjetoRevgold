@@ -386,11 +386,13 @@ export function CashManagement() {
             <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
               <h3 className="font-bold text-blue-900 mb-2">Como funciona?</h3>
               <ul className="text-sm text-blue-700 space-y-1">
-                <li>• Vendas em dinheiro, PIX e débito são adicionadas automaticamente</li>
-                <li>• Cheques compensados são adicionados quando marcados como "compensado"</li>
-                <li>• Boletos pagos são adicionados quando marcados como "compensado"</li>
-                <li>• Pagamentos de dívidas são subtraídos automaticamente</li>
-                <li>• Você pode acompanhar o fluxo diário e gráficos de crescimento</li>
+                <li>• <strong>ENTRADAS:</strong> Toda venda em dinheiro, PIX, débito ou crédito à vista aumenta o saldo</li>
+                <li>• <strong>ENTRADAS:</strong> Cheques de terceiros compensados aumentam o saldo</li>
+                <li>• <strong>ENTRADAS:</strong> Boletos recebidos aumentam o saldo</li>
+                <li>• <strong>SAÍDAS:</strong> Pagamentos de dívidas diminuem o saldo</li>
+                <li>• <strong>SAÍDAS:</strong> Salários e adiantamentos diminuem o saldo</li>
+                <li>• <strong>SAÍDAS:</strong> Impostos e tarifas diminuem o saldo</li>
+                <li>• <strong>MATEMÁTICA EXATA:</strong> Saldo sempre reflete a realidade financeira</li>
               </ul>
             </div>
 

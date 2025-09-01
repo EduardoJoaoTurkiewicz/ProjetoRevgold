@@ -112,7 +112,7 @@ export function Boletos() {
       
       // Se o boleto foi marcado como compensado, atualizar o caixa
       if (status === 'compensado' && boleto.status !== 'compensado') {
-        // Cash transactions will be handled automatically by database triggers
+        // Cash transactions are handled automatically by database triggers
         console.log('✅ Boleto marcado como compensado, transações de caixa serão criadas automaticamente');
       }
       

@@ -83,7 +83,7 @@ export function Checks() {
       
       // Se o cheque foi marcado como compensado, atualizar o caixa
       if (status === 'compensado' && check.status !== 'compensado' && !check.isOwnCheck) {
-        // Cash transactions will be handled automatically by database triggers
+        // Cash transactions are handled automatically by database triggers
         console.log('✅ Cheque marcado como compensado, transação de caixa será criada automaticamente');
       }
       
