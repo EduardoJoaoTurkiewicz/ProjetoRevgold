@@ -23,7 +23,23 @@ export function Sales() {
       const { data, error } = await supabase
         .from('sales')
         .select(`
-          *,
+          id,
+          date,
+          delivery_date,
+          client,
+          seller_id,
+          products,
+          observations,
+          total_value,
+          payment_methods,
+          received_amount,
+          pending_amount,
+          status,
+          payment_description,
+          payment_observations,
+          custom_commission_rate,
+          created_at,
+          updated_at,
           seller:employees(name)
         `)
         .order('date', { ascending: false });

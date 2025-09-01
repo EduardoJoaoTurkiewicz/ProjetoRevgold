@@ -577,7 +577,25 @@ export const salesService = {
     
     const { data, error } = await supabase
       .from('sales')
-      .select('*')
+      .select(`
+        id,
+        date,
+        delivery_date,
+        client,
+        seller_id,
+        products,
+        observations,
+        total_value,
+        payment_methods,
+        received_amount,
+        pending_amount,
+        status,
+        payment_description,
+        payment_observations,
+        custom_commission_rate,
+        created_at,
+        updated_at
+      `)
       .order('date', { ascending: false });
     
     if (error) throw error;
