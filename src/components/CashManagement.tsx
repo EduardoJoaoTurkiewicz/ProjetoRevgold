@@ -438,39 +438,6 @@ export function CashManagement() {
         </div>
         
         <div className="text-center">
-        
-        <div className="card bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 modern-shadow-xl">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-green-600">
-              <CheckCircle className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-xl font-bold text-green-900">Sistema Corrigido e Otimizado</h3>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="p-4 bg-white rounded-xl border border-green-200">
-              <h4 className="font-bold text-green-800 mb-2">✅ Problemas Resolvidos</h4>
-              <ul className="text-sm text-green-700 space-y-1">
-                <li>• Duplicatas removidas automaticamente</li>
-                <li>• Erros de vendas corrigidos</li>
-                <li>• Sistema de caixa automático implementado</li>
-                <li>• Validações rigorosas adicionadas</li>
-                <li>• Performance otimizada</li>
-              </ul>
-            </div>
-            
-            <div className="p-4 bg-white rounded-xl border border-green-200">
-              <h4 className="font-bold text-green-800 mb-2">🚀 Melhorias Implementadas</h4>
-              <ul className="text-sm text-green-700 space-y-1">
-                <li>• Caixa atualizado em tempo real</li>
-                <li>• Prevenção automática de duplicatas</li>
-                <li>• Controle rigoroso de entradas/saídas</li>
-                <li>• Triggers automáticos para todas as operações</li>
-                <li>• Sistema de integridade de dados</li>
-              </ul>
-            </div>
-          </div>
-        </div>
           <h2 className="text-2xl font-bold text-green-900 mb-4">Saldo Atual em Caixa</h2>
           <p className="text-6xl font-black text-green-700 mb-4">
             R$ {cashBalance.currentBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}

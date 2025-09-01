@@ -16,7 +16,6 @@ import {
   cashBalancesService,
   taxesService
 } from '../lib/supabaseServices';
-import { removeDuplicates } from '../utils/removeDuplicates';
 import type { 
   Sale, 
   Debt, 
@@ -115,9 +114,9 @@ interface AppContextType {
   deleteTax: (id: string) => Promise<void>;
   
   // Utility functions
-  initializeCashBalance: () => Promise<void>;
+  initializeCashBalance: (initialAmount: number) => Promise<void>;
   recalculateCashBalance: () => Promise<void>;
-  cleanupDuplicates: () => Promise<void>;
+  updateCashBalance: (amount: number, type: 'entrada' | 'saida', description: string, category: string, relatedId?: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -449,14 +448,14 @@ export function AppProvider({ children }: AppProviderProps) {
   };
 
   // Utility functions
-  const initializeCashBalance = async () => {
-    if (!cashBalance) {
-      const newBalance = await cashBalancesService.create({
-        currentBalance: 0,
-        lastUpdated: new Date().toISOString()
-      });
-      setCashBalance(newBalance);
-    }
+  const initializeCashBalance = async (initialAmount: number) => {
+    const newBalance = await cashBalancesService.create({
+      currentBalance: initialAmount,
+      initialBalance: initialAmount,
+      initialDate: new Date().toISOString().split('T')[0],
+      lastUpdated: new Date().toISOString()
+    });
+    setCashBalance(newBalance);
   };
 
   const recalculateCashBalance = async () => {
@@ -470,12 +469,23 @@ export function AppProvider({ children }: AppProviderProps) {
     }
   };
 
-  const cleanupDuplicates = async () => {
+  const updateCashBalance = async (amount: number, type: 'entrada' | 'saida', description: string, category: string, relatedId?: string) => {
     try {
-      await removeDuplicates();
+      // Create cash transaction
+      await cashTransactionsService.create({
+        date: new Date().toISOString().split('T')[0],
+        type,
+        amount,
+        description,
+        category,
+        relatedId,
+        paymentMethod: type === 'entrada' ? 'recebimento' : 'pagamento'
+      });
+      
+      // The cash balance will be updated automatically by database triggers
       await loadAllData();
     } catch (err) {
-      console.error('Error cleaning up duplicates:', err);
+      console.error('Error updating cash balance:', err);
       throw err;
     }
   };
@@ -563,7 +573,7 @@ export function AppProvider({ children }: AppProviderProps) {
     // Utility functions
     initializeCashBalance,
     recalculateCashBalance,
-    cleanupDuplicates,
+    updateCashBalance,
   };
 
   return (
