@@ -66,8 +66,8 @@ interface AppContextType {
   loadAllData: () => Promise<void>;
   
   // CRUD operations
-  createSale: (sale: Omit<Sale, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateSale: (id: string, sale: Partial<Sale>) => Promise<void>;
+  createSale: (sale: Omit<Sale, 'id' | 'createdAt'>) => Promise<void>;
+  updateSale: (sale: Sale) => Promise<void>;
   deleteSale: (id: string) => Promise<void>;
   
   createDebt: (debt: Omit<Debt, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
@@ -257,13 +257,13 @@ export function AppProvider({ children }: AppProviderProps) {
   };
 
   // Sales CRUD operations
-  const createSale = async (sale: Omit<Sale, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const createSale = async (sale: Omit<Sale, 'id' | 'createdAt'>) => {
     await salesService.create(sale);
     await loadAllData();
   };
 
-  const updateSale = async (id: string, sale: Partial<Sale>) => {
-    await salesService.update(id, sale);
+  const updateSale = async (sale: Sale) => {
+    await salesService.update(sale.id, sale);
     await loadAllData();
   };
 

@@ -1,385 +1,585 @@
-import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Eye, ShoppingCart, DollarSign, Calendar, AlertCircle, X, User, Package } from 'lucide-react';
-import { useAppContext } from '../context/AppContext';
-import { Sale } from '../types';
-import { SaleForm } from './forms/SaleForm';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '../lib/supabase';
+import type { User } from '@supabase/supabase-js';
+import {
+  salesService,
+  debtsService,
+  checksService,
+  boletosService,
+  employeesService,
+  employeePaymentsService,
+  employeeAdvancesService,
+  employeeOvertimesService,
+  employeeCommissionsService,
+  cashTransactionsService,
+  pixFeesService,
+  cashBalancesService,
+  taxesService
+} from '../lib/supabaseServices';
+import { removeDuplicates } from '../utils/removeDuplicates';
+import type { 
+  Sale, 
+  Debt, 
+  Check, 
+  Boleto, 
+  Employee,
+  EmployeePayment,
+  EmployeeAdvance,
+  EmployeeOvertime,
+  EmployeeCommission,
+  CashTransaction,
+  PixFee,
+  CashBalance,
+  Tax,
+  AgendaEvent
+} from '../types';
 
-export function Sales() {
-  const { sales, employees, isLoading, error, createSale, updateSale, deleteSale } = useAppContext();
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingSale, setEditingSale] = useState<Sale | null>(null);
-  const [viewingSale, setViewingSale] = useState<Sale | null>(null);
+interface AppContextType {
+  user: User | null;
+  loading: boolean;
+  isLoading: boolean;
+  error: string | null;
+  
+  // Data
+  sales: Sale[];
+  debts: Debt[];
+  checks: Check[];
+  boletos: Boleto[];
+  employees: Employee[];
+  employeePayments: EmployeePayment[];
+  employeeAdvances: EmployeeAdvance[];
+  employeeOvertimes: EmployeeOvertime[];
+  employeeCommissions: EmployeeCommission[];
+  cashTransactions: CashTransaction[];
+  pixFees: PixFee[];
+  cashBalance: CashBalance | null;
+  taxes: Tax[];
+  agendaEvents: AgendaEvent[];
+  
+  // Auth functions
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  
+  // Data management functions
+  refreshData: () => Promise<void>;
+  loadAllData: () => Promise<void>;
+  
+  // CRUD operations
+  createSale: (sale: Omit<Sale, 'id' | 'createdAt'>) => Promise<void>;
+  updateSale: (sale: Sale) => Promise<void>;
+  deleteSale: (id: string) => Promise<void>;
+  
+  createDebt: (debt: Omit<Debt, 'id' | 'createdAt'>) => Promise<void>;
+  updateDebt: (debt: Debt) => Promise<void>;
+  deleteDebt: (id: string) => Promise<void>;
+  
+  createCheck: (check: Omit<Check, 'id' | 'createdAt'>) => Promise<void>;
+  updateCheck: (check: Check) => Promise<void>;
+  deleteCheck: (id: string) => Promise<void>;
+  
+  createBoleto: (boleto: Omit<Boleto, 'id' | 'createdAt'>) => Promise<void>;
+  updateBoleto: (boleto: Boleto) => Promise<void>;
+  deleteBoleto: (id: string) => Promise<void>;
+  
+  createEmployee: (employee: Omit<Employee, 'id' | 'createdAt'>) => Promise<void>;
+  updateEmployee: (employee: Employee) => Promise<void>;
+  deleteEmployee: (id: string) => Promise<void>;
+  
+  createEmployeePayment: (payment: Omit<EmployeePayment, 'id' | 'createdAt'>) => Promise<void>;
+  updateEmployeePayment: (payment: EmployeePayment) => Promise<void>;
+  deleteEmployeePayment: (id: string) => Promise<void>;
+  
+  createEmployeeAdvance: (advance: Omit<EmployeeAdvance, 'id' | 'createdAt'>) => Promise<void>;
+  updateEmployeeAdvance: (advance: EmployeeAdvance) => Promise<void>;
+  deleteEmployeeAdvance: (id: string) => Promise<void>;
+  
+  createEmployeeOvertime: (overtime: Omit<EmployeeOvertime, 'id' | 'createdAt'>) => Promise<void>;
+  updateEmployeeOvertime: (overtime: EmployeeOvertime) => Promise<void>;
+  deleteEmployeeOvertime: (id: string) => Promise<void>;
+  
+  createEmployeeCommission: (commission: Omit<EmployeeCommission, 'id' | 'createdAt'>) => Promise<void>;
+  updateEmployeeCommission: (commission: EmployeeCommission) => Promise<void>;
+  deleteEmployeeCommission: (id: string) => Promise<void>;
+  
+  createCashTransaction: (transaction: Omit<CashTransaction, 'id' | 'createdAt'>) => Promise<void>;
+  updateCashTransaction: (transaction: CashTransaction) => Promise<void>;
+  deleteCashTransaction: (id: string) => Promise<void>;
+  
+  createPixFee: (fee: Omit<PixFee, 'id' | 'createdAt'>) => Promise<void>;
+  updatePixFee: (fee: PixFee) => Promise<void>;
+  deletePixFee: (id: string) => Promise<void>;
+  
+  deleteTax: (id: string) => Promise<void>;
+  
+  // Utility functions
+  initializeCashBalance: () => Promise<void>;
+  recalculateCashBalance: () => Promise<void>;
+  cleanupDuplicates: () => Promise<void>;
+}
 
-  const handleAddSale = (sale: Omit<Sale, 'id' | 'createdAt'>) => {
-    console.log('🔄 Adicionando nova venda:', sale);
-    
-    // Validate sale data before submitting
-    if (!sale.client || !sale.client.trim()) {
-      alert('Por favor, informe o nome do cliente.');
-      return;
-    }
-    
-    if (sale.totalValue <= 0) {
-      alert('O valor total da venda deve ser maior que zero.');
-      return;
-    }
-    
-    if (!sale.paymentMethods || sale.paymentMethods.length === 0) {
-      alert('Por favor, adicione pelo menos um método de pagamento.');
-      return;
-    }
-    
-    // Validar estrutura dos métodos de pagamento
-    for (const method of sale.paymentMethods) {
-      if (!method.type || typeof method.type !== 'string') {
-        alert('Todos os métodos de pagamento devem ter um tipo válido.');
-        return;
-      }
-      if (typeof method.amount !== 'number' || method.amount < 0) {
-        alert('Todos os métodos de pagamento devem ter um valor válido.');
-        return;
-      }
-    }
-    
-    createSale(sale).then(() => {
-      console.log('✅ Venda adicionada com sucesso');
-      setIsFormOpen(false);
-    }).catch(error => {
-      console.error('❌ Erro ao adicionar venda:', error);
-      let errorMessage = 'Erro desconhecido ao criar venda';
-      
-      if (error.message) {
-        if (error.message.includes('duplicate key') || error.message.includes('já existe')) {
-          errorMessage = 'Esta venda já existe no sistema. O sistema previne duplicatas automaticamente.';
-        } else if (error.message.includes('constraint')) {
-          errorMessage = 'Dados inválidos ou duplicados. Verifique as informações inseridas.';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
-      alert('Erro ao criar venda: ' + errorMessage);
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+interface AppProviderProps {
+  children: ReactNode;
+}
+
+export function AppProvider({ children }: AppProviderProps) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Data state
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [debts, setDebts] = useState<Debt[]>([]);
+  const [checks, setChecks] = useState<Check[]>([]);
+  const [boletos, setBoletos] = useState<Boleto[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employeePayments, setEmployeePayments] = useState<EmployeePayment[]>([]);
+  const [employeeAdvances, setEmployeeAdvances] = useState<EmployeeAdvance[]>([]);
+  const [employeeOvertimes, setEmployeeOvertimes] = useState<EmployeeOvertime[]>([]);
+  const [employeeCommissions, setEmployeeCommissions] = useState<EmployeeCommission[]>([]);
+  const [cashTransactions, setCashTransactions] = useState<CashTransaction[]>([]);
+  const [pixFees, setPixFees] = useState<PixFee[]>([]);
+  const [cashBalance, setCashBalance] = useState<CashBalance | null>(null);
+  const [taxes, setTaxes] = useState<Tax[]>([]);
+  const [agendaEvents, setAgendaEvents] = useState<AgendaEvent[]>([]);
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
     });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadAllData();
+    }
+  }, [user]);
+
+  const loadAllData = async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const [
+        salesData,
+        debtsData,
+        checksData,
+        boletosData,
+        employeesData,
+        employeePaymentsData,
+        employeeAdvancesData,
+        employeeOvertimesData,
+        employeeCommissionsData,
+        cashTransactionsData,
+        pixFeesData,
+        cashBalanceData,
+        taxesData
+      ] = await Promise.all([
+        salesService.getAll(),
+        debtsService.getAll(),
+        checksService.getAll(),
+        boletosService.getAll(),
+        employeesService.getAll(),
+        employeePaymentsService.getAll(),
+        employeeAdvancesService.getAll(),
+        employeeOvertimesService.getAll(),
+        employeeCommissionsService.getAll(),
+        cashTransactionsService.getAll(),
+        pixFeesService.getAll(),
+        cashBalancesService.get(),
+        taxesService.getAll()
+      ]);
+
+      setSales(salesData);
+      setDebts(debtsData);
+      setChecks(checksData);
+      setBoletos(boletosData);
+      setEmployees(employeesData);
+      setEmployeePayments(employeePaymentsData);
+      setEmployeeAdvances(employeeAdvancesData);
+      setEmployeeOvertimes(employeeOvertimesData);
+      setEmployeeCommissions(employeeCommissionsData);
+      setCashTransactions(cashTransactionsData);
+      setPixFees(pixFeesData);
+      setCashBalance(cashBalanceData);
+      setTaxes(taxesData);
+      setAgendaEvents([]); // Initialize as empty array for now
+    } catch (err) {
+      console.error('Error loading data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load data');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleEditSale = (sale: Omit<Sale, 'id' | 'createdAt'>) => {
-    if (editingSale) {
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) throw error;
+  };
+
+  const signUp = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    if (error) throw error;
+  };
+
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  };
+
+  const refreshData = async () => {
+    await loadAllData();
+  };
+
+  // Sales CRUD operations
+  const createSale = async (sale: Omit<Sale, 'id' | 'createdAt' | 'updatedAt'>) => {
+    await salesService.create(sale);
+    await loadAllData();
+  };
+
+  const updateSale = async (id: string, sale: Partial<Sale>) => {
+    await salesService.update(id, sale);
+    await loadAllData();
+  };
+
+  const deleteSale = async (id: string) => {
+    await salesService.delete(id);
+    await loadAllData();
+  };
+
+  // Debts CRUD operations
+  const createDebt = async (debt: Omit<Debt, 'id' | 'createdAt' | 'updatedAt'>) => {
+    await debtsService.create(debt);
+    await loadAllData();
+  };
+
+  const updateDebt = async (id: string, debt: Partial<Debt>) => {
+    await debtsService.update(id, debt);
+    await loadAllData();
+  };
+
+  const deleteDebt = async (id: string) => {
+    await debtsService.delete(id);
+    await loadAllData();
+  };
+
+  // Checks CRUD operations
+  const createCheck = async (check: Omit<Check, 'id' | 'createdAt' | 'updatedAt'>) => {
+    await checksService.create(check);
+    await loadAllData();
+  };
+
+  const updateCheck = async (id: string, check: Partial<Check>) => {
+    await checksService.update(id, check);
+    await loadAllData();
+  };
+
+  const deleteCheck = async (id: string) => {
+    await checksService.delete(id);
+    await loadAllData();
+  };
+
+  // Boletos CRUD operations
+  const createBoleto = async (boleto: Omit<Boleto, 'id' | 'createdAt' | 'updatedAt'>) => {
+    await boletosService.create(boleto);
+    await loadAllData();
+  };
+
+  const updateBoleto = async (id: string, boleto: Partial<Boleto>) => {
+    await boletosService.update(id, boleto);
+    await loadAllData();
+  };
+
+  const deleteBoleto = async (id: string) => {
+    await boletosService.delete(id);
+    await loadAllData();
+  };
+
+  // Employees CRUD operations
+  const createEmployee = async (employee: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>) => {
+    await employeesService.create(employee);
+    await loadAllData();
+  };
+
+  const updateEmployee = async (id: string, employee: Partial<Employee>) => {
+    await employeesService.update(id, employee);
+    await loadAllData();
+  };
+
+  const deleteEmployee = async (id: string) => {
+    await employeesService.delete(id);
+    await loadAllData();
+  };
+
+  // Employee Payments CRUD operations
+  const createEmployeePayment = async (payment: Omit<EmployeePayment, 'id' | 'createdAt' | 'updatedAt'>) => {
+    await employeePaymentsService.create(payment);
+    await loadAllData();
+  };
+
+  const updateEmployeePayment = async (id: string, payment: Partial<EmployeePayment>) => {
+    await employeePaymentsService.update(id, payment);
+    await loadAllData();
+  };
+
+  const deleteEmployeePayment = async (id: string) => {
+    await employeePaymentsService.delete(id);
+    await loadAllData();
+  };
+
+  // Employee Advances CRUD operations
+  const createEmployeeAdvance = async (advance: Omit<EmployeeAdvance, 'id' | 'createdAt' | 'updatedAt'>) => {
+    await employeeAdvancesService.create(advance);
+    await loadAllData();
+  };
+
+  const updateEmployeeAdvance = async (id: string, advance: Partial<EmployeeAdvance>) => {
+    await employeeAdvancesService.update(id, advance);
+    await loadAllData();
+  };
+
+  const deleteEmployeeAdvance = async (id: string) => {
+    await employeeAdvancesService.delete(id);
+    await loadAllData();
+  };
+
+  // Employee Overtimes CRUD operations
+  const createEmployeeOvertime = async (overtime: Omit<EmployeeOvertime, 'id' | 'createdAt' | 'updatedAt'>) => {
+    await employeeOvertimesService.create(overtime);
+    await loadAllData();
+  };
+
+  const updateEmployeeOvertime = async (id: string, overtime: Partial<EmployeeOvertime>) => {
+    await employeeOvertimesService.update(id, overtime);
+    await loadAllData();
+  };
+
+  const deleteEmployeeOvertime = async (id: string) => {
+    await employeeOvertimesService.delete(id);
+    await loadAllData();
+  };
+
+  // Employee Commissions CRUD operations
+  const createEmployeeCommission = async (commission: Omit<EmployeeCommission, 'id' | 'createdAt' | 'updatedAt'>) => {
+    await employeeCommissionsService.create(commission);
+    await loadAllData();
+  };
+
+  const updateEmployeeCommission = async (id: string, commission: Partial<EmployeeCommission>) => {
+    await employeeCommissionsService.update(id, commission);
+    await loadAllData();
+  };
+
+  const deleteEmployeeCommission = async (id: string) => {
+    await employeeCommissionsService.delete(id);
+    await loadAllData();
+  };
+
+  // Cash Transactions CRUD operations
+  const createCashTransaction = async (transaction: Omit<CashTransaction, 'id' | 'createdAt' | 'updatedAt'>) => {
+    await cashTransactionsService.create(transaction);
+    await loadAllData();
+  };
+
+  const updateCashTransaction = async (id: string, transaction: Partial<CashTransaction>) => {
+    await cashTransactionsService.update(id, transaction);
+    await loadAllData();
+  };
+
+  const deleteCashTransaction = async (id: string) => {
+    await cashTransactionsService.delete(id);
+    await loadAllData();
+  };
+
+  // PIX Fees CRUD operations
+  const createPixFee = async (fee: Omit<PixFee, 'id' | 'createdAt' | 'updatedAt'>) => {
+    await pixFeesService.create(fee);
+    await loadAllData();
+  };
+
+  const updatePixFee = async (id: string, fee: Partial<PixFee>) => {
+    await pixFeesService.update(id, fee);
+    await loadAllData();
+  };
+
+  const deletePixFee = async (id: string) => {
+    await pixFeesService.delete(id);
+    await loadAllData();
+  };
+
+  // Taxes CRUD operations
+  const createTax = async (tax: Omit<Tax, 'id' | 'createdAt' | 'updatedAt'>) => {
+    await taxesService.create(tax);
+    await loadAllData();
+  };
+
+  const updateTax = async (id: string, tax: Partial<Tax>) => {
+    await taxesService.update(id, tax);
+    await loadAllData();
+  };
+
+  const deleteTax = async (id: string) => {
+    await taxesService.delete(id);
+    await loadAllData();
+  };
+
+  // Utility functions
+  const initializeCashBalance = async () => {
       const updatedSale: Sale = {
         ...sale,
         id: editingSale.id,
         createdAt: editingSale.createdAt
       };
       updateSale(updatedSale).then(() => {
-        setEditingSale(null);
-      }).catch(error => {
-        alert('Erro ao atualizar venda: ' + error.message);
+      const newBalance = await cashBalancesService.create({
+        currentBalance: 0,
+        lastUpdated: new Date().toISOString()
       });
+      setCashBalance(newBalance);
     }
   };
 
-  const handleDeleteSale = (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta venda? Esta ação não pode ser desfeita.')) {
-      deleteSale(id).catch(error => {
-        alert('Erro ao excluir venda: ' + error.message);
-      });
+  const recalculateCashBalance = async () => {
+    try {
+      const { error } = await supabase.rpc('recalculate_cash_balance');
+      if (error) throw error;
+      await loadAllData();
+    } catch (err) {
+      console.error('Error recalculating cash balance:', err);
+      throw err;
     }
   };
 
-  const getSellerName = (sellerId: string | null) => {
-    if (!sellerId) return 'Sem vendedor';
-    const seller = employees.find(emp => emp.id === sellerId);
-    return seller?.name || 'Vendedor não encontrado';
-  };
-
-  const getStatusColor = (status: Sale['status']) => {
-    switch (status) {
-      case 'pago': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-      case 'parcial': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'pendente': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+  const cleanupDuplicates = async () => {
+    try {
+      await removeDuplicates();
+      await loadAllData();
+    } catch (err) {
+      console.error('Error cleaning up duplicates:', err);
+      throw err;
     }
   };
 
-  const getStatusLabel = (status: Sale['status']) => {
-    switch (status) {
-      case 'pago': return 'Pago';
-      case 'parcial': return 'Parcial';
-      case 'pendente': return 'Pendente';
-      default: return status;
-    }
+  const value: AppContextType = {
+    user,
+    loading,
+    isLoading,
+    error,
+    
+    // Data
+    sales,
+    debts,
+    checks,
+    boletos,
+    employees,
+    employeePayments,
+    employeeAdvances,
+    employeeOvertimes,
+    employeeCommissions,
+    cashTransactions,
+    pixFees,
+    cashBalance,
+    taxes,
+    agendaEvents,
+    
+    // Auth functions
+    signIn,
+    signUp,
+    signOut,
+    
+    // Data management
+    refreshData,
+    loadAllData,
+    
+    // CRUD operations
+    createSale,
+    updateSale,
+    deleteSale,
+    
+    createDebt,
+    updateDebt,
+    deleteDebt,
+    
+    createCheck,
+    updateCheck,
+    deleteCheck,
+    
+    createBoleto,
+    updateBoleto,
+    deleteBoleto,
+    
+    createEmployee,
+    updateEmployee,
+    deleteEmployee,
+    
+    createEmployeePayment,
+    updateEmployeePayment,
+    deleteEmployeePayment,
+    
+    createEmployeeAdvance,
+    updateEmployeeAdvance,
+    deleteEmployeeAdvance,
+    
+    createEmployeeOvertime,
+    updateEmployeeOvertime,
+    deleteEmployeeOvertime,
+    
+    createEmployeeCommission,
+    updateEmployeeCommission,
+    deleteEmployeeCommission,
+    
+    createCashTransaction,
+    updateCashTransaction,
+    deleteCashTransaction,
+    
+    createPixFee,
+    updatePixFee,
+    deletePixFee,
+    
+    createTax,
+    updateTax,
+    deleteTax,
+    
+    // Utility functions
+    initializeCashBalance,
+    recalculateCashBalance,
+    cleanupDuplicates,
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <ShoppingCart className="w-8 h-8 text-white" />
-          </div>
-          <p className="text-slate-600 font-semibold">Carregando vendas...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 shadow-xl floating-animation">
-            <ShoppingCart className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Vendas</h1>
-            <p className="text-slate-600 text-lg">Gestão completa de vendas e recebimentos</p>
-          </div>
-        </div>
-        <button
-          onClick={() => setIsFormOpen(true)}
-          className="btn-primary flex items-center gap-2 modern-shadow-xl hover:modern-shadow-lg"
-        >
-          <Plus className="w-5 h-5" />
-          Nova Venda
-        </button>
-      </div>
-
-      {/* Error Display */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
-          <div className="flex items-center gap-4">
-            <AlertCircle className="w-8 h-8 text-red-600" />
-            <div>
-              <h3 className="font-bold text-red-800">Erro no Sistema</h3>
-              <p className="text-red-700">{error}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Sales List */}
-      <div className="card modern-shadow-xl">
-        {sales.length > 0 ? (
-          <div className="overflow-x-auto modern-scrollbar">
-            <table className="min-w-full table-auto">
-              <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Data</th>
-                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Cliente</th>
-                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Vendedor</th>
-                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Produtos</th>
-                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Valor Total</th>
-                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Recebido</th>
-                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Pendente</th>
-                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Status</th>
-                  <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sales.map(sale => (
-                  <tr key={sale.id} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-all duration-300">
-                    <td className="py-4 px-6 text-sm font-semibold text-slate-900">
-                      {new Date(sale.date).toLocaleDateString('pt-BR')}
-                    </td>
-                    <td className="py-4 px-6 text-sm font-bold text-slate-900">{sale.client}</td>
-                    <td className="py-4 px-6 text-sm text-slate-700">
-                      {getSellerName(sale.sellerId)}
-                    </td>
-                    <td className="py-4 px-6 text-sm text-slate-700">
-                      <div className="max-w-32 truncate">
-                        {typeof sale.products === 'string' ? sale.products : 'Produtos vendidos'}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6 text-sm font-black text-blue-600">
-                      R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-4 px-6 text-sm font-black text-green-600">
-                      R$ {sale.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-4 px-6 text-sm font-black text-orange-600">
-                      R$ {sale.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-4 px-6 text-sm">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(sale.status)}`}>
-                        {getStatusLabel(sale.status)}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-sm">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setViewingSale(sale)}
-                          className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-modern"
-                          title="Visualizar"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setEditingSale(sale)}
-                          className="text-emerald-600 hover:text-emerald-800 p-2 rounded-lg hover:bg-emerald-50 transition-modern"
-                          title="Editar"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteSale(sale.id)}
-                          className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-modern"
-                          title="Excluir"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center py-20">
-            <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 floating-animation">
-              <ShoppingCart className="w-12 h-12 text-blue-600" />
-            </div>
-            <h3 className="text-2xl font-bold text-slate-800 mb-4">Nenhuma venda registrada</h3>
-            <p className="text-slate-600 mb-8 text-lg">Comece registrando sua primeira venda para controlar os recebimentos.</p>
-            <button
-              onClick={() => setIsFormOpen(true)}
-              className="btn-primary modern-shadow-xl"
-            >
-              Registrar primeira venda
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Sale Form Modal */}
-      {(isFormOpen || editingSale) && (
-        <SaleForm
-          sale={editingSale}
-          onSubmit={editingSale ? handleEditSale : handleAddSale}
-          onCancel={() => {
-            setIsFormOpen(false);
-            setEditingSale(null);
-          }}
-        />
-      )}
-
-      {/* View Sale Modal */}
-      {viewingSale && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
-            <div className="p-8">
-              <div className="flex justify-between items-center mb-8">
-                <div className="flex items-center gap-4">
-                  <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 modern-shadow-xl">
-                    <ShoppingCart className="w-8 h-8 text-white" />
-                  </div>
-                  <h2 className="text-3xl font-bold text-slate-900">Detalhes da Venda</h2>
-                </div>
-                <button
-                  onClick={() => setViewingSale(null)}
-                  className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div>
-                  <label className="form-label">Data da Venda</label>
-                  <p className="text-sm text-slate-900 font-semibold">
-                    {new Date(viewingSale.date).toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
-                <div>
-                  <label className="form-label">Data de Entrega</label>
-                  <p className="text-sm text-slate-900 font-medium">
-                    {viewingSale.deliveryDate ? new Date(viewingSale.deliveryDate).toLocaleDateString('pt-BR') : 'Não definida'}
-                  </p>
-                </div>
-                <div>
-                  <label className="form-label">Cliente</label>
-                  <p className="text-sm text-slate-900 font-bold">{viewingSale.client}</p>
-                </div>
-                <div>
-                  <label className="form-label">Vendedor</label>
-                  <p className="text-sm text-slate-900 font-medium">
-                    {getSellerName(viewingSale.sellerId)}
-                  </p>
-                </div>
-                <div>
-                  <label className="form-label">Valor Total</label>
-                  <p className="text-xl font-black text-blue-600">
-                    R$ {viewingSale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div>
-                  <label className="form-label">Status</label>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(viewingSale.status)}`}>
-                    {getStatusLabel(viewingSale.status)}
-                  </span>
-                </div>
-                <div>
-                  <label className="form-label">Valor Recebido</label>
-                  <p className="text-sm font-bold text-green-600">
-                    R$ {viewingSale.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div>
-                  <label className="form-label">Valor Pendente</label>
-                  <p className="text-sm font-bold text-orange-600">
-                    R$ {viewingSale.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="form-label">Produtos</label>
-                  <p className="text-sm text-slate-900 font-medium">
-                    {typeof viewingSale.products === 'string' ? viewingSale.products : 'Produtos vendidos'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mb-8">
-                <h3 className="text-xl font-bold text-blue-800 mb-4">Métodos de Pagamento</h3>
-                <div className="space-y-3">
-                  {(viewingSale.paymentMethods || []).map((method, index) => (
-                    <div key={index} className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold text-blue-800 capitalize">
-                          {method.type.replace('_', ' ')}
-                        </span>
-                        <span className="font-bold text-blue-600">R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                      </div>
-                      {method.installments && method.installments > 1 && (
-                        <div className="text-sm text-blue-600 mt-2 font-semibold">
-                          {method.installments}x de R$ {method.installmentValue?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          {method.installmentInterval && ` a cada ${method.installmentInterval} dias`}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {viewingSale.observations && (
-                <div className="mb-8">
-                  <label className="form-label">Observações</label>
-                  <p className="text-sm text-slate-900 p-4 bg-slate-50 rounded-xl border">
-                    {viewingSale.observations}
-                  </p>
-                </div>
-              )}
-
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setViewingSale(null)}
-                  className="btn-secondary"
-                >
-                  Fechar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    <AppContext.Provider value={value}>
+      {children}
+    </AppContext.Provider>
   );
+}
+
+export function useAppContext() {
+  const context = useContext(AppContext);
+  if (context === undefined) {
+    throw new Error('useAppContext must be used within an AppProvider');
+  }
+  return context;
 }
