@@ -38,7 +38,8 @@ function transformToDatabase(obj: any): any {
   for (const [key, value] of Object.entries(obj)) {
     // Convert camelCase to snake_case
     const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-    transformed[snakeKey] = value;
+    // Convert empty strings to null for UUID fields and other nullable fields
+    transformed[snakeKey] = value === '' ? null : value;
   }
   
   return transformed;
