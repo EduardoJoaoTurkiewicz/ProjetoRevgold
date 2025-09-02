@@ -51,13 +51,17 @@ export function Boletos() {
       setIsFormOpen(false);
     }).catch(error => {
       console.error('❌ Erro ao adicionar boleto:', error);
-      let errorMessage = 'Erro desconhecido ao criar boleto';
+      let errorMessage = 'Erro ao criar boleto';
       
       if (error.message) {
-        if (error.message.includes('duplicate key') || error.message.includes('já existe')) {
+        if (error.message.includes('duplicate key') || error.message.includes('unique constraint') || error.message.includes('já existe')) {
           errorMessage = 'Este boleto já existe no sistema. O sistema previne duplicatas automaticamente.';
-        } else if (error.message.includes('constraint')) {
+        } else if (error.message.includes('constraint') || error.message.includes('violates')) {
           errorMessage = 'Dados inválidos ou duplicados. Verifique as informações inseridas.';
+        } else if (error.message.includes('invalid input syntax')) {
+          errorMessage = 'Formato de dados inválido. Verifique os valores inseridos.';
+        } else if (error.message.includes('null value')) {
+          errorMessage = 'Campos obrigatórios não preenchidos. Verifique todos os campos.';
         } else {
           errorMessage = error.message;
         }

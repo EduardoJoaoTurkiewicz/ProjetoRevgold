@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase';
+import { AutomationService } from './automationService';
 import type { 
   Sale, 
   Debt, 
@@ -40,7 +41,9 @@ function transformToDatabase(obj: any): any {
     const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
     
     // Handle different value types properly
-    if (value === '' || value === undefined) {
+    if (value === undefined) {
+      transformed[snakeKey] = null;
+    } else if (value === null) {
       transformed[snakeKey] = null;
     } else if (typeof value === 'string' && value.trim() === '') {
       transformed[snakeKey] = null;
@@ -409,15 +412,24 @@ export const cashBalancesService = {
   async get(): Promise<CashBalance | null> {
     if (!isSupabaseConfigured()) return null;
     
+    try {
     const { data, error } = await supabase
       .from('cash_balances')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+        .maybeSingle();
     
-    if (error && error.code !== 'PGRST116') throw error;
+      if (error) {
+        console.error('Erro ao buscar saldo do caixa:', error);
+        throw new Error(`Erro ao buscar saldo do caixa: ${error.message}`);
+      }
+      
     return data ? transformDatabaseRow<CashBalance>(data) : null;
+    } catch (error) {
+      console.error('Erro na busca do saldo:', error);
+      return null;
+    }
   },
 
   async create(balance: Omit<CashBalance, 'id' | 'createdAt' | 'updatedAt'>): Promise<CashBalance> {
@@ -439,29 +451,56 @@ export const cashBalancesService = {
       throw new Error('Saldo inicial deve ser um número válido');
     }
     
-    const dbData = transformToDatabase(balance);
+    // Create database object directly to avoid transformation issues
+    const dbData = {
+      current_balance: balance.currentBalance,
+      initial_balance: balance.initialBalance,
+      initial_date: balance.initialDate || new Date().toISOString().split('T')[0],
+      last_updated: balance.lastUpdated || new Date().toISOString()
+    };
     
-    // Ensure required fields are properly set
-    dbData.current_balance = balance.currentBalance;
-    dbData.initial_balance = balance.initialBalance;
-    dbData.initial_date = balance.initialDate || new Date().toISOString().split('T')[0];
-    dbData.last_updated = balance.lastUpdated || new Date().toISOString();
+    console.log('🔄 Criando saldo do caixa:', dbData);
     
     const { data, error } = await supabase.from('cash_balances').insert([dbData]).select().single();
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao criar saldo do caixa:', error);
+      throw new Error(`Erro ao criar saldo do caixa: ${error.message}`);
+    }
+    
+    console.log('✅ Saldo do caixa criado:', data);
     return transformDatabaseRow<CashBalance>(data);
   },
 
   async update(id: string, balance: Partial<CashBalance>): Promise<void> {
     if (!isSupabaseConfigured()) return;
     
-    const dbData = transformToDatabase(balance);
+    // Create database object directly
+    const dbData: any = {};
+    
+    if (typeof balance.currentBalance === 'number') {
+      dbData.current_balance = balance.currentBalance;
+    }
+    
+    if (typeof balance.initialBalance === 'number') {
+      dbData.initial_balance = balance.initialBalance;
+    }
+    
+    if (balance.initialDate) {
+      dbData.initial_date = balance.initialDate;
+    }
     
     // Ensure last_updated is always set
     dbData.last_updated = new Date().toISOString();
     
+    console.log('🔄 Atualizando saldo do caixa:', dbData);
+    
     const { error } = await supabase.from('cash_balances').update(dbData).eq('id', id);
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao atualizar saldo do caixa:', error);
+      throw new Error(`Erro ao atualizar saldo do caixa: ${error.message}`);
+    }
+    
+    console.log('✅ Saldo do caixa atualizado');
   }
 };
 
@@ -546,17 +585,26 @@ export const cashTransactionsService = {
       throw new Error('Tipo deve ser entrada ou saida');
     }
     
-    const dbData = transformToDatabase(transaction);
+    // Create database object directly to avoid transformation issues
+    const dbData = {
+      date: transaction.date || new Date().toISOString().split('T')[0],
+      type: transaction.type,
+      amount: transaction.amount,
+      description: transaction.description.trim(),
+      category: transaction.category,
+      related_id: transaction.relatedId || null,
+      payment_method: transaction.paymentMethod || null
+    };
     
-    // Ensure required fields are properly set
-    dbData.description = transaction.description.trim();
-    dbData.amount = transaction.amount;
-    dbData.type = transaction.type;
-    dbData.category = transaction.category;
-    dbData.date = transaction.date || new Date().toISOString().split('T')[0];
+    console.log('🔄 Criando transação de caixa:', dbData);
     
     const { data, error } = await supabase.from('cash_transactions').insert([dbData]).select().single();
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao criar transação de caixa:', error);
+      throw new Error(`Erro ao criar transação de caixa: ${error.message}`);
+    }
+    
+    console.log('✅ Transação de caixa criada:', data);
     return transformDatabaseRow<CashTransaction>(data);
   },
 
@@ -657,35 +705,96 @@ export const salesService = {
       throw new Error('Pelo menos um método de pagamento é obrigatório');
     }
     
+    // Validate payment methods structure
+    for (const method of sale.paymentMethods) {
+      if (!method.type || typeof method.type !== 'string') {
+        throw new Error('Todos os métodos de pagamento devem ter um tipo válido');
+      }
+      if (typeof method.amount !== 'number' || method.amount < 0) {
+        throw new Error('Todos os métodos de pagamento devem ter um valor válido');
+      }
+    }
+    
     const dbData = transformToDatabase(sale);
     
     // Ensure required fields are properly set
     dbData.client = sale.client.trim();
     dbData.total_value = sale.totalValue;
-    dbData.payment_methods = sale.paymentMethods;
+    dbData.payment_methods = JSON.stringify(sale.paymentMethods);
     dbData.received_amount = sale.receivedAmount || 0;
     dbData.pending_amount = sale.pendingAmount || 0;
     dbData.status = sale.status || 'pendente';
     dbData.custom_commission_rate = sale.customCommissionRate || 5;
     
+    // Handle optional fields properly
+    if (sale.deliveryDate && sale.deliveryDate.trim() !== '') {
+      dbData.delivery_date = sale.deliveryDate;
+    }
+    
+    if (sale.sellerId && sale.sellerId.trim() !== '') {
+      dbData.seller_id = sale.sellerId;
+    }
+    
+    if (sale.products && typeof sale.products === 'string' && sale.products.trim() !== '') {
+      dbData.products = sale.products.trim();
+    }
+    
+    if (sale.observations && sale.observations.trim() !== '') {
+      dbData.observations = sale.observations.trim();
+    }
+    
+    if (sale.paymentDescription && sale.paymentDescription.trim() !== '') {
+      dbData.payment_description = sale.paymentDescription.trim();
+    }
+    
+    if (sale.paymentObservations && sale.paymentObservations.trim() !== '') {
+      dbData.payment_observations = sale.paymentObservations.trim();
+    }
+    
     const { data, error } = await supabase.from('sales').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<Sale>(data);
+    if (error) {
+      console.error('Erro ao criar venda:', error);
+      throw new Error(`Erro ao criar venda: ${error.message}`);
+    }
+    
+    const newSale = transformDatabaseRow<Sale>(data);
+    
+    // Create checks and boletos automatically
+    try {
+      await AutomationService.createChecksForSale(newSale);
+      await AutomationService.createBoletosForSale(newSale);
+    } catch (automationError) {
+      console.warn('Erro na automação (não crítico):', automationError);
+    }
+    
+    return newSale;
   },
 
   async update(id: string, sale: Partial<Sale>): Promise<void> {
     if (!isSupabaseConfigured()) return;
     
     const dbData = transformToDatabase(sale);
+    
+    // Handle JSON fields properly
+    if (sale.paymentMethods) {
+      dbData.payment_methods = JSON.stringify(sale.paymentMethods);
+    }
+    
     const { error } = await supabase.from('sales').update(dbData).eq('id', id);
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao atualizar venda:', error);
+      throw new Error(`Erro ao atualizar venda: ${error.message}`);
+    }
   },
 
   async delete(id: string): Promise<void> {
     if (!isSupabaseConfigured()) return;
     
     const { error } = await supabase.from('sales').delete().eq('id', id);
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao deletar venda:', error);
+      throw new Error(`Erro ao deletar venda: ${error.message}`);
+    }
   }
 };
 
@@ -725,19 +834,47 @@ export const debtsService = {
       throw new Error('Valor total deve ser maior que zero');
     }
     
+    // Validate payment methods structure
+    if (debt.paymentMethods && debt.paymentMethods.length > 0) {
+      for (const method of debt.paymentMethods) {
+        if (!method.type || typeof method.type !== 'string') {
+          throw new Error('Todos os métodos de pagamento devem ter um tipo válido');
+        }
+        if (typeof method.amount !== 'number' || method.amount < 0) {
+          throw new Error('Todos os métodos de pagamento devem ter um valor válido');
+        }
+      }
+    }
+    
     const dbData = transformToDatabase(debt);
     
     // Ensure required fields are properly set
     dbData.company = debt.company.trim();
     dbData.description = debt.description.trim();
     dbData.total_value = debt.totalValue;
-    dbData.payment_methods = debt.paymentMethods || [];
+    dbData.payment_methods = JSON.stringify(debt.paymentMethods || []);
     dbData.is_paid = debt.isPaid || false;
     dbData.paid_amount = debt.paidAmount || 0;
     dbData.pending_amount = debt.pendingAmount || 0;
     
+    // Handle optional fields properly
+    if (debt.paymentDescription && debt.paymentDescription.trim() !== '') {
+      dbData.payment_description = debt.paymentDescription.trim();
+    }
+    
+    if (debt.debtPaymentDescription && debt.debtPaymentDescription.trim() !== '') {
+      dbData.debt_payment_description = debt.debtPaymentDescription.trim();
+    }
+    
+    if (debt.checksUsed && debt.checksUsed.length > 0) {
+      dbData.checks_used = JSON.stringify(debt.checksUsed);
+    }
+    
     const { data, error } = await supabase.from('debts').insert([dbData]).select().single();
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao criar dívida:', error);
+      throw new Error(`Erro ao criar dívida: ${error.message}`);
+    }
     return transformDatabaseRow<Debt>(data);
   },
 
@@ -745,15 +882,31 @@ export const debtsService = {
     if (!isSupabaseConfigured()) return;
     
     const dbData = transformToDatabase(debt);
+    
+    // Handle JSON fields properly
+    if (debt.paymentMethods) {
+      dbData.payment_methods = JSON.stringify(debt.paymentMethods);
+    }
+    
+    if (debt.checksUsed) {
+      dbData.checks_used = JSON.stringify(debt.checksUsed);
+    }
+    
     const { error } = await supabase.from('debts').update(dbData).eq('id', id);
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao atualizar dívida:', error);
+      throw new Error(`Erro ao atualizar dívida: ${error.message}`);
+    }
   },
 
   async delete(id: string): Promise<void> {
     if (!isSupabaseConfigured()) return;
     
     const { error } = await supabase.from('debts').delete().eq('id', id);
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao deletar dívida:', error);
+      throw new Error(`Erro ao deletar dívida: ${error.message}`);
+    }
   }
 };
 

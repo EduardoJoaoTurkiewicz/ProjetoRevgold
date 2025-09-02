@@ -178,6 +178,8 @@ export function AppProvider({ children }: AppProviderProps) {
     setError(null);
     
     try {
+      console.log('🔄 Carregando todos os dados...');
+      
       const [
         salesData,
         debtsData,
@@ -208,6 +210,15 @@ export function AppProvider({ children }: AppProviderProps) {
         taxesService.getAll()
       ]);
 
+      console.log('✅ Dados carregados:', {
+        sales: salesData.length,
+        debts: debtsData.length,
+        checks: checksData.length,
+        boletos: boletosData.length,
+        employees: employeesData.length,
+        cashBalance: cashBalanceData ? 'Encontrado' : 'Não encontrado'
+      });
+
       setSales(salesData);
       setDebts(debtsData);
       setChecks(checksData);
@@ -224,7 +235,8 @@ export function AppProvider({ children }: AppProviderProps) {
       setAgendaEvents([]); // Initialize as empty array for now
     } catch (err) {
       console.error('Error loading data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load data');
+      const errorMessage = err instanceof Error ? err.message : 'Falha ao carregar dados';
+      setError(`Erro ao carregar dados: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -257,40 +269,78 @@ export function AppProvider({ children }: AppProviderProps) {
 
   // Sales CRUD operations
   const createSale = async (sale: Omit<Sale, 'id' | 'createdAt'>) => {
-    const newSale = await salesService.create(sale);
-    setSales(prev => [newSale, ...prev]);
-    await loadAllData();
+    try {
+      console.log('🔄 Criando venda:', sale);
+      const newSale = await salesService.create(sale);
+      console.log('✅ Venda criada:', newSale);
+      setSales(prev => [newSale, ...prev]);
+      await loadAllData();
+    } catch (error) {
+      console.error('❌ Erro ao criar venda:', error);
+      throw error;
+    }
   };
 
   const updateSale = async (id: string, saleData: Partial<Sale>) => {
-    await salesService.update(id, saleData);
-    setSales(prev => prev.map(s => s.id === id ? { ...s, ...saleData } : s));
-    await loadAllData();
+    try {
+      console.log('🔄 Atualizando venda:', id, saleData);
+      await salesService.update(id, saleData);
+      setSales(prev => prev.map(s => s.id === id ? { ...s, ...saleData } : s));
+      await loadAllData();
+    } catch (error) {
+      console.error('❌ Erro ao atualizar venda:', error);
+      throw error;
+    }
   };
 
   const deleteSale = async (id: string) => {
-    await salesService.delete(id);
-    setSales(prev => prev.filter(s => s.id !== id));
-    await loadAllData();
+    try {
+      console.log('🔄 Deletando venda:', id);
+      await salesService.delete(id);
+      setSales(prev => prev.filter(s => s.id !== id));
+      await loadAllData();
+    } catch (error) {
+      console.error('❌ Erro ao deletar venda:', error);
+      throw error;
+    }
   };
 
   // Debts CRUD operations
   const createDebt = async (debt: Omit<Debt, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newDebt = await debtsService.create(debt);
-    setDebts(prev => [newDebt, ...prev]);
-    await loadAllData();
+    try {
+      console.log('🔄 Criando dívida:', debt);
+      const newDebt = await debtsService.create(debt);
+      console.log('✅ Dívida criada:', newDebt);
+      setDebts(prev => [newDebt, ...prev]);
+      await loadAllData();
+    } catch (error) {
+      console.error('❌ Erro ao criar dívida:', error);
+      throw error;
+    }
   };
 
   const updateDebt = async (debt: Debt) => {
-    await debtsService.update(debt.id, debt);
-    setDebts(prev => prev.map(d => d.id === debt.id ? debt : d));
-    await loadAllData();
+    try {
+      console.log('🔄 Atualizando dívida:', debt);
+      await debtsService.update(debt.id, debt);
+      setDebts(prev => prev.map(d => d.id === debt.id ? debt : d));
+      await loadAllData();
+    } catch (error) {
+      console.error('❌ Erro ao atualizar dívida:', error);
+      throw error;
+    }
   };
 
   const deleteDebt = async (id: string) => {
-    await debtsService.delete(id);
-    setDebts(prev => prev.filter(d => d.id !== id));
-    await loadAllData();
+    try {
+      console.log('🔄 Deletando dívida:', id);
+      await debtsService.delete(id);
+      setDebts(prev => prev.filter(d => d.id !== id));
+      await loadAllData();
+    } catch (error) {
+      console.error('❌ Erro ao deletar dívida:', error);
+      throw error;
+    }
   };
 
   // Checks CRUD operations
@@ -486,12 +536,16 @@ export function AppProvider({ children }: AppProviderProps) {
   // Utility functions
   const initializeCashBalance = async (initialAmount: number) => {
     try {
+      console.log('🔄 Inicializando caixa com valor:', initialAmount);
+      
       const newBalance = await cashBalancesService.create({
         currentBalance: initialAmount,
         initialBalance: initialAmount,
         initialDate: new Date().toISOString().split('T')[0],
         lastUpdated: new Date().toISOString()
       });
+      
+      console.log('✅ Caixa inicializado:', newBalance);
       setCashBalance(newBalance);
       await loadAllData();
     } catch (error) {
@@ -502,10 +556,16 @@ export function AppProvider({ children }: AppProviderProps) {
 
   const recalculateCashBalance = async () => {
     try {
+      console.log('🔄 Recalculando saldo do caixa...');
+      
       // Recalcular saldo baseado em todas as transações
       const balance = await cashBalancesService.get();
       if (balance) {
+        console.log('📊 Saldo atual encontrado:', balance);
+        
         const transactions = await cashTransactionsService.getAll();
+        console.log('📊 Transações encontradas:', transactions.length);
+        
         const totalEntradas = transactions
           .filter(t => t.type === 'entrada')
           .reduce((sum, t) => sum + t.amount, 0);
@@ -513,12 +573,24 @@ export function AppProvider({ children }: AppProviderProps) {
           .filter(t => t.type === 'saida')
           .reduce((sum, t) => sum + t.amount, 0);
         
+        console.log('📊 Cálculo:', {
+          inicial: balance.initialBalance,
+          entradas: totalEntradas,
+          saidas: totalSaidas
+        });
+        
         const newBalance = balance.initialBalance + totalEntradas - totalSaidas;
+        
+        console.log('📊 Novo saldo calculado:', newBalance);
         
         await cashBalancesService.update(balance.id!, {
           currentBalance: newBalance,
           lastUpdated: new Date().toISOString()
         });
+        
+        console.log('✅ Saldo recalculado com sucesso');
+      } else {
+        console.warn('⚠️ Nenhum saldo encontrado para recalcular');
       }
       await loadAllData();
     } catch (err) {
@@ -529,6 +601,8 @@ export function AppProvider({ children }: AppProviderProps) {
 
   const updateCashBalance = async (amount: number, type: 'entrada' | 'saida', description: string, category: string, relatedId?: string) => {
     try {
+      console.log('🔄 Atualizando caixa:', { amount, type, description, category, relatedId });
+      
       // Create cash transaction
       const newTransaction = await cashTransactionsService.create({
         date: new Date().toISOString().split('T')[0],
@@ -540,6 +614,7 @@ export function AppProvider({ children }: AppProviderProps) {
         paymentMethod: type === 'entrada' ? 'recebimento' : 'pagamento'
       });
       
+      console.log('✅ Transação de caixa criada:', newTransaction);
       setCashTransactions(prev => [newTransaction, ...prev]);
       
       // Update cash balance manually
@@ -548,12 +623,21 @@ export function AppProvider({ children }: AppProviderProps) {
           ? cashBalance.currentBalance + amount
           : cashBalance.currentBalance - amount;
         
+        console.log('🔄 Atualizando saldo:', {
+          anterior: cashBalance.currentBalance,
+          operacao: `${type === 'entrada' ? '+' : '-'}${amount}`,
+          novo: newBalance
+        });
+        
         await cashBalancesService.update(cashBalance.id!, {
           currentBalance: newBalance,
           lastUpdated: new Date().toISOString()
         });
         
         setCashBalance(prev => prev ? { ...prev, currentBalance: newBalance, lastUpdated: new Date().toISOString() } : null);
+        console.log('✅ Saldo atualizado para:', newBalance);
+      } else {
+        console.warn('⚠️ Nenhum saldo encontrado para atualizar');
       }
       
       await loadAllData();

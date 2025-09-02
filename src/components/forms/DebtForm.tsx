@@ -106,21 +106,40 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
       return;
     }
     
+    // Validar estrutura dos métodos de pagamento
+    for (const method of formData.paymentMethods) {
+      if (!method.type || typeof method.type !== 'string') {
+        alert('Todos os métodos de pagamento devem ter um tipo válido.');
+        return;
+      }
+      if (typeof method.amount !== 'number' || method.amount < 0) {
+        alert('Todos os métodos de pagamento devem ter um valor válido.');
+        return;
+      }
+    }
+    
     // Clean payment methods data
     const cleanedPaymentMethods = formData.paymentMethods.map(method => {
-      const cleaned: any = { ...method };
+      const cleaned: PaymentMethod = { ...method };
       
-      // Remove empty or undefined fields
-      Object.keys(cleaned).forEach(key => {
-        if (cleaned[key] === undefined || cleaned[key] === null || 
-            (typeof cleaned[key] === 'string' && cleaned[key].trim() === '')) {
-          delete cleaned[key];
-        }
-      });
-      
-      // Garantir que campos obrigatórios existam
+      // Garantir campos obrigatórios
       if (!cleaned.type) cleaned.type = 'dinheiro';
       if (typeof cleaned.amount !== 'number') cleaned.amount = 0;
+      
+      // Limpar campos opcionais vazios
+      if (cleaned.installments === 1) {
+        delete cleaned.installments;
+        delete cleaned.installmentValue;
+        delete cleaned.installmentInterval;
+      }
+      
+      // Limpar strings vazias
+      Object.keys(cleaned).forEach(key => {
+        const value = cleaned[key as keyof PaymentMethod];
+        if (typeof value === 'string' && value.trim() === '') {
+          delete cleaned[key as keyof PaymentMethod];
+        }
+      });
       
       return cleaned;
     });

@@ -222,6 +222,23 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
           return;
         }
       }
+      
+      // Validar cheques de terceiros
+      if (method.type === 'cheque' && method.isThirdPartyCheck && method.installments && method.installments > 1) {
+        if (!method.thirdPartyDetails || method.thirdPartyDetails.length < method.installments) {
+          alert(`Você deve adicionar ${method.installments} cheque(s) de terceiros para este método de pagamento.`);
+          return;
+        }
+        
+        // Validar dados de cada cheque de terceiros
+        for (let i = 0; i < method.thirdPartyDetails.length; i++) {
+          const check = method.thirdPartyDetails[i];
+          if (!check.bank || !check.agency || !check.account || !check.checkNumber || !check.issuer || !check.cpfCnpj) {
+            alert(`Por favor, preencha todos os campos obrigatórios do cheque ${i + 1}.`);
+            return;
+          }
+        }
+      }
     }
     
     // Validar produtos
@@ -244,19 +261,26 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     
     // Limpar dados antes de enviar
     const cleanedPaymentMethods = formData.paymentMethods.map(method => {
-      const cleaned: any = { ...method };
+      const cleaned: PaymentMethod = { ...method };
       
-      // Remover campos vazios ou undefined
-      Object.keys(cleaned).forEach(key => {
-        if (cleaned[key] === undefined || cleaned[key] === null || 
-            (typeof cleaned[key] === 'string' && cleaned[key].trim() === '')) {
-          delete cleaned[key];
-        }
-      });
-      
-      // Garantir que campos obrigatórios existam
+      // Garantir campos obrigatórios
       if (!cleaned.type) cleaned.type = 'dinheiro';
       if (typeof cleaned.amount !== 'number') cleaned.amount = 0;
+      
+      // Limpar campos opcionais vazios
+      if (cleaned.installments === 1) {
+        delete cleaned.installments;
+        delete cleaned.installmentValue;
+        delete cleaned.installmentInterval;
+      }
+      
+      // Limpar strings vazias
+      Object.keys(cleaned).forEach(key => {
+        const value = cleaned[key as keyof PaymentMethod];
+        if (typeof value === 'string' && value.trim() === '') {
+          delete cleaned[key as keyof PaymentMethod];
+        }
+      });
       
       return cleaned;
     });

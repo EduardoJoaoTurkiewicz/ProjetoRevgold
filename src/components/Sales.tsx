@@ -21,16 +21,23 @@ export function Sales() {
 
   const handleSaleSubmit = async (saleData: Partial<Sale>) => {
     try {
+      console.log('🔄 Submetendo venda:', saleData);
+      
       if (editingSale) {
+        console.log('🔄 Atualizando venda existente:', editingSale.id);
         await updateSale(editingSale.id, saleData);
       } else {
+        console.log('🔄 Criando nova venda');
         await createSale(saleData);
       }
 
+      console.log('✅ Venda processada com sucesso');
       setShowForm(false);
       setEditingSale(null);
     } catch (error) {
       console.error('Error saving sale:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      alert('Erro ao salvar venda: ' + errorMessage);
     }
   };
 

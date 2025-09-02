@@ -69,6 +69,16 @@ const Dashboard: React.FC = () => {
   const today = new Date().toISOString().split('T')[0];
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
+  
+  // Force data reload on mount
+  React.useEffect(() => {
+    if (!loading && !isLoading) {
+      console.log('🔄 Dashboard montado, forçando reload dos dados...');
+      loadAllData().catch(error => {
+        console.error('Erro ao recarregar dados no dashboard:', error);
+      });
+    }
+  }, []);
 
   // Calcular métricas do dia
   const dailyMetrics = useMemo(() => {

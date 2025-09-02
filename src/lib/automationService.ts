@@ -35,8 +35,15 @@ export class AutomationService {
     }
 
     try {
+      console.log('🔄 Criando cheques automáticos para venda:', sale.id);
+      
       // Find payment methods that are checks
       const checkPayments = sale.paymentMethods.filter(method => method.type === 'cheque');
+      
+      if (checkPayments.length === 0) {
+        console.log('ℹ️ Nenhum pagamento em cheque encontrado');
+        return;
+      }
       
       for (const checkPayment of checkPayments) {
         const installments = checkPayment.installments || 1;
@@ -49,7 +56,6 @@ export class AutomationService {
           const dueDate = new Date(startDate);
           dueDate.setDate(dueDate.getDate() + (i * installmentInterval));
 
-          // Check if check already exists to prevent duplicates
 
           const checkData = {
             sale_id: sale.id,
@@ -63,6 +69,8 @@ export class AutomationService {
             total_installments: installments,
             observations: `Cheque gerado automaticamente da venda para ${sale.client}`
           };
+
+          console.log(`🔄 Criando cheque ${i + 1}/${installments}:`, checkData);
 
           const { error } = await supabase.from('checks').insert([checkData]);
           if (error) {
@@ -120,8 +128,15 @@ export class AutomationService {
     }
 
     try {
+      console.log('🔄 Criando boletos automáticos para venda:', sale.id);
+      
       // Find payment methods that are boletos
       const boletoPayments = sale.paymentMethods.filter(method => method.type === 'boleto');
+      
+      if (boletoPayments.length === 0) {
+        console.log('ℹ️ Nenhum pagamento em boleto encontrado');
+        return;
+      }
       
       for (const boletoPayment of boletoPayments) {
         const installments = boletoPayment.installments || 1;
@@ -134,7 +149,6 @@ export class AutomationService {
           const dueDate = new Date(startDate);
           dueDate.setDate(dueDate.getDate() + (i * installmentInterval));
 
-          // Check if boleto already exists to prevent duplicates
           const boletoData = {
             sale_id: sale.id,
             client: sale.client,
@@ -146,6 +160,7 @@ export class AutomationService {
             observations: `Boleto gerado automaticamente da venda para ${sale.client}`
           };
 
+          console.log(`🔄 Criando boleto ${i + 1}/${installments}:`, boletoData);
           const { error } = await supabase.from('boletos').insert([boletoData]);
           if (error) {
             if (error.code === '23505') {

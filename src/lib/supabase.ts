@@ -19,7 +19,10 @@ export function isSupabaseConfigured(): boolean {
   );
   
   if (!isConfigured) {
-    console.log('⚠️ Supabase não está configurado corretamente. Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env');
+    console.warn('⚠️ Supabase não está configurado corretamente.');
+    console.warn('📝 Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env');
+    console.warn('🔗 URL atual:', url);
+    console.warn('🔑 Key atual:', key ? `${key.substring(0, 10)}...` : 'não definida');
   }
   
   return isConfigured;
@@ -38,23 +41,36 @@ export async function testSupabaseConnection() {
   }
   
   try {
+    console.log('🔍 Testando conexão com Supabase...');
+    
     // Test with a simple query and timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
     
-    const { data, error } = await supabase
-      .from('employees')
+    // Test with cash_balances table first
+    const { data: balanceData, error: balanceError } = await supabase
+      .from('cash_balances')
       .select('id')
       .limit(1)
       .abortSignal(controller.signal);
     
     clearTimeout(timeoutId);
     
-    if (error) {
-      if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch')) {
+    if (balanceError) {
+      if (balanceError.message?.includes('Failed to fetch') || balanceError.message?.includes('fetch')) {
         throw new Error('Erro de conexão: Não foi possível conectar ao Supabase. Verifique sua conexão com a internet.');
       }
-      throw error;
+      console.warn('Tabela cash_balances não encontrada, testando com employees...');
+      
+      // Fallback test with employees table
+      const { data, error } = await supabase
+        .from('employees')
+        .select('id')
+        .limit(1);
+      
+      if (error) {
+        throw new Error(`Erro de conexão: ${error.message}`);
+      }
     }
     
     console.log('✅ Conexão com Supabase estabelecida com sucesso');

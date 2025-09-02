@@ -14,6 +14,19 @@ export function CashManagement() {
   const [isRecalculating, setIsRecalculating] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
+  
+  // Force reload cash balance on mount
+  React.useEffect(() => {
+    console.log('🔄 CashManagement montado, verificando saldo...');
+    loadAllData().catch(error => {
+      console.error('Erro ao carregar dados do caixa:', error);
+    });
+  }, []);
+  
+  // Debug cash balance
+  React.useEffect(() => {
+    console.log('💰 Estado atual do caixa:', cashBalance);
+  }, [cashBalance]);
 
   // Calcular transações do dia selecionado
   const dayTransactions = useMemo(() => {
@@ -333,11 +346,16 @@ export function CashManagement() {
     setIsInitializing(true);
     
     try {
+      console.log('🔄 Inicializando caixa com valor:', initialAmount);
       await initializeCashBalance(initialAmount);
       console.log('✅ Caixa inicializado com sucesso');
+      
+      // Forçar recarregamento dos dados
+      await loadAllData();
     } catch (error) {
       console.error('Erro ao inicializar caixa:', error);
-      alert('Erro ao inicializar caixa: ' + (error as Error).message);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      alert('Erro ao inicializar caixa: ' + errorMessage);
     } finally {
       setIsInitializing(false);
     }
@@ -351,11 +369,16 @@ export function CashManagement() {
     
     setIsRecalculating(true);
     try {
+      console.log('🔄 Recalculando saldo...');
       await recalculateCashBalance();
       console.log('✅ Saldo recalculado com sucesso');
+      
+      // Forçar recarregamento dos dados
+      await loadAllData();
     } catch (error) {
       console.error('Erro ao recalcular saldo:', error);
-      alert('Erro ao recalcular saldo: ' + (error as Error).message);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      alert('Erro ao recalcular saldo: ' + errorMessage);
     } finally {
       setIsRecalculating(false);
     }
