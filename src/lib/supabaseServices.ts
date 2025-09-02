@@ -772,7 +772,7 @@ export const salesService = {
     let cleanSellerId = null;
     if (sale.sellerId && typeof sale.sellerId === 'string') {
       const trimmedSellerId = sale.sellerId.trim();
-      if (trimmedSellerId !== '' && trimmedSellerId.length > 0 && isValidUuid(trimmedSellerId)) {
+      if (trimmedSellerId && isValidUuid(trimmedSellerId)) {
         cleanSellerId = trimmedSellerId;
       }
     }
@@ -863,13 +863,13 @@ export const salesService = {
     if (!isSupabaseConfigured()) return;
     
     // Validate and clean sellerId for updates too
-    let cleanSellerId = undefined;
+    let cleanSellerId: string | null | undefined = undefined;
     if (sale.sellerId !== undefined) {
-      if (sale.sellerId === null || sale.sellerId === '') {
+      if (!sale.sellerId || sale.sellerId === '') {
         cleanSellerId = null;
       } else if (typeof sale.sellerId === 'string') {
         const trimmedSellerId = sale.sellerId.trim();
-        if (trimmedSellerId === '' || !isValidUuid(trimmedSellerId)) {
+        if (!trimmedSellerId || !isValidUuid(trimmedSellerId)) {
           cleanSellerId = null;
         } else {
           cleanSellerId = trimmedSellerId;
