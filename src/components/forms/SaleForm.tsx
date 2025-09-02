@@ -288,10 +288,15 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     // Validar que os dados limpos ainda são válidos
     if (cleanedPaymentMethods.length === 0) {
       alert('Erro na validação dos métodos de pagamento.');
+      return;
+    }
+    
+    const deliveryDate = formData.deliveryDate || null;
+    
     const saleToSubmit = {
       ...formData,
       sellerId: sellerId,
-      deliveryDate,
+      deliveryDate: deliveryDate,
       paymentMethods: cleanedPaymentMethods,
       observations: finalObservations,
       products: typeof formData.products === 'string' ? formData.products : 'Produtos vendidos',
