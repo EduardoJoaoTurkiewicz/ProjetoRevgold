@@ -847,8 +847,6 @@ export async function exportReportToPDF(data: ReportData, startDate: string, end
     pdf.text(`${data.paidValues.length} pagamento(s)`, card3X + 3, currentY + 20);
     
     // Card 4 - Resultado
-    const card4X = margin + (finalCardWidth + 5) * 3;
-    const resultColor = netResult >= 0 ? colors.success : colors.error;
     pdf.setFillColor(255, 255, 255);
     pdf.rect(card4X, currentY, finalCardWidth, 25, 'F');
     pdf.setFillColor(...resultColor);

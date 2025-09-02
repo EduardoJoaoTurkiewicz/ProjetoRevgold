@@ -288,15 +288,6 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     // Validar que os dados limpos ainda são válidos
     if (cleanedPaymentMethods.length === 0) {
       alert('Erro na validação dos métodos de pagamento.');
-      return;
-    }
-    
-    // Garantir que deliveryDate seja null se vazio
-    const deliveryDate = !formData.deliveryDate || formData.deliveryDate.trim() === '' ? null : formData.deliveryDate;
-    
-    // Garantir que sellerId seja null se vazio ou inválido
-    const sellerId = !formData.sellerId || formData.sellerId.trim() === '' ? null : formData.sellerId;
-    
     const saleToSubmit = {
       ...formData,
       sellerId: sellerId,
