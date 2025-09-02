@@ -1077,3 +1077,13 @@ export const agendaEventsService = {
     if (error) throw error;
   }
 };
+
+// PDF export function for reports
+export async function exportReportToPDF(reportData: any, reportType: string): Promise<void> {
+  // Placeholder implementation for PDF export functionality
+  console.log('Exporting report to PDF:', { reportType, reportData });
+  
+  // This is a placeholder - in a real implementation, you would use a library like jsPDF
+  // or generate the PDF on the server side
+  alert('PDF export functionality is not yet implemented');
+}
