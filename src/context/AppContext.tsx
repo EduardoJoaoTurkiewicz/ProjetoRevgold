@@ -535,6 +535,25 @@ export function AppProvider({ children }: AppProviderProps) {
     await loadAllData();
   };
 
+  // Agenda Events CRUD operations
+  const createAgendaEvent = async (event: Omit<AgendaEvent, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newEvent = await agendaEventsService.create(event);
+    setAgendaEvents(prev => [newEvent, ...prev]);
+    await loadAllData();
+  };
+
+  const updateAgendaEvent = async (event: AgendaEvent) => {
+    await agendaEventsService.update(event.id!, event);
+    setAgendaEvents(prev => prev.map(e => e.id === event.id ? event : e));
+    await loadAllData();
+  };
+
+  const deleteAgendaEvent = async (id: string) => {
+    await agendaEventsService.delete(id);
+    setAgendaEvents(prev => prev.filter(e => e.id !== id));
+    await loadAllData();
+  };
+
   // Utility functions
   const initializeCashBalance = async (initialAmount: number) => {
     try {
