@@ -258,7 +258,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     }
     
     // Convert empty sellerId to null for UUID field
-    const sellerId = !formData.sellerId || formData.sellerId.trim() === '' ? null : formData.sellerId;
+    const sellerId = !formData.sellerId || formData.sellerId.trim() === '' ? null : formData.sellerId.trim();
     
     // Limpar dados antes de enviar
     const cleanedPaymentMethods = formData.paymentMethods.map(method => {

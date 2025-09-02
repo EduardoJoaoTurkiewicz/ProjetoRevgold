@@ -28,7 +28,8 @@ export function Sales() {
       
       if (editingSale) {
         console.log('🔄 Atualizando venda existente:', editingSale.id);
-        await updateSale(editingSale.id, saleData);
+        const updatedSale = await updateSale(editingSale.id, saleData);
+        console.log('✅ Venda atualizada:', updatedSale);
       } else {
         console.log('🔄 Criando nova venda');
         await createSale(saleData);

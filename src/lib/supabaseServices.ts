@@ -859,7 +859,7 @@ export const salesService = {
     return newSale;
   },
 
-  async update(id: string, sale: Partial<Sale>): Promise<void> {
+  async update(id: string, sale: Partial<Sale>): Promise<Sale> {
     if (!isSupabaseConfigured()) return;
     
     // Validate and clean sellerId for updates too
@@ -934,7 +934,7 @@ export const salesService = {
       });
     }
     
-    const { error } = await supabase.from('sales').update(dbData).eq('id', id);
+    const { data, error } = await supabase.from('sales').update(dbData).eq('id', id).select().single();
     if (error) {
       console.error('Erro ao atualizar venda:', error);
       
@@ -947,6 +947,8 @@ export const salesService = {
         throw new Error(`Erro ao atualizar venda: ${error.message}`);
       }
     }
+    
+    return transformDatabaseRow<Sale>(data);
   },
 
   async delete(id: string): Promise<void> {

@@ -309,13 +309,207 @@ export function Boletos() {
 
       {/* Boletos List */}
       <div className="space-y-8">
+        {/* Vendas com Boletos */}
+        {sales.filter(sale => 
+          sale.paymentMethods?.some(method => method.type === 'boleto')
+        ).length > 0 && (
+          <div className="card modern-shadow-xl">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-3 rounded-xl bg-blue-600">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900">Vendas com Boletos</h3>
+            </div>
+            
+            <div className="space-y-4">
+              {sales.filter(sale => 
+                sale.paymentMethods?.some(method => method.type === 'boleto')
+              ).map(sale => {
+                const saleBoletos = boletos.filter(boleto => boleto.saleId === sale.id);
+                const totalBoletoValue = saleBoletos.reduce((sum, boleto) => sum + boleto.value, 0);
+                const paidBoletos = saleBoletos.filter(boleto => boleto.status === 'compensado');
+                const overdueBoletos = saleBoletos.filter(boleto => 
+                  boleto.dueDate < new Date().toISOString().split('T')[0] && boleto.status === 'pendente'
+                );
+                
+                return (
+                  <div key={sale.id} className="p-6 bg-blue-50 rounded-2xl border border-blue-200">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h4 className="text-xl font-bold text-blue-900">{sale.client}</h4>
+                        <p className="text-blue-700">
+                          Venda: {new Date(sale.date).toLocaleDateString('pt-BR')} • 
+                          {saleBoletos.length} boleto(s) • 
+                          Status: {sale.status.toUpperCase()}
+                        </p>
+                        {sale.sellerId && (
+                          <p className="text-sm text-blue-600">
+                            Vendedor: {employees.find(e => e.id === sale.sellerId)?.name || 'N/A'}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-black text-blue-600">
+                          R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-sm text-blue-700">
+                          Boletos: R$ {totalBoletoValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Status Summary */}
+                    <div className="grid grid-cols-3 gap-4 mb-4">
+                      <div className="text-center p-3 bg-green-50 rounded-xl border border-green-200">
+                        <p className="text-green-600 font-semibold text-sm">Pagos</p>
+                        <p className="text-lg font-bold text-green-700">{paidBoletos.length}</p>
+                      </div>
+                      <div className="text-center p-3 bg-yellow-50 rounded-xl border border-yellow-200">
+                        <p className="text-yellow-600 font-semibold text-sm">Pendentes</p>
+                        <p className="text-lg font-bold text-yellow-700">
+                          {saleBoletos.filter(b => b.status === 'pendente').length}
+                        </p>
+                      </div>
+                      <div className="text-center p-3 bg-red-50 rounded-xl border border-red-200">
+                        <p className="text-red-600 font-semibold text-sm">Vencidos</p>
+                        <p className="text-lg font-bold text-red-700">{overdueBoletos.length}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Boletos da Venda */}
+                    <div className="space-y-3">
+                      <h5 className="font-bold text-blue-900">Boletos desta Venda:</h5>
+                      {saleBoletos.map(boleto => {
+                        const isOverdue = boleto.dueDate < new Date().toISOString().split('T')[0] && boleto.status === 'pendente';
+                        const daysOverdue = isOverdue ? 
+                          Math.ceil((new Date().getTime() - new Date(boleto.dueDate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+                        
+                        return (
+                          <div key={boleto.id} className="p-4 bg-white rounded-xl border border-blue-100">
+                            <div className="flex justify-between items-start mb-3">
+                              <div>
+                                <p className="font-bold text-slate-900">
+                                  Parcela {boleto.installmentNumber}/{boleto.totalInstallments}
+                                </p>
+                                <p className="text-sm text-slate-600">
+                                  Vencimento: {new Date(boleto.dueDate).toLocaleDateString('pt-BR')}
+                                  {isOverdue && (
+                                    <span className="text-red-600 font-bold ml-2">
+                                      ({daysOverdue} dias vencido)
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-lg font-black text-blue-600">
+                                  R$ {boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </p>
+                                <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getStatusColor(boleto.status)}`}>
+                                  {getStatusLabel(boleto.status)}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {/* Ações do Boleto */}
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center gap-2">
+                                {boleto.status === 'pendente' && (
+                                  <select
+                                    value={boleto.status}
+                                    onChange={(e) => {
+                                      const newStatus = e.target.value as Boleto['status'];
+                                      if (newStatus === 'compensado') {
+                                        if (confirm(`Marcar boleto como pago?\n\nValor: R$ ${boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\nEste valor será adicionado ao caixa da empresa.`)) {
+                                          updateBoletoStatus(boleto.id, newStatus);
+                                        }
+                                      } else {
+                                        updateBoletoStatus(boleto.id, newStatus);
+                                      }
+                                    }}
+                                    className="text-xs border rounded-lg px-2 py-1 bg-white modern-shadow"
+                                  >
+                                    <option value="pendente">Pendente</option>
+                                    <option value="compensado">Compensado</option>
+                                    <option value="vencido">Vencido</option>
+                                    <option value="cancelado">Cancelado</option>
+                                    <option value="nao_pago">Não Pago</option>
+                                  </select>
+                                )}
+                                {isOverdue && !boleto.overdueAction && (
+                                  <button
+                                    onClick={() => setManagingOverdueBoleto(boleto)}
+                                    className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors"
+                                  >
+                                    Gerenciar Vencimento
+                                  </button>
+                                )}
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setViewingBoleto(boleto)}
+                                  className="text-blue-600 hover:text-blue-800 p-1 rounded"
+                                  title="Ver Detalhes"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => setEditingBoleto(boleto)}
+                                  className="text-emerald-600 hover:text-emerald-800 p-1 rounded"
+                                  title="Editar"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                            
+                            {boleto.observations && (
+                              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                <p className="text-sm text-blue-700">{boleto.observations}</p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Informações da Venda */}
+                    <div className="mt-4 p-4 bg-white rounded-xl border border-blue-100">
+                      <h5 className="font-bold text-slate-900 mb-2">Informações da Venda:</h5>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p><strong>Data:</strong> {new Date(sale.date).toLocaleDateString('pt-BR')}</p>
+                          <p><strong>Valor Total:</strong> R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                          <p><strong>Status:</strong> {sale.status.toUpperCase()}</p>
+                        </div>
+                        <div>
+                          <p><strong>Recebido:</strong> R$ {sale.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                          <p><strong>Pendente:</strong> R$ {sale.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                          {sale.deliveryDate && (
+                            <p><strong>Entrega:</strong> {new Date(sale.deliveryDate).toLocaleDateString('pt-BR')}</p>
+                          )}
+                        </div>
+                      </div>
+                      {sale.observations && (
+                        <div className="mt-3 p-3 bg-slate-50 rounded-lg">
+                          <p className="text-sm text-slate-700">{sale.observations}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        
         {/* Boletos Recebíveis */}
         <div className="card modern-shadow-xl">
           <div className="flex items-center gap-4 mb-6">
             <div className="p-3 rounded-xl bg-green-600">
               <FileText className="w-6 h-6 text-white" />
             </div>
-            <h3 className="text-xl font-bold text-slate-900">Boletos a Receber</h3>
+            <h3 className="text-xl font-bold text-slate-900">Todos os Boletos a Receber</h3>
           </div>
           
         {boletos.length > 0 ? (

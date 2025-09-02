@@ -66,7 +66,7 @@ interface AppContextType {
   
   // CRUD operations
   createSale: (sale: Omit<Sale, 'id' | 'createdAt'>) => Promise<void>;
-  updateSale: (id: string, sale: Partial<Sale>) => Promise<void>;
+  updateSale: (id: string, sale: Partial<Sale>) => Promise<Sale>;
   deleteSale: (id: string) => Promise<void>;
   
   createDebt: (debt: Omit<Debt, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
@@ -307,7 +307,7 @@ export function AppProvider({ children }: AppProviderProps) {
     }
   };
 
-  const updateSale = async (id: string, saleData: Partial<Sale>) => {
+  const updateSale = async (id: string, saleData: Partial<Sale>): Promise<Sale> => {
     try {
       console.log('🔄 Atualizando venda:', id, saleData);
       
@@ -335,9 +335,10 @@ export function AppProvider({ children }: AppProviderProps) {
         }
       }
       
-      await salesService.update(id, saleData);
-      setSales(prev => prev.map(s => s.id === id ? { ...s, ...saleData } : s));
+      const updatedSale = await salesService.update(id, saleData);
+      setSales(prev => prev.map(s => s.id === id ? updatedSale : s));
       await loadAllData();
+      return updatedSale;
     } catch (error) {
       console.error('❌ Erro ao atualizar venda:', error);
       throw error;
