@@ -294,9 +294,12 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     // Garantir que deliveryDate seja null se vazio
     const deliveryDate = !formData.deliveryDate || formData.deliveryDate.trim() === '' ? null : formData.deliveryDate;
     
+    // Garantir que sellerId seja null se vazio ou inválido
+    const sellerId = !formData.sellerId || formData.sellerId.trim() === '' ? null : formData.sellerId;
+    
     const saleToSubmit = {
       ...formData,
-      sellerId,
+      sellerId: sellerId,
       deliveryDate,
       paymentMethods: cleanedPaymentMethods,
       observations: finalObservations,
