@@ -777,6 +777,13 @@ export const salesService = {
       }
     }
     
+    // Debug logging to inspect seller_id value
+    console.log('🔍 Debug seller_id validation:', {
+      original: sale.sellerId,
+      cleaned: cleanSellerId,
+      isValid: cleanSellerId ? isValidUuid(cleanSellerId) : 'null'
+    });
+    
     // Clean and validate all fields before database insertion
     const cleanedPaymentMethods = sale.paymentMethods.map(method => {
       const cleaned = { ...method };
@@ -811,6 +818,14 @@ export const salesService = {
     };
     
     console.log('🔄 Dados limpos para criação da venda:', dbData);
+    
+    // Additional debug for seller_id specifically
+    console.log('🔍 Final seller_id value:', {
+      value: dbData.seller_id,
+      type: typeof dbData.seller_id,
+      isNull: dbData.seller_id === null,
+      isUuid: dbData.seller_id ? isValidUuid(dbData.seller_id) : false
+    });
     
     const { data, error } = await supabase.from('sales').insert([dbData]).select().single();
     if (error) {
@@ -862,6 +877,15 @@ export const salesService = {
       }
     }
     
+    // Debug logging for updates
+    if (sale.sellerId !== undefined) {
+      console.log('🔍 Debug seller_id update validation:', {
+        original: sale.sellerId,
+        cleaned: cleanSellerId,
+        isValid: cleanSellerId ? isValidUuid(cleanSellerId) : 'null'
+      });
+    }
+    
     // Clean payment methods for updates
     let cleanedPaymentMethods = undefined;
     if (sale.paymentMethods) {
@@ -899,6 +923,16 @@ export const salesService = {
     if (sale.status) dbData.status = sale.status;
     
     console.log('🔄 Dados limpos para atualização da venda:', dbData);
+    
+    // Additional debug for seller_id in updates
+    if (dbData.seller_id !== undefined) {
+      console.log('🔍 Final seller_id update value:', {
+        value: dbData.seller_id,
+        type: typeof dbData.seller_id,
+        isNull: dbData.seller_id === null,
+        isUuid: dbData.seller_id ? isValidUuid(dbData.seller_id) : false
+      });
+    }
     
     const { error } = await supabase.from('sales').update(dbData).eq('id', id);
     if (error) {
