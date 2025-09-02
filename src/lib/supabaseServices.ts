@@ -17,6 +17,12 @@ import type {
   AgendaEvent
 } from '../types';
 
+// Utility function to validate UUID format
+function isValidUuid(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
 // Utility function to transform database row to app type
 function transformDatabaseRow<T>(row: any): T {
   if (!row) return row;
@@ -766,7 +772,7 @@ export const salesService = {
     let cleanSellerId = null;
     if (sale.sellerId && typeof sale.sellerId === 'string') {
       const trimmedSellerId = sale.sellerId.trim();
-      if (trimmedSellerId !== '' && trimmedSellerId.length > 0) {
+      if (trimmedSellerId !== '' && trimmedSellerId.length > 0 && isValidUuid(trimmedSellerId)) {
         cleanSellerId = trimmedSellerId;
       }
     }
@@ -848,7 +854,7 @@ export const salesService = {
         cleanSellerId = null;
       } else if (typeof sale.sellerId === 'string') {
         const trimmedSellerId = sale.sellerId.trim();
-        if (trimmedSellerId === '') {
+        if (trimmedSellerId === '' || !isValidUuid(trimmedSellerId)) {
           cleanSellerId = null;
         } else {
           cleanSellerId = trimmedSellerId;
