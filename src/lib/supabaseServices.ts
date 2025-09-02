@@ -127,7 +127,29 @@ export const checksService = {
       };
     }
     
-    const dbData = transformToDatabase(checkData);
+    // Create database object directly without transformation
+    const dbData = {
+      sale_id: checkData.saleId || null,
+      debt_id: checkData.debtId || null,
+      client: checkData.client,
+      value: checkData.value || 0,
+      due_date: checkData.dueDate,
+      status: checkData.status || 'pendente',
+      is_own_check: checkData.isOwnCheck || false,
+      observations: checkData.observations || null,
+      used_for: checkData.usedFor || null,
+      installment_number: checkData.installmentNumber || null,
+      total_installments: checkData.totalInstallments || null,
+      front_image: checkData.frontImage || null,
+      back_image: checkData.backImage || null,
+      selected_available_checks: checkData.selectedAvailableChecks || null,
+      used_in_debt: checkData.usedInDebt || null,
+      discount_date: checkData.discountDate || null,
+      is_company_payable: checkData.isCompanyPayable || null,
+      company_name: checkData.companyName || null,
+      payment_date: checkData.paymentDate || null
+    };
+    
     const { data, error } = await supabase.from('checks').insert([dbData]).select().single();
     if (error) throw error;
     return transformDatabaseRow<Check>(data);
@@ -176,7 +198,29 @@ export const boletosService = {
       };
     }
     
-    const dbData = transformToDatabase(boletoData);
+    // Create database object directly without transformation
+    const dbData = {
+      sale_id: boletoData.saleId || null,
+      client: boletoData.client,
+      value: boletoData.value || 0,
+      due_date: boletoData.dueDate,
+      status: boletoData.status || 'pendente',
+      installment_number: boletoData.installmentNumber || 1,
+      total_installments: boletoData.totalInstallments || 1,
+      boleto_file: boletoData.boletoFile || null,
+      observations: boletoData.observations || null,
+      overdue_action: boletoData.overdueAction || null,
+      interest_amount: boletoData.interestAmount || null,
+      penalty_amount: boletoData.penaltyAmount || null,
+      notary_costs: boletoData.notaryCosts || null,
+      final_amount: boletoData.finalAmount || null,
+      overdue_notes: boletoData.overdueNotes || null,
+      is_company_payable: boletoData.isCompanyPayable || null,
+      company_name: boletoData.companyName || null,
+      payment_date: boletoData.paymentDate || null,
+      interest_paid: boletoData.interestPaid || null
+    };
+    
     const { data, error } = await supabase.from('boletos').insert([dbData]).select().single();
     if (error) throw error;
     return transformDatabaseRow<Boleto>(data);
@@ -718,41 +762,23 @@ export const salesService = {
       }
     }
     
-    const dbData = transformToDatabase(sale);
-    
-    // Ensure required fields are properly set
-    dbData.client = sale.client.trim();
-    dbData.total_value = sale.totalValue;
-    dbData.payment_methods = sale.paymentMethods;
-    dbData.received_amount = sale.receivedAmount || 0;
-    dbData.pending_amount = sale.pendingAmount || 0;
-    dbData.status = sale.status || 'pendente';
-    dbData.custom_commission_rate = sale.customCommissionRate || 5;
-    
-    // Handle optional fields properly
-    if (sale.deliveryDate && sale.deliveryDate.trim() !== '') {
-      dbData.delivery_date = sale.deliveryDate;
-    }
-    
-    if (sale.sellerId && sale.sellerId.trim() !== '') {
-      dbData.seller_id = sale.sellerId;
-    }
-    
-    if (sale.products && typeof sale.products === 'string' && sale.products.trim() !== '') {
-      dbData.products = sale.products.trim();
-    }
-    
-    if (sale.observations && sale.observations.trim() !== '') {
-      dbData.observations = sale.observations.trim();
-    }
-    
-    if (sale.paymentDescription && sale.paymentDescription.trim() !== '') {
-      dbData.payment_description = sale.paymentDescription.trim();
-    }
-    
-    if (sale.paymentObservations && sale.paymentObservations.trim() !== '') {
-      dbData.payment_observations = sale.paymentObservations.trim();
-    }
+    // Create database object directly without transformation to avoid JSON issues
+    const dbData = {
+      date: sale.date,
+      delivery_date: sale.deliveryDate && sale.deliveryDate.trim() !== '' ? sale.deliveryDate : null,
+      client: sale.client.trim(),
+      seller_id: sale.sellerId && sale.sellerId.trim() !== '' ? sale.sellerId : null,
+      custom_commission_rate: sale.customCommissionRate || 5,
+      products: sale.products && typeof sale.products === 'string' && sale.products.trim() !== '' ? sale.products.trim() : null,
+      observations: sale.observations && sale.observations.trim() !== '' ? sale.observations.trim() : null,
+      total_value: sale.totalValue,
+      payment_methods: sale.paymentMethods, // Keep as object for JSONB
+      payment_description: sale.paymentDescription && sale.paymentDescription.trim() !== '' ? sale.paymentDescription.trim() : null,
+      payment_observations: sale.paymentObservations && sale.paymentObservations.trim() !== '' ? sale.paymentObservations.trim() : null,
+      received_amount: sale.receivedAmount || 0,
+      pending_amount: sale.pendingAmount || 0,
+      status: sale.status || 'pendente'
+    };
     
     const { data, error } = await supabase.from('sales').insert([dbData]).select().single();
     if (error) {
@@ -776,7 +802,23 @@ export const salesService = {
   async update(id: string, sale: Partial<Sale>): Promise<void> {
     if (!isSupabaseConfigured()) return;
     
-    const dbData = transformToDatabase(sale);
+    // Create database object directly without transformation to avoid JSON issues
+    const dbData: any = {};
+    
+    if (sale.date) dbData.date = sale.date;
+    if (sale.deliveryDate !== undefined) dbData.delivery_date = sale.deliveryDate && sale.deliveryDate.trim() !== '' ? sale.deliveryDate : null;
+    if (sale.client) dbData.client = sale.client.trim();
+    if (sale.sellerId !== undefined) dbData.seller_id = sale.sellerId && sale.sellerId.trim() !== '' ? sale.sellerId : null;
+    if (sale.customCommissionRate !== undefined) dbData.custom_commission_rate = sale.customCommissionRate;
+    if (sale.products !== undefined) dbData.products = sale.products && typeof sale.products === 'string' && sale.products.trim() !== '' ? sale.products.trim() : null;
+    if (sale.observations !== undefined) dbData.observations = sale.observations && sale.observations.trim() !== '' ? sale.observations.trim() : null;
+    if (sale.totalValue) dbData.total_value = sale.totalValue;
+    if (sale.paymentMethods) dbData.payment_methods = sale.paymentMethods; // Keep as object for JSONB
+    if (sale.paymentDescription !== undefined) dbData.payment_description = sale.paymentDescription && sale.paymentDescription.trim() !== '' ? sale.paymentDescription.trim() : null;
+    if (sale.paymentObservations !== undefined) dbData.payment_observations = sale.paymentObservations && sale.paymentObservations.trim() !== '' ? sale.paymentObservations.trim() : null;
+    if (sale.receivedAmount !== undefined) dbData.received_amount = sale.receivedAmount;
+    if (sale.pendingAmount !== undefined) dbData.pending_amount = sale.pendingAmount;
+    if (sale.status) dbData.status = sale.status;
     
     const { error } = await supabase.from('sales').update(dbData).eq('id', id);
     if (error) {
@@ -844,29 +886,20 @@ export const debtsService = {
       }
     }
     
-    const dbData = transformToDatabase(debt);
-    
-    // Ensure required fields are properly set
-    dbData.company = debt.company.trim();
-    dbData.description = debt.description.trim();
-    dbData.total_value = debt.totalValue;
-    dbData.payment_methods = debt.paymentMethods || [];
-    dbData.is_paid = debt.isPaid || false;
-    dbData.paid_amount = debt.paidAmount || 0;
-    dbData.pending_amount = debt.pendingAmount || 0;
-    
-    // Handle optional fields properly
-    if (debt.paymentDescription && debt.paymentDescription.trim() !== '') {
-      dbData.payment_description = debt.paymentDescription.trim();
-    }
-    
-    if (debt.debtPaymentDescription && debt.debtPaymentDescription.trim() !== '') {
-      dbData.debt_payment_description = debt.debtPaymentDescription.trim();
-    }
-    
-    if (debt.checksUsed && debt.checksUsed.length > 0) {
-      dbData.checks_used = debt.checksUsed;
-    }
+    // Create database object directly without transformation to avoid JSON issues
+    const dbData = {
+      date: debt.date,
+      company: debt.company.trim(),
+      description: debt.description.trim(),
+      total_value: debt.totalValue,
+      payment_methods: debt.paymentMethods || [], // Keep as object for JSONB
+      is_paid: debt.isPaid || false,
+      paid_amount: debt.paidAmount || 0,
+      pending_amount: debt.pendingAmount || 0,
+      payment_description: debt.paymentDescription && debt.paymentDescription.trim() !== '' ? debt.paymentDescription.trim() : null,
+      debt_payment_description: debt.debtPaymentDescription && debt.debtPaymentDescription.trim() !== '' ? debt.debtPaymentDescription.trim() : null,
+      checks_used: debt.checksUsed && debt.checksUsed.length > 0 ? debt.checksUsed : null // Keep as array for JSONB
+    };
     
     const { data, error } = await supabase.from('debts').insert([dbData]).select().single();
     if (error) {
@@ -879,7 +912,20 @@ export const debtsService = {
   async update(id: string, debt: Partial<Debt>): Promise<void> {
     if (!isSupabaseConfigured()) return;
     
-    const dbData = transformToDatabase(debt);
+    // Create database object directly without transformation to avoid JSON issues
+    const dbData: any = {};
+    
+    if (debt.date) dbData.date = debt.date;
+    if (debt.company) dbData.company = debt.company.trim();
+    if (debt.description) dbData.description = debt.description.trim();
+    if (debt.totalValue) dbData.total_value = debt.totalValue;
+    if (debt.paymentMethods) dbData.payment_methods = debt.paymentMethods; // Keep as object for JSONB
+    if (debt.isPaid !== undefined) dbData.is_paid = debt.isPaid;
+    if (debt.paidAmount !== undefined) dbData.paid_amount = debt.paidAmount;
+    if (debt.pendingAmount !== undefined) dbData.pending_amount = debt.pendingAmount;
+    if (debt.paymentDescription !== undefined) dbData.payment_description = debt.paymentDescription && debt.paymentDescription.trim() !== '' ? debt.paymentDescription.trim() : null;
+    if (debt.debtPaymentDescription !== undefined) dbData.debt_payment_description = debt.debtPaymentDescription && debt.debtPaymentDescription.trim() !== '' ? debt.debtPaymentDescription.trim() : null;
+    if (debt.checksUsed !== undefined) dbData.checks_used = debt.checksUsed && debt.checksUsed.length > 0 ? debt.checksUsed : null; // Keep as array for JSONB
     
     const { error } = await supabase.from('debts').update(dbData).eq('id', id);
     if (error) {

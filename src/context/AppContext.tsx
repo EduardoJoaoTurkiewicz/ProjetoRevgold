@@ -193,7 +193,8 @@ export function AppProvider({ children }: AppProviderProps) {
         cashTransactionsData,
         pixFeesData,
         cashBalanceData,
-        taxesData
+        taxesData,
+        agendaEventsData
       ] = await Promise.all([
         salesService.getAll(),
         debtsService.getAll(),
@@ -207,7 +208,8 @@ export function AppProvider({ children }: AppProviderProps) {
         cashTransactionsService.getAll(),
         pixFeesService.getAll(),
         cashBalancesService.get(),
-        taxesService.getAll()
+        taxesService.getAll(),
+        agendaEventsService.getAll()
       ]);
 
       console.log('✅ Dados carregados:', {
@@ -232,7 +234,7 @@ export function AppProvider({ children }: AppProviderProps) {
       setPixFees(pixFeesData);
       setCashBalance(cashBalanceData);
       setTaxes(taxesData);
-      setAgendaEvents([]); // Initialize as empty array for now
+      setAgendaEvents(agendaEventsData);
     } catch (err) {
       console.error('Error loading data:', err);
       const errorMessage = err instanceof Error ? err.message : 'Falha ao carregar dados';
@@ -731,6 +733,10 @@ export function AppProvider({ children }: AppProviderProps) {
     createTax,
     updateTax,
     deleteTax,
+    
+    createAgendaEvent,
+    updateAgendaEvent,
+    deleteAgendaEvent,
     
     // Utility functions
     initializeCashBalance,

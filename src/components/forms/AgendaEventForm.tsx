@@ -6,6 +6,7 @@ interface AgendaEventFormProps {
   event?: AgendaEvent | null;
   onSubmit: (event: Omit<AgendaEvent, 'id' | 'createdAt'>) => void;
   onCancel: () => void;
+  defaultDate?: string | null;
 }
 
 const EVENT_TYPES = [
@@ -31,11 +32,11 @@ const STATUS_OPTIONS = [
   { value: 'adiado', label: 'Adiado' }
 ];
 
-export function AgendaEventForm({ event, onSubmit, onCancel }: AgendaEventFormProps) {
+export function AgendaEventForm({ event, onSubmit, onCancel, defaultDate }: AgendaEventFormProps) {
   const [formData, setFormData] = useState({
     title: event?.title || '',
     description: event?.description || '',
-    date: event?.date || new Date().toISOString().split('T')[0],
+    date: event?.date || defaultDate || new Date().toISOString().split('T')[0],
     time: event?.time || '',
     type: event?.type || 'evento',
     priority: event?.priority || 'media',
