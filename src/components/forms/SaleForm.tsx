@@ -79,6 +79,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
             delete updatedMethod.firstInstallmentDate;
             delete updatedMethod.isThirdPartyCheck;
             delete updatedMethod.thirdPartyDetails;
+            delete updatedMethod.isOwnCheck;
           }
           
           return updatedMethod;
@@ -272,12 +273,25 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
         delete cleaned.installments;
         delete cleaned.installmentValue;
         delete cleaned.installmentInterval;
+        delete cleaned.startDate;
+        delete cleaned.firstInstallmentDate;
+      }
+      
+      // Limpar campos específicos de cheques se não for cheque
+      if (cleaned.type !== 'cheque') {
+        delete cleaned.isOwnCheck;
+        delete cleaned.isThirdPartyCheck;
+        delete cleaned.thirdPartyDetails;
       }
       
       // Limpar strings vazias
       Object.keys(cleaned).forEach(key => {
         const value = cleaned[key as keyof PaymentMethod];
         if (typeof value === 'string' && value.trim() === '') {
+          delete cleaned[key as keyof PaymentMethod];
+        }
+        // Limpar arrays vazios
+        if (Array.isArray(value) && value.length === 0) {
           delete cleaned[key as keyof PaymentMethod];
         }
       });
@@ -291,15 +305,26 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       return;
     }
     
-    const deliveryDate = formData.deliveryDate || null;
+    // Limpar deliveryDate - converter string vazia para null
+    const deliveryDate = !formData.deliveryDate || formData.deliveryDate.trim() === '' ? null : formData.deliveryDate;
+    
+    // Limpar observations - converter string vazia para null
+    const cleanedObservations = !finalObservations || finalObservations.trim() === '' ? null : finalObservations.trim();
+    
+    // Limpar products - garantir que seja string ou null
+    const cleanedProducts = !formData.products || (typeof formData.products === 'string' && formData.products.trim() === '') 
+      ? null 
+      : (typeof formData.products === 'string' ? formData.products.trim() : 'Produtos vendidos');
     
     const saleToSubmit = {
       ...formData,
       sellerId: sellerId,
       deliveryDate: deliveryDate,
       paymentMethods: cleanedPaymentMethods,
-      observations: finalObservations,
-      products: typeof formData.products === 'string' ? formData.products : 'Produtos vendidos',
+      observations: cleanedObservations,
+      products: cleanedProducts,
+      paymentDescription: !formData.paymentDescription || formData.paymentDescription.trim() === '' ? null : formData.paymentDescription.trim(),
+      paymentObservations: !formData.paymentObservations || formData.paymentObservations.trim() === '' ? null : formData.paymentObservations.trim(),
       ...amounts
     };
     
