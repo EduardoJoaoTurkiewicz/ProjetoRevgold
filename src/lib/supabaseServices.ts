@@ -767,7 +767,7 @@ export const salesService = {
       date: sale.date,
       delivery_date: sale.deliveryDate && sale.deliveryDate.trim() !== '' ? sale.deliveryDate : null,
       client: sale.client.trim(),
-      seller_id: sale.sellerId && sale.sellerId.trim() !== '' ? sale.sellerId : null,
+      seller_id: sale.sellerId && sale.sellerId.trim() !== '' ? sale.sellerId.trim() : null,
       custom_commission_rate: sale.customCommissionRate || 5,
       products: sale.products && typeof sale.products === 'string' && sale.products.trim() !== '' ? sale.products.trim() : null,
       observations: sale.observations && sale.observations.trim() !== '' ? sale.observations.trim() : null,
@@ -808,7 +808,7 @@ export const salesService = {
     if (sale.date) dbData.date = sale.date;
     if (sale.deliveryDate !== undefined) dbData.delivery_date = sale.deliveryDate && sale.deliveryDate.trim() !== '' ? sale.deliveryDate : null;
     if (sale.client) dbData.client = sale.client.trim();
-    if (sale.sellerId !== undefined) dbData.seller_id = sale.sellerId && sale.sellerId.trim() !== '' ? sale.sellerId : null;
+    if (sale.sellerId !== undefined) dbData.seller_id = sale.sellerId && sale.sellerId.trim() !== '' ? sale.sellerId.trim() : null;
     if (sale.customCommissionRate !== undefined) dbData.custom_commission_rate = sale.customCommissionRate;
     if (sale.products !== undefined) dbData.products = sale.products && typeof sale.products === 'string' && sale.products.trim() !== '' ? sale.products.trim() : null;
     if (sale.observations !== undefined) dbData.observations = sale.observations && sale.observations.trim() !== '' ? sale.observations.trim() : null;
