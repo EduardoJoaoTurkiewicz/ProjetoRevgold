@@ -762,12 +762,28 @@ export const salesService = {
       }
     }
     
+    // Validate and clean sellerId - ensure it's either a valid UUID or null
+    let cleanSellerId = null;
+    if (sale.sellerId && typeof sale.sellerId === 'string') {
+      const trimmedSellerId = sale.sellerId.trim();
+      if (trimmedSellerId !== '' && trimmedSellerId.length > 0) {
+        // Basic UUID format validation
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(trimmedSellerId)) {
+          cleanSellerId = trimmedSellerId;
+        } else {
+          console.warn('⚠️ sellerId inválido fornecido:', trimmedSellerId);
+          cleanSellerId = null;
+        }
+      }
+    }
+    
     // Create database object directly without transformation to avoid JSON issues
     const dbData = {
       date: sale.date,
-      delivery_date: sale.deliveryDate && sale.deliveryDate.trim() !== '' ? sale.deliveryDate : null,
+      delivery_date: sale.deliveryDate && typeof sale.deliveryDate === 'string' && sale.deliveryDate.trim() !== '' ? sale.deliveryDate.trim() : null,
       client: sale.client.trim(),
-      seller_id: sale.sellerId && sale.sellerId.trim() !== '' ? sale.sellerId.trim() : null,
+      seller_id: cleanSellerId,
       custom_commission_rate: sale.customCommissionRate || 5,
       products: sale.products && typeof sale.products === 'string' && sale.products.trim() !== '' ? sale.products.trim() : null,
       observations: sale.observations && sale.observations.trim() !== '' ? sale.observations.trim() : null,
@@ -779,6 +795,8 @@ export const salesService = {
       pending_amount: sale.pendingAmount || 0,
       status: sale.status || 'pendente'
     };
+    
+    console.log('🔄 Dados limpos para criação da venda:', dbData);
     
     const { data, error } = await supabase.from('sales').insert([dbData]).select().single();
     if (error) {
@@ -802,13 +820,35 @@ export const salesService = {
   async update(id: string, sale: Partial<Sale>): Promise<void> {
     if (!isSupabaseConfigured()) return;
     
+    // Validate and clean sellerId for updates too
+    let cleanSellerId = undefined;
+    if (sale.sellerId !== undefined) {
+      if (sale.sellerId === null || sale.sellerId === '') {
+        cleanSellerId = null;
+      } else if (typeof sale.sellerId === 'string') {
+        const trimmedSellerId = sale.sellerId.trim();
+        if (trimmedSellerId === '') {
+          cleanSellerId = null;
+        } else {
+          // Basic UUID format validation
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          if (uuidRegex.test(trimmedSellerId)) {
+            cleanSellerId = trimmedSellerId;
+          } else {
+            console.warn('⚠️ sellerId inválido fornecido para atualização:', trimmedSellerId);
+            cleanSellerId = null;
+          }
+        }
+      }
+    }
+    
     // Create database object directly without transformation to avoid JSON issues
     const dbData: any = {};
     
     if (sale.date) dbData.date = sale.date;
-    if (sale.deliveryDate !== undefined) dbData.delivery_date = sale.deliveryDate && sale.deliveryDate.trim() !== '' ? sale.deliveryDate : null;
+    if (sale.deliveryDate !== undefined) dbData.delivery_date = sale.deliveryDate && typeof sale.deliveryDate === 'string' && sale.deliveryDate.trim() !== '' ? sale.deliveryDate.trim() : null;
     if (sale.client) dbData.client = sale.client.trim();
-    if (sale.sellerId !== undefined) dbData.seller_id = sale.sellerId && sale.sellerId.trim() !== '' ? sale.sellerId.trim() : null;
+    if (cleanSellerId !== undefined) dbData.seller_id = cleanSellerId;
     if (sale.customCommissionRate !== undefined) dbData.custom_commission_rate = sale.customCommissionRate;
     if (sale.products !== undefined) dbData.products = sale.products && typeof sale.products === 'string' && sale.products.trim() !== '' ? sale.products.trim() : null;
     if (sale.observations !== undefined) dbData.observations = sale.observations && sale.observations.trim() !== '' ? sale.observations.trim() : null;
@@ -819,6 +859,8 @@ export const salesService = {
     if (sale.receivedAmount !== undefined) dbData.received_amount = sale.receivedAmount;
     if (sale.pendingAmount !== undefined) dbData.pending_amount = sale.pendingAmount;
     if (sale.status) dbData.status = sale.status;
+    
+    console.log('🔄 Dados limpos para atualização da venda:', dbData);
     
     const { error } = await supabase.from('sales').update(dbData).eq('id', id);
     if (error) {
