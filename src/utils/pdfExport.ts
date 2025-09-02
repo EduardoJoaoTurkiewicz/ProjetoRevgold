@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { AutomationService } from './automationService';
+import { AutomationService } from '../lib/automationService';
 import type { 
   Sale, 
   Debt, 
