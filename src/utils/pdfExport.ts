@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from './supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { AutomationService } from './automationService';
 import type { 
   Sale, 
