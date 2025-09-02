@@ -114,10 +114,19 @@ export function Boletos() {
     if (boleto) {
       let updatedBoleto = { ...boleto, status };
       
+      // Se foi marcado como compensado, adicionar data de pagamento
+      if (status === 'compensado' && boleto.status !== 'compensado') {
+        updatedBoleto.paymentDate = new Date().toISOString().split('T')[0];
+      }
+      
       // Se o boleto foi marcado como compensado, atualizar o caixa
       if (status === 'compensado' && boleto.status !== 'compensado') {
-        // Cash transactions are handled automatically by database triggers
-        console.log('✅ Boleto marcado como compensado, transações de caixa serão criadas automaticamente');
+        if (!boleto.isCompanyPayable) {
+          // Cash transactions are handled automatically by database triggers
+          console.log('✅ Boleto recebível compensado, será adicionado ao caixa automaticamente');
+        } else {
+          console.log('✅ Boleto da empresa pago, será descontado do caixa automaticamente');
+        }
       }
       
       updateBoleto(updatedBoleto).catch(error => {

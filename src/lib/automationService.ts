@@ -178,7 +178,7 @@ export class AutomationService {
             status: 'pendente',
             installment_number: i + 1,
             total_installments: installments,
-            observations: `Boleto gerado automaticamente da venda para ${sale.client}`,
+            observations: `Boleto gerado automaticamente da venda para ${sale.client} - Parcela ${i + 1}/${installments}`,
             // Ensure all optional fields are properly handled
             boleto_file: null,
             overdue_action: null,

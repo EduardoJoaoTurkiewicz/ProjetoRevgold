@@ -79,12 +79,17 @@ export function Checks() {
   const updateCheckStatus = (checkId: string, status: Check['status']) => {
     const check = checks.find(c => c.id === checkId);
     if (check) {
-      const updatedCheck = { ...check, status };
+      let updatedCheck = { ...check, status };
+      
+      // Se foi marcado como compensado, adicionar data de pagamento
+      if (status === 'compensado' && check.status !== 'compensado') {
+        updatedCheck.paymentDate = new Date().toISOString().split('T')[0];
+      }
       
       // Se o cheque foi marcado como compensado, atualizar o caixa
       if (status === 'compensado' && check.status !== 'compensado' && !check.isOwnCheck) {
-        // Cash transactions are handled automatically by database triggers
-        console.log('✅ Cheque marcado como compensado, transação de caixa será criada automaticamente');
+          // Cash transactions are handled automatically by database triggers
+          console.log('✅ Cheque de terceiros compensado, será adicionado ao caixa automaticamente');
       }
       
       updateCheck(updatedCheck).catch(error => {

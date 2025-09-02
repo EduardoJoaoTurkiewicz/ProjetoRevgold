@@ -882,7 +882,7 @@ export const salesService = {
       console.log('🔍 Debug seller_id update validation:', {
         original: sale.sellerId,
         cleaned: cleanSellerId,
-        isValid: cleanSellerId ? isValidUuid(cleanSellerId) : 'null'
+        isValid: cleanSellerId ? cleanSellerId.length > 0 : 'null'
       });
     }
     
@@ -930,7 +930,7 @@ export const salesService = {
         value: dbData.seller_id,
         type: typeof dbData.seller_id,
         isNull: dbData.seller_id === null,
-        isUuid: dbData.seller_id ? isValidUuid(dbData.seller_id) : false
+        isValid: dbData.seller_id ? dbData.seller_id.length > 0 : false
       });
     }
     
@@ -947,6 +947,8 @@ export const salesService = {
         throw new Error(`Erro ao atualizar venda: ${error.message}`);
       }
     }
+    
+    return transformDatabaseRow<Sale>(data);
     
     return transformDatabaseRow<Sale>(data);
   },

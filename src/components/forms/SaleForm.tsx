@@ -290,7 +290,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
         if (typeof value === 'string' && value.trim() === '') {
           delete cleaned[key as keyof PaymentMethod];
         }
-        // Limpar arrays vazios
+        // Limpar arrays vazios ou null
         if (Array.isArray(value) && value.length === 0) {
           delete cleaned[key as keyof PaymentMethod];
         }
