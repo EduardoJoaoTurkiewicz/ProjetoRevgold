@@ -47,7 +47,7 @@ export class AutomationService {
       
       for (const checkPayment of checkPayments) {
         const installments = checkPayment.installments || 1;
-        const installmentValue = checkPayment.installmentValue || checkPayment.amount;
+        let installmentValue = checkPayment.installmentValue || checkPayment.amount;
         const installmentInterval = checkPayment.installmentInterval || 30;
         const startDate = new Date(checkPayment.firstInstallmentDate || sale.date);
 
@@ -156,7 +156,7 @@ export class AutomationService {
       
       for (const boletoPayment of boletoPayments) {
         const installments = boletoPayment.installments || 1;
-        const installmentValue = boletoPayment.installmentValue || boletoPayment.amount;
+        let installmentValue = boletoPayment.installmentValue || boletoPayment.amount;
         const installmentInterval = boletoPayment.installmentInterval || 30;
         const startDate = new Date(boletoPayment.firstInstallmentDate || sale.date);
 
