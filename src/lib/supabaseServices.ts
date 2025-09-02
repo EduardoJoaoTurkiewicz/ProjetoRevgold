@@ -47,6 +47,9 @@ function transformToDatabase(obj: any): any {
       transformed[snakeKey] = null;
     } else if (typeof value === 'string' && value.trim() === '') {
       transformed[snakeKey] = null;
+    } else if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+      // Keep objects and arrays as-is for JSONB fields - Supabase will handle serialization
+      transformed[snakeKey] = value;
     } else {
       transformed[snakeKey] = value;
     }
@@ -720,7 +723,7 @@ export const salesService = {
     // Ensure required fields are properly set
     dbData.client = sale.client.trim();
     dbData.total_value = sale.totalValue;
-    dbData.payment_methods = JSON.stringify(sale.paymentMethods);
+    dbData.payment_methods = sale.paymentMethods;
     dbData.received_amount = sale.receivedAmount || 0;
     dbData.pending_amount = sale.pendingAmount || 0;
     dbData.status = sale.status || 'pendente';
@@ -774,11 +777,6 @@ export const salesService = {
     if (!isSupabaseConfigured()) return;
     
     const dbData = transformToDatabase(sale);
-    
-    // Handle JSON fields properly
-    if (sale.paymentMethods) {
-      dbData.payment_methods = JSON.stringify(sale.paymentMethods);
-    }
     
     const { error } = await supabase.from('sales').update(dbData).eq('id', id);
     if (error) {
@@ -852,7 +850,7 @@ export const debtsService = {
     dbData.company = debt.company.trim();
     dbData.description = debt.description.trim();
     dbData.total_value = debt.totalValue;
-    dbData.payment_methods = JSON.stringify(debt.paymentMethods || []);
+    dbData.payment_methods = debt.paymentMethods || [];
     dbData.is_paid = debt.isPaid || false;
     dbData.paid_amount = debt.paidAmount || 0;
     dbData.pending_amount = debt.pendingAmount || 0;
@@ -867,7 +865,7 @@ export const debtsService = {
     }
     
     if (debt.checksUsed && debt.checksUsed.length > 0) {
-      dbData.checks_used = JSON.stringify(debt.checksUsed);
+      dbData.checks_used = debt.checksUsed;
     }
     
     const { data, error } = await supabase.from('debts').insert([dbData]).select().single();
@@ -882,15 +880,6 @@ export const debtsService = {
     if (!isSupabaseConfigured()) return;
     
     const dbData = transformToDatabase(debt);
-    
-    // Handle JSON fields properly
-    if (debt.paymentMethods) {
-      dbData.payment_methods = JSON.stringify(debt.paymentMethods);
-    }
-    
-    if (debt.checksUsed) {
-      dbData.checks_used = JSON.stringify(debt.checksUsed);
-    }
     
     const { error } = await supabase.from('debts').update(dbData).eq('id', id);
     if (error) {
