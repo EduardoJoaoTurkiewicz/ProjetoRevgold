@@ -49,7 +49,7 @@ export interface Sale {
   deliveryDate?: string | null;
   client: string;
   sellerId?: string | null;
-  products: string | Product[];
+  products?: string | Product[] | null;
   observations?: string | null;
   totalValue: number;
   paymentMethods: PaymentMethod[];

@@ -56,6 +56,11 @@ export class AutomationService {
           const dueDate = new Date(startDate);
           dueDate.setDate(dueDate.getDate() + (i * installmentInterval));
 
+          // Validate installment value
+          if (!installmentValue || installmentValue <= 0) {
+            console.warn(`⚠️ Valor da parcela inválido para cheque ${i + 1}, usando valor total`);
+            installmentValue = checkPayment.amount;
+          }
 
           const checkData = {
             sale_id: sale.id,
@@ -67,7 +72,16 @@ export class AutomationService {
             used_for: `Venda - ${sale.client}`,
             installment_number: i + 1,
             total_installments: installments,
-            observations: `Cheque gerado automaticamente da venda para ${sale.client}`
+            observations: `Cheque gerado automaticamente da venda para ${sale.client}`,
+            // Ensure all optional fields are properly handled
+            front_image: null,
+            back_image: null,
+            selected_available_checks: null,
+            used_in_debt: null,
+            discount_date: null,
+            is_company_payable: null,
+            company_name: null,
+            payment_date: null
           };
 
           console.log(`🔄 Criando cheque ${i + 1}/${installments}:`, checkData);
@@ -77,7 +91,8 @@ export class AutomationService {
             if (error.code === '23505') {
               console.log(`⚠️ Cheque ${i + 1}/${installments} já existe (constraint violation)`);
             } else {
-              console.error('Erro ao criar cheque automático:', error);
+              console.error(`❌ Erro ao criar cheque ${i + 1}/${installments}:`, error);
+              // Don't throw error to prevent sale creation failure
             }
           } else {
             console.log(`✅ Cheque ${i + 1}/${installments} criado para venda ${sale.id}`);
@@ -86,6 +101,7 @@ export class AutomationService {
       }
     } catch (error) {
       console.error('Erro na criação automática de cheques:', error);
+      // Don't throw error to prevent sale creation failure
     }
   }
 
@@ -149,6 +165,11 @@ export class AutomationService {
           const dueDate = new Date(startDate);
           dueDate.setDate(dueDate.getDate() + (i * installmentInterval));
 
+          // Validate installment value
+          if (!installmentValue || installmentValue <= 0) {
+            console.warn(`⚠️ Valor da parcela inválido para boleto ${i + 1}, usando valor total`);
+            installmentValue = boletoPayment.amount;
+          }
           const boletoData = {
             sale_id: sale.id,
             client: sale.client,
@@ -157,7 +178,19 @@ export class AutomationService {
             status: 'pendente',
             installment_number: i + 1,
             total_installments: installments,
-            observations: `Boleto gerado automaticamente da venda para ${sale.client}`
+            observations: `Boleto gerado automaticamente da venda para ${sale.client}`,
+            // Ensure all optional fields are properly handled
+            boleto_file: null,
+            overdue_action: null,
+            interest_amount: null,
+            penalty_amount: null,
+            notary_costs: null,
+            final_amount: null,
+            overdue_notes: null,
+            is_company_payable: null,
+            company_name: null,
+            payment_date: null,
+            interest_paid: null
           };
 
           console.log(`🔄 Criando boleto ${i + 1}/${installments}:`, boletoData);
@@ -166,7 +199,8 @@ export class AutomationService {
             if (error.code === '23505') {
               console.log(`⚠️ Boleto ${i + 1}/${installments} já existe (constraint violation)`);
             } else {
-              console.error('Erro ao criar boleto automático:', error);
+              console.error(`❌ Erro ao criar boleto ${i + 1}/${installments}:`, error);
+              // Don't throw error to prevent sale creation failure
             }
           } else {
             console.log(`✅ Boleto ${i + 1}/${installments} criado para venda ${sale.id}`);
@@ -175,6 +209,7 @@ export class AutomationService {
       }
     } catch (error) {
       console.error('Erro na criação automática de boletos:', error);
+      // Don't throw error to prevent sale creation failure
     }
   }
 

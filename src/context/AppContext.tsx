@@ -273,6 +273,30 @@ export function AppProvider({ children }: AppProviderProps) {
   const createSale = async (sale: Omit<Sale, 'id' | 'createdAt'>) => {
     try {
       console.log('🔄 Criando venda:', sale);
+      
+      // Additional validation before sending to service
+      if (!sale.client || !sale.client.trim()) {
+        throw new Error('Nome do cliente é obrigatório');
+      }
+      
+      if (!sale.totalValue || sale.totalValue <= 0) {
+        throw new Error('Valor total deve ser maior que zero');
+      }
+      
+      if (!sale.paymentMethods || sale.paymentMethods.length === 0) {
+        throw new Error('Pelo menos um método de pagamento é obrigatório');
+      }
+      
+      // Validate payment methods total
+      const totalPaymentAmount = sale.paymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
+      if (totalPaymentAmount === 0) {
+        throw new Error('Pelo menos um método de pagamento deve ter valor maior que zero');
+      }
+      
+      if (totalPaymentAmount > sale.totalValue) {
+        throw new Error('Total dos métodos de pagamento não pode exceder o valor da venda');
+      }
+      
       const newSale = await salesService.create(sale);
       console.log('✅ Venda criada:', newSale);
       setSales(prev => [newSale, ...prev]);
@@ -286,6 +310,31 @@ export function AppProvider({ children }: AppProviderProps) {
   const updateSale = async (id: string, saleData: Partial<Sale>) => {
     try {
       console.log('🔄 Atualizando venda:', id, saleData);
+      
+      // Additional validation for updates
+      if (saleData.client !== undefined && (!saleData.client || !saleData.client.trim())) {
+        throw new Error('Nome do cliente não pode estar vazio');
+      }
+      
+      if (saleData.totalValue !== undefined && (!saleData.totalValue || saleData.totalValue <= 0)) {
+        throw new Error('Valor total deve ser maior que zero');
+      }
+      
+      if (saleData.paymentMethods !== undefined) {
+        if (!saleData.paymentMethods || saleData.paymentMethods.length === 0) {
+          throw new Error('Pelo menos um método de pagamento é obrigatório');
+        }
+        
+        const totalPaymentAmount = saleData.paymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
+        if (totalPaymentAmount === 0) {
+          throw new Error('Pelo menos um método de pagamento deve ter valor maior que zero');
+        }
+        
+        if (saleData.totalValue && totalPaymentAmount > saleData.totalValue) {
+          throw new Error('Total dos métodos de pagamento não pode exceder o valor da venda');
+        }
+      }
+      
       await salesService.update(id, saleData);
       setSales(prev => prev.map(s => s.id === id ? { ...s, ...saleData } : s));
       await loadAllData();

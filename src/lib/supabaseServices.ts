@@ -771,19 +771,34 @@ export const salesService = {
       }
     }
     
+    // Clean and validate all fields before database insertion
+    const cleanedPaymentMethods = sale.paymentMethods.map(method => {
+      const cleaned = { ...method };
+      
+      // Remove undefined and empty values
+      Object.keys(cleaned).forEach(key => {
+        const value = cleaned[key as keyof PaymentMethod];
+        if (value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) {
+          delete cleaned[key as keyof PaymentMethod];
+        }
+      });
+      
+      return cleaned;
+    });
+    
     // Create database object directly without transformation to avoid JSON issues
     const dbData = {
       date: sale.date,
-      delivery_date: sale.deliveryDate || null,
+      delivery_date: !sale.deliveryDate || sale.deliveryDate.trim() === '' ? null : sale.deliveryDate,
       client: sale.client.trim(),
       seller_id: cleanSellerId,
       custom_commission_rate: sale.customCommissionRate || 5,
-      products: sale.products || null,
-      observations: sale.observations || null,
+      products: !sale.products || (typeof sale.products === 'string' && sale.products.trim() === '') ? null : sale.products,
+      observations: !sale.observations || sale.observations.trim() === '' ? null : sale.observations.trim(),
       total_value: sale.totalValue,
-      payment_methods: sale.paymentMethods, // Keep as object for JSONB
-      payment_description: sale.paymentDescription || null,
-      payment_observations: sale.paymentObservations || null,
+      payment_methods: cleanedPaymentMethods, // Keep as object for JSONB
+      payment_description: !sale.paymentDescription || sale.paymentDescription.trim() === '' ? null : sale.paymentDescription.trim(),
+      payment_observations: !sale.paymentObservations || sale.paymentObservations.trim() === '' ? null : sale.paymentObservations.trim(),
       received_amount: sale.receivedAmount || 0,
       pending_amount: sale.pendingAmount || 0,
       status: sale.status || 'pendente'
@@ -794,7 +809,19 @@ export const salesService = {
     const { data, error } = await supabase.from('sales').insert([dbData]).select().single();
     if (error) {
       console.error('Erro ao criar venda:', error);
-      throw new Error(`Erro ao criar venda: ${error.message}`);
+      
+      // Provide more specific error messages
+      if (error.code === '23505') {
+        throw new Error('Esta venda já existe no sistema. Verifique se não há duplicatas.');
+      } else if (error.code === '23503') {
+        throw new Error('Vendedor selecionado não existe. Verifique se o vendedor está ativo.');
+      } else if (error.message.includes('invalid input syntax')) {
+        throw new Error('Dados inválidos. Verifique os valores inseridos, especialmente datas e números.');
+      } else if (error.message.includes('violates check constraint')) {
+        throw new Error('Dados violam regras do sistema. Verifique se todos os valores estão corretos.');
+      } else {
+        throw new Error(`Erro ao criar venda: ${error.message}`);
+      }
     }
     
     const newSale = transformDatabaseRow<Sale>(data);
@@ -805,6 +832,7 @@ export const salesService = {
       await AutomationService.createBoletosForSale(newSale);
     } catch (automationError) {
       console.warn('Erro na automação (não crítico):', automationError);
+      // Don't throw automation errors as they're not critical for sale creation
     }
     
     return newSale;
@@ -828,20 +856,38 @@ export const salesService = {
       }
     }
     
+    // Clean payment methods for updates
+    let cleanedPaymentMethods = undefined;
+    if (sale.paymentMethods) {
+      cleanedPaymentMethods = sale.paymentMethods.map(method => {
+        const cleaned = { ...method };
+        
+        // Remove undefined and empty values
+        Object.keys(cleaned).forEach(key => {
+          const value = cleaned[key as keyof PaymentMethod];
+          if (value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) {
+            delete cleaned[key as keyof PaymentMethod];
+          }
+        });
+        
+        return cleaned;
+      });
+    }
+    
     // Create database object directly without transformation to avoid JSON issues
     const dbData: any = {};
     
     if (sale.date) dbData.date = sale.date;
-    if (sale.deliveryDate !== undefined) dbData.delivery_date = sale.deliveryDate || null;
+    if (sale.deliveryDate !== undefined) dbData.delivery_date = !sale.deliveryDate || sale.deliveryDate.trim() === '' ? null : sale.deliveryDate;
     if (sale.client) dbData.client = sale.client.trim();
     if (cleanSellerId !== undefined) dbData.seller_id = cleanSellerId;
     if (sale.customCommissionRate !== undefined) dbData.custom_commission_rate = sale.customCommissionRate;
-    if (sale.products !== undefined) dbData.products = sale.products || null;
-    if (sale.observations !== undefined) dbData.observations = sale.observations || null;
+    if (sale.products !== undefined) dbData.products = !sale.products || (typeof sale.products === 'string' && sale.products.trim() === '') ? null : sale.products;
+    if (sale.observations !== undefined) dbData.observations = !sale.observations || sale.observations.trim() === '' ? null : sale.observations.trim();
     if (sale.totalValue) dbData.total_value = sale.totalValue;
-    if (sale.paymentMethods) dbData.payment_methods = sale.paymentMethods; // Keep as object for JSONB
-    if (sale.paymentDescription !== undefined) dbData.payment_description = sale.paymentDescription || null;
-    if (sale.paymentObservations !== undefined) dbData.payment_observations = sale.paymentObservations || null;
+    if (cleanedPaymentMethods) dbData.payment_methods = cleanedPaymentMethods; // Keep as object for JSONB
+    if (sale.paymentDescription !== undefined) dbData.payment_description = !sale.paymentDescription || sale.paymentDescription.trim() === '' ? null : sale.paymentDescription.trim();
+    if (sale.paymentObservations !== undefined) dbData.payment_observations = !sale.paymentObservations || sale.paymentObservations.trim() === '' ? null : sale.paymentObservations.trim();
     if (sale.receivedAmount !== undefined) dbData.received_amount = sale.receivedAmount;
     if (sale.pendingAmount !== undefined) dbData.pending_amount = sale.pendingAmount;
     if (sale.status) dbData.status = sale.status;
@@ -851,7 +897,15 @@ export const salesService = {
     const { error } = await supabase.from('sales').update(dbData).eq('id', id);
     if (error) {
       console.error('Erro ao atualizar venda:', error);
-      throw new Error(`Erro ao atualizar venda: ${error.message}`);
+      
+      // Provide more specific error messages for updates
+      if (error.code === '23505') {
+        throw new Error('Não é possível atualizar: dados duplicados detectados.');
+      } else if (error.code === '23503') {
+        throw new Error('Vendedor selecionado não existe ou foi removido.');
+      } else {
+        throw new Error(`Erro ao atualizar venda: ${error.message}`);
+      }
     }
   },
 
