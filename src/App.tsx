@@ -14,15 +14,21 @@ import { Employees } from './components/Employees';
 import { Taxes } from './components/Taxes';
 
 function App() {
+  return (
+    <AppProvider>
+      <AppContent />
+    </AppProvider>
+  );
+}
+
+function AppContent() {
   const [currentPage, setCurrentPage] = useState('dashboard');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50">
-      <AppProvider>
-        <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
-          {renderPage(currentPage)}
-        </Layout>
-      </AppProvider>
+      <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
+        {renderPage(currentPage)}
+      </Layout>
     </div>
   );
 }
