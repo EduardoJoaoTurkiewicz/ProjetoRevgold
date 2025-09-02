@@ -767,30 +767,23 @@ export const salesService = {
     if (sale.sellerId && typeof sale.sellerId === 'string') {
       const trimmedSellerId = sale.sellerId.trim();
       if (trimmedSellerId !== '' && trimmedSellerId.length > 0) {
-        // Basic UUID format validation
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (uuidRegex.test(trimmedSellerId)) {
-          cleanSellerId = trimmedSellerId;
-        } else {
-          console.warn('⚠️ sellerId inválido fornecido:', trimmedSellerId);
-          cleanSellerId = null;
-        }
+        cleanSellerId = trimmedSellerId;
       }
     }
     
     // Create database object directly without transformation to avoid JSON issues
     const dbData = {
       date: sale.date,
-      delivery_date: sale.deliveryDate && typeof sale.deliveryDate === 'string' && sale.deliveryDate.trim() !== '' ? sale.deliveryDate.trim() : null,
+      delivery_date: sale.deliveryDate || null,
       client: sale.client.trim(),
       seller_id: cleanSellerId,
       custom_commission_rate: sale.customCommissionRate || 5,
-      products: sale.products && typeof sale.products === 'string' && sale.products.trim() !== '' ? sale.products.trim() : null,
-      observations: sale.observations && sale.observations.trim() !== '' ? sale.observations.trim() : null,
+      products: sale.products || null,
+      observations: sale.observations || null,
       total_value: sale.totalValue,
       payment_methods: sale.paymentMethods, // Keep as object for JSONB
-      payment_description: sale.paymentDescription && sale.paymentDescription.trim() !== '' ? sale.paymentDescription.trim() : null,
-      payment_observations: sale.paymentObservations && sale.paymentObservations.trim() !== '' ? sale.paymentObservations.trim() : null,
+      payment_description: sale.paymentDescription || null,
+      payment_observations: sale.paymentObservations || null,
       received_amount: sale.receivedAmount || 0,
       pending_amount: sale.pendingAmount || 0,
       status: sale.status || 'pendente'
@@ -830,14 +823,7 @@ export const salesService = {
         if (trimmedSellerId === '') {
           cleanSellerId = null;
         } else {
-          // Basic UUID format validation
-          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-          if (uuidRegex.test(trimmedSellerId)) {
-            cleanSellerId = trimmedSellerId;
-          } else {
-            console.warn('⚠️ sellerId inválido fornecido para atualização:', trimmedSellerId);
-            cleanSellerId = null;
-          }
+          cleanSellerId = trimmedSellerId;
         }
       }
     }
@@ -846,16 +832,16 @@ export const salesService = {
     const dbData: any = {};
     
     if (sale.date) dbData.date = sale.date;
-    if (sale.deliveryDate !== undefined) dbData.delivery_date = sale.deliveryDate && typeof sale.deliveryDate === 'string' && sale.deliveryDate.trim() !== '' ? sale.deliveryDate.trim() : null;
+    if (sale.deliveryDate !== undefined) dbData.delivery_date = sale.deliveryDate || null;
     if (sale.client) dbData.client = sale.client.trim();
     if (cleanSellerId !== undefined) dbData.seller_id = cleanSellerId;
     if (sale.customCommissionRate !== undefined) dbData.custom_commission_rate = sale.customCommissionRate;
-    if (sale.products !== undefined) dbData.products = sale.products && typeof sale.products === 'string' && sale.products.trim() !== '' ? sale.products.trim() : null;
-    if (sale.observations !== undefined) dbData.observations = sale.observations && sale.observations.trim() !== '' ? sale.observations.trim() : null;
+    if (sale.products !== undefined) dbData.products = sale.products || null;
+    if (sale.observations !== undefined) dbData.observations = sale.observations || null;
     if (sale.totalValue) dbData.total_value = sale.totalValue;
     if (sale.paymentMethods) dbData.payment_methods = sale.paymentMethods; // Keep as object for JSONB
-    if (sale.paymentDescription !== undefined) dbData.payment_description = sale.paymentDescription && sale.paymentDescription.trim() !== '' ? sale.paymentDescription.trim() : null;
-    if (sale.paymentObservations !== undefined) dbData.payment_observations = sale.paymentObservations && sale.paymentObservations.trim() !== '' ? sale.paymentObservations.trim() : null;
+    if (sale.paymentDescription !== undefined) dbData.payment_description = sale.paymentDescription || null;
+    if (sale.paymentObservations !== undefined) dbData.payment_observations = sale.paymentObservations || null;
     if (sale.receivedAmount !== undefined) dbData.received_amount = sale.receivedAmount;
     if (sale.pendingAmount !== undefined) dbData.pending_amount = sale.pendingAmount;
     if (sale.status) dbData.status = sale.status;
