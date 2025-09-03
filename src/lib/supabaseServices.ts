@@ -778,9 +778,20 @@ export const salesService = {
     let cleanSellerId = null;
     if (sale.sellerId && typeof sale.sellerId === 'string') {
       const trimmedSellerId = sale.sellerId.trim();
-      if (trimmedSellerId && trimmedSellerId !== '' && isValidUuid(trimmedSellerId)) {
-        cleanSellerId = trimmedSellerId;
+      if (trimmedSellerId && trimmedSellerId !== '') {
+        if (isValidUuid(trimmedSellerId)) {
+          cleanSellerId = trimmedSellerId;
+        } else {
+          console.warn('Invalid UUID format for sellerId:', trimmedSellerId);
+          cleanSellerId = null;
+        }
       }
+    }
+    
+    // Additional validation to ensure we never send empty strings to UUID fields
+    if (cleanSellerId === '') {
+        cleanSellerId = trimmedSellerId;
+      cleanSellerId = null;
     }
     
     // Debug logging to inspect seller_id value
@@ -812,7 +823,7 @@ export const salesService = {
       client: sale.client.trim(),
       seller_id: cleanSellerId,
       custom_commission_rate: sale.customCommissionRate || 5,
-      products: !sale.products || (typeof sale.products === 'string' && sale.products.trim() === '') ? '' : sale.products,
+      products: !sale.products || (typeof sale.products === 'string' && sale.products.trim() === '') ? 'Produtos vendidos' : sale.products,
       observations: !sale.observations || sale.observations.trim() === '' ? null : sale.observations.trim(),
       total_value: sale.totalValue,
       payment_methods: cleanedPaymentMethods, // Keep as object for JSONB
@@ -916,9 +927,28 @@ export const salesService = {
     if (sale.date) dbData.date = sale.date;
     if (sale.deliveryDate !== undefined) dbData.delivery_date = !sale.deliveryDate || sale.deliveryDate.trim() === '' ? null : sale.deliveryDate;
     if (sale.client) dbData.client = sale.client.trim();
-    if (cleanSellerId !== undefined) dbData.seller_id = cleanSellerId;
+    if (sale.sellerId !== undefined) {
+      // Clean and validate sellerId for updates
+      let updateCleanSellerId = null;
+      if (sale.sellerId && typeof sale.sellerId === 'string') {
+        const trimmedSellerId = sale.sellerId.trim();
+        if (trimmedSellerId && trimmedSellerId !== '') {
+          if (isValidUuid(trimmedSellerId)) {
+            updateCleanSellerId = trimmedSellerId;
+          } else {
+            console.warn('Invalid UUID format for sellerId in update:', trimmedSellerId);
+            updateCleanSellerId = null;
+          }
+        }
+      }
+      // Additional check to ensure no empty strings
+      if (updateCleanSellerId === '') {
+        updateCleanSellerId = null;
+      }
+      dbData.seller_id = updateCleanSellerId;
+    }
     if (sale.customCommissionRate !== undefined) dbData.custom_commission_rate = sale.customCommissionRate;
-    if (sale.products !== undefined) dbData.products = !sale.products || (typeof sale.products === 'string' && sale.products.trim() === '') ? '' : sale.products;
+    if (sale.products !== undefined) dbData.products = !sale.products || (typeof sale.products === 'string' && sale.products.trim() === '') ? 'Produtos vendidos' : sale.products;
     if (sale.observations !== undefined) dbData.observations = !sale.observations || sale.observations.trim() === '' ? null : sale.observations.trim();
     if (sale.totalValue) dbData.total_value = sale.totalValue;
     if (cleanedPaymentMethods) dbData.payment_methods = cleanedPaymentMethods; // Keep as object for JSONB
@@ -936,7 +966,7 @@ export const salesService = {
         value: dbData.seller_id,
         type: typeof dbData.seller_id,
         isNull: dbData.seller_id === null,
-        isValid: dbData.seller_id ? dbData.seller_id.length > 0 : false
+        isUuid: dbData.seller_id ? isValidUuid(dbData.seller_id) : false
       });
     }
     
