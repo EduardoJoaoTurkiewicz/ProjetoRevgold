@@ -14,7 +14,11 @@ import type {
   PixFee,
   CashBalance,
   Tax,
-  AgendaEvent
+  AgendaEvent,
+  SaleBoleto,
+  SaleCheque,
+  DebtBoleto,
+  DebtCheque
 } from '../types';
 
 // Utility function to validate UUID format
@@ -1182,6 +1186,190 @@ export const agendaEventsService = {
     if (!isSupabaseConfigured()) return;
     
     const { error } = await supabase.from('agenda_events').delete().eq('id', id);
+    if (error) throw error;
+  }
+};
+
+// Sale Boletos Service (A Receber)
+export const saleBoletosService = {
+  async getAll(): Promise<SaleBoleto[]> {
+    if (!isSupabaseConfigured()) return [];
+    
+    const { data, error } = await supabase
+      .from('sale_boletos')
+      .select('*')
+      .order('due_date', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformDatabaseRow<SaleBoleto>);
+  },
+
+  async create(boleto: Omit<SaleBoleto, 'id' | 'createdAt' | 'updatedAt'>): Promise<SaleBoleto> {
+    if (!isSupabaseConfigured()) {
+      return {
+        ...boleto,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
+    const dbData = transformToDatabase(boleto);
+    const { data, error } = await supabase.from('sale_boletos').insert([dbData]).select().single();
+    if (error) throw error;
+    return transformDatabaseRow<SaleBoleto>(data);
+  },
+
+  async update(id: string, boleto: Partial<SaleBoleto>): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const dbData = transformToDatabase(boleto);
+    const { error } = await supabase.from('sale_boletos').update(dbData).eq('id', id);
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const { error } = await supabase.from('sale_boletos').delete().eq('id', id);
+    if (error) throw error;
+  }
+};
+
+// Sale Cheques Service (A Receber)
+export const saleChequesService = {
+  async getAll(): Promise<SaleCheque[]> {
+    if (!isSupabaseConfigured()) return [];
+    
+    const { data, error } = await supabase
+      .from('sale_cheques')
+      .select('*')
+      .order('due_date', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformDatabaseRow<SaleCheque>);
+  },
+
+  async create(cheque: Omit<SaleCheque, 'id' | 'createdAt' | 'updatedAt'>): Promise<SaleCheque> {
+    if (!isSupabaseConfigured()) {
+      return {
+        ...cheque,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
+    const dbData = transformToDatabase(cheque);
+    const { data, error } = await supabase.from('sale_cheques').insert([dbData]).select().single();
+    if (error) throw error;
+    return transformDatabaseRow<SaleCheque>(data);
+  },
+
+  async update(id: string, cheque: Partial<SaleCheque>): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const dbData = transformToDatabase(cheque);
+    const { error } = await supabase.from('sale_cheques').update(dbData).eq('id', id);
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const { error } = await supabase.from('sale_cheques').delete().eq('id', id);
+    if (error) throw error;
+  }
+};
+
+// Debt Boletos Service (A Pagar)
+export const debtBoletosService = {
+  async getAll(): Promise<DebtBoleto[]> {
+    if (!isSupabaseConfigured()) return [];
+    
+    const { data, error } = await supabase
+      .from('debt_boletos')
+      .select('*')
+      .order('due_date', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformDatabaseRow<DebtBoleto>);
+  },
+
+  async create(boleto: Omit<DebtBoleto, 'id' | 'createdAt' | 'updatedAt'>): Promise<DebtBoleto> {
+    if (!isSupabaseConfigured()) {
+      return {
+        ...boleto,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
+    const dbData = transformToDatabase(boleto);
+    const { data, error } = await supabase.from('debt_boletos').insert([dbData]).select().single();
+    if (error) throw error;
+    return transformDatabaseRow<DebtBoleto>(data);
+  },
+
+  async update(id: string, boleto: Partial<DebtBoleto>): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const dbData = transformToDatabase(boleto);
+    const { error } = await supabase.from('debt_boletos').update(dbData).eq('id', id);
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const { error } = await supabase.from('debt_boletos').delete().eq('id', id);
+    if (error) throw error;
+  }
+};
+
+// Debt Cheques Service (A Pagar)
+export const debtChequesService = {
+  async getAll(): Promise<DebtCheque[]> {
+    if (!isSupabaseConfigured()) return [];
+    
+    const { data, error } = await supabase
+      .from('debt_cheques')
+      .select('*')
+      .order('due_date', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformDatabaseRow<DebtCheque>);
+  },
+
+  async create(cheque: Omit<DebtCheque, 'id' | 'createdAt' | 'updatedAt'>): Promise<DebtCheque> {
+    if (!isSupabaseConfigured()) {
+      return {
+        ...cheque,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
+    const dbData = transformToDatabase(cheque);
+    const { data, error } = await supabase.from('debt_cheques').insert([dbData]).select().single();
+    if (error) throw error;
+    return transformDatabaseRow<DebtCheque>(data);
+  },
+
+  async update(id: string, cheque: Partial<DebtCheque>): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const dbData = transformToDatabase(cheque);
+    const { error } = await supabase.from('debt_cheques').update(dbData).eq('id', id);
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured()) return;
+    
+    const { error } = await supabase.from('debt_cheques').delete().eq('id', id);
     if (error) throw error;
   }
 };

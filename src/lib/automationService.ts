@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase';
-import type { Sale, Check, Boleto } from '../types';
+import type { Sale, Check, Boleto, SaleBoleto, SaleCheque, DebtBoleto, DebtCheque, Debt } from '../types';
+import { saleBoletosService, saleChequesService, debtBoletosService, debtChequesService } from './supabaseServices';
 
 export class AutomationService {
   // Transform database row to app format
@@ -62,40 +63,26 @@ export class AutomationService {
             installmentValue = checkPayment.amount;
           }
 
-          const checkData = {
-            sale_id: sale.id,
-            client: sale.client,
+          // Use new sale_cheques table
+          const saleChequeData: Omit<SaleCheque, 'id' | 'createdAt' | 'updatedAt'> = {
+            saleId: sale.id,
+            bank: checkPayment.thirdPartyDetails?.[0]?.bank || 'Banco não informado',
+            number: checkPayment.thirdPartyDetails?.[0]?.checkNumber || `CHQ-${Date.now()}-${i + 1}`,
+            dueDate: dueDate.toISOString().split('T')[0],
             value: installmentValue,
-            due_date: dueDate.toISOString().split('T')[0],
+            usedForDebt: false,
             status: 'pendente',
-            is_own_check: checkPayment.isOwnCheck || false,
-            used_for: `Venda - ${sale.client}`,
-            installment_number: i + 1,
-            total_installments: installments,
-            observations: `Cheque gerado automaticamente da venda para ${sale.client}`,
-            // Ensure all optional fields are properly handled
-            front_image: null,
-            back_image: null,
-            selected_available_checks: null,
-            used_in_debt: null,
-            discount_date: null,
-            is_company_payable: null,
-            company_name: null,
-            payment_date: null
+            observations: `Cheque gerado automaticamente da venda para ${sale.client} - Parcela ${i + 1}/${installments}`
           };
 
-          console.log(`🔄 Criando cheque ${i + 1}/${installments}:`, checkData);
+          console.log(`🔄 Criando cheque ${i + 1}/${installments}:`, saleChequeData);
 
-          const { error } = await supabase.from('checks').insert([checkData]);
-          if (error) {
-            if (error.code === '23505') {
-              console.log(`⚠️ Cheque ${i + 1}/${installments} já existe (constraint violation)`);
-            } else {
-              console.error(`❌ Erro ao criar cheque ${i + 1}/${installments}:`, error);
-              // Don't throw error to prevent sale creation failure
-            }
-          } else {
+          try {
+            await saleChequesService.create(saleChequeData);
             console.log(`✅ Cheque ${i + 1}/${installments} criado para venda ${sale.id}`);
+          } catch (error) {
+            console.error(`❌ Erro ao criar cheque ${i + 1}/${installments}:`, error);
+            // Don't throw error to prevent sale creation failure
           }
         }
       }
@@ -170,40 +157,26 @@ export class AutomationService {
             console.warn(`⚠️ Valor da parcela inválido para boleto ${i + 1}, usando valor total`);
             installmentValue = boletoPayment.amount;
           }
-          const boletoData = {
-            sale_id: sale.id,
-            client: sale.client,
+          
+          // Use new sale_boletos table
+          const saleBoletoData: Omit<SaleBoleto, 'id' | 'createdAt' | 'updatedAt'> = {
+            saleId: sale.id,
+            number: `${sale.client.substring(0, 3).toUpperCase()}-${Date.now()}-${i + 1}`,
+            dueDate: dueDate.toISOString().split('T')[0],
             value: installmentValue,
-            due_date: dueDate.toISOString().split('T')[0],
             status: 'pendente',
-            installment_number: i + 1,
-            total_installments: installments,
-            observations: `Boleto gerado automaticamente da venda para ${sale.client} - Parcela ${i + 1}/${installments}`,
-            // Ensure all optional fields are properly handled
-            boleto_file: null,
-            overdue_action: null,
-            interest_amount: null,
-            penalty_amount: null,
-            notary_costs: null,
-            final_amount: null,
-            overdue_notes: null,
-            is_company_payable: null,
-            company_name: null,
-            payment_date: null,
-            interest_paid: null
+            interest: 0,
+            observations: `Boleto gerado automaticamente da venda para ${sale.client} - Parcela ${i + 1}/${installments}`
           };
 
           console.log(`🔄 Criando boleto ${i + 1}/${installments}:`, boletoData);
-          const { error } = await supabase.from('boletos').insert([boletoData]);
-          if (error) {
-            if (error.code === '23505') {
-              console.log(`⚠️ Boleto ${i + 1}/${installments} já existe (constraint violation)`);
-            } else {
-              console.error(`❌ Erro ao criar boleto ${i + 1}/${installments}:`, error);
-              // Don't throw error to prevent sale creation failure
-            }
-          } else {
+          
+          try {
+            await saleBoletosService.create(saleBoletoData);
             console.log(`✅ Boleto ${i + 1}/${installments} criado para venda ${sale.id}`);
+          } catch (error) {
+            console.error(`❌ Erro ao criar boleto ${i + 1}/${installments}:`, error);
+            // Don't throw error to prevent sale creation failure
           }
         }
       }
@@ -241,6 +214,125 @@ export class AutomationService {
       }
     } catch (error) {
       console.error('Erro na atualização de boletos:', error);
+    }
+  }
+
+  // Create boletos for debts
+  static async createBoletosForDebt(debt: Debt): Promise<void> {
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado, pulando criação automática de boletos para dívida');
+      return;
+    }
+
+    try {
+      console.log('🔄 Criando boletos automáticos para dívida:', debt.id);
+      
+      // Find payment methods that are boletos
+      const boletoPayments = debt.paymentMethods.filter(method => method.type === 'boleto');
+      
+      if (boletoPayments.length === 0) {
+        console.log('ℹ️ Nenhum pagamento em boleto encontrado para dívida');
+        return;
+      }
+      
+      for (const boletoPayment of boletoPayments) {
+        const installments = boletoPayment.installments || 1;
+        let installmentValue = boletoPayment.installmentValue || boletoPayment.amount;
+        const installmentInterval = boletoPayment.installmentInterval || 30;
+        const startDate = new Date(boletoPayment.firstInstallmentDate || debt.date);
+
+        // Create boletos for each installment
+        for (let i = 0; i < installments; i++) {
+          const dueDate = new Date(startDate);
+          dueDate.setDate(dueDate.getDate() + (i * installmentInterval));
+
+          // Validate installment value
+          if (!installmentValue || installmentValue <= 0) {
+            console.warn(`⚠️ Valor da parcela inválido para boleto ${i + 1}, usando valor total`);
+            installmentValue = boletoPayment.amount;
+          }
+          
+          const debtBoletoData: Omit<DebtBoleto, 'id' | 'createdAt' | 'updatedAt'> = {
+            debtId: debt.id,
+            number: `${debt.company.substring(0, 3).toUpperCase()}-DEBT-${Date.now()}-${i + 1}`,
+            dueDate: dueDate.toISOString().split('T')[0],
+            value: installmentValue,
+          console.log(`🔄 Criando boleto de dívida ${i + 1}/${installments}:`, debtBoletoData);
+          
+          try {
+            await debtBoletosService.create(debtBoletoData);
+            console.log(`✅ Boleto de dívida ${i + 1}/${installments} criado para dívida ${debt.id}`);
+          } catch (error) {
+            console.error(`❌ Erro ao criar boleto de dívida ${i + 1}/${installments}:`, error);
+            // Don't throw error to prevent debt creation failure
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erro na criação automática de boletos para dívida:', error);
+      // Don't throw error to prevent debt creation failure
+    }
+  }
+
+  // Create cheques for debts
+  static async createChequesForDebt(debt: Debt): Promise<void> {
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado, pulando criação automática de cheques para dívida');
+      return;
+    }
+            status: 'pendente',
+    try {
+      console.log('🔄 Criando cheques automáticos para dívida:', debt.id);
+      
+      // Find payment methods that are cheques
+      const chequePayments = debt.paymentMethods.filter(method => method.type === 'cheque');
+      
+      if (chequePayments.length === 0) {
+        console.log('ℹ️ Nenhum pagamento em cheque encontrado para dívida');
+        return;
+      }
+      
+      for (const chequePayment of chequePayments) {
+        const installments = chequePayment.installments || 1;
+        let installmentValue = chequePayment.installmentValue || chequePayment.amount;
+        const installmentInterval = chequePayment.installmentInterval || 30;
+        const startDate = new Date(chequePayment.firstInstallmentDate || debt.date);
+            interest: 0,
+        // Create cheques for each installment
+        for (let i = 0; i < installments; i++) {
+          const dueDate = new Date(startDate);
+          dueDate.setDate(dueDate.getDate() + (i * installmentInterval));
+            observations: `Boleto gerado automaticamente da dívida para ${debt.company} - Parcela ${i + 1}/${installments}`
+          // Validate installment value
+          if (!installmentValue || installmentValue <= 0) {
+            console.warn(`⚠️ Valor da parcela inválido para cheque ${i + 1}, usando valor total`);
+            installmentValue = chequePayment.amount;
+          }
+          
+          const debtChequeData: Omit<DebtCheque, 'id' | 'createdAt' | 'updatedAt'> = {
+            debtId: debt.id,
+            bank: 'Banco da empresa',
+            number: `CHQ-DEBT-${Date.now()}-${i + 1}`,
+            dueDate: dueDate.toISOString().split('T')[0],
+            value: installmentValue,
+            status: 'pendente',
+            observations: `Cheque gerado automaticamente da dívida para ${debt.company} - Parcela ${i + 1}/${installments}`
+          };
+          };
+          console.log(`🔄 Criando cheque de dívida ${i + 1}/${installments}:`, debtChequeData);
+          
+          try {
+            await debtChequesService.create(debtChequeData);
+            console.log(`✅ Cheque de dívida ${i + 1}/${installments} criado para dívida ${debt.id}`);
+          } catch (error) {
+            console.error(`❌ Erro ao criar cheque de dívida ${i + 1}/${installments}:`, error);
+            // Don't throw error to prevent debt creation failure
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erro na criação automática de cheques para dívida:', error);
+      // Don't throw error to prevent debt creation failure
     }
   }
 }

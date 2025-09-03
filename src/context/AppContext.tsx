@@ -14,7 +14,11 @@ import {
   cashTransactionsService,
   pixFeesService,
   cashBalancesService,
-  taxesService
+  taxesService,
+  saleBoletosService,
+  saleChequesService,
+  debtBoletosService,
+  debtChequesService
 } from '../lib/supabaseServices';
 import type { 
   Sale, 
@@ -30,7 +34,11 @@ import type {
   PixFee,
   CashBalance,
   Tax,
-  AgendaEvent
+  AgendaEvent,
+  SaleBoleto,
+  SaleCheque,
+  DebtBoleto,
+  DebtCheque
 } from '../types';
 
 interface AppContextType {
@@ -54,6 +62,10 @@ interface AppContextType {
   cashBalance: CashBalance | null;
   taxes: Tax[];
   agendaEvents: AgendaEvent[];
+  saleBoletos: SaleBoleto[];
+  saleCheques: SaleCheque[];
+  debtBoletos: DebtBoleto[];
+  debtCheques: DebtCheque[];
   
   // Auth functions
   signIn: (email: string, password: string) => Promise<void>;
@@ -111,6 +123,22 @@ interface AppContextType {
   createTax: (tax: Omit<Tax, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateTax: (tax: Tax) => Promise<void>;
   deleteTax: (id: string) => Promise<void>;
+  
+  createSaleBoleto: (boleto: Omit<SaleBoleto, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateSaleBoleto: (boleto: SaleBoleto) => Promise<void>;
+  deleteSaleBoleto: (id: string) => Promise<void>;
+  
+  createSaleCheque: (cheque: Omit<SaleCheque, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateSaleCheque: (cheque: SaleCheque) => Promise<void>;
+  deleteSaleCheque: (id: string) => Promise<void>;
+  
+  createDebtBoleto: (boleto: Omit<DebtBoleto, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateDebtBoleto: (boleto: DebtBoleto) => Promise<void>;
+  deleteDebtBoleto: (id: string) => Promise<void>;
+  
+  createDebtCheque: (cheque: Omit<DebtCheque, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateDebtCheque: (cheque: DebtCheque) => Promise<void>;
+  deleteDebtCheque: (id: string) => Promise<void>;
   
   // Utility functions
   initializeCashBalance: (initialAmount: number) => Promise<void>;

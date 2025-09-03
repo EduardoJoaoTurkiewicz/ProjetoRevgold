@@ -276,6 +276,67 @@ export interface AgendaEvent {
   updatedAt?: string;
 }
 
+// Sale Boleto interface (A Receber)
+export interface SaleBoleto {
+  id: string;
+  saleId: string;
+  number: string;
+  dueDate: string;
+  value: number;
+  status: 'pendente' | 'pago' | 'cancelado';
+  paidAt?: string;
+  interest: number;
+  observations?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Sale Cheque interface (A Receber)
+export interface SaleCheque {
+  id: string;
+  saleId: string;
+  bank?: string;
+  number?: string;
+  dueDate: string;
+  value: number;
+  usedForDebt: boolean;
+  status: 'pendente' | 'pago' | 'usado' | 'cancelado';
+  paidAt?: string;
+  observations?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Debt Boleto interface (A Pagar)
+export interface DebtBoleto {
+  id: string;
+  debtId: string;
+  number: string;
+  dueDate: string;
+  value: number;
+  status: 'pendente' | 'pago' | 'cancelado';
+  paidAt?: string;
+  interest: number;
+  observations?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Debt Cheque interface (A Pagar)
+export interface DebtCheque {
+  id: string;
+  debtId: string;
+  bank?: string;
+  number?: string;
+  dueDate: string;
+  value: number;
+  status: 'pendente' | 'pago' | 'cancelado';
+  paidAt?: string;
+  observations?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Installment interface
 export interface Installment {
   id?: string;
