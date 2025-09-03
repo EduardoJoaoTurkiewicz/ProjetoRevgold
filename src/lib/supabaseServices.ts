@@ -812,7 +812,7 @@ export const salesService = {
       client: sale.client.trim(),
       seller_id: cleanSellerId,
       custom_commission_rate: sale.customCommissionRate || 5,
-      products: !sale.products || (typeof sale.products === 'string' && sale.products.trim() === '') ? null : sale.products,
+      products: !sale.products || (typeof sale.products === 'string' && sale.products.trim() === '') ? '' : sale.products,
       observations: !sale.observations || sale.observations.trim() === '' ? null : sale.observations.trim(),
       total_value: sale.totalValue,
       payment_methods: cleanedPaymentMethods, // Keep as object for JSONB
@@ -918,7 +918,7 @@ export const salesService = {
     if (sale.client) dbData.client = sale.client.trim();
     if (cleanSellerId !== undefined) dbData.seller_id = cleanSellerId;
     if (sale.customCommissionRate !== undefined) dbData.custom_commission_rate = sale.customCommissionRate;
-    if (sale.products !== undefined) dbData.products = !sale.products || (typeof sale.products === 'string' && sale.products.trim() === '') ? null : sale.products;
+    if (sale.products !== undefined) dbData.products = !sale.products || (typeof sale.products === 'string' && sale.products.trim() === '') ? '' : sale.products;
     if (sale.observations !== undefined) dbData.observations = !sale.observations || sale.observations.trim() === '' ? null : sale.observations.trim();
     if (sale.totalValue) dbData.total_value = sale.totalValue;
     if (cleanedPaymentMethods) dbData.payment_methods = cleanedPaymentMethods; // Keep as object for JSONB
