@@ -398,8 +398,13 @@ const Dashboard: React.FC = () => {
               <p className="mb-2">Para resolver este problema:</p>
               <ul className="text-left space-y-1">
                 <li>• Verifique sua conexão com a internet</li>
-                <li>• Confirme se as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY estão corretas no arquivo .env</li>
+                <li>• <strong>Configure o arquivo .env</strong> com suas credenciais do Supabase:</li>
+                <li className="ml-4 font-mono text-xs bg-gray-100 p-2 rounded">
+                  VITE_SUPABASE_URL=https://seu-projeto-id.supabase.co<br/>
+                  VITE_SUPABASE_ANON_KEY=sua-chave-anon-aqui
+                </li>
                 <li>• Verifique se o projeto Supabase está ativo e acessível</li>
+                <li>• Reinicie o servidor de desenvolvimento após configurar o .env</li>
               </ul>
             </div>
           </div>

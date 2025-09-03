@@ -19,19 +19,30 @@ export function isSupabaseConfigured(): boolean {
   );
   
   if (!isConfigured) {
-    console.warn('⚠️ Supabase não está configurado corretamente.');
-    console.warn('📝 Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env');
-    console.warn('🔗 URL atual:', url);
-    console.warn('🔑 Key atual:', key ? `${key.substring(0, 10)}...` : 'não definida');
+    console.error('❌ SUPABASE NÃO CONFIGURADO CORRETAMENTE');
+    console.error('📝 Para corrigir este erro:');
+    console.error('1. Crie um arquivo .env na raiz do projeto');
+    console.error('2. Adicione suas credenciais do Supabase:');
+    console.error('   VITE_SUPABASE_URL=https://seu-projeto-id.supabase.co');
+    console.error('   VITE_SUPABASE_ANON_KEY=sua-chave-anon-aqui');
+    console.error('3. Reinicie o servidor de desenvolvimento');
+    console.error('🔗 URL atual:', url || 'não definida');
+    console.error('🔑 Key atual:', key ? `${key.substring(0, 10)}...` : 'não definida');
   }
   
   return isConfigured;
 }
 
-// Only create client if environment variables are properly configured
-export const supabase = isSupabaseConfigured() 
-  ? createClient<Database>(supabaseUrl, supabaseAnonKey)
-  : createClient<Database>('https://placeholder.supabase.co', 'placeholder-key');
+// Create client with proper error handling
+export const supabase = (() => {
+  if (!isSupabaseConfigured()) {
+    console.error('❌ Criando cliente Supabase com valores placeholder devido à configuração incorreta');
+    return createClient<Database>('https://placeholder.supabase.co', 'placeholder-key');
+  }
+  
+  console.log('✅ Supabase configurado corretamente, criando cliente...');
+  return createClient<Database>(supabaseUrl, supabaseAnonKey);
+})();
 
 // Test connection function
 export async function testSupabaseConnection() {

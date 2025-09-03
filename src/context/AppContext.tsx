@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
+import { isSupabaseConfigured } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import {
   salesService,
@@ -227,6 +228,11 @@ export function AppProvider({ children }: AppProviderProps) {
     setError(null);
     
     try {
+      // Check if Supabase is properly configured before attempting to load data
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase não está configurado. Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env e reinicie o servidor.');
+      }
+      
       console.log('🔄 Carregando todos os dados...');
       
       const [
@@ -329,6 +335,11 @@ export function AppProvider({ children }: AppProviderProps) {
   // Sales CRUD operations
   const createSale = async (saleData: CreateSalePayload | Partial<Sale>) => {
     try {
+      // Check Supabase configuration before attempting to create sale
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase não está configurado. Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env e reinicie o servidor.');
+      }
+      
       console.log('🔄 Criando venda:', saleData);
       
       // Use simple Sale format
