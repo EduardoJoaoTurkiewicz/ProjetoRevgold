@@ -292,24 +292,22 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       }
     });
     
-    // Create payload for RPC
-    const saleToSubmit: CreateSalePayload = {
+    // Create payload - use simple Sale format instead of complex RPC
+    const saleToSubmit = {
       date: formData.date,
-      delivery_date: formData.deliveryDate?.trim() || null,
+      deliveryDate: formData.deliveryDate?.trim() || null,
       client: formData.client.trim(),
-      seller_id: cleanSellerId,
-      custom_commission_rate: formData.customCommissionRate,
+      sellerId: cleanSellerId,
+      customCommissionRate: formData.customCommissionRate,
       products: typeof formData.products === 'string' ? [{ name: formData.products }] : formData.products,
       observations: formData.observations?.trim() || null,
-      total_value: formData.totalValue,
-      payment_methods: cleanedPaymentMethods,
-      payment_description: formData.paymentDescription?.trim() || null,
-      payment_observations: formData.paymentObservations?.trim() || null,
-      received_amount: recalculatedAmounts.receivedAmount,
-      pending_amount: recalculatedAmounts.pendingAmount,
+      totalValue: formData.totalValue,
+      paymentMethods: cleanedPaymentMethods,
+      paymentDescription: formData.paymentDescription?.trim() || null,
+      paymentObservations: formData.paymentObservations?.trim() || null,
+      receivedAmount: recalculatedAmounts.receivedAmount,
+      pendingAmount: recalculatedAmounts.pendingAmount,
       status: recalculatedAmounts.status,
-      boletos,
-      cheques
     };
     
     // Final validation before submission
@@ -318,7 +316,7 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       return;
     }
     
-    if (saleToSubmit.seller_id === '') {
+    if (saleToSubmit.sellerId === '') {
       alert('Erro interno: seller_id não pode ser string vazia. Selecione um vendedor válido ou deixe em branco.');
       return;
     }

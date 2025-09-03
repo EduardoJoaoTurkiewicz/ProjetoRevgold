@@ -88,71 +88,57 @@ export const salesService = {
     return (data || []).map(transformToCamelCase);
   },
 
-  async create(sale: CreateSalePayload): Promise<Sale> {
-    console.log('🔄 Creating sale via RPC:', sale);
+  async create(sale: Partial<Sale>): Promise<Sale> {
+    console.log('🔄 Creating sale:', sale);
     
     // Critical validation before sending to Supabase
     if (!sale.client || typeof sale.client !== 'string' || sale.client.trim() === '') {
       throw new Error('Cliente é obrigatório e deve ser um texto válido');
     }
     
-    if (!sale.total_value || typeof sale.total_value !== 'number' || sale.total_value <= 0) {
+    if (!sale.totalValue || typeof sale.totalValue !== 'number' || sale.totalValue <= 0) {
       throw new Error('Valor total deve ser um número maior que zero');
     }
     
     // Validate seller_id specifically for UUID issues
-    if (sale.seller_id !== undefined && sale.seller_id !== null) {
-      if (typeof sale.seller_id !== 'string') {
+    if (sale.sellerId !== undefined && sale.sellerId !== null) {
+      if (typeof sale.sellerId !== 'string') {
         throw new Error('seller_id deve ser uma string UUID válida ou null');
       }
       
-      const trimmedSellerId = sale.seller_id.trim();
+      const trimmedSellerId = sale.sellerId.trim();
       if (trimmedSellerId === '' || trimmedSellerId === 'null' || trimmedSellerId === 'undefined') {
         // Convert invalid values to null
-        sale.seller_id = null;
+        sale.sellerId = null;
       } else {
         // Validate UUID format
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
         if (!uuidRegex.test(trimmedSellerId)) {
           throw new Error(`seller_id inválido: "${trimmedSellerId}" não é um UUID válido`);
         }
-        sale.seller_id = trimmedSellerId;
+        sale.sellerId = trimmedSellerId;
       }
     }
     
-    // Ensure all optional string fields are null instead of undefined
-    const cleanedSale = {
-      ...sale,
-      delivery_date: sale.delivery_date || null,
-      seller_id: sale.seller_id || null,
-      observations: sale.observations || null,
-      payment_description: sale.payment_description || null,
-      payment_observations: sale.payment_observations || null
-    };
+    // Transform to database format
+    const dbData = transformToSnakeCase(sale);
     
-    console.log('📝 Sale data after validation and cleaning:', cleanedSale);
+    console.log('📝 Sale data after validation and cleaning:', dbData);
     
-    // Use RPC instead of direct insert to avoid UUID issues
-    const { data: saleId, error } = await supabase.rpc('create_sale', {
-      payload: cleanedSale
-    });
+    // Use direct insert
+    const { data, error } = await supabase
+      .from('sales')
+      .insert([dbData])
+      .select()
+      .single();
     
     if (error) {
-      console.error('❌ RPC create_sale error:', error);
+      console.error('❌ Sales insert error:', error);
       throw new Error(`Erro ao criar venda: ${error.message}`);
     }
     
-    console.log('✅ Sale created with ID:', saleId);
-    
-    // Fetch the created sale
-    const { data: createdSale, error: fetchError } = await supabase
-      .from('sales')
-      .select('*')
-      .eq('id', saleId)
-      .single();
-    
-    if (fetchError) throw fetchError;
-    return transformToCamelCase(createdSale);
+    console.log('✅ Sale created:', data);
+    return transformToCamelCase(data);
   },
 
   async update(id: string, sale: Partial<Sale>): Promise<Sale> {

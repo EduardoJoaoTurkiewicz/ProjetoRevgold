@@ -170,7 +170,6 @@ export default function CashManagement() {
             <DollarSign className="w-12 h-12 text-blue-200" />
           </div>
           <div className="mt-4 flex items-center gap-4 text-sm text-blue-100">
-            <span>Última atualização: {formatDate(balance.last_updated)}</span>
             <span>Última atualização: {fmtDate(balance.last_updated)}</span>
           </div>
         </div>

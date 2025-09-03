@@ -120,21 +120,9 @@ interface AppContextType {
   updateTax: (tax: Tax) => Promise<void>;
   deleteTax: (id: string) => Promise<void>;
   
-  createSaleBoleto: (boleto: Omit<SaleBoleto, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateSaleBoleto: (boleto: SaleBoleto) => Promise<void>;
-  deleteSaleBoleto: (id: string) => Promise<void>;
-  
-  createSaleCheque: (cheque: Omit<SaleCheque, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateSaleCheque: (cheque: SaleCheque) => Promise<void>;
-  deleteSaleCheque: (id: string) => Promise<void>;
-  
-  createDebtBoleto: (boleto: Omit<DebtBoleto, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateDebtBoleto: (boleto: DebtBoleto) => Promise<void>;
-  deleteDebtBoleto: (id: string) => Promise<void>;
-  
-  createDebtCheque: (cheque: Omit<DebtCheque, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateDebtCheque: (cheque: DebtCheque) => Promise<void>;
-  deleteDebtCheque: (id: string) => Promise<void>;
+  // Sale Boletos/Cheques operations
+  markSaleBoletoPaid: (boletoId: string, paidAt?: string, interest?: number) => Promise<void>;
+  markSaleChequePaid: (chequeId: string, paidAt?: string) => Promise<void>;
   
   // Utility functions
   initializeCashBalance: (initialAmount: number) => Promise<void>;
@@ -343,64 +331,39 @@ export function AppProvider({ children }: AppProviderProps) {
     try {
       console.log('🔄 Criando venda:', saleData);
       
-      // Additional frontend validation before sending to service
-      let payload: CreateSalePayload;
-      
-      // Convert old Sale format to new CreateSalePayload format if needed
-      if ('client' in saleData && typeof saleData.client === 'string') {
-        // New format - use as is
-        payload = saleData as CreateSalePayload;
-      } else {
-        // Old format - convert
-        const oldSale = saleData as Partial<Sale>;
-        payload = {
-          date: oldSale.date || new Date().toISOString().split('T')[0],
-          delivery_date: oldSale.deliveryDate || undefined,
-          client: oldSale.client || '',
-          seller_id: oldSale.sellerId || undefined,
-          custom_commission_rate: oldSale.customCommissionRate || 5.00,
-          products: Array.isArray(oldSale.products) ? oldSale.products : [],
-          observations: oldSale.observations || undefined,
-          total_value: oldSale.totalValue || 0,
-          payment_methods: oldSale.paymentMethods || [],
-          payment_description: oldSale.paymentDescription || undefined,
-          payment_observations: oldSale.paymentObservations || undefined,
-          received_amount: oldSale.receivedAmount || 0,
-          pending_amount: oldSale.pendingAmount || 0,
-          status: oldSale.status || 'pendente'
-        };
-      }
+      // Use simple Sale format
+      const sale = saleData as Partial<Sale>;
       
       // Enhanced validation with clear error messages
-      if (!payload.client || !payload.client.trim()) {
+      if (!sale.client || !sale.client.trim()) {
         throw new Error('Nome do cliente é obrigatório e não pode estar vazio');
       }
       
-      if (!payload.total_value || payload.total_value <= 0) {
+      if (!sale.totalValue || sale.totalValue <= 0) {
         throw new Error('O valor total da venda deve ser maior que zero');
       }
       
-      if (!payload.payment_methods || payload.payment_methods.length === 0) {
+      if (!sale.paymentMethods || sale.paymentMethods.length === 0) {
         throw new Error('Pelo menos um método de pagamento é obrigatório');
       }
       
       // Validate payment methods total
-      const totalPaymentAmount = payload.payment_methods.reduce((sum, method) => sum + (method.amount || 0), 0);
+      const totalPaymentAmount = sale.paymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
       if (totalPaymentAmount === 0) {
         throw new Error('Pelo menos um método de pagamento deve ter valor maior que zero');
       }
       
-      if (totalPaymentAmount > payload.total_value) {
+      if (totalPaymentAmount > sale.totalValue) {
         throw new Error('O total dos métodos de pagamento não pode ser maior que o valor da venda');
       }
       
       // Critical UUID validation for seller_id
-      if (payload.seller_id && typeof payload.seller_id === 'string') {
-        const trimmedSellerId = payload.seller_id.trim();
+      if (sale.sellerId && typeof sale.sellerId === 'string') {
+        const trimmedSellerId = sale.sellerId.trim();
         
         // If empty string, null string, or undefined string, set to undefined
         if (trimmedSellerId === '' || trimmedSellerId === 'null' || trimmedSellerId === 'undefined') {
-          payload.seller_id = undefined;
+          sale.sellerId = null;
         } else {
           // Validate UUID format (basic check)
           const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -414,27 +377,27 @@ export function AppProvider({ children }: AppProviderProps) {
             throw new Error('Vendedor selecionado não existe ou não está ativo. Selecione um vendedor válido ou deixe em branco.');
           }
           
-          payload.seller_id = trimmedSellerId;
+          sale.sellerId = trimmedSellerId;
         }
       } else {
-        // Ensure seller_id is undefined if not provided
-        payload.seller_id = undefined;
+        // Ensure sellerId is null if not provided
+        sale.sellerId = null;
       }
       
-      // Clean payload before sending to service
-      const cleanedPayload = {
-        ...payload,
-        seller_id: payload.seller_id, // Already cleaned above
-        observations: payload.observations?.trim() || undefined,
-        payment_description: payload.payment_description?.trim() || undefined,
-        payment_observations: payload.payment_observations?.trim() || undefined,
-        delivery_date: payload.delivery_date?.trim() || undefined
+      // Clean sale data before sending to service
+      const cleanedSale = {
+        ...sale,
+        sellerId: sale.sellerId, // Already cleaned above
+        observations: sale.observations?.trim() || null,
+        paymentDescription: sale.paymentDescription?.trim() || null,
+        paymentObservations: sale.paymentObservations?.trim() || null,
+        deliveryDate: sale.deliveryDate?.trim() || null
       };
       
-      console.log('📝 Payload limpo antes do envio:', cleanedPayload);
+      console.log('📝 Sale data limpo antes do envio:', cleanedSale);
       
-      const saleId = await salesService.create(cleanedPayload);
-      console.log('✅ Venda criada com ID:', saleId);
+      await salesService.create(cleanedSale);
+      console.log('✅ Venda criada com sucesso');
       await loadAllData();
     } catch (error) {
       console.error('❌ Erro ao criar venda:', error);
