@@ -1,20 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, TrendingDown, Calendar, Plus, Edit2, Trash2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import type { CashTransaction, CashBalance } from '../types';
+import { DollarSign, TrendingUp, TrendingDown, Calendar, Plus, Minus, Eye, EyeOff } from 'lucide-react';
+import { useAppContext } from '../context/AppContext';
+import { formatCurrency, formatDate } from '../utils/format';
 
-interface CashManagementProps {
-  onClose?: () => void;
+interface CashTransaction {
+  id: string;
+  date: string;
+  type: 'entrada' | 'saida';
+  amount: number;
+  description: string;
+  category: string;
+  payment_method?: string;
+  created_at: string;
 }
 
-export default function CashManagement({ onClose }: CashManagementProps) {
+interface CashBalance {
+  id: string;
+  current_balance: number;
+  initial_balance: number;
+  initial_date: string;
+  last_updated: string;
+}
+
+export default function CashManagement() {
+  const { supabase } = useAppContext();
   const [transactions, setTransactions] = useState<CashTransaction[]>([]);
   const [balance, setBalance] = useState<CashBalance | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<CashTransaction | null>(null);
-
-  const [formData, setFormData] = useState({
+  const [showBalance, setShowBalance] = useState(true);
+  const [newTransaction, setNewTransaction] = useState({
     type: 'entrada' as 'entrada' | 'saida',
     amount: '',
     description: '',
@@ -23,27 +37,48 @@ export default function CashManagement({ onClose }: CashManagementProps) {
     date: new Date().toISOString().split('T')[0]
   });
 
+  const categories = [
+    { value: 'venda', label: 'Venda' },
+    { value: 'divida', label: 'Dívida' },
+    { value: 'adiantamento', label: 'Adiantamento' },
+    { value: 'salario', label: 'Salário' },
+    { value: 'comissao', label: 'Comissão' },
+    { value: 'cheque', label: 'Cheque' },
+    { value: 'boleto', label: 'Boleto' },
+    { value: 'outro', label: 'Outro' }
+  ];
+
+  const paymentMethods = [
+    { value: 'dinheiro', label: 'Dinheiro' },
+    { value: 'pix', label: 'PIX' },
+    { value: 'transferencia', label: 'Transferência' },
+    { value: 'cartao_debito', label: 'Cartão Débito' },
+    { value: 'cartao_credito', label: 'Cartão Crédito' },
+    { value: 'cheque', label: 'Cheque' },
+    { value: 'boleto', label: 'Boleto' }
+  ];
+
   useEffect(() => {
-    loadData();
+    fetchData();
   }, []);
 
-  const loadData = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
       
-      // Load cash balance
+      // Fetch cash balance
       const { data: balanceData } = await supabase
         .from('cash_balances')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
-      
+
       if (balanceData) {
         setBalance(balanceData);
       }
 
-      // Load recent transactions
+      // Fetch recent transactions
       const { data: transactionsData } = await supabase
         .from('cash_transactions')
         .select('*')
@@ -54,7 +89,7 @@ export default function CashManagement({ onClose }: CashManagementProps) {
         setTransactions(transactionsData);
       }
     } catch (error) {
-      console.error('Error loading cash data:', error);
+      console.error('Error fetching cash data:', error);
     } finally {
       setLoading(false);
     }
@@ -63,24 +98,27 @@ export default function CashManagement({ onClose }: CashManagementProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!newTransaction.amount || !newTransaction.description) {
+      alert('Por favor, preencha todos os campos obrigatórios.');
+      return;
+    }
+
     try {
-      const transactionData = {
-        ...formData,
-        amount: parseFloat(formData.amount)
-      };
+      const { error } = await supabase
+        .from('cash_transactions')
+        .insert([{
+          type: newTransaction.type,
+          amount: parseFloat(newTransaction.amount),
+          description: newTransaction.description,
+          category: newTransaction.category,
+          payment_method: newTransaction.payment_method,
+          date: newTransaction.date
+        }]);
 
-      if (editingTransaction) {
-        await supabase
-          .from('cash_transactions')
-          .update(transactionData)
-          .eq('id', editingTransaction.id);
-      } else {
-        await supabase
-          .from('cash_transactions')
-          .insert([transactionData]);
-      }
+      if (error) throw error;
 
-      setFormData({
+      // Reset form
+      setNewTransaction({
         type: 'entrada',
         amount: '',
         description: '',
@@ -88,52 +126,13 @@ export default function CashManagement({ onClose }: CashManagementProps) {
         payment_method: 'dinheiro',
         date: new Date().toISOString().split('T')[0]
       });
-      setShowForm(false);
-      setEditingTransaction(null);
-      loadData();
+
+      // Refresh data
+      fetchData();
     } catch (error) {
-      console.error('Error saving transaction:', error);
+      console.error('Error adding transaction:', error);
+      alert('Erro ao adicionar transação.');
     }
-  };
-
-  const handleEdit = (transaction: CashTransaction) => {
-    setEditingTransaction(transaction);
-    setFormData({
-      type: transaction.type,
-      amount: transaction.amount?.toString() || '',
-      description: transaction.description,
-      category: transaction.category,
-      payment_method: transaction.payment_method || 'dinheiro',
-      date: transaction.date || new Date().toISOString().split('T')[0]
-    });
-    setShowForm(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (confirm('Tem certeza que deseja excluir esta transação?')) {
-      try {
-        await supabase
-          .from('cash_transactions')
-          .delete()
-          .eq('id', id);
-        loadData();
-      } catch (error) {
-        console.error('Error deleting transaction:', error);
-      }
-    }
-  };
-
-  const formatCurrency = (value: number | null | undefined) => {
-    if (value === null || value === undefined) return 'R$ 0,00';
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '';
-    return new Date(dateString + 'T00:00:00').toLocaleDateString('pt-BR');
   };
 
   if (loading) {
@@ -146,176 +145,151 @@ export default function CashManagement({ onClose }: CashManagementProps) {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Gestão de Caixa</h2>
+        <h1 className="text-2xl font-bold text-gray-900">Gestão de Caixa</h1>
         <button
-          onClick={() => setShowForm(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          onClick={() => setShowBalance(!showBalance)}
+          className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
         >
-          <Plus className="w-4 h-4" />
-          Nova Transação
+          {showBalance ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          {showBalance ? 'Ocultar Saldo' : 'Mostrar Saldo'}
         </button>
       </div>
 
       {/* Balance Card */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex items-center gap-4">
-          <div className="bg-green-100 p-3 rounded-full">
-            <DollarSign className="w-6 h-6 text-green-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Saldo Atual</h3>
-            <p className="text-2xl font-bold text-green-600">
-              {formatCurrency(balance?.current_balance)}
-            </p>
-            {balance?.last_updated && (
-              <p className="text-sm text-gray-500">
-                Última atualização: {new Date(balance.last_updated).toLocaleString('pt-BR')}
+      {balance && (
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-100 text-sm">Saldo Atual</p>
+              <p className="text-3xl font-bold">
+                {showBalance ? formatCurrency(balance.current_balance) : '••••••'}
               </p>
-            )}
+            </div>
+            <DollarSign className="w-12 h-12 text-blue-200" />
           </div>
-        </div>
-      </div>
-
-      {/* Transaction Form */}
-      {showForm && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold mb-4">
-            {editingTransaction ? 'Editar Transação' : 'Nova Transação'}
-          </h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tipo
-                </label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value as 'entrada' | 'saida' })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  required
-                >
-                  <option value="entrada">Entrada</option>
-                  <option value="saida">Saída</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Valor
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Descrição
-                </label>
-                <input
-                  type="text"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Categoria
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  required
-                >
-                  <option value="venda">Venda</option>
-                  <option value="divida">Dívida</option>
-                  <option value="adiantamento">Adiantamento</option>
-                  <option value="salario">Salário</option>
-                  <option value="comissao">Comissão</option>
-                  <option value="cheque">Cheque</option>
-                  <option value="boleto">Boleto</option>
-                  <option value="outro">Outro</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Método de Pagamento
-                </label>
-                <select
-                  value={formData.payment_method}
-                  onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                >
-                  <option value="dinheiro">Dinheiro</option>
-                  <option value="pix">PIX</option>
-                  <option value="transferencia">Transferência</option>
-                  <option value="cartao_debito">Cartão de Débito</option>
-                  <option value="cartao_credito">Cartão de Crédito</option>
-                  <option value="cheque">Cheque</option>
-                  <option value="boleto">Boleto</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Data
-                </label>
-                <input
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-              >
-                {editingTransaction ? 'Atualizar' : 'Salvar'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  setEditingTransaction(null);
-                  setFormData({
-                    type: 'entrada',
-                    amount: '',
-                    description: '',
-                    category: 'outro',
-                    payment_method: 'dinheiro',
-                    date: new Date().toISOString().split('T')[0]
-                  });
-                }}
-                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
+          <div className="mt-4 flex items-center gap-4 text-sm text-blue-100">
+            <span>Última atualização: {formatDate(balance.last_updated)}</span>
+          </div>
         </div>
       )}
 
-      {/* Transactions List */}
-      <div className="bg-white rounded-lg shadow-md">
+      {/* Add Transaction Form */}
+      <div className="bg-white rounded-lg shadow-sm border p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Nova Transação</h2>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo
+              </label>
+              <select
+                value={newTransaction.type}
+                onChange={(e) => setNewTransaction(prev => ({ 
+                  ...prev, 
+                  type: e.target.value as 'entrada' | 'saida' 
+                }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="entrada">Entrada</option>
+                <option value="saida">Saída</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Valor *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={newTransaction.amount}
+                onChange={(e) => setNewTransaction(prev => ({ ...prev, amount: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="0,00"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Descrição *
+              </label>
+              <input
+                type="text"
+                value={newTransaction.description}
+                onChange={(e) => setNewTransaction(prev => ({ ...prev, description: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Descrição da transação"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Categoria
+              </label>
+              <select
+                value={newTransaction.category}
+                onChange={(e) => setNewTransaction(prev => ({ ...prev, category: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {categories.map(category => (
+                  <option key={category.value} value={category.value}>
+                    {category.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Método de Pagamento
+              </label>
+              <select
+                value={newTransaction.payment_method}
+                onChange={(e) => setNewTransaction(prev => ({ ...prev, payment_method: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {paymentMethods.map(method => (
+                  <option key={method.value} value={method.value}>
+                    {method.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Data
+              </label>
+              <input
+                type="date"
+                value={newTransaction.date}
+                onChange={(e) => setNewTransaction(prev => ({ ...prev, date: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+          >
+            {newTransaction.type === 'entrada' ? <Plus className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
+            Adicionar {newTransaction.type === 'entrada' ? 'Entrada' : 'Saída'}
+          </button>
+        </form>
+      </div>
+
+      {/* Recent Transactions */}
+      <div className="bg-white rounded-lg shadow-sm border">
         <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Transações Recentes</h3>
+          <h2 className="text-lg font-semibold text-gray-900">Transações Recentes</h2>
         </div>
+        
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
@@ -335,68 +309,51 @@ export default function CashManagement({ onClose }: CashManagementProps) {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Valor
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ações
-                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {transactions.map((transaction) => (
-                <tr key={transaction.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatDate(transaction.date)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      {transaction.type === 'entrada' ? (
-                        <TrendingUp className="w-4 h-4 text-green-500 mr-2" />
-                      ) : (
-                        <TrendingDown className="w-4 h-4 text-red-500 mr-2" />
-                      )}
-                      <span className={`text-sm font-medium ${
-                        transaction.type === 'entrada' ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {transaction.type === 'entrada' ? 'Entrada' : 'Saída'}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {transaction.description}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {transaction.category}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <span className={transaction.type === 'entrada' ? 'text-green-600' : 'text-red-600'}>
-                      {transaction.type === 'entrada' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleEdit(transaction)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(transaction.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+              {transactions.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                    Nenhuma transação encontrada
                   </td>
                 </tr>
-              ))}
+              ) : (
+                transactions.map((transaction) => (
+                  <tr key={transaction.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatDate(transaction.date)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        {transaction.type === 'entrada' ? (
+                          <TrendingUp className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <TrendingDown className="w-4 h-4 text-red-600" />
+                        )}
+                        <span className={`text-sm font-medium ${
+                          transaction.type === 'entrada' ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {transaction.type === 'entrada' ? 'Entrada' : 'Saída'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {transaction.description}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {categories.find(c => c.value === transaction.category)?.label || transaction.category}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <span className={transaction.type === 'entrada' ? 'text-green-600' : 'text-red-600'}>
+                        {transaction.type === 'entrada' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
-          
-          {transactions.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              Nenhuma transação encontrada
-            </div>
-          )}
         </div>
       </div>
     </div>
