@@ -789,11 +789,6 @@ export const salesService = {
     }
     
     // Additional validation to ensure we never send empty strings to UUID fields
-    if (cleanSellerId === '') {
-        cleanSellerId = trimmedSellerId;
-      cleanSellerId = null;
-    }
-    
     // Debug logging to inspect seller_id value
     console.log('🔍 Debug seller_id validation:', {
       original: sale.sellerId,
