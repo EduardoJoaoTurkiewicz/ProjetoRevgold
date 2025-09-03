@@ -466,22 +466,22 @@ export const cashBalancesService = {
     if (!isSupabaseConfigured()) return null;
     
     try {
-    const { data, error } = await supabase
-      .from('cash_balances')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1)
+      const { data, error } = await supabase
+        .from('cash_balances')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
-    
+      
       if (error) {
         console.error('Erro ao buscar saldo do caixa:', error);
         throw new Error(`Erro ao buscar saldo do caixa: ${error.message}`);
       }
       
-    return data ? transformDatabaseRow<CashBalance>(data) : null;
+      return data ? transformDatabaseRow<CashBalance>(data) : null;
     } catch (error) {
       console.error('Erro na busca do saldo:', error);
-      return null;
+      throw error;
     }
   },
 
