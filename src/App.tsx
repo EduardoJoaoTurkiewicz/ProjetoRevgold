@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AppProvider } from './context/AppContext';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import { Sales } from './components/Sales';
@@ -12,12 +13,18 @@ import { CashManagement } from './components/CashManagement';
 import { Agenda } from './components/Agenda';
 import { Employees } from './components/Employees';
 import { Taxes } from './components/Taxes';
+import { PrintReportPage } from './components/reports/PrintReportPage';
 
 function App() {
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <Router>
+      <AppProvider>
+        <Routes>
+          <Route path="/print/reports" element={<PrintReportPage />} />
+          <Route path="/*" element={<AppContent />} />
+        </Routes>
+      </AppProvider>
+    </Router>
   );
 }
 

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { FileText, TrendingUp, Calendar, DollarSign, Filter, Eye, ArrowUpCircle, ArrowDownCircle, CreditCard, Receipt, Users, Building2, Clock, CheckCircle, AlertTriangle, Download } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
-import { exportReportToPDF } from '../utils/pdfExport';
+import { ExportButtons } from './reports/ExportButtons';
 
 export default function Reports() {
   const { 
@@ -261,12 +261,17 @@ export default function Reports() {
           <p className="text-slate-600 text-lg">Análise detalhada dos dados do negócio</p>
         </div>
         <button
-          onClick={() => exportReportToPDF(filteredData, startDate, endDate)}
+          onClick={() => {}}
           className="btn-primary flex items-center gap-2 modern-shadow-xl hover:modern-shadow-lg ml-auto"
+          style={{ visibility: 'hidden' }}
         >
           <Download className="w-5 h-5" />
           Exportar PDF
         </button>
+        <ExportButtons 
+          filters={{ startDate, endDate, status: 'all' }}
+          data={filteredData}
+        />
       </div>
 
       {/* Filtro de Período */}

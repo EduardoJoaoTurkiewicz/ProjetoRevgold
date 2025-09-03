@@ -1,0 +1,360 @@
+/* Mantém as cores fiéis no PDF */
+html, body { 
+  -webkit-print-color-adjust: exact; 
+  print-color-adjust: exact; 
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Formato e margens A4 */
+@page {
+  size: A4 portrait;
+  margin: 14mm 12mm 16mm 12mm;
+}
+
+/* Controle de quebras */
+.page-break { 
+  break-after: page; 
+}
+
+.avoid-break-inside { 
+  break-inside: avoid; 
+}
+
+.avoid-break-after { 
+  break-after: avoid; 
+}
+
+.avoid-break-before { 
+  break-before: avoid; 
+}
+
+.keep-together {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Repetir cabeçalho/rodapé de tabelas */
+table { 
+  width: 100%; 
+  border-collapse: collapse; 
+  margin: 16px 0;
+}
+
+thead { 
+  display: table-header-group; 
+}
+
+tfoot { 
+  display: table-footer-group; 
+}
+
+tbody {
+  display: table-row-group;
+}
+
+/* Estética de tabela (alinhar ao design da aba) */
+th, td { 
+  padding: 12px 16px; 
+  border-bottom: 1px solid rgba(0,0,0,0.08); 
+  font-size: 12px;
+  text-align: left;
+}
+
+thead th { 
+  background: linear-gradient(to right, #f1f5f9, #e2e8f0) !important;
+  font-weight: 700;
+  color: #334155 !important;
+  border-bottom: 2px solid #cbd5e1 !important;
+}
+
+tr:nth-child(even) td { 
+  background: rgba(0,0,0,0.02) !important; 
+}
+
+.subtotal-row td {
+  background: linear-gradient(to right, #f8fafc, #f1f5f9) !important;
+  font-weight: 700 !important;
+  border-top: 2px solid #cbd5e1 !important;
+  border-bottom: 2px solid #cbd5e1 !important;
+}
+
+.total-row td {
+  background: linear-gradient(to right, #dbeafe, #bfdbfe) !important;
+  font-weight: 800 !important;
+  font-size: 14px !important;
+  border-top: 3px solid #3b82f6 !important;
+  border-bottom: 3px solid #3b82f6 !important;
+}
+
+/* Títulos/Seções */
+.section-title { 
+  font-size: 18px; 
+  font-weight: 800; 
+  margin: 24px 0 16px; 
+  color: #1e293b;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.subsection-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 20px 0 12px;
+  color: #334155;
+}
+
+.subtle { 
+  color: #64748b; 
+  font-size: 14px;
+}
+
+/* Cards equivalentes */
+.print-card { 
+  border: 1px solid rgba(0,0,0,0.08); 
+  border-radius: 16px; 
+  padding: 20px; 
+  margin: 16px 0;
+  background: white !important;
+}
+
+.print-card-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.print-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+}
+
+.print-card-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0;
+}
+
+.print-card-subtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin: 4px 0 0 0;
+}
+
+/* Grid layouts */
+.print-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.print-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+
+.print-grid-4 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 20px;
+}
+
+/* Metric cards */
+.metric-card {
+  text-align: center;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: white !important;
+}
+
+.metric-value {
+  font-size: 28px;
+  font-weight: 900;
+  margin: 8px 0;
+}
+
+.metric-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-green { color: #059669 !important; }
+.metric-red { color: #dc2626 !important; }
+.metric-blue { color: #2563eb !important; }
+.metric-orange { color: #ea580c !important; }
+.metric-purple { color: #9333ea !important; }
+
+/* Status badges */
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-paid {
+  background: #dcfce7 !important;
+  color: #166534 !important;
+  border: 1px solid #bbf7d0 !important;
+}
+
+.status-pending {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+  border: 1px solid #fde68a !important;
+}
+
+.status-partial {
+  background: #dbeafe !important;
+  color: #1e40af !important;
+  border: 1px solid #bfdbfe !important;
+}
+
+/* Payment method badges */
+.payment-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.payment-dinheiro { background: #dcfce7 !important; color: #166534 !important; }
+.payment-pix { background: #dbeafe !important; color: #1e40af !important; }
+.payment-cartao { background: #f3e8ff !important; color: #7c3aed !important; }
+.payment-cheque { background: #fef3c7 !important; color: #92400e !important; }
+.payment-boleto { background: #cffafe !important; color: #0f766e !important; }
+
+/* Chart containers */
+.chart-container {
+  width: 100%;
+  height: 300px;
+  margin: 20px 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  background: white !important;
+}
+
+/* Logo and branding */
+.company-logo {
+  max-height: 60px;
+  max-width: 200px;
+}
+
+.company-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding-bottom: 20px;
+  border-bottom: 3px solid #e2e8f0;
+}
+
+.report-title {
+  font-size: 28px;
+  font-weight: 900;
+  color: #1e293b;
+  margin: 0;
+}
+
+.report-subtitle {
+  font-size: 16px;
+  color: #64748b;
+  margin: 8px 0 0 0;
+}
+
+/* Filter summary */
+.filter-summary {
+  background: linear-gradient(to right, #f8fafc, #f1f5f9) !important;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 20px 0;
+}
+
+.filter-item {
+  display: inline-block;
+  margin: 4px 8px 4px 0;
+  padding: 4px 12px;
+  background: white !important;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Text utilities */
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+.text-bold { font-weight: 700; }
+.text-black { font-weight: 900; }
+
+/* Color utilities for print */
+.text-green { color: #059669 !important; }
+.text-red { color: #dc2626 !important; }
+.text-blue { color: #2563eb !important; }
+.text-orange { color: #ea580c !important; }
+.text-purple { color: #9333ea !important; }
+.text-gray { color: #6b7280 !important; }
+
+/* Background utilities for print */
+.bg-green-light { background: #f0fdf4 !important; }
+.bg-red-light { background: #fef2f2 !important; }
+.bg-blue-light { background: #eff6ff !important; }
+.bg-orange-light { background: #fff7ed !important; }
+.bg-purple-light { background: #faf5ff !important; }
+
+/* Hide elements in print */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+}
+
+@media screen {
+  .print-only {
+    display: none !important;
+  }
+}
+
+/* Ensure proper spacing */
+.section-spacing {
+  margin: 32px 0;
+}
+
+.subsection-spacing {
+  margin: 24px 0;
+}
+
+/* Footer styling */
+.report-footer {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 2px solid #e2e8f0;
+  text-align: center;
+  color: #64748b;
+  font-size: 12px;
+}
