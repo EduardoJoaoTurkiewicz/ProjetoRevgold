@@ -105,6 +105,11 @@ export const salesService = {
       throw new Error('Valor total deve ser um número maior que zero');
     }
     
+    // Fix sellerId empty string issue before transformation
+    if (sale.sellerId === '' || sale.sellerId === 'null' || sale.sellerId === 'undefined') {
+      sale.sellerId = null;
+    }
+    
     // Validate seller_id specifically for UUID issues
     if (sale.sellerId !== undefined && sale.sellerId !== null) {
       if (typeof sale.sellerId !== 'string') {
