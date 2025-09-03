@@ -35,7 +35,12 @@ function transformToSnakeCase(obj: any): any {
   const transformed: any = {};
   for (const [key, value] of Object.entries(obj)) {
     const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-    transformed[snakeKey] = value === '' ? null : value;
+    // Convert empty strings, null, undefined to null for database
+    if (value === '' || value === null || value === undefined) {
+      transformed[snakeKey] = null;
+    } else {
+      transformed[snakeKey] = value;
+    }
   }
   return transformed;
 }
