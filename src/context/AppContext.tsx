@@ -360,11 +360,25 @@ export function AppProvider({ children }: AppProviderProps) {
         throw new Error('Total dos métodos de pagamento não pode exceder o valor da venda');
       }
       
+      // Validate sellerId if provided
+      if (sale.sellerId && typeof sale.sellerId === 'string') {
+        const trimmedSellerId = sale.sellerId.trim();
+        if (trimmedSellerId !== '' && trimmedSellerId !== 'null' && trimmedSellerId !== 'undefined') {
+          // Check if seller exists and is active
+          const seller = employees.find(emp => emp.id === trimmedSellerId && emp.isActive);
+          if (!seller) {
+            throw new Error('Vendedor selecionado não existe ou não está ativo. Selecione um vendedor válido ou deixe em branco.');
+          }
+        }
+      }
+      
       // Clean sellerId before sending to service
       const cleanedSale = {
         ...sale,
-        sellerId: sale.sellerId && sale.sellerId.trim() !== '' ? sale.sellerId.trim() : null
+        sellerId: sale.sellerId && typeof sale.sellerId === 'string' && sale.sellerId.trim() !== '' && sale.sellerId.trim() !== 'null' ? sale.sellerId.trim() : null
       };
+      
+      console.log('📝 Venda limpa antes do envio:', cleanedSale);
       
       const newSale = await salesService.create(cleanedSale);
       console.log('✅ Venda criada:', newSale);
@@ -372,6 +386,18 @@ export function AppProvider({ children }: AppProviderProps) {
       await loadAllData();
     } catch (error) {
       console.error('❌ Erro ao criar venda:', error);
+      
+      // Enhanced error handling
+      if (error instanceof Error) {
+        if (error.message.includes('duplicate') || error.message.includes('duplicata')) {
+          throw new Error('Venda duplicada: Uma venda similar já foi registrada. Verifique os dados ou aguarde alguns segundos antes de tentar novamente.');
+        } else if (error.message.includes('vendedor') || error.message.includes('seller')) {
+          throw new Error('Problema com vendedor: ' + error.message);
+        } else if (error.message.includes('constraint') || error.message.includes('violates')) {
+          throw new Error('Dados inválidos: ' + error.message);
+        }
+      }
+      
       throw error;
     }
   };

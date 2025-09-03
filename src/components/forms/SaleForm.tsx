@@ -124,6 +124,8 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('📝 Dados do formulário antes da validação:', formData);
+    
     if (!formData.client || !formData.client.trim()) {
       alert('Por favor, informe o nome do cliente.');
       return;
@@ -163,41 +165,118 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       }
     }
     
-    // Clean payment methods data
-    const cleanedPaymentMethods = formData.paymentMethods.map(method => {
-      const cleaned: PaymentMethod = { ...method };
-      
-      // Clean empty values
-      Object.keys(cleaned).forEach(key => {
-        const value = cleaned[key as keyof PaymentMethod];
-        if (typeof value === 'string' && value.trim() === '') {
-          delete cleaned[key as keyof PaymentMethod];
+    // Clean and validate payment methods data
+    const cleanedPaymentMethods = formData.paymentMethods
+      .filter(method => method.amount > 0) // Remove methods with zero amount
+      .map(method => {
+        const cleaned: any = { ...method };
+        
+        // Ensure required fields are properly typed
+        if (!cleaned.type || typeof cleaned.type !== 'string') {
+          cleaned.type = 'dinheiro';
         }
-      });
-      
-      return cleaned;
-    });
+        
+        if (typeof cleaned.amount !== 'number' || cleaned.amount <= 0) {
+          return null; // Will be filtered out
+        }
+        
+        // Clean optional fields - remove empty values
+        Object.keys(cleaned).forEach(key => {
+          const value = cleaned[key];
+          if (value === undefined || value === '' || 
+              (Array.isArray(value) && value.length === 0) ||
+              (typeof value === 'string' && value.trim() === '')) {
+            delete cleaned[key];
+          }
+        });
+        
+        // Handle installment fields properly
+        if (cleaned.installments === 1 || !cleaned.installments) {
+          delete cleaned.installments;
+          delete cleaned.installmentValue;
+          delete cleaned.installmentInterval;
+          delete cleaned.firstInstallmentDate;
+          delete cleaned.startDate;
+        }
+        
+        // Validate installment data if present
+        if (cleaned.installments && cleaned.installments > 1) {
+          if (!cleaned.installmentValue || cleaned.installmentValue <= 0) {
+            cleaned.installmentValue = cleaned.amount / cleaned.installments;
+          }
+          if (!cleaned.installmentInterval || cleaned.installmentInterval <= 0) {
+            cleaned.installmentInterval = 30; // Default to 30 days
+          }
+        }
+        
+        return cleaned;
+      })
+      .filter(method => method !== null); // Remove null methods
     
+    if (cleanedPaymentMethods.length === 0) {
+      alert('Pelo menos um método de pagamento deve ter valor maior que zero.');
+      return;
+    }
+    
+    console.log('✅ Métodos de pagamento limpos:', cleanedPaymentMethods);
+      
     // Clean sellerId - ensure it's either a valid UUID or null
     let cleanSellerId = null;
     if (formData.sellerId && typeof formData.sellerId === 'string') {
       const trimmedSellerId = formData.sellerId.trim();
       if (trimmedSellerId !== '' && trimmedSellerId !== 'null' && trimmedSellerId !== 'undefined') {
-        cleanSellerId = trimmedSellerId;
+        // Validate UUID format before using
+        if (isValidUuid(trimmedSellerId)) {
+          cleanSellerId = trimmedSellerId;
+        } else {
+          console.warn('⚠️ ID de vendedor inválido, será definido como null:', trimmedSellerId);
+          cleanSellerId = null;
+        }
       }
     }
+    
+    // Recalculate amounts with cleaned payment methods
+    const recalculatedAmounts = (() => {
+      const totalPayments = cleanedPaymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
+      const receivedAmount = cleanedPaymentMethods.reduce((sum, method) => {
+        // Immediate payment methods
+        if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
+            (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
+          return sum + method.amount;
+        }
+        return sum;
+      }, 0);
+      
+      const pendingAmount = Math.max(0, formData.totalValue - receivedAmount);
+      
+      let status: Sale['status'] = 'pendente';
+      if (receivedAmount >= formData.totalValue) {
+        status = 'pago';
+      } else if (receivedAmount > 0) {
+        status = 'parcial';
+      }
+      
+      return {
+        receivedAmount,
+        pendingAmount,
+        status,
+        totalPayments
+      };
+    })();
     
     const saleToSubmit = {
       ...formData,
       sellerId: cleanSellerId,
-      products: formData.products && formData.products.trim() !== '' ? formData.products.trim() : null,
-      observations: formData.observations && formData.observations.trim() !== '' ? formData.observations.trim() : null,
-      paymentDescription: formData.paymentDescription && formData.paymentDescription.trim() !== '' ? formData.paymentDescription.trim() : null,
-      paymentObservations: formData.paymentObservations && formData.paymentObservations.trim() !== '' ? formData.paymentObservations.trim() : null,
-      deliveryDate: formData.deliveryDate && formData.deliveryDate.trim() !== '' ? formData.deliveryDate : null,
+      products: formData.products && typeof formData.products === 'string' && formData.products.trim() !== '' ? formData.products.trim() : null,
+      observations: formData.observations && typeof formData.observations === 'string' && formData.observations.trim() !== '' ? formData.observations.trim() : null,
+      paymentDescription: formData.paymentDescription && typeof formData.paymentDescription === 'string' && formData.paymentDescription.trim() !== '' ? formData.paymentDescription.trim() : null,
+      paymentObservations: formData.paymentObservations && typeof formData.paymentObservations === 'string' && formData.paymentObservations.trim() !== '' ? formData.paymentObservations.trim() : null,
+      deliveryDate: formData.deliveryDate && typeof formData.deliveryDate === 'string' && formData.deliveryDate.trim() !== '' ? formData.deliveryDate.trim() : null,
       paymentMethods: cleanedPaymentMethods,
-      ...amounts
+      ...recalculatedAmounts
     };
+    
+    console.log('📤 Dados finais para submissão:', saleToSubmit);
     
     onSubmit(saleToSubmit);
   };
