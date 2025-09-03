@@ -347,7 +347,48 @@ export function CashManagement() {
     
     try {
       console.log('🔄 Inicializando caixa com valor:', initialAmount);
-      await initializeCashBalance(initialAmount);
+      
+      // Criar saldo inicial diretamente
+      const { data: existingBalance, error: checkError } = await supabase
+        .from('cash_balances')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+      
+      if (checkError) {
+        console.error('Erro ao verificar saldo existente:', checkError);
+        throw new Error(`Erro ao verificar saldo: ${checkError.message}`);
+      }
+      
+      if (existingBalance) {
+        // Atualizar saldo existente
+        const { error: updateError } = await supabase
+          .from('cash_balances')
+          .update({
+            initial_balance: initialAmount,
+            current_balance: initialAmount,
+            initial_date: new Date().toISOString().split('T')[0],
+            last_updated: new Date().toISOString()
+          })
+          .eq('id', existingBalance.id);
+        
+        if (updateError) {
+          console.error('Erro ao atualizar saldo:', updateError);
+          throw new Error(`Erro ao atualizar saldo: ${updateError.message}`);
+        }
+      } else {
+        // Criar novo saldo
+        const { error: createError } = await supabase
+          .from('cash_balances')
+          .insert([{
+            initial_balance: initialAmount,
+            current_balance: initialAmount,
+            initial_date: new Date().toISOString().split('T')[0],
+            last_updated: new Date().toISOString()
+          }]);
+        
+        if (createError) {
+          console.error('Erro ao criar saldo:', createError);
       console.log('✅ Caixa inicializado com sucesso');
       
       // Forçar recarregamento dos dados

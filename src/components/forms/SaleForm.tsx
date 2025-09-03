@@ -1,427 +1,846 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, DollarSign, User, Package, FileText, CreditCard } from 'lucide-react';
-import { Employee, Sale } from '../../types';
-import { supabase } from '../../lib/supabase';
+import { X, Plus, Trash2, Calendar, DollarSign, User, Package, FileText, CreditCard, AlertCircle, Calculator, CheckCircle } from 'lucide-react';
+import { useAppContext } from '../../context/AppContext';
+import { Sale, PaymentMethod, ThirdPartyCheckDetails } from '../../types';
 
 interface SaleFormProps {
-  onSubmit: (sale: Omit<Sale, 'id' | 'created_at' | 'updated_at'>) => void;
+  sale?: Sale | null;
+  onSubmit: (sale: Partial<Sale>) => void;
   onCancel: () => void;
-  initialData?: Sale;
 }
 
-export default function SaleForm({ onSubmit, onCancel, initialData }: SaleFormProps) {
-  const [employees, setEmployees] = useState<Employee[]>([]);
+const PAYMENT_TYPES = [
+  { value: 'dinheiro', label: 'Dinheiro' },
+  { value: 'pix', label: 'PIX' },
+  { value: 'cartao_credito', label: 'Cartão de Crédito' },
+  { value: 'cartao_debito', label: 'Cartão de Débito' },
+  { value: 'cheque', label: 'Cheque' },
+  { value: 'boleto', label: 'Boleto' },
+  { value: 'transferencia', label: 'Transferência' }
+];
+
+export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
+  const { employees } = useAppContext();
+  
   const [formData, setFormData] = useState({
-    date: initialData?.date || new Date().toISOString().split('T')[0],
-    delivery_date: initialData?.delivery_date || '',
-    client: initialData?.client || '',
-    seller_id: initialData?.seller_id || '',
-    products: initialData?.products || [],
-    observations: initialData?.observations || '',
-    total_value: initialData?.total_value || 0,
-    payment_methods: initialData?.payment_methods || [],
-    received_amount: initialData?.received_amount || 0,
-    pending_amount: initialData?.pending_amount || 0,
-    status: initialData?.status || 'pendente',
-    payment_description: initialData?.payment_description || '',
-    payment_observations: initialData?.payment_observations || '',
-    custom_commission_rate: initialData?.custom_commission_rate || 5.00
+    date: sale?.date || new Date().toISOString().split('T')[0],
+    deliveryDate: sale?.deliveryDate || '',
+    client: sale?.client || '',
+    sellerId: sale?.sellerId || '',
+    products: sale?.products || '',
+    observations: sale?.observations || '',
+    totalValue: sale?.totalValue || 0,
+    paymentMethods: sale?.paymentMethods || [{ type: 'dinheiro' as const, amount: 0 }],
+    paymentDescription: sale?.paymentDescription || '',
+    paymentObservations: sale?.paymentObservations || '',
+    customCommissionRate: sale?.customCommissionRate || 5.00
   });
 
-  const [currentProduct, setCurrentProduct] = useState({
-    name: '',
-    quantity: 1,
-    unit_price: 0,
-    total_price: 0
-  });
+  const activeEmployees = employees.filter(emp => emp.isActive);
+  const sellers = activeEmployees.filter(emp => emp.isSeller);
 
-  const [currentPayment, setCurrentPayment] = useState({
-    method: 'dinheiro',
-    amount: 0,
-    description: ''
-  });
+  const addPaymentMethod = () => {
+    setFormData(prev => ({
+      ...prev,
+      paymentMethods: [...prev.paymentMethods, { type: 'dinheiro', amount: 0 }]
+    }));
+  };
 
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
+  const removePaymentMethod = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      paymentMethods: prev.paymentMethods.filter((_, i) => i !== index)
+    }));
+  };
 
-  useEffect(() => {
-    const totalProducts = formData.products.reduce((sum: number, product: any) => sum + product.total_price, 0);
-    const totalPayments = formData.payment_methods.reduce((sum: number, payment: any) => sum + payment.amount, 0);
+  const updatePaymentMethod = (index: number, field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      paymentMethods: prev.paymentMethods.map((method, i) => 
+        i === index ? { ...method, [field]: value } : method
+      )
+    }));
+  };
+
+  const addThirdPartyCheckDetail = (methodIndex: number) => {
+    const method = formData.paymentMethods[methodIndex];
+    const newDetail: ThirdPartyCheckDetails = {
+      bank: '',
+      agency: '',
+      account: '',
+      checkNumber: '',
+      issuer: '',
+      cpfCnpj: '',
+      observations: ''
+    };
     
-    setFormData(prev => ({
-      ...prev,
-      total_value: totalProducts,
-      received_amount: totalPayments,
-      pending_amount: totalProducts - totalPayments
-    }));
-  }, [formData.products, formData.payment_methods]);
+    updatePaymentMethod(methodIndex, 'thirdPartyDetails', [
+      ...(method.thirdPartyDetails || []),
+      newDetail
+    ]);
+  };
 
-  const fetchEmployees = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
+  const updateThirdPartyCheckDetail = (methodIndex: number, detailIndex: number, field: string, value: string) => {
+    const method = formData.paymentMethods[methodIndex];
+    const updatedDetails = [...(method.thirdPartyDetails || [])];
+    updatedDetails[detailIndex] = { ...updatedDetails[detailIndex], [field]: value };
+    updatePaymentMethod(methodIndex, 'thirdPartyDetails', updatedDetails);
+  };
 
-      if (error) throw error;
-      setEmployees(data || []);
-    } catch (error) {
-      console.error('Error fetching employees:', error);
+  const removeThirdPartyCheckDetail = (methodIndex: number, detailIndex: number) => {
+    const method = formData.paymentMethods[methodIndex];
+    const updatedDetails = (method.thirdPartyDetails || []).filter((_, i) => i !== detailIndex);
+    updatePaymentMethod(methodIndex, 'thirdPartyDetails', updatedDetails);
+  };
+
+  const calculateAmounts = () => {
+    const totalPayments = formData.paymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
+    const receivedAmount = formData.paymentMethods.reduce((sum, method) => {
+      // Immediate payment methods
+      if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
+          (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
+        return sum + method.amount;
+      }
+      return sum;
+    }, 0);
+    
+    const pendingAmount = Math.max(0, formData.totalValue - receivedAmount);
+    
+    let status: Sale['status'] = 'pendente';
+    if (receivedAmount >= formData.totalValue) {
+      status = 'pago';
+    } else if (receivedAmount > 0) {
+      status = 'parcial';
     }
-  };
-
-  const addProduct = () => {
-    if (currentProduct.name && currentProduct.quantity > 0 && currentProduct.unit_price > 0) {
-      const totalPrice = currentProduct.quantity * currentProduct.unit_price;
-      setFormData(prev => ({
-        ...prev,
-        products: [...prev.products, { ...currentProduct, total_price: totalPrice }]
-      }));
-      setCurrentProduct({ name: '', quantity: 1, unit_price: 0, total_price: 0 });
-    }
-  };
-
-  const removeProduct = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      products: prev.products.filter((_: any, i: number) => i !== index)
-    }));
-  };
-
-  const addPayment = () => {
-    if (currentPayment.amount > 0) {
-      setFormData(prev => ({
-        ...prev,
-        payment_methods: [...prev.payment_methods, currentPayment]
-      }));
-      setCurrentPayment({ method: 'dinheiro', amount: 0, description: '' });
-    }
-  };
-
-  const removePayment = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      payment_methods: prev.payment_methods.filter((_: any, i: number) => i !== index)
-    }));
+    
+    return {
+      receivedAmount,
+      pendingAmount,
+      status,
+      totalPayments
+    };
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Update status based on payment
-    let status = 'pendente';
-    if (formData.received_amount >= formData.total_value) {
-      status = 'pago';
-    } else if (formData.received_amount > 0) {
-      status = 'parcial';
+    if (!formData.client || !formData.client.trim()) {
+      alert('Por favor, informe o nome do cliente.');
+      return;
     }
-
-    onSubmit({
-      ...formData,
-      status,
-      delivery_date: formData.delivery_date || null
+    
+    if (!formData.totalValue || formData.totalValue <= 0) {
+      alert('O valor total da venda deve ser maior que zero.');
+      return;
+    }
+    
+    if (!formData.paymentMethods || formData.paymentMethods.length === 0) {
+      alert('Por favor, adicione pelo menos um método de pagamento.');
+      return;
+    }
+    
+    const amounts = calculateAmounts();
+    
+    if (amounts.totalPayments === 0) {
+      alert('Por favor, informe pelo menos um método de pagamento com valor maior que zero.');
+      return;
+    }
+    
+    if (amounts.totalPayments > formData.totalValue) {
+      alert('O total dos métodos de pagamento não pode ser maior que o valor total da venda.');
+      return;
+    }
+    
+    // Validate third party check details if needed
+    for (const method of formData.paymentMethods) {
+      if (method.type === 'cheque' && method.isThirdPartyCheck && method.thirdPartyDetails) {
+        for (const detail of method.thirdPartyDetails) {
+          if (!detail.issuer || !detail.cpfCnpj || !detail.bank || !detail.agency || !detail.account || !detail.checkNumber) {
+            alert('Por favor, preencha todos os campos obrigatórios dos cheques de terceiros.');
+            return;
+          }
+        }
+      }
+    }
+    
+    // Clean payment methods data
+    const cleanedPaymentMethods = formData.paymentMethods.map(method => {
+      const cleaned: PaymentMethod = { ...method };
+      
+      // Clean empty values
+      Object.keys(cleaned).forEach(key => {
+        const value = cleaned[key as keyof PaymentMethod];
+        if (typeof value === 'string' && value.trim() === '') {
+          delete cleaned[key as keyof PaymentMethod];
+        }
+      });
+      
+      return cleaned;
     });
+    
+    // Clean sellerId - ensure it's either a valid UUID or null
+    let cleanSellerId = null;
+    if (formData.sellerId && typeof formData.sellerId === 'string') {
+      const trimmedSellerId = formData.sellerId.trim();
+      if (trimmedSellerId && trimmedSellerId !== '') {
+        cleanSellerId = trimmedSellerId;
+      }
+    }
+    
+    const saleToSubmit = {
+      ...formData,
+      sellerId: cleanSellerId,
+      products: !formData.products || formData.products.trim() === '' ? null : formData.products.trim(),
+      observations: !formData.observations || formData.observations.trim() === '' ? null : formData.observations.trim(),
+      paymentDescription: !formData.paymentDescription || formData.paymentDescription.trim() === '' ? null : formData.paymentDescription.trim(),
+      paymentObservations: !formData.paymentObservations || formData.paymentObservations.trim() === '' ? null : formData.paymentObservations.trim(),
+      deliveryDate: !formData.deliveryDate || formData.deliveryDate.trim() === '' ? null : formData.deliveryDate,
+      paymentMethods: cleanedPaymentMethods,
+      ...amounts
+    };
+    
+    console.log('📝 Enviando venda:', saleToSubmit);
+    onSubmit(saleToSubmit);
   };
 
+  const amounts = calculateAmounts();
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
-            {initialData ? 'Editar Venda' : 'Nova Venda'}
-          </h2>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                <Calendar className="w-4 h-4 inline mr-1" />
-                Data da Venda
-              </label>
-              <input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[100] backdrop-blur-sm modal-overlay">
+      <div className="bg-white rounded-3xl max-w-6xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
+        <div className="p-8">
+          <div className="flex justify-between items-center mb-8">
+            <div className="flex items-center gap-4">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-xl">
+                <DollarSign className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h2 className="text-3xl font-bold text-slate-900">
+                  {sale ? 'Editar Venda' : 'Nova Venda'}
+                </h2>
+                <p className="text-slate-600">Registre uma nova venda no sistema</p>
+              </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                <Calendar className="w-4 h-4 inline mr-1" />
-                Data de Entrega
-              </label>
-              <input
-                type="date"
-                value={formData.delivery_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                <User className="w-4 h-4 inline mr-1" />
-                Vendedor
-              </label>
-              <select
-                value={formData.seller_id}
-                onChange={(e) => setFormData(prev => ({ ...prev, seller_id: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Selecione um vendedor</option>
-                {employees.filter(emp => emp.is_seller).map(employee => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-all">
+              <X className="w-6 h-6" />
+            </button>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              <User className="w-4 h-4 inline mr-1" />
-              Cliente
-            </label>
-            <input
-              type="text"
-              value={formData.client}
-              onChange={(e) => setFormData(prev => ({ ...prev, client: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Nome do cliente"
-              required
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Informações Básicas */}
+            <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 rounded-xl bg-green-600">
+                  <User className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-green-900">Informações Básicas</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="form-group">
+                  <label className="form-label">Data da Venda *</label>
+                  <input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                    className="input-field"
+                    required
+                  />
+                </div>
 
-          {/* Products Section */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              <Package className="w-5 h-5 inline mr-2" />
-              Produtos
-            </h3>
+                <div className="form-group">
+                  <label className="form-label">Data de Entrega</label>
+                  <input
+                    type="date"
+                    value={formData.deliveryDate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, deliveryDate: e.target.value }))}
+                    className="input-field"
+                  />
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-              <input
-                type="text"
-                placeholder="Nome do produto"
-                value={currentProduct.name}
-                onChange={(e) => setCurrentProduct(prev => ({ ...prev, name: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="number"
-                placeholder="Quantidade"
-                min="1"
-                value={currentProduct.quantity}
-                onChange={(e) => setCurrentProduct(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="number"
-                placeholder="Preço unitário"
-                min="0"
-                step="0.01"
-                value={currentProduct.unit_price}
-                onChange={(e) => setCurrentProduct(prev => ({ ...prev, unit_price: parseFloat(e.target.value) || 0 }))}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                type="button"
-                onClick={addProduct}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Adicionar
-              </button>
+                <div className="form-group">
+                  <label className="form-label">Vendedor</label>
+                  <select
+                    value={formData.sellerId}
+                    onChange={(e) => setFormData(prev => ({ ...prev, sellerId: e.target.value }))}
+                    className="input-field"
+                  >
+                    <option value="">Sem vendedor</option>
+                    {sellers.map(seller => (
+                      <option key={seller.id} value={seller.id}>
+                        {seller.name} - {seller.position}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group md:col-span-2">
+                  <label className="form-label">Cliente *</label>
+                  <input
+                    type="text"
+                    value={formData.client}
+                    onChange={(e) => setFormData(prev => ({ ...prev, client: e.target.value }))}
+                    className="input-field"
+                    placeholder="Nome do cliente"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Valor Total *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.totalValue}
+                    onChange={(e) => setFormData(prev => ({ ...prev, totalValue: parseFloat(e.target.value) || 0 }))}
+                    className="input-field"
+                    placeholder="0,00"
+                    required
+                  />
+                </div>
+              </div>
             </div>
 
-            {formData.products.length > 0 && (
-              <div className="space-y-2">
-                {formData.products.map((product: any, index: number) => (
-                  <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
-                    <div className="flex-1">
-                      <span className="font-medium">{product.name}</span>
-                      <span className="text-gray-600 ml-2">
-                        {product.quantity}x R$ {product.unit_price.toFixed(2)} = R$ {product.total_price.toFixed(2)}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeProduct(index)}
-                      className="text-red-600 hover:text-red-800 ml-2"
-                    >
-                      Remover
-                    </button>
+            {/* Produtos (Opcional) */}
+            <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 rounded-xl bg-green-600">
+                  <Package className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-green-900">Produtos Vendidos</h3>
+                  <p className="text-green-700 text-sm">Campo opcional - descreva os produtos vendidos</p>
+                </div>
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Descrição dos Produtos (Opcional)</label>
+                <textarea
+                  value={formData.products}
+                  onChange={(e) => setFormData(prev => ({ ...prev, products: e.target.value }))}
+                  className="input-field"
+                  rows={3}
+                  placeholder="Ex: 2x Produto A, 1x Produto B, Serviço de instalação..."
+                />
+                <p className="text-xs text-green-600 mt-2 font-semibold">
+                  💡 Este campo é opcional. Você pode deixar em branco se preferir.
+                </p>
+              </div>
+            </div>
+
+            {/* Comissão do Vendedor */}
+            {formData.sellerId && (
+              <div className="p-6 bg-gradient-to-r from-purple-50 to-violet-50 rounded-2xl border border-purple-200">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="p-3 rounded-xl bg-purple-600">
+                    <DollarSign className="w-6 h-6 text-white" />
                   </div>
-                ))}
+                  <h3 className="text-xl font-bold text-purple-900">Comissão do Vendedor</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="form-group">
+                    <label className="form-label">Taxa de Comissão (%)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={formData.customCommissionRate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, customCommissionRate: parseFloat(e.target.value) || 0 }))}
+                      className="input-field"
+                      placeholder="5.00"
+                    />
+                  </div>
+                  
+                  <div className="p-4 bg-white rounded-xl border border-purple-200">
+                    <div className="flex items-center gap-3">
+                      <Calculator className="w-6 h-6 text-purple-600" />
+                      <div>
+                        <p className="text-purple-600 font-semibold">Valor da Comissão</p>
+                        <p className="text-2xl font-black text-purple-700">
+                          R$ {((formData.totalValue * (formData.customCommissionRate || 0)) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
-          </div>
 
-          {/* Payment Methods Section */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              <CreditCard className="w-5 h-5 inline mr-2" />
-              Formas de Pagamento
-            </h3>
+            {/* Métodos de Pagamento */}
+            <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl bg-green-600">
+                    <CreditCard className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-green-900">Métodos de Pagamento</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={addPaymentMethod}
+                  className="btn-secondary flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Adicionar Método
+                </button>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-              <select
-                value={currentPayment.method}
-                onChange={(e) => setCurrentPayment(prev => ({ ...prev, method: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="dinheiro">Dinheiro</option>
-                <option value="pix">PIX</option>
-                <option value="transferencia">Transferência</option>
-                <option value="cartao_debito">Cartão de Débito</option>
-                <option value="cartao_credito">Cartão de Crédito</option>
-                <option value="cheque">Cheque</option>
-                <option value="boleto">Boleto</option>
-              </select>
-              <input
-                type="number"
-                placeholder="Valor"
-                min="0"
-                step="0.01"
-                value={currentPayment.amount}
-                onChange={(e) => setCurrentPayment(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Descrição (opcional)"
-                value={currentPayment.description}
-                onChange={(e) => setCurrentPayment(prev => ({ ...prev, description: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                type="button"
-                onClick={addPayment}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-              >
-                Adicionar
-              </button>
-            </div>
-
-            {formData.payment_methods.length > 0 && (
-              <div className="space-y-2">
-                {formData.payment_methods.map((payment: any, index: number) => (
-                  <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
-                    <div className="flex-1">
-                      <span className="font-medium capitalize">{payment.method.replace('_', ' ')}</span>
-                      <span className="text-gray-600 ml-2">R$ {payment.amount.toFixed(2)}</span>
-                      {payment.description && (
-                        <span className="text-gray-500 ml-2">- {payment.description}</span>
+              <div className="space-y-6">
+                {formData.paymentMethods.map((method, index) => (
+                  <div key={index} className="p-6 bg-white rounded-2xl border border-green-100 shadow-sm">
+                    <div className="flex justify-between items-start mb-6">
+                      <h4 className="text-lg font-bold text-green-900">Método {index + 1}</h4>
+                      {formData.paymentMethods.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removePaymentMethod(index)}
+                          className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-modern"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => removePayment(index)}
-                      className="text-red-600 hover:text-red-800 ml-2"
-                    >
-                      Remover
-                    </button>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="form-group">
+                        <label className="form-label">Tipo de Pagamento *</label>
+                        <select
+                          value={method.type}
+                          onChange={(e) => updatePaymentMethod(index, 'type', e.target.value)}
+                          className="input-field"
+                          required
+                        >
+                          {PAYMENT_TYPES.map(type => (
+                            <option key={type.value} value={type.value}>
+                              {type.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Valor *</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={method.amount}
+                          onChange={(e) => updatePaymentMethod(index, 'amount', parseFloat(e.target.value) || 0)}
+                          className="input-field"
+                          placeholder="0,00"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Parcelamento */}
+                    {['cartao_credito', 'cheque', 'boleto'].includes(method.type) && (
+                      <div className="mt-6 p-4 bg-green-50 rounded-xl border border-green-200">
+                        <h5 className="font-bold text-green-800 mb-4">Configurações de Parcelamento</h5>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="form-group">
+                            <label className="form-label">Número de Parcelas</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={method.installments || 1}
+                              onChange={(e) => {
+                                const installments = parseInt(e.target.value) || 1;
+                                const installmentValue = method.amount / installments;
+                                updatePaymentMethod(index, 'installments', installments);
+                                updatePaymentMethod(index, 'installmentValue', installmentValue);
+                              }}
+                              className="input-field"
+                              placeholder="1"
+                            />
+                          </div>
+
+                          <div className="form-group">
+                            <label className="form-label">Valor por Parcela</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={method.installmentValue || 0}
+                              onChange={(e) => updatePaymentMethod(index, 'installmentValue', parseFloat(e.target.value) || 0)}
+                              className="input-field bg-gray-50"
+                              readOnly
+                            />
+                          </div>
+
+                          <div className="form-group">
+                            <label className="form-label">Intervalo (dias)</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={method.installmentInterval || 30}
+                              onChange={(e) => updatePaymentMethod(index, 'installmentInterval', parseInt(e.target.value) || 30)}
+                              className="input-field"
+                              placeholder="30"
+                            />
+                          </div>
+
+                          {(method.installments || 1) > 1 && (
+                            <div className="form-group md:col-span-3">
+                              <label className="form-label">Data da Primeira Parcela</label>
+                              <input
+                                type="date"
+                                value={method.firstInstallmentDate || formData.date}
+                                onChange={(e) => updatePaymentMethod(index, 'firstInstallmentDate', e.target.value)}
+                                className="input-field"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Configurações de Cheque */}
+                    {method.type === 'cheque' && (
+                      <div className="mt-6 p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                        <h5 className="font-bold text-yellow-800 mb-4">Configurações do Cheque</h5>
+                        
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-4">
+                            <label className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={method.isOwnCheck || false}
+                                onChange={(e) => updatePaymentMethod(index, 'isOwnCheck', e.target.checked)}
+                                className="rounded"
+                              />
+                              <span className="form-label mb-0">Cheque Próprio</span>
+                            </label>
+                            
+                            <label className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={method.isThirdPartyCheck || false}
+                                onChange={(e) => {
+                                  updatePaymentMethod(index, 'isThirdPartyCheck', e.target.checked);
+                                  if (e.target.checked && !method.thirdPartyDetails) {
+                                    updatePaymentMethod(index, 'thirdPartyDetails', []);
+                                  }
+                                }}
+                                className="rounded"
+                              />
+                              <span className="form-label mb-0">Cheque de Terceiros</span>
+                            </label>
+                          </div>
+
+                          {/* Detalhes de Cheques de Terceiros */}
+                          {method.isThirdPartyCheck && (
+                            <div className="space-y-4">
+                              <div className="flex justify-between items-center">
+                                <h6 className="font-bold text-yellow-800">Detalhes dos Cheques de Terceiros</h6>
+                                <button
+                                  type="button"
+                                  onClick={() => addThirdPartyCheckDetail(index)}
+                                  className="px-3 py-1 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-bold"
+                                >
+                                  <Plus className="w-3 h-3 mr-1" />
+                                  Adicionar Cheque
+                                </button>
+                              </div>
+                              
+                              {(method.thirdPartyDetails || []).map((detail, detailIndex) => (
+                                <div key={detailIndex} className="p-4 bg-white rounded-xl border border-yellow-100">
+                                  <div className="flex justify-between items-center mb-4">
+                                    <h6 className="font-bold text-yellow-900">Cheque {detailIndex + 1}</h6>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeThirdPartyCheckDetail(index, detailIndex)}
+                                      className="text-red-600 hover:text-red-800 p-1 rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="form-group">
+                                      <label className="form-label">Emissor *</label>
+                                      <input
+                                        type="text"
+                                        value={detail.issuer}
+                                        onChange={(e) => updateThirdPartyCheckDetail(index, detailIndex, 'issuer', e.target.value)}
+                                        className="input-field"
+                                        placeholder="Nome do emissor"
+                                        required
+                                      />
+                                    </div>
+                                    
+                                    <div className="form-group">
+                                      <label className="form-label">CPF/CNPJ *</label>
+                                      <input
+                                        type="text"
+                                        value={detail.cpfCnpj}
+                                        onChange={(e) => updateThirdPartyCheckDetail(index, detailIndex, 'cpfCnpj', e.target.value)}
+                                        className="input-field"
+                                        placeholder="000.000.000-00"
+                                        required
+                                      />
+                                    </div>
+                                    
+                                    <div className="form-group">
+                                      <label className="form-label">Banco *</label>
+                                      <input
+                                        type="text"
+                                        value={detail.bank}
+                                        onChange={(e) => updateThirdPartyCheckDetail(index, detailIndex, 'bank', e.target.value)}
+                                        className="input-field"
+                                        placeholder="Nome do banco"
+                                        required
+                                      />
+                                    </div>
+                                    
+                                    <div className="form-group">
+                                      <label className="form-label">Agência *</label>
+                                      <input
+                                        type="text"
+                                        value={detail.agency}
+                                        onChange={(e) => updateThirdPartyCheckDetail(index, detailIndex, 'agency', e.target.value)}
+                                        className="input-field"
+                                        placeholder="0000"
+                                        required
+                                      />
+                                    </div>
+                                    
+                                    <div className="form-group">
+                                      <label className="form-label">Conta *</label>
+                                      <input
+                                        type="text"
+                                        value={detail.account}
+                                        onChange={(e) => updateThirdPartyCheckDetail(index, detailIndex, 'account', e.target.value)}
+                                        className="input-field"
+                                        placeholder="00000-0"
+                                        required
+                                      />
+                                    </div>
+                                    
+                                    <div className="form-group">
+                                      <label className="form-label">Nº do Cheque *</label>
+                                      <input
+                                        type="text"
+                                        value={detail.checkNumber}
+                                        onChange={(e) => updateThirdPartyCheckDetail(index, detailIndex, 'checkNumber', e.target.value)}
+                                        className="input-field"
+                                        placeholder="000000"
+                                        required
+                                      />
+                                    </div>
+                                    
+                                    <div className="form-group md:col-span-3">
+                                      <label className="form-label">Observações</label>
+                                      <textarea
+                                        value={detail.observations}
+                                        onChange={(e) => updateThirdPartyCheckDetail(index, detailIndex, 'observations', e.target.value)}
+                                        className="input-field"
+                                        rows={2}
+                                        placeholder="Observações sobre este cheque..."
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-
-          {/* Commission Rate */}
-          {formData.seller_id && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                <DollarSign className="w-4 h-4 inline mr-1" />
-                Taxa de Comissão (%)
-              </label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                value={formData.custom_commission_rate}
-                onChange={(e) => setFormData(prev => ({ ...prev, custom_commission_rate: parseFloat(e.target.value) || 0 }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
             </div>
-          )}
 
-          {/* Summary */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Resumo</h3>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span>Valor Total:</span>
-                <span className="font-medium">R$ {formData.total_value.toFixed(2)}</span>
+            {/* Observações */}
+            <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 rounded-xl bg-green-600">
+                  <FileText className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-green-900">Observações</h3>
               </div>
-              <div className="flex justify-between">
-                <span>Valor Recebido:</span>
-                <span className="font-medium text-green-600">R$ {formData.received_amount.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Valor Pendente:</span>
-                <span className={`font-medium ${formData.pending_amount > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  R$ {formData.pending_amount.toFixed(2)}
-                </span>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="form-group">
+                  <label className="form-label">Observações da Venda</label>
+                  <textarea
+                    value={formData.observations}
+                    onChange={(e) => setFormData(prev => ({ ...prev, observations: e.target.value }))}
+                    className="input-field"
+                    rows={4}
+                    placeholder="Informações gerais sobre a venda..."
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Observações do Pagamento</label>
+                  <textarea
+                    value={formData.paymentObservations}
+                    onChange={(e) => setFormData(prev => ({ ...prev, paymentObservations: e.target.value }))}
+                    className="input-field"
+                    rows={4}
+                    placeholder="Informações específicas sobre o pagamento..."
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Additional Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                <FileText className="w-4 h-4 inline mr-1" />
-                Observações da Venda
-              </label>
-              <textarea
-                value={formData.observations}
-                onChange={(e) => setFormData(prev => ({ ...prev, observations: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={3}
-                placeholder="Observações sobre a venda..."
-              />
+            {/* Resumo Financeiro */}
+            <div className="p-8 bg-gradient-to-br from-green-100 via-emerald-100 to-green-100 rounded-3xl border-2 border-green-300 modern-shadow-xl">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-lg">
+                  <Calculator className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-green-900">Resumo Financeiro</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="text-center p-6 bg-white rounded-2xl border border-green-200 modern-shadow-lg">
+                  <div className="p-3 rounded-xl bg-blue-600 w-fit mx-auto mb-4">
+                    <DollarSign className="w-6 h-6 text-white" />
+                  </div>
+                  <h4 className="font-bold text-green-900 mb-2">Valor Total</h4>
+                  <p className="text-3xl font-black text-blue-600">
+                    R$ {formData.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                
+                <div className="text-center p-6 bg-white rounded-2xl border border-green-200 modern-shadow-lg">
+                  <div className="p-3 rounded-xl bg-green-600 w-fit mx-auto mb-4">
+                    <CheckCircle className="w-6 h-6 text-white" />
+                  </div>
+                  <h4 className="font-bold text-green-900 mb-2">Valor Recebido</h4>
+                  <p className="text-3xl font-black text-green-600">
+                    R$ {amounts.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-sm text-green-600 font-semibold mt-1">
+                    Pagamento imediato
+                  </p>
+                </div>
+                
+                <div className="text-center p-6 bg-white rounded-2xl border border-green-200 modern-shadow-lg">
+                  <div className="p-3 rounded-xl bg-orange-600 w-fit mx-auto mb-4">
+                    <Calendar className="w-6 h-6 text-white" />
+                  </div>
+                  <h4 className="font-bold text-green-900 mb-2">Valor Pendente</h4>
+                  <p className="text-3xl font-black text-orange-600">
+                    R$ {amounts.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-sm text-orange-600 font-semibold mt-1">
+                    A receber
+                  </p>
+                </div>
+                
+                <div className="text-center p-6 bg-white rounded-2xl border border-green-200 modern-shadow-lg">
+                  <div className="p-3 rounded-xl bg-purple-600 w-fit mx-auto mb-4">
+                    <FileText className="w-6 h-6 text-white" />
+                  </div>
+                  <h4 className="font-bold text-green-900 mb-2">Status</h4>
+                  <span className={`px-4 py-2 rounded-full text-sm font-bold border ${
+                    amounts.status === 'pago' ? 'bg-green-100 text-green-800 border-green-200' :
+                    amounts.status === 'parcial' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                    'bg-yellow-100 text-yellow-800 border-yellow-200'
+                  }`}>
+                    {amounts.status === 'pago' ? 'PAGO' :
+                     amounts.status === 'parcial' ? 'PARCIAL' : 'PENDENTE'}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Breakdown dos Pagamentos */}
+              <div className="mt-8 p-6 bg-white rounded-2xl border border-green-200">
+                <h4 className="font-bold text-green-900 mb-4">Breakdown dos Pagamentos</h4>
+                <div className="space-y-3">
+                  {formData.paymentMethods.map((method, index) => (
+                    <div key={index} className="flex justify-between items-center p-3 bg-green-50 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                          method.type === 'dinheiro' ? 'bg-green-100 text-green-800' :
+                          method.type === 'pix' ? 'bg-blue-100 text-blue-800' :
+                          method.type === 'cartao_credito' ? 'bg-purple-100 text-purple-800' :
+                          method.type === 'cartao_debito' ? 'bg-indigo-100 text-indigo-800' :
+                          method.type === 'cheque' ? 'bg-yellow-100 text-yellow-800' :
+                          method.type === 'boleto' ? 'bg-cyan-100 text-cyan-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {method.type.replace('_', ' ').toUpperCase()}
+                        </span>
+                        {method.installments && method.installments > 1 && (
+                          <span className="text-xs text-green-600 font-semibold">
+                            {method.installments}x de R$ {(method.installmentValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-lg font-black text-green-600">
+                        R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  ))}
+                  
+                  <div className="flex justify-between items-center p-4 bg-green-100 rounded-xl border-t-2 border-green-300">
+                    <span className="font-bold text-green-800">TOTAL DOS PAGAMENTOS:</span>
+                    <span className="text-2xl font-black text-green-700">
+                      R$ {amounts.totalPayments.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Alertas */}
+              {amounts.totalPayments > formData.totalValue && (
+                <div className="mt-6 p-4 bg-red-50 rounded-xl border border-red-200">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="w-6 h-6 text-red-600" />
+                    <div>
+                      <p className="text-red-800 font-bold">Atenção!</p>
+                      <p className="text-red-700 text-sm">
+                        O total dos pagamentos (R$ {amounts.totalPayments.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) 
+                        é maior que o valor da venda (R$ {formData.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {amounts.totalPayments < formData.totalValue && (
+                <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="w-6 h-6 text-blue-600" />
+                    <div>
+                      <p className="text-blue-800 font-bold">Informação</p>
+                      <p className="text-blue-700 text-sm">
+                        Restam R$ {amounts.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} 
+                        a receber. Esta venda ficará com status "{amounts.status.toUpperCase()}".
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                <FileText className="w-4 h-4 inline mr-1" />
-                Observações do Pagamento
-              </label>
-              <textarea
-                value={formData.payment_observations}
-                onChange={(e) => setFormData(prev => ({ ...prev, payment_observations: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={3}
-                placeholder="Observações sobre o pagamento..."
-              />
+            <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="btn-secondary"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="btn-primary group"
+                disabled={amounts.totalPayments > formData.totalValue}
+              >
+                {sale ? 'Atualizar Venda' : 'Criar Venda'}
+              </button>
             </div>
-          </div>
-
-          {/* Form Actions */}
-          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={formData.products.length === 0 || !formData.client}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-            >
-              {initialData ? 'Atualizar' : 'Criar'} Venda
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

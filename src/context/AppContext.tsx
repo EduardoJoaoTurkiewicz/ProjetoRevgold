@@ -644,30 +644,16 @@ export function AppProvider({ children }: AppProviderProps) {
     try {
       console.log('🔄 Inicializando caixa com valor:', initialValue);
       
-      // Garante que existe registro de saldo
-      const { error: e1 } = await supabase.rpc('ensure_cash_balance');
-      if (e1) console.warn('Aviso ao garantir caixa:', e1);
-
-      // Força a definição do saldo inicial
-      const { data: balances, error: e2 } = await supabase.from('cash_balances').select('*').order('created_at', { ascending: false }).limit(1);
-      if (e2) throw e2;
-
-      if (balances && balances.length > 0) {
-        const bal = balances[0];
-        const { error: e3 } = await supabase
-          .from('cash_balances')
-          .update({
-            initial_balance: initialValue,
-            current_balance: initialValue,
-            initial_date: new Date().toISOString().split('T')[0],
-            last_updated: new Date().toISOString()
-          })
-          .eq('id', bal.id);
-        if (e3) throw e3;
-      }
-
-      // Recalcula para garantir consistência
-      await supabase.rpc('recalculate_cash_balance');
+      // Criar saldo inicial diretamente usando o service
+      const newBalance = await cashBalancesService.create({
+        currentBalance: initialValue,
+        initialBalance: initialValue,
+        initialDate: new Date().toISOString().split('T')[0],
+        lastUpdated: new Date().toISOString()
+      });
+      
+      console.log('✅ Saldo inicial criado:', newBalance);
+      setCashBalance(newBalance);
       console.log('✅ Caixa inicializado com sucesso');
       await loadAllData();
     } catch (error) {

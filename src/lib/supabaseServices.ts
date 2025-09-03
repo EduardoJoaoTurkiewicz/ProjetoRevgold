@@ -495,6 +495,12 @@ export const cashBalancesService = {
       };
     }
     
+    // Verificar se já existe um saldo
+    const existingBalance = await this.get();
+    if (existingBalance) {
+      throw new Error('O caixa já foi inicializado. Use o botão "Recalcular" para atualizar o saldo.');
+    }
+    
     // Validate required fields
     if (typeof balance.currentBalance !== 'number') {
       throw new Error('Saldo atual deve ser um número válido');
