@@ -343,9 +343,10 @@ export function AppProvider({ children }: AppProviderProps) {
     try {
       console.log('🔄 Criando venda:', saleData);
       
-      // Convert old Sale format to new CreateSalePayload format if needed
+      // Additional frontend validation before sending to service
       let payload: CreateSalePayload;
       
+      // Convert old Sale format to new CreateSalePayload format if needed
       if ('client' in saleData && typeof saleData.client === 'string') {
         // New format - use as is
         payload = saleData as CreateSalePayload;
@@ -370,13 +371,13 @@ export function AppProvider({ children }: AppProviderProps) {
         };
       }
       
-      // Validation
+      // Enhanced validation with clear error messages
       if (!payload.client || !payload.client.trim()) {
-        throw new Error('Nome do cliente é obrigatório');
+        throw new Error('Nome do cliente é obrigatório e não pode estar vazio');
       }
       
       if (!payload.total_value || payload.total_value <= 0) {
-        throw new Error('Valor total deve ser maior que zero');
+        throw new Error('O valor total da venda deve ser maior que zero');
       }
       
       if (!payload.payment_methods || payload.payment_methods.length === 0) {
@@ -390,25 +391,40 @@ export function AppProvider({ children }: AppProviderProps) {
       }
       
       if (totalPaymentAmount > payload.total_value) {
-        throw new Error('Total dos métodos de pagamento não pode exceder o valor da venda');
+        throw new Error('O total dos métodos de pagamento não pode ser maior que o valor da venda');
       }
       
-      // Validate sellerId if provided
+      // Critical UUID validation for seller_id
       if (payload.seller_id && typeof payload.seller_id === 'string') {
         const trimmedSellerId = payload.seller_id.trim();
-        if (trimmedSellerId !== '' && trimmedSellerId !== 'null' && trimmedSellerId !== 'undefined') {
+        
+        // If empty string, null string, or undefined string, set to undefined
+        if (trimmedSellerId === '' || trimmedSellerId === 'null' || trimmedSellerId === 'undefined') {
+          payload.seller_id = undefined;
+        } else {
+          // Validate UUID format (basic check)
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+          if (!uuidRegex.test(trimmedSellerId)) {
+            throw new Error('ID do vendedor inválido. Selecione um vendedor válido da lista.');
+          }
+          
           // Check if seller exists and is active
           const seller = employees.find(emp => emp.id === trimmedSellerId && emp.isActive);
           if (!seller) {
             throw new Error('Vendedor selecionado não existe ou não está ativo. Selecione um vendedor válido ou deixe em branco.');
           }
+          
+          payload.seller_id = trimmedSellerId;
         }
+      } else {
+        // Ensure seller_id is undefined if not provided
+        payload.seller_id = undefined;
       }
       
       // Clean payload before sending to service
       const cleanedPayload = {
         ...payload,
-        seller_id: payload.seller_id?.trim() || undefined,
+        seller_id: payload.seller_id, // Already cleaned above
         observations: payload.observations?.trim() || undefined,
         payment_description: payload.payment_description?.trim() || undefined,
         payment_observations: payload.payment_observations?.trim() || undefined,

@@ -295,22 +295,33 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     // Create payload for RPC
     const saleToSubmit: CreateSalePayload = {
       date: formData.date,
-      delivery_date: formData.deliveryDate?.trim() || undefined,
+      delivery_date: formData.deliveryDate?.trim() || null,
       client: formData.client.trim(),
-      seller_id: cleanSellerId || undefined,
+      seller_id: cleanSellerId,
       custom_commission_rate: formData.customCommissionRate,
       products: typeof formData.products === 'string' ? [{ name: formData.products }] : formData.products,
-      observations: formData.observations?.trim() || undefined,
+      observations: formData.observations?.trim() || null,
       total_value: formData.totalValue,
       payment_methods: cleanedPaymentMethods,
-      payment_description: formData.paymentDescription?.trim() || undefined,
-      payment_observations: formData.paymentObservations?.trim() || undefined,
+      payment_description: formData.paymentDescription?.trim() || null,
+      payment_observations: formData.paymentObservations?.trim() || null,
       received_amount: recalculatedAmounts.receivedAmount,
       pending_amount: recalculatedAmounts.pendingAmount,
       status: recalculatedAmounts.status,
       boletos,
       cheques
     };
+    
+    // Final validation before submission
+    if (!saleToSubmit.client || saleToSubmit.client.trim() === '') {
+      alert('Nome do cliente é obrigatório e não pode estar vazio.');
+      return;
+    }
+    
+    if (saleToSubmit.seller_id === '') {
+      alert('Erro interno: seller_id não pode ser string vazia. Selecione um vendedor válido ou deixe em branco.');
+      return;
+    }
     
     console.log('📤 Dados finais para submissão:', saleToSubmit);
     
@@ -375,8 +386,14 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                 <div className="form-group">
                   <label className="form-label">Vendedor</label>
                   <select
-                    value={formData.sellerId}
-                    onChange={(e) => setFormData(prev => ({ ...prev, sellerId: e.target.value || null }))}
+                    value={formData.sellerId || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        sellerId: value === '' ? null : value 
+                      }));
+                    }}
                     className="input-field"
                   >
                     <option value="">Sem vendedor</option>
@@ -386,6 +403,9 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                       </option>
                     ))}
                   </select>
+                  <p className="text-xs text-green-600 mt-1 font-semibold">
+                    💡 Deixe em branco se a venda não tem vendedor específico
+                  </p>
                 </div>
 
                 <div className="form-group md:col-span-2">

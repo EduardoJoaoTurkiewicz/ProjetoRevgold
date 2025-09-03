@@ -26,6 +26,51 @@ export function Sales() {
     try {
       console.log('🔄 Submetendo venda:', saleData);
       
+      // Validate required fields before submission
+      if (!saleData.client || !saleData.client.trim()) {
+        alert('Por favor, informe o nome do cliente.');
+        return;
+      }
+      
+      // Validate seller_id if provided - must be a valid UUID or null
+      if (saleData.sellerId !== undefined && saleData.sellerId !== null) {
+        const trimmedSellerId = saleData.sellerId.trim();
+        if (trimmedSellerId === '' || trimmedSellerId === 'null' || trimmedSellerId === 'undefined') {
+          // Convert empty/invalid seller to null
+          saleData.sellerId = null;
+        } else {
+          // Validate that seller exists and is active
+          const seller = employees.find(emp => emp.id === trimmedSellerId && emp.isActive);
+          if (!seller) {
+            alert('Vendedor selecionado não existe ou não está ativo. Selecione um vendedor válido ou deixe em branco.');
+            return;
+          }
+        }
+      }
+      
+      // Validate total value
+      if (!saleData.totalValue || saleData.totalValue <= 0) {
+        alert('O valor total da venda deve ser maior que zero.');
+        return;
+      }
+      
+      // Validate payment methods
+      if (!saleData.paymentMethods || saleData.paymentMethods.length === 0) {
+        alert('Por favor, adicione pelo menos um método de pagamento.');
+        return;
+      }
+      
+      const totalPaymentAmount = saleData.paymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
+      if (totalPaymentAmount === 0) {
+        alert('Por favor, informe pelo menos um método de pagamento com valor maior que zero.');
+        return;
+      }
+      
+      if (totalPaymentAmount > saleData.totalValue) {
+        alert('O total dos métodos de pagamento não pode ser maior que o valor total da venda.');
+        return;
+      }
+      
       if (editingSale) {
         console.log('🔄 Atualizando venda existente:', editingSale.id);
         const updatedSale = await updateSale(editingSale.id, saleData);
