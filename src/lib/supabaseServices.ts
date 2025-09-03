@@ -821,7 +821,7 @@ export const salesService = {
       date: sale.date,
       delivery_date: !sale.deliveryDate || sale.deliveryDate.trim() === '' ? null : sale.deliveryDate,
       client: sale.client.trim(),
-      seller_id: cleanSellerId,
+      seller_id: cleanSellerId || null,
       custom_commission_rate: sale.customCommissionRate || 5,
       products: !sale.products || (typeof sale.products === 'string' && sale.products.trim() === '') ? 'Produtos vendidos' : sale.products,
       observations: !sale.observations || sale.observations.trim() === '' ? null : sale.observations.trim(),
@@ -844,7 +844,11 @@ export const salesService = {
       isUuid: dbData.seller_id ? isValidUuid(dbData.seller_id) : false
     });
     
-    const { data, error } = await supabase.from('sales').insert([dbData]).select().single();
+    const { data, error } = await supabase
+      .from('sales')
+      .insert(dbData)
+      .select()
+      .single();
     if (error) {
       console.error('Erro ao criar venda:', error);
       
@@ -857,6 +861,8 @@ export const salesService = {
         throw new Error('Dados inválidos. Verifique os valores inseridos, especialmente datas e números.');
       } else if (error.message.includes('violates check constraint')) {
         throw new Error('Dados violam regras do sistema. Verifique se todos os valores estão corretos.');
+      } else if (error.message.includes('operator does not exist: uuid = text')) {
+        throw new Error('Erro de tipo de dados. Verifique se o vendedor foi selecionado corretamente.');
       } else {
         throw new Error(`Erro ao criar venda: ${error.message}`);
       }
@@ -928,24 +934,7 @@ export const salesService = {
     if (sale.deliveryDate !== undefined) dbData.delivery_date = !sale.deliveryDate || sale.deliveryDate.trim() === '' ? null : sale.deliveryDate;
     if (sale.client) dbData.client = sale.client.trim();
     if (sale.sellerId !== undefined) {
-      // Clean and validate sellerId for updates
-      let updateCleanSellerId = null;
-      if (sale.sellerId && typeof sale.sellerId === 'string') {
-        const trimmedSellerId = sale.sellerId.trim();
-        if (trimmedSellerId && trimmedSellerId !== '') {
-          if (isValidUuid(trimmedSellerId)) {
-            updateCleanSellerId = trimmedSellerId;
-          } else {
-            console.warn('Invalid UUID format for sellerId in update:', trimmedSellerId);
-            updateCleanSellerId = null;
-          }
-        }
-      }
-      // Additional check to ensure no empty strings
-      if (updateCleanSellerId === '') {
-        updateCleanSellerId = null;
-      }
-      dbData.seller_id = updateCleanSellerId;
+      dbData.seller_id = cleanSellerId;
     }
     if (sale.customCommissionRate !== undefined) dbData.custom_commission_rate = sale.customCommissionRate;
     if (sale.products !== undefined) dbData.products = !sale.products || (typeof sale.products === 'string' && sale.products.trim() === '') ? 'Produtos vendidos' : sale.products;
@@ -970,7 +959,12 @@ export const salesService = {
       });
     }
     
-    const { data, error } = await supabase.from('sales').update(dbData).eq('id', id).select().single();
+    const { data, error } = await supabase
+      .from('sales')
+      .update(dbData)
+      .eq('id', id)
+      .select()
+      .single();
     if (error) {
       console.error('Erro ao atualizar venda:', error);
       
@@ -979,12 +973,12 @@ export const salesService = {
         throw new Error('Não é possível atualizar: dados duplicados detectados.');
       } else if (error.code === '23503') {
         throw new Error('Vendedor selecionado não existe ou foi removido.');
+      } else if (error.message.includes('operator does not exist: uuid = text')) {
+        throw new Error('Erro de tipo de dados. Verifique se o vendedor foi selecionado corretamente.');
       } else {
         throw new Error(`Erro ao atualizar venda: ${error.message}`);
       }
     }
-    
-    return transformDatabaseRow<Sale>(data);
     
     return transformDatabaseRow<Sale>(data);
   },
