@@ -375,7 +375,12 @@ export function AppProvider({ children }: AppProviderProps) {
       // Clean sellerId before sending to service
       const cleanedSale = {
         ...sale,
-        sellerId: sale.sellerId && typeof sale.sellerId === 'string' && sale.sellerId.trim() !== '' && sale.sellerId.trim() !== 'null' && sale.sellerId.trim() !== 'undefined' ? sale.sellerId.trim() : null
+        sellerId: sale.sellerId?.trim() || null,
+        products: sale.products?.trim() || null,
+        observations: sale.observations?.trim() || null,
+        paymentDescription: sale.paymentDescription?.trim() || null,
+        paymentObservations: sale.paymentObservations?.trim() || null,
+        deliveryDate: sale.deliveryDate?.trim() || null
       };
       
       console.log('📝 Venda limpa antes do envio:', cleanedSale);
@@ -433,9 +438,12 @@ export function AppProvider({ children }: AppProviderProps) {
       // Clean sellerId for updates
       const cleanedSaleData = {
         ...saleData,
-        sellerId: saleData.sellerId !== undefined ? 
-          (saleData.sellerId && typeof saleData.sellerId === 'string' && saleData.sellerId.trim() !== '' && saleData.sellerId.trim() !== 'null' && saleData.sellerId.trim() !== 'undefined' ? saleData.sellerId.trim() : null) : 
-          undefined
+        sellerId: saleData.sellerId !== undefined ? (saleData.sellerId?.trim() || null) : undefined,
+        products: saleData.products !== undefined ? (saleData.products?.trim() || null) : undefined,
+        observations: saleData.observations !== undefined ? (saleData.observations?.trim() || null) : undefined,
+        paymentDescription: saleData.paymentDescription !== undefined ? (saleData.paymentDescription?.trim() || null) : undefined,
+        paymentObservations: saleData.paymentObservations !== undefined ? (saleData.paymentObservations?.trim() || null) : undefined,
+        deliveryDate: saleData.deliveryDate !== undefined ? (saleData.deliveryDate?.trim() || null) : undefined
       };
       
       const updatedSale = await salesService.update(id, cleanedSaleData);

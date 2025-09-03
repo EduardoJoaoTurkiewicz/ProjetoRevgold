@@ -26,7 +26,7 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     date: sale?.date || new Date().toISOString().split('T')[0],
     deliveryDate: sale?.deliveryDate || '',
     client: sale?.client || '',
-    sellerId: sale?.sellerId || '',
+    sellerId: sale?.sellerId || null,
     products: sale?.products || '',
     observations: sale?.observations || '',
     totalValue: sale?.totalValue || 0,
@@ -183,10 +183,10 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
         // Clean optional fields - remove empty values
         Object.keys(cleaned).forEach(key => {
           const value = cleaned[key];
-          if (value === undefined || value === '' || 
+          if (value === undefined || value === '' || value === null ||
               (Array.isArray(value) && value.length === 0) ||
               (typeof value === 'string' && value.trim() === '')) {
-            delete cleaned[key];
+            cleaned[key] = null;
           }
         });
         
@@ -221,19 +221,7 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     console.log('✅ Métodos de pagamento limpos:', cleanedPaymentMethods);
       
     // Clean sellerId - ensure it's either a valid UUID or null
-    let cleanSellerId = null;
-    if (formData.sellerId && typeof formData.sellerId === 'string') {
-      const trimmedSellerId = formData.sellerId.trim();
-      if (trimmedSellerId !== '' && trimmedSellerId !== 'null' && trimmedSellerId !== 'undefined') {
-        // Validate UUID format before using
-        if (isValidUuid(trimmedSellerId)) {
-          cleanSellerId = trimmedSellerId;
-        } else {
-          console.warn('⚠️ ID de vendedor inválido, será definido como null:', trimmedSellerId);
-          cleanSellerId = null;
-        }
-      }
-    }
+    const cleanSellerId = formData.sellerId && formData.sellerId.trim() !== '' ? formData.sellerId : null;
     
     // Recalculate amounts with cleaned payment methods
     const recalculatedAmounts = (() => {
@@ -267,11 +255,11 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     const saleToSubmit = {
       ...formData,
       sellerId: cleanSellerId,
-      products: formData.products && typeof formData.products === 'string' && formData.products.trim() !== '' ? formData.products.trim() : null,
-      observations: formData.observations && typeof formData.observations === 'string' && formData.observations.trim() !== '' ? formData.observations.trim() : null,
-      paymentDescription: formData.paymentDescription && typeof formData.paymentDescription === 'string' && formData.paymentDescription.trim() !== '' ? formData.paymentDescription.trim() : null,
-      paymentObservations: formData.paymentObservations && typeof formData.paymentObservations === 'string' && formData.paymentObservations.trim() !== '' ? formData.paymentObservations.trim() : null,
-      deliveryDate: formData.deliveryDate && typeof formData.deliveryDate === 'string' && formData.deliveryDate.trim() !== '' ? formData.deliveryDate.trim() : null,
+      products: formData.products?.trim() || null,
+      observations: formData.observations?.trim() || null,
+      paymentDescription: formData.paymentDescription?.trim() || null,
+      paymentObservations: formData.paymentObservations?.trim() || null,
+      deliveryDate: formData.deliveryDate?.trim() || null,
       paymentMethods: cleanedPaymentMethods,
       ...recalculatedAmounts
     };
@@ -340,7 +328,7 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                   <label className="form-label">Vendedor</label>
                   <select
                     value={formData.sellerId}
-                    onChange={(e) => setFormData(prev => ({ ...prev, sellerId: e.target.value }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, sellerId: e.target.value || null }))}
                     className="input-field"
                   >
                     <option value="">Sem vendedor</option>
@@ -715,7 +703,7 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                       <label className="form-label">Observações</label>
                                       <textarea
                                         value={detail.observations}
-                                        onChange={(e) => updateThirdPartyCheckDetail(index, detailIndex, 'observations', e.target.value)}
+                                        onChange={(e) => updateThirdPartyCheckDetail(index, detailIndex, 'observations', e.target.value || null)}
                                         className="input-field"
                                         rows={2}
                                         placeholder="Observações sobre este cheque..."
