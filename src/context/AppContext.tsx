@@ -375,7 +375,7 @@ export function AppProvider({ children }: AppProviderProps) {
       // Clean sellerId before sending to service
       const cleanedSale = {
         ...sale,
-        sellerId: sale.sellerId && typeof sale.sellerId === 'string' && sale.sellerId.trim() !== '' && sale.sellerId.trim() !== 'null' ? sale.sellerId.trim() : null
+        sellerId: sale.sellerId && typeof sale.sellerId === 'string' && sale.sellerId.trim() !== '' && sale.sellerId.trim() !== 'null' && sale.sellerId.trim() !== 'undefined' ? sale.sellerId.trim() : null
       };
       
       console.log('📝 Venda limpa antes do envio:', cleanedSale);
@@ -434,7 +434,7 @@ export function AppProvider({ children }: AppProviderProps) {
       const cleanedSaleData = {
         ...saleData,
         sellerId: saleData.sellerId !== undefined ? 
-          (saleData.sellerId && saleData.sellerId.trim() !== '' ? saleData.sellerId.trim() : null) : 
+          (saleData.sellerId && typeof saleData.sellerId === 'string' && saleData.sellerId.trim() !== '' && saleData.sellerId.trim() !== 'null' && saleData.sellerId.trim() !== 'undefined' ? saleData.sellerId.trim() : null) : 
           undefined
       };
       
