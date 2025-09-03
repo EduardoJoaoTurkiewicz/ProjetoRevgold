@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DollarSign, TrendingUp, TrendingDown, Calendar, Plus, Minus, Eye, EyeOff } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
-import { formatCurrency, formatDate } from '../utils/format';
+import { fmtBRL, fmtDate } from '../utils/format';
 
 interface CashTransaction {
   id: string;
@@ -164,13 +164,14 @@ export default function CashManagement() {
             <div>
               <p className="text-blue-100 text-sm">Saldo Atual</p>
               <p className="text-3xl font-bold">
-                {showBalance ? formatCurrency(balance.current_balance) : '••••••'}
+                {showBalance ? fmtBRL(balance.current_balance) : '••••••'}
               </p>
             </div>
             <DollarSign className="w-12 h-12 text-blue-200" />
           </div>
           <div className="mt-4 flex items-center gap-4 text-sm text-blue-100">
             <span>Última atualização: {formatDate(balance.last_updated)}</span>
+            <span>Última atualização: {fmtDate(balance.last_updated)}</span>
           </div>
         </div>
       )}
@@ -322,7 +323,7 @@ export default function CashManagement() {
                 transactions.map((transaction) => (
                   <tr key={transaction.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(transaction.date)}
+                      {fmtDate(transaction.date)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
@@ -346,7 +347,7 @@ export default function CashManagement() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <span className={transaction.type === 'entrada' ? 'text-green-600' : 'text-red-600'}>
-                        {transaction.type === 'entrada' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                        {transaction.type === 'entrada' ? '+' : '-'}{fmtBRL(transaction.amount)}
                       </span>
                     </td>
                   </tr>
