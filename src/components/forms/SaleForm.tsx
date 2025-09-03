@@ -182,7 +182,7 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     let cleanSellerId = null;
     if (formData.sellerId && typeof formData.sellerId === 'string') {
       const trimmedSellerId = formData.sellerId.trim();
-      if (trimmedSellerId && trimmedSellerId !== '') {
+      if (trimmedSellerId !== '' && trimmedSellerId !== 'null' && trimmedSellerId !== 'undefined') {
         cleanSellerId = trimmedSellerId;
       }
     }
@@ -190,16 +190,15 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     const saleToSubmit = {
       ...formData,
       sellerId: cleanSellerId,
-      products: !formData.products || formData.products.trim() === '' ? null : formData.products.trim(),
-      observations: !formData.observations || formData.observations.trim() === '' ? null : formData.observations.trim(),
-      paymentDescription: !formData.paymentDescription || formData.paymentDescription.trim() === '' ? null : formData.paymentDescription.trim(),
-      paymentObservations: !formData.paymentObservations || formData.paymentObservations.trim() === '' ? null : formData.paymentObservations.trim(),
-      deliveryDate: !formData.deliveryDate || formData.deliveryDate.trim() === '' ? null : formData.deliveryDate,
+      products: formData.products && formData.products.trim() !== '' ? formData.products.trim() : null,
+      observations: formData.observations && formData.observations.trim() !== '' ? formData.observations.trim() : null,
+      paymentDescription: formData.paymentDescription && formData.paymentDescription.trim() !== '' ? formData.paymentDescription.trim() : null,
+      paymentObservations: formData.paymentObservations && formData.paymentObservations.trim() !== '' ? formData.paymentObservations.trim() : null,
+      deliveryDate: formData.deliveryDate && formData.deliveryDate.trim() !== '' ? formData.deliveryDate : null,
       paymentMethods: cleanedPaymentMethods,
       ...amounts
     };
     
-    console.log('📝 Enviando venda:', saleToSubmit);
     onSubmit(saleToSubmit);
   };
 

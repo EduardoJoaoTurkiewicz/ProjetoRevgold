@@ -360,7 +360,13 @@ export function AppProvider({ children }: AppProviderProps) {
         throw new Error('Total dos métodos de pagamento não pode exceder o valor da venda');
       }
       
-      const newSale = await salesService.create(sale);
+      // Clean sellerId before sending to service
+      const cleanedSale = {
+        ...sale,
+        sellerId: sale.sellerId && sale.sellerId.trim() !== '' ? sale.sellerId.trim() : null
+      };
+      
+      const newSale = await salesService.create(cleanedSale);
       console.log('✅ Venda criada:', newSale);
       setSales(prev => [newSale, ...prev]);
       await loadAllData();
@@ -398,7 +404,15 @@ export function AppProvider({ children }: AppProviderProps) {
         }
       }
       
-      const updatedSale = await salesService.update(id, saleData);
+      // Clean sellerId for updates
+      const cleanedSaleData = {
+        ...saleData,
+        sellerId: saleData.sellerId !== undefined ? 
+          (saleData.sellerId && saleData.sellerId.trim() !== '' ? saleData.sellerId.trim() : null) : 
+          undefined
+      };
+      
+      const updatedSale = await salesService.update(id, cleanedSaleData);
       setSales(prev => prev.map(s => s.id === id ? updatedSale : s));
       await loadAllData();
       return updatedSale;

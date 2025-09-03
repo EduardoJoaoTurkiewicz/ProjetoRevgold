@@ -778,27 +778,11 @@ export const salesService = {
       }
     }
     
-    // Validate and clean sellerId - ensure it's either a valid UUID or null
-    let cleanSellerId = null;
-    if (sale.sellerId && typeof sale.sellerId === 'string') {
-      const trimmedSellerId = sale.sellerId.trim();
-      if (trimmedSellerId && trimmedSellerId !== '') {
-        if (isValidUuid(trimmedSellerId)) {
-          cleanSellerId = trimmedSellerId;
-        } else {
-          console.warn('Invalid UUID format for sellerId:', trimmedSellerId);
-          cleanSellerId = null;
-        }
-      }
+    // Clean sellerId - convert empty strings to null for UUID field
+    let cleanSellerId: string | null = null;
+    if (sale.sellerId && typeof sale.sellerId === 'string' && sale.sellerId.trim() !== '') {
+      cleanSellerId = sale.sellerId.trim();
     }
-    
-    // Additional validation to ensure we never send empty strings to UUID fields
-    // Debug logging to inspect seller_id value
-    console.log('🔍 Debug seller_id validation:', {
-      original: sale.sellerId,
-      cleaned: cleanSellerId,
-      isValid: cleanSellerId ? isValidUuid(cleanSellerId) : 'null'
-    });
     
     // Clean and validate all fields before database insertion
     const cleanedPaymentMethods = sale.paymentMethods.map(method => {
@@ -818,36 +802,27 @@ export const salesService = {
     // Create database object directly without transformation to avoid JSON issues
     const dbData = {
       date: sale.date,
-      delivery_date: !sale.deliveryDate || sale.deliveryDate.trim() === '' ? null : sale.deliveryDate,
+      delivery_date: sale.deliveryDate && sale.deliveryDate.trim() !== '' ? sale.deliveryDate : null,
       client: sale.client.trim(),
-      seller_id: cleanSellerId || null,
+      seller_id: cleanSellerId,
       custom_commission_rate: sale.customCommissionRate || 5,
-      products: !sale.products || (typeof sale.products === 'string' && sale.products.trim() === '') ? 'Produtos vendidos' : sale.products,
-      observations: !sale.observations || sale.observations.trim() === '' ? null : sale.observations.trim(),
+      products: sale.products && typeof sale.products === 'string' && sale.products.trim() !== '' ? sale.products.trim() : null,
+      observations: sale.observations && sale.observations.trim() !== '' ? sale.observations.trim() : null,
       total_value: sale.totalValue,
       payment_methods: cleanedPaymentMethods, // Keep as object for JSONB
-      payment_description: !sale.paymentDescription || sale.paymentDescription.trim() === '' ? null : sale.paymentDescription.trim(),
-      payment_observations: !sale.paymentObservations || sale.paymentObservations.trim() === '' ? null : sale.paymentObservations.trim(),
+      payment_description: sale.paymentDescription && sale.paymentDescription.trim() !== '' ? sale.paymentDescription.trim() : null,
+      payment_observations: sale.paymentObservations && sale.paymentObservations.trim() !== '' ? sale.paymentObservations.trim() : null,
       received_amount: sale.receivedAmount || 0,
       pending_amount: sale.pendingAmount || 0,
       status: sale.status || 'pendente'
     };
-    
-    console.log('🔄 Dados limpos para criação da venda:', dbData);
-    
-    // Additional debug for seller_id specifically
-    console.log('🔍 Final seller_id value:', {
-      value: dbData.seller_id,
-      type: typeof dbData.seller_id,
-      isNull: dbData.seller_id === null,
-      isUuid: dbData.seller_id ? isValidUuid(dbData.seller_id) : false
-    });
     
     const { data, error } = await supabase
       .from('sales')
       .insert(dbData)
       .select()
       .single();
+       
     if (error) {
       console.error('Erro ao criar venda:', error);
       
@@ -860,8 +835,8 @@ export const salesService = {
         throw new Error('Dados inválidos. Verifique os valores inseridos, especialmente datas e números.');
       } else if (error.message.includes('violates check constraint')) {
         throw new Error('Dados violam regras do sistema. Verifique se todos os valores estão corretos.');
-      } else if (error.message.includes('operator does not exist: uuid = text')) {
-        throw new Error('Erro de tipo de dados. Verifique se o vendedor foi selecionado corretamente.');
+      } else if (error.message.includes('operator does not exist')) {
+        throw new Error('Erro interno do banco de dados. Tente novamente.');
       } else {
         throw new Error(`Erro ao criar venda: ${error.message}`);
       }
@@ -869,43 +844,16 @@ export const salesService = {
     
     const newSale = transformDatabaseRow<Sale>(data);
     
-    // Create checks and boletos automatically
-    try {
-      await AutomationService.createChecksForSale(newSale);
-      await AutomationService.createBoletosForSale(newSale);
-    } catch (automationError) {
-      console.warn('Erro na automação (não crítico):', automationError);
-      // Don't throw automation errors as they're not critical for sale creation
-    }
-    
     return newSale;
   },
 
   async update(id: string, sale: Partial<Sale>): Promise<Sale> {
     if (!isSupabaseConfigured()) return;
     
-    // Validate and clean sellerId for updates too
+    // Clean sellerId for updates
     let cleanSellerId: string | null | undefined = undefined;
     if (sale.sellerId !== undefined) {
-      if (!sale.sellerId || sale.sellerId === '' || sale.sellerId.trim() === '') {
-        cleanSellerId = null;
-      } else if (typeof sale.sellerId === 'string') {
-        const trimmedSellerId = sale.sellerId.trim();
-        if (!trimmedSellerId || trimmedSellerId === '' || !isValidUuid(trimmedSellerId)) {
-          cleanSellerId = null;
-        } else {
-          cleanSellerId = trimmedSellerId;
-        }
-      }
-    }
-    
-    // Debug logging for updates
-    if (sale.sellerId !== undefined) {
-      console.log('🔍 Debug seller_id update validation:', {
-        original: sale.sellerId,
-        cleaned: cleanSellerId,
-        isValid: cleanSellerId ? cleanSellerId.length > 0 : 'null'
-      });
+      cleanSellerId = sale.sellerId && sale.sellerId.trim() !== '' ? sale.sellerId.trim() : null;
     }
     
     // Clean payment methods for updates
@@ -930,33 +878,21 @@ export const salesService = {
     const dbData: any = {};
     
     if (sale.date) dbData.date = sale.date;
-    if (sale.deliveryDate !== undefined) dbData.delivery_date = !sale.deliveryDate || sale.deliveryDate.trim() === '' ? null : sale.deliveryDate;
+    if (sale.deliveryDate !== undefined) dbData.delivery_date = sale.deliveryDate && sale.deliveryDate.trim() !== '' ? sale.deliveryDate : null;
     if (sale.client) dbData.client = sale.client.trim();
     if (sale.sellerId !== undefined) {
       dbData.seller_id = cleanSellerId;
     }
     if (sale.customCommissionRate !== undefined) dbData.custom_commission_rate = sale.customCommissionRate;
-    if (sale.products !== undefined) dbData.products = !sale.products || (typeof sale.products === 'string' && sale.products.trim() === '') ? 'Produtos vendidos' : sale.products;
-    if (sale.observations !== undefined) dbData.observations = !sale.observations || sale.observations.trim() === '' ? null : sale.observations.trim();
+    if (sale.products !== undefined) dbData.products = sale.products && typeof sale.products === 'string' && sale.products.trim() !== '' ? sale.products.trim() : null;
+    if (sale.observations !== undefined) dbData.observations = sale.observations && sale.observations.trim() !== '' ? sale.observations.trim() : null;
     if (sale.totalValue) dbData.total_value = sale.totalValue;
     if (cleanedPaymentMethods) dbData.payment_methods = cleanedPaymentMethods; // Keep as object for JSONB
-    if (sale.paymentDescription !== undefined) dbData.payment_description = !sale.paymentDescription || sale.paymentDescription.trim() === '' ? null : sale.paymentDescription.trim();
-    if (sale.paymentObservations !== undefined) dbData.payment_observations = !sale.paymentObservations || sale.paymentObservations.trim() === '' ? null : sale.paymentObservations.trim();
+    if (sale.paymentDescription !== undefined) dbData.payment_description = sale.paymentDescription && sale.paymentDescription.trim() !== '' ? sale.paymentDescription.trim() : null;
+    if (sale.paymentObservations !== undefined) dbData.payment_observations = sale.paymentObservations && sale.paymentObservations.trim() !== '' ? sale.paymentObservations.trim() : null;
     if (sale.receivedAmount !== undefined) dbData.received_amount = sale.receivedAmount;
     if (sale.pendingAmount !== undefined) dbData.pending_amount = sale.pendingAmount;
     if (sale.status) dbData.status = sale.status;
-    
-    console.log('🔄 Dados limpos para atualização da venda:', dbData);
-    
-    // Additional debug for seller_id in updates
-    if (dbData.seller_id !== undefined) {
-      console.log('🔍 Final seller_id update value:', {
-        value: dbData.seller_id,
-        type: typeof dbData.seller_id,
-        isNull: dbData.seller_id === null,
-        isUuid: dbData.seller_id ? isValidUuid(dbData.seller_id) : false
-      });
-    }
     
     const { data, error } = await supabase
       .from('sales')
@@ -972,8 +908,8 @@ export const salesService = {
         throw new Error('Não é possível atualizar: dados duplicados detectados.');
       } else if (error.code === '23503') {
         throw new Error('Vendedor selecionado não existe ou foi removido.');
-      } else if (error.message.includes('operator does not exist: uuid = text')) {
-        throw new Error('Erro de tipo de dados. Verifique se o vendedor foi selecionado corretamente.');
+      } else if (error.message.includes('operator does not exist')) {
+        throw new Error('Erro interno do banco de dados. Tente novamente.');
       } else {
         throw new Error(`Erro ao atualizar venda: ${error.message}`);
       }
