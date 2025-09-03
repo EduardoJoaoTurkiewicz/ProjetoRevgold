@@ -723,6 +723,67 @@ export function AppProvider({ children }: AppProviderProps) {
     setError(error);
   };
 
+  // Add missing agendaEventsService import and functions
+  const agendaEventsService = {
+    async getAll(): Promise<AgendaEvent[]> {
+      if (!user) return [];
+      
+      try {
+        const { data, error } = await supabase
+          .from('agenda_events')
+          .select('*')
+          .order('date', { ascending: false });
+        
+        if (error) throw error;
+        return (data || []).map(row => {
+          const transformed: any = {};
+          for (const [key, value] of Object.entries(row)) {
+            const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+            transformed[camelKey] = value;
+          }
+          return transformed as AgendaEvent;
+        });
+      } catch (error) {
+        console.error('Error loading agenda events:', error);
+        return [];
+      }
+    },
+
+    async create(event: Omit<AgendaEvent, 'id' | 'createdAt' | 'updatedAt'>): Promise<AgendaEvent> {
+      const dbData: any = {};
+      for (const [key, value] of Object.entries(event)) {
+        const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+        dbData[snakeKey] = value === '' ? null : value;
+      }
+      
+      const { data, error } = await supabase.from('agenda_events').insert([dbData]).select().single();
+      if (error) throw error;
+      
+      const transformed: any = {};
+      for (const [key, value] of Object.entries(data)) {
+        const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        transformed[camelKey] = value;
+      }
+      return transformed as AgendaEvent;
+    },
+
+    async update(id: string, event: Partial<AgendaEvent>): Promise<void> {
+      const dbData: any = {};
+      for (const [key, value] of Object.entries(event)) {
+        const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+        dbData[snakeKey] = value === '' ? null : value;
+      }
+      
+      const { error } = await supabase.from('agenda_events').update(dbData).eq('id', id);
+      if (error) throw error;
+    },
+
+    async delete(id: string): Promise<void> {
+      const { error } = await supabase.from('agenda_events').delete().eq('id', id);
+      if (error) throw error;
+    }
+  };
+
   const value: AppContextType = {
     user,
     loading,
