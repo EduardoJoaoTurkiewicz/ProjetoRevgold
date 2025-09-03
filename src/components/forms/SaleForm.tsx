@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Calendar, DollarSign, User, Package, FileText, CreditCard, AlertCircle, Calculator, CheckCircle } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { Sale, PaymentMethod, ThirdPartyCheckDetails } from '../../types';
+import { CreateSalePayload, SaleBoleto, SaleCheque } from '../../lib/supabaseServices';
 
 interface SaleFormProps {
   sale?: Sale | null;
-  onSubmit: (sale: Partial<Sale>) => void;
+  onSubmit: (sale: CreateSalePayload | Partial<Sale>) => void;
   onCancel: () => void;
 }
 
@@ -33,7 +34,10 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     paymentMethods: sale?.paymentMethods || [{ type: 'dinheiro' as const, amount: 0 }],
     paymentDescription: sale?.paymentDescription || '',
     paymentObservations: sale?.paymentObservations || '',
-    customCommissionRate: sale?.customCommissionRate || 5.00
+    customCommissionRate: sale?.customCommissionRate || 5.00,
+    // New fields for boletos and cheques
+    boletos: [] as SaleBoleto[],
+    cheques: [] as SaleCheque[]
   });
 
   const activeEmployees = employees.filter(emp => emp.isActive);
@@ -252,16 +256,60 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       };
     })();
     
-    const saleToSubmit = {
-      ...formData,
-      sellerId: cleanSellerId,
-      products: formData.products?.trim() || null,
-      observations: formData.observations?.trim() || null,
-      paymentDescription: formData.paymentDescription?.trim() || null,
-      paymentObservations: formData.paymentObservations?.trim() || null,
-      deliveryDate: formData.deliveryDate?.trim() || null,
-      paymentMethods: cleanedPaymentMethods,
-      ...recalculatedAmounts
+    // Generate boletos and cheques from payment methods
+    const boletos: SaleBoleto[] = [];
+    const cheques: SaleCheque[] = [];
+    
+    cleanedPaymentMethods.forEach(method => {
+      if (method.type === 'boleto' && method.installments && method.installments > 1) {
+        // Generate multiple boletos
+        for (let i = 1; i <= method.installments; i++) {
+          const dueDate = new Date(method.firstInstallmentDate || formData.date);
+          dueDate.setDate(dueDate.getDate() + (i - 1) * (method.installmentInterval || 30));
+          
+          boletos.push({
+            number: `BOL-${Date.now()}-${i}`,
+            due_date: dueDate.toISOString().split('T')[0],
+            value: method.installmentValue || (method.amount / method.installments),
+            observations: `Parcela ${i}/${method.installments} da venda`
+          });
+        }
+      } else if (method.type === 'cheque' && method.installments && method.installments > 1) {
+        // Generate multiple cheques
+        for (let i = 1; i <= method.installments; i++) {
+          const dueDate = new Date(method.firstInstallmentDate || formData.date);
+          dueDate.setDate(dueDate.getDate() + (i - 1) * (method.installmentInterval || 30));
+          
+          cheques.push({
+            bank: method.thirdPartyDetails?.[0]?.bank || 'Banco não especificado',
+            number: method.thirdPartyDetails?.[0]?.checkNumber || `CHQ-${Date.now()}-${i}`,
+            due_date: dueDate.toISOString().split('T')[0],
+            value: method.installmentValue || (method.amount / method.installments),
+            used_for_debt: false,
+            observations: `Parcela ${i}/${method.installments} da venda`
+          });
+        }
+      }
+    });
+    
+    // Create payload for RPC
+    const saleToSubmit: CreateSalePayload = {
+      date: formData.date,
+      delivery_date: formData.deliveryDate?.trim() || undefined,
+      client: formData.client.trim(),
+      seller_id: cleanSellerId || undefined,
+      custom_commission_rate: formData.customCommissionRate,
+      products: typeof formData.products === 'string' ? [{ name: formData.products }] : formData.products,
+      observations: formData.observations?.trim() || undefined,
+      total_value: formData.totalValue,
+      payment_methods: cleanedPaymentMethods,
+      payment_description: formData.paymentDescription?.trim() || undefined,
+      payment_observations: formData.paymentObservations?.trim() || undefined,
+      received_amount: recalculatedAmounts.receivedAmount,
+      pending_amount: recalculatedAmounts.pendingAmount,
+      status: recalculatedAmounts.status,
+      boletos,
+      cheques
     };
     
     console.log('📤 Dados finais para submissão:', saleToSubmit);

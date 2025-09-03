@@ -1,5 +1,4 @@
-import { supabase, isSupabaseConfigured } from './supabase';
-import { AutomationService } from './automationService';
+import { supabase } from './supabase';
 import type { 
   Sale, 
   Debt, 
@@ -14,109 +13,750 @@ import type {
   PixFee,
   CashBalance,
   Tax,
-  AgendaEvent,
-  SaleBoleto,
-  SaleCheque,
-  DebtBoleto,
-  DebtCheque
+  AgendaEvent
 } from '../types';
 
-// Utility function to validate UUID format
-function isValidUuid(str: string): boolean {
-  if (!str || typeof str !== 'string') return false;
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(str);
-}
-
-// Utility function to transform database row to app type
-function transformDatabaseRow<T>(row: any): T {
-  if (!row) return row;
-  
-  // Transform snake_case to camelCase
-  const transformed = {};
-  for (const [key, value] of Object.entries(row)) {
-    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-    transformed[camelKey] = value;
-  }
-  
-  return transformed as T;
-}
-
-// Transform app type to database format
-function transformToDatabase(obj: any): any {
-  if (!obj) return obj;
+// Transform database row to camelCase
+function transformToCamelCase(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj;
   
   const transformed: any = {};
   for (const [key, value] of Object.entries(obj)) {
-    // Convert camelCase to snake_case
-    const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-    
-    // Handle different value types properly
-    if (value === undefined) {
-      transformed[snakeKey] = null;
-    } else if (value === null) {
-      transformed[snakeKey] = null;
-    } else if (typeof value === 'string' && value.trim() === '') {
-      transformed[snakeKey] = null;
-    } else if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
-      // Keep objects and arrays as-is for JSONB fields - Supabase will handle serialization
-      transformed[snakeKey] = value;
-    } else {
-      transformed[snakeKey] = value;
-    }
+    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    transformed[camelKey] = value;
   }
-  
   return transformed;
 }
 
-// Image handling functions for check images
-export async function uploadCheckImage(file: File, checkId: string, imageType: 'front' | 'back'): Promise<string> {
-  if (!isSupabaseConfigured()) {
-    throw new Error('Supabase não está configurado. Configure as variáveis de ambiente.');
+// Transform camelCase to snake_case for database
+function transformToSnakeCase(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj;
+  
+  const transformed: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    transformed[snakeKey] = value === '' ? null : value;
   }
+  return transformed;
+}
 
+// Sale types for RPC
+export type SaleBoleto = { 
+  number: string; 
+  due_date: string; 
+  value: number; 
+  observations?: string;
+};
+
+export type SaleCheque = { 
+  bank?: string; 
+  number?: string; 
+  due_date: string; 
+  value: number; 
+  used_for_debt?: boolean;
+  observations?: string;
+};
+
+export type CreateSalePayload = {
+  date: string;
+  delivery_date?: string;
+  client: string;                  // Client name (text)
+  seller_id?: string;              // UUID of seller
+  custom_commission_rate?: number;
+  products?: any[];
+  observations?: string;
+  total_value: number;
+  payment_methods?: any[];
+  payment_description?: string;
+  payment_observations?: string;
+  received_amount?: number;
+  pending_amount?: number;
+  status?: 'pago' | 'pendente' | 'parcial';
+  boletos?: SaleBoleto[];
+  cheques?: SaleCheque[];
+};
+
+// Sales Service
+export const salesService = {
+  async getAll(): Promise<Sale[]> {
+    const { data, error } = await supabase
+      .from('sales')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformToCamelCase);
+  },
+
+  async create(sale: CreateSalePayload): Promise<Sale> {
+    console.log('🔄 Creating sale via RPC:', sale);
+    
+    // Use RPC instead of direct insert to avoid UUID issues
+    const { data: saleId, error } = await supabase.rpc('create_sale', { 
+      payload: sale 
+    });
+    
+    if (error) {
+      console.error('❌ RPC create_sale error:', error);
+      throw new Error(`Erro ao criar venda: ${error.message}`);
+    }
+    
+    console.log('✅ Sale created with ID:', saleId);
+    
+    // Fetch the created sale
+    const { data: createdSale, error: fetchError } = await supabase
+      .from('sales')
+      .select('*')
+      .eq('id', saleId)
+      .single();
+    
+    if (fetchError) throw fetchError;
+    return transformToCamelCase(createdSale);
+  },
+
+  async update(id: string, sale: Partial<Sale>): Promise<Sale> {
+    const dbData = transformToSnakeCase(sale);
+    const { data, error } = await supabase
+      .from('sales')
+      .update(dbData)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return transformToCamelCase(data);
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('sales')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Sale Boletos Service
+export const saleBoletosService = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('sale_boletos')
+      .select(`
+        *,
+        sales!inner(client, date)
+      `)
+      .order('due_date', { ascending: true });
+    
+    if (error) throw error;
+    return (data || []).map(transformToCamelCase);
+  },
+
+  async markAsPaid(boletoId: string, paidAt?: string, interest?: number) {
+    const { error } = await supabase.rpc('mark_sale_boleto_paid', {
+      p_boleto_id: boletoId,
+      p_paid_at: paidAt ? new Date(paidAt).toISOString() : null,
+      p_interest: interest ?? 0
+    });
+    
+    if (error) throw new Error(`Erro ao marcar boleto como pago: ${error.message}`);
+  }
+};
+
+// Sale Cheques Service
+export const saleChequesService = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('sale_cheques')
+      .select(`
+        *,
+        sales!inner(client, date)
+      `)
+      .order('due_date', { ascending: true });
+    
+    if (error) throw error;
+    return (data || []).map(transformToCamelCase);
+  },
+
+  async markAsPaid(chequeId: string, paidAt?: string) {
+    const { error } = await supabase.rpc('mark_sale_cheque_paid', {
+      p_cheque_id: chequeId,
+      p_paid_at: paidAt ? new Date(paidAt).toISOString() : null
+    });
+    
+    if (error) throw new Error(`Erro ao marcar cheque como pago: ${error.message}`);
+  }
+};
+
+// Debts Service
+export const debtsService = {
+  async getAll(): Promise<Debt[]> {
+    const { data, error } = await supabase
+      .from('debts')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformToCamelCase);
+  },
+
+  async create(debt: Omit<Debt, 'id' | 'createdAt' | 'updatedAt'>): Promise<Debt> {
+    const dbData = transformToSnakeCase(debt);
+    const { data, error } = await supabase
+      .from('debts')
+      .insert([dbData])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return transformToCamelCase(data);
+  },
+
+  async update(id: string, debt: Partial<Debt>): Promise<void> {
+    const dbData = transformToSnakeCase(debt);
+    const { error } = await supabase
+      .from('debts')
+      .update(dbData)
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('debts')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Checks Service
+export const checksService = {
+  async getAll(): Promise<Check[]> {
+    const { data, error } = await supabase
+      .from('checks')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformToCamelCase);
+  },
+
+  async create(check: Omit<Check, 'id' | 'createdAt' | 'updatedAt'>): Promise<Check> {
+    const dbData = transformToSnakeCase(check);
+    const { data, error } = await supabase
+      .from('checks')
+      .insert([dbData])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return transformToCamelCase(data);
+  },
+
+  async update(id: string, check: Partial<Check>): Promise<void> {
+    const dbData = transformToSnakeCase(check);
+    const { error } = await supabase
+      .from('checks')
+      .update(dbData)
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('checks')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Boletos Service
+export const boletosService = {
+  async getAll(): Promise<Boleto[]> {
+    const { data, error } = await supabase
+      .from('boletos')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformToCamelCase);
+  },
+
+  async create(boleto: Omit<Boleto, 'id' | 'createdAt' | 'updatedAt'>): Promise<Boleto> {
+    const dbData = transformToSnakeCase(boleto);
+    const { data, error } = await supabase
+      .from('boletos')
+      .insert([dbData])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return transformToCamelCase(data);
+  },
+
+  async update(id: string, boleto: Partial<Boleto>): Promise<void> {
+    const dbData = transformToSnakeCase(boleto);
+    const { error } = await supabase
+      .from('boletos')
+      .update(dbData)
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('boletos')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Employees Service
+export const employeesService = {
+  async getAll(): Promise<Employee[]> {
+    const { data, error } = await supabase
+      .from('employees')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformToCamelCase);
+  },
+
+  async create(employee: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>): Promise<Employee> {
+    const dbData = transformToSnakeCase(employee);
+    const { data, error } = await supabase
+      .from('employees')
+      .insert([dbData])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return transformToCamelCase(data);
+  },
+
+  async update(id: string, employee: Partial<Employee>): Promise<void> {
+    const dbData = transformToSnakeCase(employee);
+    const { error } = await supabase
+      .from('employees')
+      .update(dbData)
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('employees')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Employee Payments Service
+export const employeePaymentsService = {
+  async getAll(): Promise<EmployeePayment[]> {
+    const { data, error } = await supabase
+      .from('employee_payments')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformToCamelCase);
+  },
+
+  async create(payment: Omit<EmployeePayment, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeePayment> {
+    const dbData = transformToSnakeCase(payment);
+    const { data, error } = await supabase
+      .from('employee_payments')
+      .insert([dbData])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return transformToCamelCase(data);
+  },
+
+  async update(id: string, payment: Partial<EmployeePayment>): Promise<void> {
+    const dbData = transformToSnakeCase(payment);
+    const { error } = await supabase
+      .from('employee_payments')
+      .update(dbData)
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('employee_payments')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Employee Advances Service
+export const employeeAdvancesService = {
+  async getAll(): Promise<EmployeeAdvance[]> {
+    const { data, error } = await supabase
+      .from('employee_advances')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformToCamelCase);
+  },
+
+  async create(advance: Omit<EmployeeAdvance, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeeAdvance> {
+    const dbData = transformToSnakeCase(advance);
+    const { data, error } = await supabase
+      .from('employee_advances')
+      .insert([dbData])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return transformToCamelCase(data);
+  },
+
+  async update(id: string, advance: Partial<EmployeeAdvance>): Promise<void> {
+    const dbData = transformToSnakeCase(advance);
+    const { error } = await supabase
+      .from('employee_advances')
+      .update(dbData)
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('employee_advances')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Employee Overtimes Service
+export const employeeOvertimesService = {
+  async getAll(): Promise<EmployeeOvertime[]> {
+    const { data, error } = await supabase
+      .from('employee_overtimes')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformToCamelCase);
+  },
+
+  async create(overtime: Omit<EmployeeOvertime, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeeOvertime> {
+    const dbData = transformToSnakeCase(overtime);
+    const { data, error } = await supabase
+      .from('employee_overtimes')
+      .insert([dbData])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return transformToCamelCase(data);
+  },
+
+  async update(id: string, overtime: Partial<EmployeeOvertime>): Promise<void> {
+    const dbData = transformToSnakeCase(overtime);
+    const { error } = await supabase
+      .from('employee_overtimes')
+      .update(dbData)
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('employee_overtimes')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Employee Commissions Service
+export const employeeCommissionsService = {
+  async getAll(): Promise<EmployeeCommission[]> {
+    const { data, error } = await supabase
+      .from('employee_commissions')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformToCamelCase);
+  },
+
+  async create(commission: Omit<EmployeeCommission, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeeCommission> {
+    const dbData = transformToSnakeCase(commission);
+    const { data, error } = await supabase
+      .from('employee_commissions')
+      .insert([dbData])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return transformToCamelCase(data);
+  },
+
+  async update(id: string, commission: Partial<EmployeeCommission>): Promise<void> {
+    const dbData = transformToSnakeCase(commission);
+    const { error } = await supabase
+      .from('employee_commissions')
+      .update(dbData)
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('employee_commissions')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Cash Transactions Service
+export const cashTransactionsService = {
+  async getAll(): Promise<CashTransaction[]> {
+    const { data, error } = await supabase
+      .from('cash_transactions')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformToCamelCase);
+  },
+
+  async create(transaction: Omit<CashTransaction, 'id' | 'createdAt' | 'updatedAt'>): Promise<CashTransaction> {
+    const dbData = transformToSnakeCase(transaction);
+    const { data, error } = await supabase
+      .from('cash_transactions')
+      .insert([dbData])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return transformToCamelCase(data);
+  },
+
+  async update(id: string, transaction: Partial<CashTransaction>): Promise<void> {
+    const dbData = transformToSnakeCase(transaction);
+    const { error } = await supabase
+      .from('cash_transactions')
+      .update(dbData)
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('cash_transactions')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Cash Balances Service
+export const cashBalancesService = {
+  async get(): Promise<CashBalance | null> {
+    const { data, error } = await supabase
+      .from('cash_balances')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    
+    if (error) throw error;
+    return data ? transformToCamelCase(data) : null;
+  },
+
+  async create(balance: Omit<CashBalance, 'id' | 'createdAt' | 'updatedAt'>): Promise<CashBalance> {
+    const dbData = transformToSnakeCase(balance);
+    const { data, error } = await supabase
+      .from('cash_balances')
+      .insert([dbData])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return transformToCamelCase(data);
+  }
+};
+
+// PIX Fees Service
+export const pixFeesService = {
+  async getAll(): Promise<PixFee[]> {
+    const { data, error } = await supabase
+      .from('pix_fees')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformToCamelCase);
+  },
+
+  async create(fee: Omit<PixFee, 'id' | 'createdAt' | 'updatedAt'>): Promise<PixFee> {
+    const dbData = transformToSnakeCase(fee);
+    const { data, error } = await supabase
+      .from('pix_fees')
+      .insert([dbData])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return transformToCamelCase(data);
+  },
+
+  async update(id: string, fee: Partial<PixFee>): Promise<void> {
+    const dbData = transformToSnakeCase(fee);
+    const { error } = await supabase
+      .from('pix_fees')
+      .update(dbData)
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('pix_fees')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Taxes Service
+export const taxesService = {
+  async getAll(): Promise<Tax[]> {
+    const { data, error } = await supabase
+      .from('taxes')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformToCamelCase);
+  },
+
+  async create(tax: Omit<Tax, 'id' | 'createdAt' | 'updatedAt'>): Promise<Tax> {
+    const dbData = transformToSnakeCase(tax);
+    const { data, error } = await supabase
+      .from('taxes')
+      .insert([dbData])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return transformToCamelCase(data);
+  },
+
+  async update(id: string, tax: Partial<Tax>): Promise<void> {
+    const dbData = transformToSnakeCase(tax);
+    const { error } = await supabase
+      .from('taxes')
+      .update(dbData)
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('taxes')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Agenda Events Service
+export const agendaEventsService = {
+  async getAll(): Promise<AgendaEvent[]> {
+    const { data, error } = await supabase
+      .from('agenda_events')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []).map(transformToCamelCase);
+  },
+
+  async create(event: Omit<AgendaEvent, 'id' | 'createdAt' | 'updatedAt'>): Promise<AgendaEvent> {
+    const dbData = transformToSnakeCase(event);
+    const { data, error } = await supabase
+      .from('agenda_events')
+      .insert([dbData])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return transformToCamelCase(data);
+  },
+
+  async update(id: string, event: Partial<AgendaEvent>): Promise<void> {
+    const dbData = transformToSnakeCase(event);
+    const { error } = await supabase
+      .from('agenda_events')
+      .update(dbData)
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('agenda_events')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Image upload functions (for checks)
+export async function uploadCheckImage(file: File, checkId: string, imageType: 'front' | 'back'): Promise<string> {
   const fileExt = file.name.split('.').pop();
-  const fileName = `${checkId}-${imageType}-${Date.now()}.${fileExt}`;
-  const filePath = `check-images/${fileName}`;
+  const fileName = `${checkId}_${imageType}.${fileExt}`;
+  const filePath = `checks/${fileName}`;
 
-  const { error } = await supabase.storage
+  const { error: uploadError } = await supabase.storage
     .from('check-images')
     .upload(filePath, file, {
       cacheControl: '3600',
-      upsert: false
+      upsert: true
     });
 
-  if (error) {
-    console.error('Erro no upload:', error);
-    throw new Error(`Erro ao fazer upload: ${error.message}`);
-  }
-
-  console.log('✅ Upload realizado com sucesso:', filePath);
-  return filePath;
-}
-
-export async function deleteCheckImage(filePath: string): Promise<void> {
-  if (!isSupabaseConfigured()) {
-    throw new Error('Supabase não está configurado. Configure as variáveis de ambiente.');
-  }
-
-  const { error } = await supabase.storage
-    .from('check-images')
-    .remove([filePath]);
-
-  if (error) {
-    console.error('Erro ao deletar imagem:', error);
-    throw new Error(`Erro ao deletar imagem: ${error.message}`);
-  }
-
-  console.log('✅ Imagem deletada com sucesso:', filePath);
-}
-
-export function getCheckImageUrl(filePath: string): string {
-  if (!isSupabaseConfigured()) {
-    console.warn('Supabase não configurado, retornando URL de fallback');
-    return '/logo-fallback.svg';
-  }
+  if (uploadError) throw uploadError;
 
   const { data } = supabase.storage
     .from('check-images')
@@ -125,1366 +765,53 @@ export function getCheckImageUrl(filePath: string): string {
   return data.publicUrl;
 }
 
-// Service objects for automation
-export const checksService = {
-  async create(checkData: Omit<Check, 'id' | 'createdAt' | 'updatedAt'>) {
-    if (!isSupabaseConfigured()) {
-      // Return mock data for local development
-      return {
-        ...checkData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    // Create database object directly without transformation
-    const dbData = {
-      sale_id: checkData.saleId || null,
-      debt_id: checkData.debtId || null,
-      client: checkData.client,
-      value: checkData.value || 0,
-      due_date: checkData.dueDate,
-      status: checkData.status || 'pendente',
-      is_own_check: checkData.isOwnCheck || false,
-      observations: checkData.observations || null,
-      used_for: checkData.usedFor || null,
-      installment_number: checkData.installmentNumber || null,
-      total_installments: checkData.totalInstallments || null,
-      front_image: checkData.frontImage || null,
-      back_image: checkData.backImage || null,
-      selected_available_checks: checkData.selectedAvailableChecks || null,
-      used_in_debt: checkData.usedInDebt || null,
-      discount_date: checkData.discountDate || null,
-      is_company_payable: checkData.isCompanyPayable || null,
-      company_name: checkData.companyName || null,
-      payment_date: checkData.paymentDate || null
-    };
-    
-    const { data, error } = await supabase.from('checks').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<Check>(data);
-  },
+export async function deleteCheckImage(imageUrl: string): Promise<void> {
+  const path = imageUrl.split('/').pop();
+  if (!path) return;
+
+  const { error } = await supabase.storage
+    .from('check-images')
+    .remove([`checks/${path}`]);
+
+  if (error) throw error;
+}
+
+export function getCheckImageUrl(imagePath: string): string {
+  if (imagePath.startsWith('http')) return imagePath;
   
-  async getAll(): Promise<Check[]> {
-    if (!isSupabaseConfigured()) return [];
-    
+  const { data } = supabase.storage
+    .from('check-images')
+    .getPublicUrl(`checks/${imagePath}`);
+
+  return data.publicUrl;
+}
+
+// Reports and Views Service
+export const reportsService = {
+  async getBoletosReceber() {
     const { data, error } = await supabase
-      .from('checks')
-      .select('*')
-      .order('due_date', { ascending: false });
+      .from('v_boletos_receber')
+      .select('*');
     
     if (error) throw error;
-    return (data || []).map(transformDatabaseRow<Check>);
+    return (data || []).map(transformToCamelCase);
   },
 
-  async update(id: string, checkData: Partial<Check>) {
-    if (!isSupabaseConfigured()) {
-      return; // No-op for local development
-    }
-    
-    const dbData = transformToDatabase(checkData);
-    const { error } = await supabase.from('checks').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-  
-  async delete(id: string) {
-    if (!isSupabaseConfigured()) {
-      return; // No-op for local development
-    }
-    const { error } = await supabase.from('checks').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const boletosService = {
-  async create(boletoData: Omit<Boleto, 'id' | 'createdAt' | 'updatedAt'>) {
-    if (!isSupabaseConfigured()) {
-      // Return mock data for local development
-      return {
-        ...boletoData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    // Create database object directly without transformation
-    const dbData = {
-      sale_id: boletoData.saleId || null,
-      client: boletoData.client,
-      value: boletoData.value || 0,
-      due_date: boletoData.dueDate,
-      status: boletoData.status || 'pendente',
-      installment_number: boletoData.installmentNumber || 1,
-      total_installments: boletoData.totalInstallments || 1,
-      boleto_file: boletoData.boletoFile || null,
-      observations: boletoData.observations || null,
-      overdue_action: boletoData.overdueAction || null,
-      interest_amount: boletoData.interestAmount || null,
-      penalty_amount: boletoData.penaltyAmount || null,
-      notary_costs: boletoData.notaryCosts || null,
-      final_amount: boletoData.finalAmount || null,
-      overdue_notes: boletoData.overdueNotes || null,
-      is_company_payable: boletoData.isCompanyPayable || null,
-      company_name: boletoData.companyName || null,
-      payment_date: boletoData.paymentDate || null,
-      interest_paid: boletoData.interestPaid || null
-    };
-    
-    const { data, error } = await supabase.from('boletos').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<Boleto>(data);
-  },
-  
-  async findDuplicate(boletoData: Omit<Boleto, 'id' | 'createdAt' | 'updatedAt'>): Promise<Boleto | null> {
-    if (!isSupabaseConfigured()) return null;
-    
+  async getChequesReceber() {
     const { data, error } = await supabase
-      .from('boletos')
-      .select('*')
-      .eq('client', boletoData.client)
-      .eq('value', boletoData.value)
-      .eq('due_date', boletoData.dueDate)
-      .eq('installment_number', boletoData.installmentNumber || 1)
-      .eq('total_installments', boletoData.totalInstallments || 1)
-      .limit(1)
-      .single();
+      .from('v_cheques_receber')
+      .select('*');
     
-    if (error && error.code !== 'PGRST116') throw error;
-    return data ? transformDatabaseRow<Boleto>(data) : null;
+    if (error) throw error;
+    return (data || []).map(transformToCamelCase);
   },
-  
-  async getAll(): Promise<Boleto[]> {
-    if (!isSupabaseConfigured()) return [];
-    
+
+  async getAReceber() {
     const { data, error } = await supabase
-      .from('boletos')
-      .select('*')
-      .order('due_date', { ascending: false });
+      .from('v_a_receber')
+      .select('*');
     
     if (error) throw error;
-    return (data || []).map(transformDatabaseRow<Boleto>);
-  },
-
-  async update(id: string, boletoData: Partial<Boleto>) {
-    if (!isSupabaseConfigured()) {
-      return; // No-op for local development
-    }
-    
-    const dbData = transformToDatabase(boletoData);
-    const { error } = await supabase.from('boletos').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-  
-  async delete(id: string) {
-    if (!isSupabaseConfigured()) {
-      return; // No-op for local development
-    }
-    const { error } = await supabase.from('boletos').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const employeeCommissionsService = {
-  async getAll(): Promise<EmployeeCommission[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('employee_commissions')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<EmployeeCommission>);
-  },
-
-  async create(commission: Omit<EmployeeCommission, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeeCommission> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...commission,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(commission);
-    const { data, error } = await supabase.from('employee_commissions').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<EmployeeCommission>(data);
-  },
-
-  async update(id: string, commission: Partial<EmployeeCommission>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(commission);
-    const { error } = await supabase.from('employee_commissions').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('employee_commissions').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const employeePaymentsService = {
-  async getAll(): Promise<EmployeePayment[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('employee_payments')
-      .select('*')
-      .order('payment_date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<EmployeePayment>);
-  },
-
-  async create(payment: Omit<EmployeePayment, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeePayment> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...payment,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(payment);
-    const { data, error } = await supabase.from('employee_payments').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<EmployeePayment>(data);
-  },
-
-  async update(id: string, payment: Partial<EmployeePayment>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(payment);
-    const { error } = await supabase.from('employee_payments').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('employee_payments').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const employeeAdvancesService = {
-  async getAll(): Promise<EmployeeAdvance[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('employee_advances')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<EmployeeAdvance>);
-  },
-
-  async create(advance: Omit<EmployeeAdvance, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeeAdvance> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...advance,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(advance);
-    const { data, error } = await supabase.from('employee_advances').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<EmployeeAdvance>(data);
-  },
-
-  async update(id: string, advance: Partial<EmployeeAdvance>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(advance);
-    const { error } = await supabase.from('employee_advances').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('employee_advances').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const employeeOvertimesService = {
-  async getAll(): Promise<EmployeeOvertime[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('employee_overtimes')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<EmployeeOvertime>);
-  },
-
-  async create(overtime: Omit<EmployeeOvertime, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeeOvertime> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...overtime,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(overtime);
-    const { data, error } = await supabase.from('employee_overtimes').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<EmployeeOvertime>(data);
-  },
-
-  async update(id: string, overtime: Partial<EmployeeOvertime>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(overtime);
-    const { error } = await supabase.from('employee_overtimes').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('employee_overtimes').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const cashBalancesService = {
-  async get(): Promise<CashBalance | null> {
-    if (!isSupabaseConfigured()) return null;
-    
-    try {
-      const { data, error } = await supabase
-        .from('cash_balances')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('Erro ao buscar saldo do caixa:', error);
-        throw new Error(`Erro ao buscar saldo do caixa: ${error.message}`);
-      }
-      
-      return data ? transformDatabaseRow<CashBalance>(data) : null;
-    } catch (error) {
-      console.error('Erro na busca do saldo:', error);
-      throw error;
-    }
-  },
-
-  async create(balance: Omit<CashBalance, 'id' | 'createdAt' | 'updatedAt'>): Promise<CashBalance> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...balance,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    // Verificar se já existe um saldo
-    const existingBalance = await this.get();
-    if (existingBalance) {
-      throw new Error('O caixa já foi inicializado. Use o botão "Recalcular" para atualizar o saldo.');
-    }
-    
-    // Validate required fields
-    if (typeof balance.currentBalance !== 'number') {
-      throw new Error('Saldo atual deve ser um número válido');
-    }
-    
-    if (typeof balance.initialBalance !== 'number') {
-      throw new Error('Saldo inicial deve ser um número válido');
-    }
-    
-    // Create database object directly to avoid transformation issues
-    const dbData = {
-      current_balance: balance.currentBalance,
-      initial_balance: balance.initialBalance,
-      initial_date: balance.initialDate || new Date().toISOString().split('T')[0],
-      last_updated: balance.lastUpdated || new Date().toISOString()
-    };
-    
-    console.log('🔄 Criando saldo do caixa:', dbData);
-    
-    const { data, error } = await supabase.from('cash_balances').insert([dbData]).select().single();
-    if (error) {
-      console.error('Erro ao criar saldo do caixa:', error);
-      throw new Error(`Erro ao criar saldo do caixa: ${error.message}`);
-    }
-    
-    console.log('✅ Saldo do caixa criado:', data);
-    return transformDatabaseRow<CashBalance>(data);
-  },
-
-  async update(id: string, balance: Partial<CashBalance>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    // Create database object directly
-    const dbData: any = {};
-    
-    if (typeof balance.currentBalance === 'number') {
-      dbData.current_balance = balance.currentBalance;
-    }
-    
-    if (typeof balance.initialBalance === 'number') {
-      dbData.initial_balance = balance.initialBalance;
-    }
-    
-    if (balance.initialDate) {
-      dbData.initial_date = balance.initialDate;
-    }
-    
-    // Ensure last_updated is always set
-    dbData.last_updated = new Date().toISOString();
-    
-    console.log('🔄 Atualizando saldo do caixa:', dbData);
-    
-    const { error } = await supabase.from('cash_balances').update(dbData).eq('id', id);
-    if (error) {
-      console.error('Erro ao atualizar saldo do caixa:', error);
-      throw new Error(`Erro ao atualizar saldo do caixa: ${error.message}`);
-    }
-    
-    console.log('✅ Saldo do caixa atualizado');
-  }
-};
-
-export const pixFeesService = {
-  async getAll(): Promise<PixFee[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('pix_fees')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<PixFee>);
-  },
-
-  async create(fee: Omit<PixFee, 'id' | 'createdAt' | 'updatedAt'>): Promise<PixFee> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...fee,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(fee);
-    const { data, error } = await supabase.from('pix_fees').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<PixFee>(data);
-  },
-
-  async update(id: string, fee: Partial<PixFee>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(fee);
-    const { error } = await supabase.from('pix_fees').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('pix_fees').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const cashTransactionsService = {
-  async getAll(): Promise<CashTransaction[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('cash_transactions')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<CashTransaction>);
-  },
-
-  async create(transaction: Omit<CashTransaction, 'id' | 'createdAt' | 'updatedAt'>): Promise<CashTransaction> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...transaction,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    // Validate required fields
-    if (!transaction.description || !transaction.description.trim()) {
-      throw new Error('Descrição é obrigatória');
-    }
-    
-    if (typeof transaction.amount !== 'number' || transaction.amount <= 0) {
-      throw new Error('Valor deve ser maior que zero');
-    }
-    
-    if (!['entrada', 'saida'].includes(transaction.type)) {
-      throw new Error('Tipo deve ser entrada ou saida');
-    }
-    
-    // Create database object directly to avoid transformation issues
-    const dbData = {
-      date: transaction.date || new Date().toISOString().split('T')[0],
-      type: transaction.type,
-      amount: transaction.amount,
-      description: transaction.description.trim(),
-      category: transaction.category,
-      related_id: transaction.relatedId || null,
-      payment_method: transaction.paymentMethod || null
-    };
-    
-    console.log('🔄 Criando transação de caixa:', dbData);
-    
-    const { data, error } = await supabase.from('cash_transactions').insert([dbData]).select().single();
-    if (error) {
-      console.error('Erro ao criar transação de caixa:', error);
-      throw new Error(`Erro ao criar transação de caixa: ${error.message}`);
-    }
-    
-    console.log('✅ Transação de caixa criada:', data);
-    return transformDatabaseRow<CashTransaction>(data);
-  },
-
-  async update(id: string, transaction: Partial<CashTransaction>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(transaction);
-    const { error } = await supabase.from('cash_transactions').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('cash_transactions').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const employeesService = {
-  async getAll(): Promise<Employee[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('employees')
-      .select('*')
-      .order('name');
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<Employee>);
-  },
-
-  async create(employee: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>): Promise<Employee> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...employee,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(employee);
-    const { data, error } = await supabase.from('employees').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<Employee>(data);
-  },
-
-  async update(id: string, employee: Partial<Employee>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(employee);
-    const { error } = await supabase.from('employees').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('employees').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const salesService = {
-  async getAll(): Promise<Sale[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('sales')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<Sale>);
-  },
-
-  async create(sale: Omit<Sale, 'id' | 'createdAt' | 'updatedAt'>): Promise<Sale> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...sale,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    console.log('🔄 Iniciando criação de venda:', sale);
-    
-    // Validate required fields
-    if (!sale.client || !sale.client.trim()) {
-      throw new Error('Cliente é obrigatório');
-    }
-    
-    if (!sale.totalValue || sale.totalValue <= 0) {
-      throw new Error('Valor total deve ser maior que zero');
-    }
-    
-    if (!sale.paymentMethods || sale.paymentMethods.length === 0) {
-      throw new Error('Pelo menos um método de pagamento é obrigatório');
-    }
-    
-    // Validate payment methods structure
-    for (const method of sale.paymentMethods) {
-      if (!method.type || typeof method.type !== 'string') {
-        throw new Error('Todos os métodos de pagamento devem ter um tipo válido');
-      }
-      if (typeof method.amount !== 'number' || method.amount < 0) {
-        throw new Error('Todos os métodos de pagamento devem ter um valor válido');
-      }
-    }
-    
-    // Clean and validate sellerId
-    let cleanSellerId: string | null = null;
-    if (sale.sellerId && typeof sale.sellerId === 'string') {
-      const trimmedSellerId = sale.sellerId.trim();
-      if (trimmedSellerId !== '' && trimmedSellerId !== 'null' && trimmedSellerId !== 'undefined') {
-        // Validate UUID format
-        if (isValidUuid(trimmedSellerId)) {
-          cleanSellerId = trimmedSellerId;
-        } else {
-          console.warn('⚠️ ID de vendedor inválido, será definido como null:', trimmedSellerId);
-          cleanSellerId = null;
-        }
-      }
-    }
-    
-    // Clean and validate all fields before database insertion
-    const cleanedPaymentMethods = sale.paymentMethods.map(method => {
-      const cleaned: any = { ...method };
-      
-      // Ensure required fields
-      if (!cleaned.type) cleaned.type = 'dinheiro';
-      if (typeof cleaned.amount !== 'number') cleaned.amount = 0;
-      
-      // Clean optional fields - remove undefined and empty values
-      Object.keys(cleaned).forEach(key => {
-        const value = cleaned[key];
-        if (value === undefined || value === '' || 
-            (Array.isArray(value) && value.length === 0) ||
-            (typeof value === 'string' && value.trim() === '')) {
-          delete cleaned[key];
-        }
-      });
-      
-      // Ensure installment fields are consistent
-      if (cleaned.installments === 1) {
-        delete cleaned.installments;
-        delete cleaned.installmentValue;
-        delete cleaned.installmentInterval;
-        delete cleaned.firstInstallmentDate;
-        delete cleaned.startDate;
-      }
-      
-      return cleaned;
-    });
-    
-    // Validate that we have at least one valid payment method
-    const validPaymentMethods = cleanedPaymentMethods.filter(method => 
-      method.type && typeof method.amount === 'number' && method.amount > 0
-    );
-    
-    if (validPaymentMethods.length === 0) {
-      throw new Error('Pelo menos um método de pagamento deve ter valor maior que zero');
-    }
-    
-    console.log('✅ Métodos de pagamento validados:', validPaymentMethods);
-    
-    // Create database object directly without transformation to avoid JSON issues
-    const dbData = {
-      date: sale.date,
-      delivery_date: sale.deliveryDate && typeof sale.deliveryDate === 'string' && sale.deliveryDate.trim() !== '' ? sale.deliveryDate.trim() : null,
-      client: sale.client.trim(),
-      seller_id: cleanSellerId,
-      custom_commission_rate: typeof sale.customCommissionRate === 'number' ? sale.customCommissionRate : 5.00,
-      products: sale.products && typeof sale.products === 'string' && sale.products.trim() !== '' ? sale.products.trim() : null,
-      observations: sale.observations && typeof sale.observations === 'string' && sale.observations.trim() !== '' ? sale.observations.trim() : null,
-      total_value: sale.totalValue,
-      payment_methods: validPaymentMethods, // Use only valid payment methods
-      payment_description: sale.paymentDescription && typeof sale.paymentDescription === 'string' && sale.paymentDescription.trim() !== '' ? sale.paymentDescription.trim() : null,
-      payment_observations: sale.paymentObservations && typeof sale.paymentObservations === 'string' && sale.paymentObservations.trim() !== '' ? sale.paymentObservations.trim() : null,
-      received_amount: sale.receivedAmount || 0,
-      pending_amount: sale.pendingAmount || 0,
-      status: sale.status || 'pendente'
-    };
-    
-    console.log('📝 Dados preparados para inserção:', {
-      ...dbData,
-      payment_methods: `${validPaymentMethods.length} método(s) válido(s)`
-    });
-    
-    const { data, error } = await supabase
-      .from('sales')
-      .insert(dbData)
-      .select()
-      .single();
-       
-    if (error) {
-      console.error('Erro ao criar venda:', error);
-      
-      // Provide more specific error messages
-      if (error.code === '23505') {
-        if (error.message.includes('sales_flexible_unique')) {
-          throw new Error('Uma venda idêntica (mesmo cliente, data, valor) já foi registrada recentemente. Aguarde alguns segundos ou altere algum valor.');
-        } else {
-          throw new Error('Esta venda já existe no sistema. Verifique se não há duplicatas.');
-        }
-      } else if (error.code === '23503') {
-        if (error.message.includes('seller_id')) {
-          throw new Error('Vendedor selecionado não existe ou foi removido. Selecione um vendedor válido ou deixe em branco.');
-        } else {
-          throw new Error('Referência inválida detectada. Verifique os dados inseridos.');
-        }
-      } else if (error.message.includes('invalid input syntax')) {
-        throw new Error('Formato de dados inválido. Verifique se as datas estão no formato correto (AAAA-MM-DD) e os números são válidos.');
-      } else if (error.message.includes('violates check constraint')) {
-        throw new Error('Dados violam regras do sistema. Verifique se o status está correto e todos os valores são positivos.');
-      } else if (error.message.includes('operator does not exist')) {
-        throw new Error('Erro interno do banco de dados. Verifique se todos os campos estão preenchidos corretamente.');
-      } else if (error.message.includes('duplicate key')) {
-        throw new Error('Venda duplicada detectada. Uma venda com os mesmos dados já existe.');
-      } else if (error.message.includes('null value')) {
-        throw new Error('Campo obrigatório não preenchido. Verifique se cliente, data e valor total estão preenchidos.');
-      } else {
-        throw new Error(`Erro ao criar venda: ${error.message}`);
-      }
-    }
-    
-    console.log('✅ Venda criada com sucesso no banco:', data);
-    
-    const newSale = transformDatabaseRow<Sale>(data);
-    console.log('✅ Venda transformada:', newSale);
-    
-    return newSale;
-  },
-
-  async update(id: string, sale: Partial<Sale>): Promise<Sale> {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase não está configurado');
-    }
-    
-    console.log('🔄 Atualizando venda:', id, sale);
-    
-    // Clean sellerId for updates
-    let cleanSellerId: string | null | undefined = undefined;
-    if (sale.sellerId !== undefined) {
-      if (sale.sellerId && typeof sale.sellerId === 'string') {
-        const trimmedSellerId = sale.sellerId.trim();
-        if (trimmedSellerId !== '' && trimmedSellerId !== 'null' && trimmedSellerId !== 'undefined') {
-          // Validate UUID format
-          if (isValidUuid(trimmedSellerId)) {
-            cleanSellerId = trimmedSellerId;
-          } else {
-            console.warn('⚠️ ID de vendedor inválido na atualização, será definido como null:', trimmedSellerId);
-            cleanSellerId = null;
-          }
-        } else {
-          cleanSellerId = null;
-        }
-      } else {
-        cleanSellerId = null;
-      }
-    }
-    
-    // Clean payment methods for updates
-    let cleanedPaymentMethods = undefined;
-    if (sale.paymentMethods) {
-      cleanedPaymentMethods = sale.paymentMethods.map(method => {
-        const cleaned: any = { ...method };
-        
-        // Ensure required fields
-        if (!cleaned.type) cleaned.type = 'dinheiro';
-        if (typeof cleaned.amount !== 'number') cleaned.amount = 0;
-        
-        // Clean optional fields - remove undefined and empty values
-        Object.keys(cleaned).forEach(key => {
-          const value = cleaned[key];
-          if (value === undefined || value === '' || 
-              (Array.isArray(value) && value.length === 0) ||
-              (typeof value === 'string' && value.trim() === '')) {
-            delete cleaned[key];
-          }
-        });
-        
-        // Clean installment fields
-        if (cleaned.installments === 1) {
-          delete cleaned.installments;
-          delete cleaned.installmentValue;
-          delete cleaned.installmentInterval;
-          delete cleaned.firstInstallmentDate;
-          delete cleaned.startDate;
-        }
-        
-        return cleaned;
-      });
-      
-      // Validate that we have at least one valid payment method
-      const validPaymentMethods = cleanedPaymentMethods.filter(method => 
-        method.type && typeof method.amount === 'number' && method.amount > 0
-      );
-      
-      if (validPaymentMethods.length === 0) {
-        throw new Error('Pelo menos um método de pagamento deve ter valor maior que zero');
-      }
-      
-      cleanedPaymentMethods = validPaymentMethods;
-    }
-    
-    // Create database object directly without transformation to avoid JSON issues
-    const dbData: any = {};
-    
-    if (sale.date) dbData.date = sale.date;
-    if (sale.deliveryDate !== undefined) {
-      dbData.delivery_date = sale.deliveryDate && typeof sale.deliveryDate === 'string' && sale.deliveryDate.trim() !== '' ? sale.deliveryDate.trim() : null;
-    }
-    if (sale.client) dbData.client = sale.client.trim();
-    if (sale.sellerId !== undefined) {
-      dbData.seller_id = cleanSellerId;
-    }
-    if (sale.customCommissionRate !== undefined) {
-      dbData.custom_commission_rate = typeof sale.customCommissionRate === 'number' ? sale.customCommissionRate : 5.00;
-    }
-    if (sale.products !== undefined) {
-      dbData.products = sale.products && typeof sale.products === 'string' && sale.products.trim() !== '' ? sale.products.trim() : null;
-    }
-    if (sale.observations !== undefined) {
-      dbData.observations = sale.observations && typeof sale.observations === 'string' && sale.observations.trim() !== '' ? sale.observations.trim() : null;
-    }
-    if (sale.totalValue) dbData.total_value = sale.totalValue;
-    if (cleanedPaymentMethods) dbData.payment_methods = cleanedPaymentMethods;
-    if (sale.paymentDescription !== undefined) {
-      dbData.payment_description = sale.paymentDescription && typeof sale.paymentDescription === 'string' && sale.paymentDescription.trim() !== '' ? sale.paymentDescription.trim() : null;
-    }
-    if (sale.paymentObservations !== undefined) {
-      dbData.payment_observations = sale.paymentObservations && typeof sale.paymentObservations === 'string' && sale.paymentObservations.trim() !== '' ? sale.paymentObservations.trim() : null;
-    }
-    if (sale.receivedAmount !== undefined) dbData.received_amount = sale.receivedAmount;
-    if (sale.pendingAmount !== undefined) dbData.pending_amount = sale.pendingAmount;
-    if (sale.status) dbData.status = sale.status;
-    
-    console.log('📝 Dados preparados para atualização:', {
-      ...dbData,
-      payment_methods: cleanedPaymentMethods ? `${cleanedPaymentMethods.length} método(s)` : 'não alterado'
-    });
-    
-    const { data, error } = await supabase
-      .from('sales')
-      .update(dbData)
-      .eq('id', id)
-      .select()
-      .single();
-       
-    if (error) {
-      console.error('Erro ao atualizar venda:', error);
-      
-      // Provide more specific error messages for updates
-      if (error.code === '23505') {
-        if (error.message.includes('sales_flexible_unique')) {
-          throw new Error('Não é possível atualizar: uma venda com os mesmos dados já existe.');
-        } else {
-          throw new Error('Não é possível atualizar: dados duplicados detectados.');
-        }
-      } else if (error.code === '23503') {
-        if (error.message.includes('seller_id')) {
-          throw new Error('Vendedor selecionado não existe ou foi removido. Selecione um vendedor válido ou deixe em branco.');
-        } else {
-          throw new Error('Referência inválida detectada na atualização.');
-        }
-      } else if (error.message.includes('operator does not exist')) {
-        throw new Error('Erro interno do banco de dados. Tente novamente.');
-      } else if (error.message.includes('null value')) {
-        throw new Error('Campo obrigatório não pode estar vazio na atualização.');
-      } else {
-        throw new Error(`Erro ao atualizar venda: ${error.message}`);
-      }
-    }
-    
-    console.log('✅ Venda atualizada com sucesso:', data);
-    return transformDatabaseRow<Sale>(data);
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Supabase não está configurado');
-    }
-    
-    console.log('🔄 Deletando venda:', id);
-    
-    const { error } = await supabase.from('sales').delete().eq('id', id);
-    if (error) {
-      console.error('Erro ao deletar venda:', error);
-      throw new Error(`Erro ao deletar venda: ${error.message}`);
-    }
-    
-    console.log('✅ Venda deletada com sucesso');
-  }
-};
-
-export const debtsService = {
-  async getAll(): Promise<Debt[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('debts')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<Debt>);
-  },
-
-  async create(debt: Omit<Debt, 'id' | 'createdAt' | 'updatedAt'>): Promise<Debt> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...debt,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    // Validate required fields
-    if (!debt.company || !debt.company.trim()) {
-      throw new Error('Empresa é obrigatória');
-    }
-    
-    if (!debt.description || !debt.description.trim()) {
-      throw new Error('Descrição é obrigatória');
-    }
-    
-    if (!debt.totalValue || debt.totalValue <= 0) {
-      throw new Error('Valor total deve ser maior que zero');
-    }
-    
-    // Validate payment methods structure
-    if (debt.paymentMethods && debt.paymentMethods.length > 0) {
-      for (const method of debt.paymentMethods) {
-        if (!method.type || typeof method.type !== 'string') {
-          throw new Error('Todos os métodos de pagamento devem ter um tipo válido');
-        }
-        if (typeof method.amount !== 'number' || method.amount < 0) {
-          throw new Error('Todos os métodos de pagamento devem ter um valor válido');
-        }
-      }
-    }
-    
-    // Create database object directly without transformation to avoid JSON issues
-    const dbData = {
-      date: debt.date,
-      company: debt.company.trim(),
-      description: debt.description.trim(),
-      total_value: debt.totalValue,
-      payment_methods: debt.paymentMethods || [], // Keep as object for JSONB
-      is_paid: debt.isPaid || false,
-      paid_amount: debt.paidAmount || 0,
-      pending_amount: debt.pendingAmount || 0,
-      payment_description: debt.paymentDescription && debt.paymentDescription.trim() !== '' ? debt.paymentDescription.trim() : null,
-      debt_payment_description: debt.debtPaymentDescription && debt.debtPaymentDescription.trim() !== '' ? debt.debtPaymentDescription.trim() : null,
-      checks_used: debt.checksUsed && debt.checksUsed.length > 0 ? debt.checksUsed : null // Keep as array for JSONB
-    };
-    
-    const { data, error } = await supabase.from('debts').insert([dbData]).select().single();
-    if (error) {
-      console.error('Erro ao criar dívida:', error);
-      throw new Error(`Erro ao criar dívida: ${error.message}`);
-    }
-    return transformDatabaseRow<Debt>(data);
-  },
-
-  async update(id: string, debt: Partial<Debt>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    // Create database object directly without transformation to avoid JSON issues
-    const dbData: any = {};
-    
-    if (debt.date) dbData.date = debt.date;
-    if (debt.company) dbData.company = debt.company.trim();
-    if (debt.description) dbData.description = debt.description.trim();
-    if (debt.totalValue) dbData.total_value = debt.totalValue;
-    if (debt.paymentMethods) dbData.payment_methods = debt.paymentMethods; // Keep as object for JSONB
-    if (debt.isPaid !== undefined) dbData.is_paid = debt.isPaid;
-    if (debt.paidAmount !== undefined) dbData.paid_amount = debt.paidAmount;
-    if (debt.pendingAmount !== undefined) dbData.pending_amount = debt.pendingAmount;
-    if (debt.paymentDescription !== undefined) dbData.payment_description = debt.paymentDescription && debt.paymentDescription.trim() !== '' ? debt.paymentDescription.trim() : null;
-    if (debt.debtPaymentDescription !== undefined) dbData.debt_payment_description = debt.debtPaymentDescription && debt.debtPaymentDescription.trim() !== '' ? debt.debtPaymentDescription.trim() : null;
-    if (debt.checksUsed !== undefined) dbData.checks_used = debt.checksUsed && debt.checksUsed.length > 0 ? debt.checksUsed : null; // Keep as array for JSONB
-    
-    const { error } = await supabase.from('debts').update(dbData).eq('id', id);
-    if (error) {
-      console.error('Erro ao atualizar dívida:', error);
-      throw new Error(`Erro ao atualizar dívida: ${error.message}`);
-    }
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('debts').delete().eq('id', id);
-    if (error) {
-      console.error('Erro ao deletar dívida:', error);
-      throw new Error(`Erro ao deletar dívida: ${error.message}`);
-    }
-  }
-};
-
-export const taxesService = {
-  async getAll(): Promise<Tax[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('taxes')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<Tax>);
-  },
-
-  async create(tax: Omit<Tax, 'id' | 'createdAt' | 'updatedAt'>): Promise<Tax> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...tax,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(tax);
-    const { data, error } = await supabase.from('taxes').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<Tax>(data);
-  },
-
-  async update(id: string, tax: Partial<Tax>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(tax);
-    const { error } = await supabase.from('taxes').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('taxes').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-export const agendaEventsService = {
-  async getAll(): Promise<AgendaEvent[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('agenda_events')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<AgendaEvent>);
-  },
-
-  async create(event: Omit<AgendaEvent, 'id' | 'createdAt' | 'updatedAt'>): Promise<AgendaEvent> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...event,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(event);
-    const { data, error } = await supabase.from('agenda_events').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<AgendaEvent>(data);
-  },
-
-  async update(id: string, event: Partial<AgendaEvent>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(event);
-    const { error } = await supabase.from('agenda_events').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('agenda_events').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-// Sale Boletos Service (A Receber)
-export const saleBoletosService = {
-  async getAll(): Promise<SaleBoleto[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('sale_boletos')
-      .select('*')
-      .order('due_date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<SaleBoleto>);
-  },
-
-  async create(boleto: Omit<SaleBoleto, 'id' | 'createdAt' | 'updatedAt'>): Promise<SaleBoleto> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...boleto,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(boleto);
-    const { data, error } = await supabase.from('sale_boletos').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<SaleBoleto>(data);
-  },
-
-  async update(id: string, boleto: Partial<SaleBoleto>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(boleto);
-    const { error } = await supabase.from('sale_boletos').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('sale_boletos').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-// Sale Cheques Service (A Receber)
-export const saleChequesService = {
-  async getAll(): Promise<SaleCheque[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('sale_cheques')
-      .select('*')
-      .order('due_date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<SaleCheque>);
-  },
-
-  async create(cheque: Omit<SaleCheque, 'id' | 'createdAt' | 'updatedAt'>): Promise<SaleCheque> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...cheque,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(cheque);
-    const { data, error } = await supabase.from('sale_cheques').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<SaleCheque>(data);
-  },
-
-  async update(id: string, cheque: Partial<SaleCheque>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(cheque);
-    const { error } = await supabase.from('sale_cheques').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('sale_cheques').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-// Debt Boletos Service (A Pagar)
-export const debtBoletosService = {
-  async getAll(): Promise<DebtBoleto[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('debt_boletos')
-      .select('*')
-      .order('due_date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<DebtBoleto>);
-  },
-
-  async create(boleto: Omit<DebtBoleto, 'id' | 'createdAt' | 'updatedAt'>): Promise<DebtBoleto> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...boleto,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(boleto);
-    const { data, error } = await supabase.from('debt_boletos').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<DebtBoleto>(data);
-  },
-
-  async update(id: string, boleto: Partial<DebtBoleto>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(boleto);
-    const { error } = await supabase.from('debt_boletos').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('debt_boletos').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-// Debt Cheques Service (A Pagar)
-export const debtChequesService = {
-  async getAll(): Promise<DebtCheque[]> {
-    if (!isSupabaseConfigured()) return [];
-    
-    const { data, error } = await supabase
-      .from('debt_cheques')
-      .select('*')
-      .order('due_date', { ascending: false });
-    
-    if (error) throw error;
-    return (data || []).map(transformDatabaseRow<DebtCheque>);
-  },
-
-  async create(cheque: Omit<DebtCheque, 'id' | 'createdAt' | 'updatedAt'>): Promise<DebtCheque> {
-    if (!isSupabaseConfigured()) {
-      return {
-        ...cheque,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    const dbData = transformToDatabase(cheque);
-    const { data, error } = await supabase.from('debt_cheques').insert([dbData]).select().single();
-    if (error) throw error;
-    return transformDatabaseRow<DebtCheque>(data);
-  },
-
-  async update(id: string, cheque: Partial<DebtCheque>): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const dbData = transformToDatabase(cheque);
-    const { error } = await supabase.from('debt_cheques').update(dbData).eq('id', id);
-    if (error) throw error;
-  },
-
-  async delete(id: string): Promise<void> {
-    if (!isSupabaseConfigured()) return;
-    
-    const { error } = await supabase.from('debt_cheques').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
-
-// Utilitários para caixa via RPC
-export const cashUtils = {
-  async recalc(): Promise<void> {
-    if (!isSupabaseConfigured()) {
-      console.warn('⚠️ Supabase não configurado, pulando recálculo');
-      return;
-    }
-    
-    const { error } = await supabase.rpc('recalculate_cash_balance');
-    if (error) {
-      console.error('Erro no RPC recalculate_cash_balance:', error);
-      throw error;
-    }
-  },
-  
-  async initialize(initialAmount: number): Promise<void> {
-    if (!isSupabaseConfigured()) {
-      console.warn('⚠️ Supabase não configurado, pulando inicialização');
-      return;
-    }
-    
-    const { error } = await supabase.rpc('initialize_cash_balance', { initial_amount: initialAmount });
-    if (error) {
-      console.error('Erro no RPC initialize_cash_balance:', error);
-      throw error;
-    }
-  },
-  
-  async getCurrentBalance(): Promise<CashBalance | null> {
-    if (!isSupabaseConfigured()) return null;
-    
-    const { data, error } = await supabase.rpc('get_current_cash_balance');
-    if (error) {
-      console.error('Erro no RPC get_current_cash_balance:', error);
-      throw error;
-    }
-    
-    return data && data.length > 0 ? transformDatabaseRow<CashBalance>(data[0]) : null;
+    return (data || []).map(transformToCamelCase);
   }
 };

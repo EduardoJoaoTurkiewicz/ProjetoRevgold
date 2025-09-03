@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import {
   salesService,
+  saleBoletosService,
+  saleChequesService,
   debtsService,
   checksService,
   boletosService,
@@ -15,10 +17,8 @@ import {
   pixFeesService,
   cashBalancesService,
   taxesService,
-  saleBoletosService,
-  saleChequesService,
-  debtBoletosService,
-  debtChequesService
+  reportsService,
+  CreateSalePayload
 } from '../lib/supabaseServices';
 import type { 
   Sale, 
@@ -35,10 +35,6 @@ import type {
   CashBalance,
   Tax,
   AgendaEvent,
-  SaleBoleto,
-  SaleCheque,
-  DebtBoleto,
-  DebtCheque
 } from '../types';
 
 interface AppContextType {
@@ -62,10 +58,10 @@ interface AppContextType {
   cashBalance: CashBalance | null;
   taxes: Tax[];
   agendaEvents: AgendaEvent[];
-  saleBoletos: SaleBoleto[];
-  saleCheques: SaleCheque[];
-  debtBoletos: DebtBoleto[];
-  debtCheques: DebtCheque[];
+  saleBoletos: any[];
+  saleCheques: any[];
+  saleBoletos: any[];
+  saleCheques: any[];
   
   // Auth functions
   signIn: (email: string, password: string) => Promise<void>;
@@ -77,7 +73,7 @@ interface AppContextType {
   loadAllData: () => Promise<void>;
   
   // CRUD operations
-  createSale: (sale: Omit<Sale, 'id' | 'createdAt'>) => Promise<void>;
+  createSale: (sale: CreateSalePayload | Partial<Sale>) => Promise<void>;
   updateSale: (id: string, sale: Partial<Sale>) => Promise<Sale>;
   deleteSale: (id: string) => Promise<void>;
   
@@ -174,6 +170,8 @@ export function AppProvider({ children }: AppProviderProps) {
   const [cashBalance, setCashBalance] = useState<CashBalance | null>(null);
   const [taxes, setTaxes] = useState<Tax[]>([]);
   const [agendaEvents, setAgendaEvents] = useState<AgendaEvent[]>([]);
+  const [saleBoletos, setSaleBoletos] = useState<any[]>([]);
+  const [saleCheques, setSaleCheques] = useState<any[]>([]);
 
   useEffect(() => {
     // Get initial session
@@ -257,7 +255,9 @@ export function AppProvider({ children }: AppProviderProps) {
         pixFeesData,
         cashBalanceData,
         taxesData,
-        agendaEventsData
+        agendaEventsData,
+        saleBoletosData,
+        saleChequesData
       ] = await Promise.all([
         salesService.getAll(),
         debtsService.getAll(),
@@ -272,7 +272,9 @@ export function AppProvider({ children }: AppProviderProps) {
         pixFeesService.getAll(),
         cashBalancesService.get(),
         taxesService.getAll(),
-        agendaEventsService.getAll()
+        agendaEventsService.getAll(),
+        saleBoletosService.getAll(),
+        saleChequesService.getAll()
       ]);
 
       console.log('✅ Dados carregados:', {
@@ -281,7 +283,9 @@ export function AppProvider({ children }: AppProviderProps) {
         checks: checksData.length,
         boletos: boletosData.length,
         employees: employeesData.length,
-        cashBalance: cashBalanceData ? 'Encontrado' : 'Não encontrado'
+        cashBalance: cashBalanceData ? 'Encontrado' : 'Não encontrado',
+        saleBoletos: saleBoletosData.length,
+        saleCheques: saleChequesData.length
       });
 
       setSales(salesData);
@@ -298,6 +302,8 @@ export function AppProvider({ children }: AppProviderProps) {
       setCashBalance(cashBalanceData);
       setTaxes(taxesData);
       setAgendaEvents(agendaEventsData);
+      setSaleBoletos(saleBoletosData);
+      setSaleCheques(saleChequesData);
     } catch (err) {
       console.error('Error loading data:', err);
       const errorMessage = err instanceof Error ? err.message : 'Falha ao carregar dados';
@@ -333,36 +339,63 @@ export function AppProvider({ children }: AppProviderProps) {
   };
 
   // Sales CRUD operations
-  const createSale = async (sale: Omit<Sale, 'id' | 'createdAt'>) => {
+  const createSale = async (saleData: CreateSalePayload | Partial<Sale>) => {
     try {
-      console.log('🔄 Criando venda:', sale);
+      console.log('🔄 Criando venda:', saleData);
       
-      // Additional validation before sending to service
-      if (!sale.client || !sale.client.trim()) {
+      // Convert old Sale format to new CreateSalePayload format if needed
+      let payload: CreateSalePayload;
+      
+      if ('client' in saleData && typeof saleData.client === 'string') {
+        // New format - use as is
+        payload = saleData as CreateSalePayload;
+      } else {
+        // Old format - convert
+        const oldSale = saleData as Partial<Sale>;
+        payload = {
+          date: oldSale.date || new Date().toISOString().split('T')[0],
+          delivery_date: oldSale.deliveryDate || undefined,
+          client: oldSale.client || '',
+          seller_id: oldSale.sellerId || undefined,
+          custom_commission_rate: oldSale.customCommissionRate || 5.00,
+          products: Array.isArray(oldSale.products) ? oldSale.products : [],
+          observations: oldSale.observations || undefined,
+          total_value: oldSale.totalValue || 0,
+          payment_methods: oldSale.paymentMethods || [],
+          payment_description: oldSale.paymentDescription || undefined,
+          payment_observations: oldSale.paymentObservations || undefined,
+          received_amount: oldSale.receivedAmount || 0,
+          pending_amount: oldSale.pendingAmount || 0,
+          status: oldSale.status || 'pendente'
+        };
+      }
+      
+      // Validation
+      if (!payload.client || !payload.client.trim()) {
         throw new Error('Nome do cliente é obrigatório');
       }
       
-      if (!sale.totalValue || sale.totalValue <= 0) {
+      if (!payload.total_value || payload.total_value <= 0) {
         throw new Error('Valor total deve ser maior que zero');
       }
       
-      if (!sale.paymentMethods || sale.paymentMethods.length === 0) {
+      if (!payload.payment_methods || payload.payment_methods.length === 0) {
         throw new Error('Pelo menos um método de pagamento é obrigatório');
       }
       
       // Validate payment methods total
-      const totalPaymentAmount = sale.paymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
+      const totalPaymentAmount = payload.payment_methods.reduce((sum, method) => sum + (method.amount || 0), 0);
       if (totalPaymentAmount === 0) {
         throw new Error('Pelo menos um método de pagamento deve ter valor maior que zero');
       }
       
-      if (totalPaymentAmount > sale.totalValue) {
+      if (totalPaymentAmount > payload.total_value) {
         throw new Error('Total dos métodos de pagamento não pode exceder o valor da venda');
       }
       
       // Validate sellerId if provided
-      if (sale.sellerId && typeof sale.sellerId === 'string') {
-        const trimmedSellerId = sale.sellerId.trim();
+      if (payload.seller_id && typeof payload.seller_id === 'string') {
+        const trimmedSellerId = payload.seller_id.trim();
         if (trimmedSellerId !== '' && trimmedSellerId !== 'null' && trimmedSellerId !== 'undefined') {
           // Check if seller exists and is active
           const seller = employees.find(emp => emp.id === trimmedSellerId && emp.isActive);
@@ -372,22 +405,20 @@ export function AppProvider({ children }: AppProviderProps) {
         }
       }
       
-      // Clean sellerId before sending to service
-      const cleanedSale = {
-        ...sale,
-        sellerId: sale.sellerId?.trim() || null,
-        products: sale.products?.trim() || null,
-        observations: sale.observations?.trim() || null,
-        paymentDescription: sale.paymentDescription?.trim() || null,
-        paymentObservations: sale.paymentObservations?.trim() || null,
-        deliveryDate: sale.deliveryDate?.trim() || null
+      // Clean payload before sending to service
+      const cleanedPayload = {
+        ...payload,
+        seller_id: payload.seller_id?.trim() || undefined,
+        observations: payload.observations?.trim() || undefined,
+        payment_description: payload.payment_description?.trim() || undefined,
+        payment_observations: payload.payment_observations?.trim() || undefined,
+        delivery_date: payload.delivery_date?.trim() || undefined
       };
       
-      console.log('📝 Venda limpa antes do envio:', cleanedSale);
+      console.log('📝 Payload limpo antes do envio:', cleanedPayload);
       
-      const newSale = await salesService.create(cleanedSale);
-      console.log('✅ Venda criada:', newSale);
-      setSales(prev => [newSale, ...prev]);
+      const saleId = await salesService.create(cleanedPayload);
+      console.log('✅ Venda criada com ID:', saleId);
       await loadAllData();
     } catch (error) {
       console.error('❌ Erro ao criar venda:', error);
@@ -867,6 +898,8 @@ export function AppProvider({ children }: AppProviderProps) {
     cashBalance,
     taxes,
     agendaEvents,
+    saleBoletos,
+    saleCheques,
     
     // Auth functions
     signIn,
@@ -929,6 +962,10 @@ export function AppProvider({ children }: AppProviderProps) {
     createAgendaEvent,
     updateAgendaEvent,
     deleteAgendaEvent,
+    
+    // Sale Boletos/Cheques operations
+    markSaleBoletoPaid: saleBoletosService.markAsPaid,
+    markSaleChequePaid: saleChequesService.markAsPaid,
     
     // Utility functions
     initializeCashBalance,
