@@ -640,18 +640,35 @@ export function AppProvider({ children }: AppProviderProps) {
   };
 
   // Utility functions
-  const initializeCashBalance = async (initialAmount: number) => {
+  const initializeCashBalance = async (initialValue: number) => {
     try {
-      console.log('🔄 Inicializando caixa com valor:', initialAmount);
+      console.log('🔄 Inicializando caixa com valor:', initialValue);
       
-      // Usar RPC para inicializar caixa
-      const { error } = await supabase.rpc('initialize_cash_balance', { initial_amount: initialAmount });
-      if (error) {
-        console.error('Erro no RPC initialize_cash_balance:', error);
-        throw error;
+      // Garante que existe registro de saldo
+      const { error: e1 } = await supabase.rpc('ensure_cash_balance');
+      if (e1) console.warn('Aviso ao garantir caixa:', e1);
+
+      // Força a definição do saldo inicial
+      const { data: balances, error: e2 } = await supabase.from('cash_balances').select('*').order('created_at', { ascending: false }).limit(1);
+      if (e2) throw e2;
+
+      if (balances && balances.length > 0) {
+        const bal = balances[0];
+        const { error: e3 } = await supabase
+          .from('cash_balances')
+          .update({
+            initial_balance: initialValue,
+            current_balance: initialValue,
+            initial_date: new Date().toISOString().split('T')[0],
+            last_updated: new Date().toISOString()
+          })
+          .eq('id', bal.id);
+        if (e3) throw e3;
       }
-      
-      console.log('✅ Caixa inicializado via RPC com sucesso');
+
+      // Recalcula para garantir consistência
+      await supabase.rpc('recalculate_cash_balance');
+      console.log('✅ Caixa inicializado com sucesso');
       await loadAllData();
     } catch (error) {
       console.error('Erro ao inicializar caixa:', error);

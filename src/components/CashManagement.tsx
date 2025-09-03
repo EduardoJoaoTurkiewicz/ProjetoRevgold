@@ -352,10 +352,9 @@ export function CashManagement() {
       
       // Forçar recarregamento dos dados
       await loadAllData();
-    } catch (error) {
-      console.error('Erro ao inicializar caixa:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      alert('Erro ao inicializar caixa: ' + errorMessage);
+    } catch (e: any) {
+      console.error('Erro ao inicializar caixa:', e);
+      alert('Não foi possível inicializar o caixa. Se já existe, apenas use Recalcular.');
     } finally {
       setIsInitializing(false);
     }
