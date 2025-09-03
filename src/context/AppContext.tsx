@@ -171,6 +171,41 @@ export function AppProvider({ children }: AppProviderProps) {
     }
   }, [user]);
 
+  // NOVO: Realtime para caixa
+  useEffect(() => {
+    if (!user) return;
+    
+    const channel = supabase
+      .channel('cash_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_transactions' }, () => {
+        // Qualquer mudança em transações → recarrega
+        console.log('🔄 Transação de caixa alterada, recarregando dados...');
+        loadAllData();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'cash_balances' }, (payload: any) => {
+        // Atualização direta do saldo pelo trigger ou RPC
+        console.log('💰 Saldo do caixa atualizado automaticamente:', payload.new);
+        if (payload.new) {
+          const transformedBalance = {
+            id: payload.new.id,
+            currentBalance: payload.new.current_balance,
+            initialBalance: payload.new.initial_balance,
+            initialDate: payload.new.initial_date,
+            lastUpdated: payload.new.last_updated,
+            createdAt: payload.new.created_at,
+            updatedAt: payload.new.updated_at
+          };
+          setCashBalance(transformedBalance);
+        }
+      })
+      .subscribe();
+    
+    return () => { 
+      console.log('🔌 Desconectando realtime do caixa...');
+      channel.unsubscribe(); 
+    };
+  }, [user]);
+
   const loadAllData = async () => {
     if (!user) return;
     
@@ -609,15 +644,14 @@ export function AppProvider({ children }: AppProviderProps) {
     try {
       console.log('🔄 Inicializando caixa com valor:', initialAmount);
       
-      const newBalance = await cashBalancesService.create({
-        currentBalance: initialAmount,
-        initialBalance: initialAmount,
-        initialDate: new Date().toISOString().split('T')[0],
-        lastUpdated: new Date().toISOString()
-      });
+      // Usar RPC para inicializar caixa
+      const { error } = await supabase.rpc('initialize_cash_balance', { initial_amount: initialAmount });
+      if (error) {
+        console.error('Erro no RPC initialize_cash_balance:', error);
+        throw error;
+      }
       
-      console.log('✅ Caixa inicializado:', newBalance);
-      setCashBalance(newBalance);
+      console.log('✅ Caixa inicializado via RPC com sucesso');
       await loadAllData();
     } catch (error) {
       console.error('Erro ao inicializar caixa:', error);
@@ -627,93 +661,42 @@ export function AppProvider({ children }: AppProviderProps) {
 
   const recalculateCashBalance = async () => {
     try {
-      console.log('🔄 Recalculando saldo do caixa...');
-      
-      // Recalcular saldo baseado em todas as transações
-      const balance = await cashBalancesService.get();
-      if (balance) {
-        console.log('📊 Saldo atual encontrado:', balance);
-        
-        const transactions = await cashTransactionsService.getAll();
-        console.log('📊 Transações encontradas:', transactions.length);
-        
-        const totalEntradas = transactions
-          .filter(t => t.type === 'entrada')
-          .reduce((sum, t) => sum + t.amount, 0);
-        const totalSaidas = transactions
-          .filter(t => t.type === 'saida')
-          .reduce((sum, t) => sum + t.amount, 0);
-        
-        console.log('📊 Cálculo:', {
-          inicial: balance.initialBalance,
-          entradas: totalEntradas,
-          saidas: totalSaidas
-        });
-        
-        const newBalance = balance.initialBalance + totalEntradas - totalSaidas;
-        
-        console.log('📊 Novo saldo calculado:', newBalance);
-        
-        await cashBalancesService.update(balance.id!, {
-          currentBalance: newBalance,
-          lastUpdated: new Date().toISOString()
-        });
-        
-        console.log('✅ Saldo recalculado com sucesso');
-      } else {
-        console.warn('⚠️ Nenhum saldo encontrado para recalcular');
+      console.log('🔄 Recalculando saldo via RPC...');
+      const { error } = await supabase.rpc('recalculate_cash_balance');
+      if (error) {
+        console.error('Erro no RPC recalculate_cash_balance:', error);
+        throw error;
       }
+      console.log('✅ Saldo recalculado via RPC com sucesso');
       await loadAllData();
-    } catch (err) {
-      console.error('Error recalculating cash balance:', err);
-      throw err;
+    } catch (e) {
+      console.error('Erro ao recalcular saldo via RPC:', e);
+      throw e;
     }
   };
 
   const updateCashBalance = async (amount: number, type: 'entrada' | 'saida', description: string, category: string, relatedId?: string) => {
     try {
-      console.log('🔄 Atualizando caixa:', { amount, type, description, category, relatedId });
+      console.log('🔄 Criando transação de caixa (saldo será atualizado automaticamente pelo banco):', { amount, type, description, category, relatedId });
       
-      // Create cash transaction
-      const newTransaction = await cashTransactionsService.create({
+      // Agora o banco faz tudo: criamos a transação e deixamos o trigger ajustar o saldo
+      await cashTransactionsService.create({
         date: new Date().toISOString().split('T')[0],
-        type,
-        amount,
-        description,
-        category,
+        type, 
+        amount, 
+        description, 
+        category, 
         relatedId,
         paymentMethod: type === 'entrada' ? 'recebimento' : 'pagamento'
       });
       
-      console.log('✅ Transação de caixa criada:', newTransaction);
-      setCashTransactions(prev => [newTransaction, ...prev]);
+      console.log('✅ Transação de caixa criada, saldo será atualizado automaticamente pelo trigger');
       
-      // Update cash balance manually
-      if (cashBalance) {
-        const newBalance = type === 'entrada' 
-          ? cashBalance.currentBalance + amount
-          : cashBalance.currentBalance - amount;
-        
-        console.log('🔄 Atualizando saldo:', {
-          anterior: cashBalance.currentBalance,
-          operacao: `${type === 'entrada' ? '+' : '-'}${amount}`,
-          novo: newBalance
-        });
-        
-        await cashBalancesService.update(cashBalance.id!, {
-          currentBalance: newBalance,
-          lastUpdated: new Date().toISOString()
-        });
-        
-        setCashBalance(prev => prev ? { ...prev, currentBalance: newBalance, lastUpdated: new Date().toISOString() } : null);
-        console.log('✅ Saldo atualizado para:', newBalance);
-      } else {
-        console.warn('⚠️ Nenhum saldo encontrado para atualizar');
-      }
-      
+      // Opcional: garantir consistência imediata via RPC
+      // await supabase.rpc('recalculate_cash_balance');
       await loadAllData();
     } catch (err) {
-      console.error('Error updating cash balance:', err);
+      console.error('Erro ao criar transação de caixa:', err);
       throw err;
     }
   };

@@ -1160,3 +1160,44 @@ export const agendaEventsService = {
     if (error) throw error;
   }
 };
+
+// Utilitários para caixa via RPC
+export const cashUtils = {
+  async recalc(): Promise<void> {
+    if (!isSupabaseConfigured()) {
+      console.warn('⚠️ Supabase não configurado, pulando recálculo');
+      return;
+    }
+    
+    const { error } = await supabase.rpc('recalculate_cash_balance');
+    if (error) {
+      console.error('Erro no RPC recalculate_cash_balance:', error);
+      throw error;
+    }
+  },
+  
+  async initialize(initialAmount: number): Promise<void> {
+    if (!isSupabaseConfigured()) {
+      console.warn('⚠️ Supabase não configurado, pulando inicialização');
+      return;
+    }
+    
+    const { error } = await supabase.rpc('initialize_cash_balance', { initial_amount: initialAmount });
+    if (error) {
+      console.error('Erro no RPC initialize_cash_balance:', error);
+      throw error;
+    }
+  },
+  
+  async getCurrentBalance(): Promise<CashBalance | null> {
+    if (!isSupabaseConfigured()) return null;
+    
+    const { data, error } = await supabase.rpc('get_current_cash_balance');
+    if (error) {
+      console.error('Erro no RPC get_current_cash_balance:', error);
+      throw error;
+    }
+    
+    return data && data.length > 0 ? transformDatabaseRow<CashBalance>(data[0]) : null;
+  }
+};

@@ -466,12 +466,12 @@ export function CashManagement() {
               onClick={handleRecalculateBalance}
               disabled={isRecalculating}
               className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-bold disabled:opacity-50"
-              title="Recalcular saldo baseado em todas as transações"
+              title="Recalcular saldo via banco (forçar)"
             >
-              {isRecalculating ? 'Recalculando...' : 'Recalcular'}
+              {isRecalculating ? 'Recalculando...' : 'Recalcular (forçar)'}
             </button>
             <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-            <span className="text-green-700 text-sm font-bold">Atualização Automática</span>
+            <span className="text-green-700 text-sm font-bold">Automático + Realtime</span>
           </div>
         </div>
         
@@ -483,6 +483,15 @@ export function CashManagement() {
           <p className="text-green-600 font-semibold">
             Última atualização: {new Date(cashBalance.lastUpdated).toLocaleString('pt-BR')}
           </p>
+          <div className="text-sm text-green-600 mt-2">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span className="font-bold">Saldo controlado 100% pelo banco</span>
+            </div>
+            <p className="text-xs mt-1">
+              Última atualização: {cashBalance?.lastUpdated ? new Date(cashBalance.lastUpdated).toLocaleString('pt-BR') : '—'}
+            </p>
+          </div>
           {cashBalance.initialBalance !== undefined && (
             <p className="text-green-600 text-sm mt-2">
               Saldo inicial: R$ {cashBalance.initialBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -664,7 +673,7 @@ export function CashManagement() {
               </div>
               <div className="mt-4 text-center">
                 <p className="text-xs text-blue-600 font-semibold">
-                  ⚡ Valores atualizados em tempo real conforme as operações
+                  🤖 Sistema de Caixa Automático + Realtime Ativo
                 </p>
               </div>
             </div>
@@ -689,7 +698,7 @@ export function CashManagement() {
           </div>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
+                  ⚡ Realtime ativo • 🛡️ Anti-duplicação • 📊 100% banco • 🔄 Triggers automáticos
               <XAxis dataKey="date" />
               <YAxis />
               <Tooltip formatter={(value) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
