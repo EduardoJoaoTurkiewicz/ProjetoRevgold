@@ -385,6 +385,28 @@ export function CashManagement() {
   };
 
   // Se não há saldo inicial, mostrar formulário de inicialização
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center p-8">
+        <div className="card modern-shadow-xl max-w-2xl w-full text-center">
+          <div className="w-24 h-24 bg-gradient-to-br from-green-600 to-emerald-700 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Wallet className="w-12 h-12 text-white animate-pulse" />
+          </div>
+          <h1 className="text-3xl font-bold text-slate-900 mb-4">
+            Carregando Sistema de Caixa...
+          </h1>
+          <p className="text-slate-600 text-lg">
+            Verificando status do caixa da empresa
+          </p>
+          <div className="mt-6">
+            <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Se não há saldo inicial, mostrar formulário de inicialização
   if (!cashBalance) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center p-8">
