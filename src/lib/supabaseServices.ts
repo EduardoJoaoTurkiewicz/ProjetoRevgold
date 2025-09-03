@@ -778,7 +778,7 @@ export const salesService = {
     let cleanSellerId = null;
     if (sale.sellerId && typeof sale.sellerId === 'string') {
       const trimmedSellerId = sale.sellerId.trim();
-      if (trimmedSellerId && isValidUuid(trimmedSellerId)) {
+      if (trimmedSellerId && trimmedSellerId !== '' && isValidUuid(trimmedSellerId)) {
         cleanSellerId = trimmedSellerId;
       }
     }
@@ -871,11 +871,11 @@ export const salesService = {
     // Validate and clean sellerId for updates too
     let cleanSellerId: string | null | undefined = undefined;
     if (sale.sellerId !== undefined) {
-      if (!sale.sellerId || sale.sellerId === '') {
+      if (!sale.sellerId || sale.sellerId === '' || sale.sellerId.trim() === '') {
         cleanSellerId = null;
       } else if (typeof sale.sellerId === 'string') {
         const trimmedSellerId = sale.sellerId.trim();
-        if (!trimmedSellerId || !isValidUuid(trimmedSellerId)) {
+        if (!trimmedSellerId || trimmedSellerId === '' || !isValidUuid(trimmedSellerId)) {
           cleanSellerId = null;
         } else {
           cleanSellerId = trimmedSellerId;
