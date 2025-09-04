@@ -16,6 +16,52 @@ import type {
   AgendaEvent
 } from '../types';
 
+// Comprehensive UUID sanitization function
+function sanitizePayload(data: any, depth = 0): any {
+  if (!data || typeof data !== 'object') return data;
+  
+  // Handle arrays recursively
+  if (Array.isArray(data)) {
+    return data.map(item => sanitizePayload(item, depth + 1));
+  }
+  
+  const sanitized: any = {};
+  let hasChanges = false;
+  
+  for (const [key, value] of Object.entries(data)) {
+    // Check if this is a UUID field (ends with _id or Id)
+    const isUUIDField = key.endsWith('_id') || key.endsWith('Id');
+    
+    if (isUUIDField) {
+      // Sanitize UUID fields - convert empty strings to null
+      if (value === '' || value === 'null' || value === 'undefined' || value === null || value === undefined) {
+        sanitized[key] = null;
+        if (value === '' || value === 'null' || value === 'undefined') {
+          console.log(`🔧 UUID field '${key}' sanitized: "${value}" → null`);
+          hasChanges = true;
+        }
+      } else if (typeof value === 'string' && value.trim() === '') {
+        sanitized[key] = null;
+        console.log(`🔧 UUID field '${key}' sanitized: empty string → null`);
+        hasChanges = true;
+      } else {
+        sanitized[key] = value;
+      }
+    } else if (value && typeof value === 'object') {
+      // Recursively sanitize nested objects and arrays
+      sanitized[key] = sanitizePayload(value, depth + 1);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  
+  if (hasChanges && depth === 0) {
+    console.log('✅ UUID sanitization completed for payload');
+  }
+  
+  return sanitized;
+}
+
 // Transform database row to camelCase
 function transformToCamelCase(obj: any): any {
   if (!obj || typeof obj !== 'object') return obj;
@@ -44,11 +90,6 @@ function transformToSnakeCase(obj: any, depth = 0): any {
     // Recursively handle nested objects and arrays
     if (value && typeof value === 'object') {
       transformed[snakeKey] = transformToSnakeCase(value, depth + 1);
-    }
-    // Special handling for UUID fields - convert empty strings to null
-    else if (snakeKey.endsWith('_id') && 
-        (value === '' || value === 'null' || value === 'undefined' || value === null)) {
-      transformed[snakeKey] = null;
     } else if (value === '' || value === null || value === undefined) {
       transformed[snakeKey] = null;
     } else {
@@ -56,32 +97,6 @@ function transformToSnakeCase(obj: any, depth = 0): any {
     }
   }
   return transformed;
-}
-
-// Utility function to sanitize UUID fields
-function sanitizeUUIDs(obj: any): any {
-  if (!obj || typeof obj !== 'object') return obj;
-  
-  // Handle arrays
-  if (Array.isArray(obj)) {
-    return obj.map(item => sanitizeUUIDs(item));
-  }
-  
-  const sanitized: any = {};
-  for (const [key, value] of Object.entries(obj)) {
-    // Recursively sanitize nested objects and arrays
-    if (value && typeof value === 'object') {
-      sanitized[key] = sanitizeUUIDs(value);
-    }
-    // Sanitize UUID fields (both camelCase and snake_case)
-    else if ((key.endsWith('_id') || key.endsWith('Id')) && 
-        (value === '' || value === 'null' || value === 'undefined')) {
-      sanitized[key] = null;
-    } else {
-      sanitized[key] = value;
-    }
-  }
-  return sanitized;
 }
 
 // Sale types for RPC
@@ -145,11 +160,15 @@ export const salesService = {
   },
 
   async create(sale: Partial<Sale>): Promise<Sale> {
-    // 1) First sanitize all UUID fields recursively
-    const uuidSanitized = sanitizeUUIDs(sale);
+    console.log('🔄 Creating sale with data:', sale);
+    
+    // 1) First sanitize all UUID fields to prevent empty string errors
+    const uuidSanitized = sanitizePayload(sale);
+    console.log('🔧 After UUID sanitization:', uuidSanitized);
     
     // 2) Transform to snake_case and apply additional sanitization
     const dbData = transformToSnakeCase(uuidSanitized);
+    console.log('🔧 After snake_case transformation:', dbData);
     
     // 3) Apply final sanitization and defaults
     const sanitized = {
@@ -170,10 +189,10 @@ export const salesService = {
       status: dbData.status || 'pendente'
     };
 
-    // 4) DEBUG: log no console o payload que será enviado (temporário para achar origem)
-    console.debug('createSale -> sanitized payload:', JSON.stringify(sanitized, null, 2));
+    // 4) Final validation before sending to Supabase
+    console.log('📤 Final payload to Supabase RPC:', sanitized);
 
-    // 5) Validação adicional no frontend antes de enviar
+    // 5) Additional frontend validation before sending
     if (!sanitized.client) {
       throw new Error('O nome do cliente é obrigatório e não pode estar vazio.');
     }
@@ -182,20 +201,18 @@ export const salesService = {
       throw new Error('O valor total da venda deve ser maior que zero.');
     }
 
-    // 6) Chamada RPC segura
+    // 6) Safe RPC call with sanitized data
     const { data, error } = await supabase.rpc('create_sale', { payload: sanitized });
 
     if (error) {
       console.error('❌ RPC create_sale error:', error);
       
-      // Log para debug - verificar tabela create_sale_errors no Supabase
-      console.error('🔍 Para debug, verifique a tabela create_sale_errors no Supabase SQL editor:');
-      console.error('SELECT * FROM public.create_sale_errors ORDER BY created_at DESC LIMIT 5;');
-      
-      // Mensagem amigável baseada no tipo de erro
+      // Friendly error message based on error type
       let friendlyMessage = 'Erro ao criar venda';
       if (error.message?.includes('UUID') || error.message?.includes('uuid')) {
-        friendlyMessage = 'Erro de validação: Verifique se todos os campos estão preenchidos corretamente.';
+        friendlyMessage = 'Erro de validação UUID: Um campo de ID contém valor inválido. Verifique se todos os campos estão preenchidos corretamente.';
+        console.error('🔍 UUID Error Debug - Check create_sale_errors table in Supabase:');
+        console.error('SELECT * FROM public.create_sale_errors ORDER BY created_at DESC LIMIT 5;');
       } else if (error.message?.includes('client')) {
         friendlyMessage = 'Erro no cliente: ' + error.message;
       } else if (error.message?.includes('seller')) {
@@ -212,11 +229,15 @@ export const salesService = {
   },
 
   async update(id: string, sale: Partial<Sale>): Promise<Sale> {
-    // 1) First sanitize all UUID fields recursively
-    const uuidSanitized = sanitizeUUIDs(sale);
+    console.log('🔄 Updating sale with data:', sale);
+    
+    // 1) First sanitize all UUID fields to prevent empty string errors
+    const uuidSanitized = sanitizePayload(sale);
+    console.log('🔧 After UUID sanitization:', uuidSanitized);
     
     // 2) Transform to snake_case (which will also sanitize recursively)
     const dbData = transformToSnakeCase(uuidSanitized);
+    console.log('🔧 After snake_case transformation:', dbData);
     
     // 3) Update in database
     const { data, error } = await supabase
