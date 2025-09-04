@@ -1,6 +1,43 @@
 import { supabase } from './supabase';
 import type { Database } from './database.types';
 
+// Helper function to validate UUID format
+export const isValidUUID = (value: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(value);
+};
+
+// Helper function to sanitize payload data, especially UUID fields
+export const sanitizePayload = (data: any): any => {
+  if (!data || typeof data !== 'object') {
+    return data;
+  }
+
+  const sanitized = { ...data };
+
+  for (const key in sanitized) {
+    if (sanitized.hasOwnProperty(key)) {
+      const value = sanitized[key];
+      
+      // Check if this is a UUID field (ends with _id or is exactly 'id')
+      if (key.endsWith('_id') || key === 'id') {
+        if (value === '' || value === null || value === undefined) {
+          // Convert empty strings, null, or undefined to null
+          sanitized[key] = null;
+        } else if (typeof value === 'string' && !isValidUUID(value)) {
+          // Log warning for invalid UUID strings and convert to null
+          console.warn(`Invalid UUID format for field '${key}': '${value}'. Converting to null.`);
+          sanitized[key] = null;
+        }
+        // Otherwise, keep the original value (valid UUID)
+      }
+      // For all other keys, keep the original value
+    }
+  }
+
+  return sanitized;
+};
+
 // Image Upload Services
 export const uploadCheckImage = async (file: File, checkId: string, type: 'front' | 'back'): Promise<string> => {
   const fileExt = file.name.split('.').pop();
