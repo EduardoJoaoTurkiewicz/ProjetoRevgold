@@ -292,6 +292,18 @@ export const cashTransactionsService = {
     return data;
   },
 
+  async update(id: string, updates: Partial<CashTransaction>) {
+    const { data, error } = await supabase
+      .from('cash_transactions')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
   async getCurrentBalance() {
     const { data, error } = await supabase
       .from('cash_balances')
@@ -302,6 +314,172 @@ export const cashTransactionsService = {
     
     if (error) throw error;
     return data?.current_balance || 0;
+  }
+};
+
+// Cash Balances Services
+export const cashBalancesService = {
+  async get() {
+    const { data, error } = await supabase
+      .from('cash_balances')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
+  },
+
+  async create(balance: Omit<Tables['cash_balances']['Row'], 'id' | 'created_at' | 'updated_at'>) {
+    const { data, error } = await supabase
+      .from('cash_balances')
+      .insert(balance)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id: string, updates: Partial<Tables['cash_balances']['Row']>) {
+    const { data, error } = await supabase
+      .from('cash_balances')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+};
+
+// Sale Boletos Services
+export const saleBoletosService = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('sale_boletos')
+      .select('*')
+      .order('due_date', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async create(boleto: Omit<Tables['sale_boletos']['Row'], 'id' | 'created_at' | 'updated_at'>) {
+    const { data, error } = await supabase
+      .from('sale_boletos')
+      .insert(boleto)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id: string, updates: Partial<Tables['sale_boletos']['Row']>) {
+    const { data, error } = await supabase
+      .from('sale_boletos')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async delete(id: string) {
+    const { error } = await supabase
+      .from('sale_boletos')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async markAsPaid(boletoId: string, paidAt?: string, interest?: number) {
+    const updates: any = {
+      status: 'pago',
+      paid_at: paidAt || new Date().toISOString()
+    };
+    
+    if (interest !== undefined) {
+      updates.interest = interest;
+    }
+    
+    const { data, error } = await supabase
+      .from('sale_boletos')
+      .update(updates)
+      .eq('id', boletoId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+};
+
+// Sale Cheques Services
+export const saleChequesService = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('sale_cheques')
+      .select('*')
+      .order('due_date', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async create(cheque: Omit<Tables['sale_cheques']['Row'], 'id' | 'created_at' | 'updated_at'>) {
+    const { data, error } = await supabase
+      .from('sale_cheques')
+      .insert(cheque)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id: string, updates: Partial<Tables['sale_cheques']['Row']>) {
+    const { data, error } = await supabase
+      .from('sale_cheques')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async delete(id: string) {
+    const { error } = await supabase
+      .from('sale_cheques')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async markAsPaid(chequeId: string, paidAt?: string) {
+    const updates = {
+      status: 'pago',
+      paid_at: paidAt || new Date().toISOString()
+    };
+    
+    const { data, error } = await supabase
+      .from('sale_cheques')
+      .update(updates)
+      .eq('id', chequeId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
   }
 };
 
@@ -441,7 +619,7 @@ export const pixFeesService = {
 };
 
 // Employee Commissions Services
-export const commissionsService = {
+export const employeeCommissionsService = {
   async getAll() {
     const { data, error } = await supabase
       .from('employee_commissions')
@@ -468,6 +646,38 @@ export const commissionsService = {
     
     if (error) throw error;
     return data;
+  },
+
+  async create(commission: Omit<Tables['employee_commissions']['Row'], 'id' | 'created_at' | 'updated_at'>) {
+    const { data, error } = await supabase
+      .from('employee_commissions')
+      .insert(commission)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id: string, updates: Partial<Tables['employee_commissions']['Row']>) {
+    const { data, error } = await supabase
+      .from('employee_commissions')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async delete(id: string) {
+    const { error } = await supabase
+      .from('employee_commissions')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
   }
 };
 
@@ -490,6 +700,18 @@ export const employeePaymentsService = {
     const { data, error } = await supabase
       .from('employee_payments')
       .insert(payment)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id: string, updates: Partial<Tables['employee_payments']['Row']>) {
+    const { data, error } = await supabase
+      .from('employee_payments')
+      .update(updates)
+      .eq('id', id)
       .select()
       .single();
     
@@ -522,6 +744,18 @@ export const employeeAdvancesService = {
     
     if (error) throw error;
     return data;
+  },
+
+  async update(id: string, updates: Partial<Tables['employee_advances']['Row']>) {
+    const { data, error } = await supabase
+      .from('employee_advances')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
   }
 };
 
@@ -544,6 +778,18 @@ export const employeeOvertimesService = {
     const { data, error } = await supabase
       .from('employee_overtimes')
       .insert(overtime)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id: string, updates: Partial<Tables['employee_overtimes']['Row']>) {
+    const { data, error } = await supabase
+      .from('employee_overtimes')
+      .update(updates)
+      .eq('id', id)
       .select()
       .single();
     
