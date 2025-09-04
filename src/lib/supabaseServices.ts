@@ -37,8 +37,8 @@ function transformToSnakeCase(obj: any): any {
     const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
     
     // Special handling for UUID fields - convert empty strings to null
-    if ((snakeKey === 'seller_id' || snakeKey.endsWith('_id')) && 
-        (value === '' || value === 'null' || value === 'undefined')) {
+    if (snakeKey.endsWith('_id') && 
+        (value === '' || value === 'null' || value === 'undefined' || value === null)) {
       transformed[snakeKey] = null;
     } else if (value === '' || value === null || value === undefined) {
       transformed[snakeKey] = null;
@@ -94,7 +94,19 @@ export const salesService = {
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return (data || []).map(transformToCamelCase);
+    return (data || []).map(item => {
+      const transformed = transformToCamelCase(item);
+      // Parse products back to array if it's a string
+      if (transformed.products && typeof transformed.products === 'string') {
+        try {
+          transformed.products = JSON.parse(transformed.products);
+        } catch (e) {
+          // If parsing fails, keep as string
+          console.warn('Failed to parse products JSON:', e);
+        }
+      }
+      return transformed;
+    });
   },
 
   async create(sale: Partial<Sale>): Promise<Sale> {
@@ -109,13 +121,25 @@ export const salesService = {
       throw new Error('Valor total deve ser um número maior que zero');
     }
     
-    // CRITICAL: Fix sellerId empty string issue BEFORE transformation
-    if (sale.sellerId === '' || sale.sellerId === 'null' || sale.sellerId === 'undefined') {
+    // CRITICAL: Fix all UUID fields empty string issues BEFORE transformation
+    if (sale.sellerId === '' || sale.sellerId === 'null' || sale.sellerId === 'undefined' || sale.sellerId === null) {
       sale.sellerId = null;
+    }
+    
+    // Handle products field - ensure it's properly formatted for database
+    if (sale.products && Array.isArray(sale.products)) {
+      sale.products = JSON.stringify(sale.products);
     }
     
     // Transform to database format with proper UUID handling
     const dbData = transformToSnakeCase(sale);
+    
+    // Double-check that no UUID fields have empty strings
+    Object.keys(dbData).forEach(key => {
+      if (key.endsWith('_id') && dbData[key] === '') {
+        dbData[key] = null;
+      }
+    });
     
     console.log('📝 Sale data after transformation:', dbData);
     
@@ -140,12 +164,25 @@ export const salesService = {
   },
 
   async update(id: string, sale: Partial<Sale>): Promise<Sale> {
-    // Fix sellerId for updates too
-    if (sale.sellerId === '' || sale.sellerId === 'null' || sale.sellerId === 'undefined') {
+    // Fix all UUID fields for updates too
+    if (sale.sellerId === '' || sale.sellerId === 'null' || sale.sellerId === 'undefined' || sale.sellerId === null) {
       sale.sellerId = null;
     }
     
+    // Handle products field for updates
+    if (sale.products && Array.isArray(sale.products)) {
+      sale.products = JSON.stringify(sale.products);
+    }
+    
     const dbData = transformToSnakeCase(sale);
+    
+    // Double-check that no UUID fields have empty strings
+    Object.keys(dbData).forEach(key => {
+      if (key.endsWith('_id') && dbData[key] === '') {
+        dbData[key] = null;
+      }
+    });
+    
     const { data, error } = await supabase
       .from('sales')
       .update(dbData)
