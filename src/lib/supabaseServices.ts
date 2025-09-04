@@ -110,57 +110,65 @@ export const salesService = {
   },
 
   async create(sale: Partial<Sale>): Promise<Sale> {
-    console.log('🔄 Creating sale:', sale);
-    
-    // Critical validation before sending to Supabase
-    if (!sale.client || typeof sale.client !== 'string' || sale.client.trim() === '') {
-      throw new Error('Cliente é obrigatório e deve ser um texto válido');
+    // 1) Sanitização básica: trim e converter "" -> null para campos de UUID
+    const sanitized = {
+      ...sale,
+      client: sale.client && typeof sale.client === 'string' && sale.client.trim() !== '' ? sale.client.trim() : null,
+      seller_id: sale.sellerId && typeof sale.sellerId === 'string' && sale.sellerId.trim() !== '' ? sale.sellerId.trim() : null,
+      // garantir tipos mínimos
+      total_value: sale.totalValue ?? 0,
+      received_amount: sale.receivedAmount ?? 0,
+      pending_amount: sale.pendingAmount ?? 0,
+      products: sale.products ?? [],
+      payment_methods: sale.paymentMethods ?? [],
+      date: sale.date || new Date().toISOString().split('T')[0],
+      delivery_date: sale.deliveryDate && sale.deliveryDate.trim() !== '' ? sale.deliveryDate.trim() : null,
+      observations: sale.observations && sale.observations.trim() !== '' ? sale.observations.trim() : null,
+      payment_description: sale.paymentDescription && sale.paymentDescription.trim() !== '' ? sale.paymentDescription.trim() : null,
+      payment_observations: sale.paymentObservations && sale.paymentObservations.trim() !== '' ? sale.paymentObservations.trim() : null,
+      custom_commission_rate: sale.customCommissionRate ?? 5.00,
+      status: sale.status || 'pendente'
+    };
+
+    // 2) DEBUG: log no console o payload que será enviado (temporário para achar origem)
+    console.debug('createSale -> sanitized payload:', JSON.stringify(sanitized, null, 2));
+
+    // 3) Validação adicional no frontend antes de enviar
+    if (!sanitized.client) {
+      throw new Error('O nome do cliente é obrigatório e não pode estar vazio.');
     }
-    
-    if (!sale.totalValue || typeof sale.totalValue !== 'number' || sale.totalValue <= 0) {
-      throw new Error('Valor total deve ser um número maior que zero');
+
+    if (sanitized.total_value <= 0) {
+      throw new Error('O valor total da venda deve ser maior que zero.');
     }
-    
-    // CRITICAL: Fix all UUID fields empty string issues BEFORE transformation
-    if (sale.sellerId === '' || sale.sellerId === 'null' || sale.sellerId === 'undefined' || sale.sellerId === null) {
-      sale.sellerId = null;
-    }
-    
-    // Handle products field - ensure it's properly formatted for database
-    if (sale.products && Array.isArray(sale.products)) {
-      sale.products = JSON.stringify(sale.products);
-    }
-    
-    // Transform to database format with proper UUID handling
-    const dbData = transformToSnakeCase(sale);
-    
-    // Double-check that no UUID fields have empty strings
-    Object.keys(dbData).forEach(key => {
-      if (key.endsWith('_id') && dbData[key] === '') {
-        dbData[key] = null;
+
+    // 4) Chamada RPC segura
+    const { data, error } = await supabase.rpc('create_sale', { payload: sanitized });
+
+    if (error) {
+      console.error('❌ RPC create_sale error:', error);
+      
+      // Log para debug - verificar tabela create_sale_errors no Supabase
+      console.error('🔍 Para debug, verifique a tabela create_sale_errors no Supabase SQL editor:');
+      console.error('SELECT * FROM public.create_sale_errors ORDER BY created_at DESC LIMIT 5;');
+      
+      // Mensagem amigável baseada no tipo de erro
+      let friendlyMessage = 'Erro ao criar venda';
+      if (error.message?.includes('UUID') || error.message?.includes('uuid')) {
+        friendlyMessage = 'Erro de validação: Verifique se todos os campos estão preenchidos corretamente.';
+      } else if (error.message?.includes('client')) {
+        friendlyMessage = 'Erro no cliente: ' + error.message;
+      } else if (error.message?.includes('seller')) {
+        friendlyMessage = 'Erro no vendedor: ' + error.message;
+      } else if (error.message?.includes('total_value')) {
+        friendlyMessage = 'Erro no valor: ' + error.message;
       }
-    });
-    
-    console.log('📝 Sale data after transformation:', dbData);
-    
-    // Create the sale first
-    const { data: saleData, error: saleError } = await supabase
-      .from('sales')
-      .insert([dbData])
-      .select()
-      .single();
-    
-    if (saleError) {
-      console.error('❌ Sales insert error:', saleError);
-      throw new Error(`Erro ao criar venda: ${saleError.message}`);
+      
+      throw new Error(friendlyMessage + ' (Detalhes: ' + (error.message || JSON.stringify(error)) + ')');
     }
-    
-    console.log('✅ Sale created:', saleData);
-    
-    // Now create boletos and cheques based on payment methods
-    await createBoletosAndChequesFromSale(saleData, sale.paymentMethods || []);
-    
-    return transformToCamelCase(saleData);
+
+    console.log('✅ Sale created successfully with ID:', data);
+    return { id: data } as Sale;
   },
 
   async update(id: string, sale: Partial<Sale>): Promise<Sale> {

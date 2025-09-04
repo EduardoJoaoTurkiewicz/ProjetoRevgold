@@ -26,6 +26,7 @@ export function Sales() {
     try {
       console.log('🔄 Submetendo venda:', saleData);
       
+      // Frontend validation before sending to backend
       // Validate required fields before submission
       if (!saleData.client || !saleData.client.trim()) {
         alert('Por favor, informe o nome do cliente.');
@@ -59,7 +60,22 @@ export function Sales() {
         alert('Por favor, adicione pelo menos um método de pagamento.');
         return;
       }
-      
+      // Validate seller selection - ensure it's either null or a valid UUID
+      if (saleData.sellerId !== undefined && saleData.sellerId !== null) {
+        const trimmedSellerId = saleData.sellerId.toString().trim();
+        if (trimmedSellerId === '' || trimmedSellerId === 'null' || trimmedSellerId === 'undefined') {
+          // Convert invalid values to null
+          saleData.sellerId = null;
+        } else {
+          // Validate that seller exists and is active
+          const seller = employees.find(emp => emp.id === trimmedSellerId && emp.isActive);
+          if (!seller) {
+            alert('Vendedor selecionado não existe ou não está ativo. Selecione um vendedor válido ou deixe em branco.');
+            return;
+          }
+        }
+      }
+      const totalPaymentAmount = saleData.paymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
       const totalPaymentAmount = saleData.paymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
       if (totalPaymentAmount === 0) {
         alert('Por favor, informe pelo menos um método de pagamento com valor maior que zero.');
@@ -70,6 +86,14 @@ export function Sales() {
         alert('O total dos métodos de pagamento não pode ser maior que o valor total da venda.');
         return;
       }
+      
+      // Log the data being sent for debugging
+      console.debug('🔍 Sale data being sent to backend:', {
+        client: saleData.client,
+        sellerId: saleData.sellerId,
+        totalValue: saleData.totalValue,
+        paymentMethodsCount: saleData.paymentMethods?.length || 0
+      });
       
       if (editingSale) {
         console.log('🔄 Atualizando venda existente:', editingSale.id);
@@ -85,7 +109,18 @@ export function Sales() {
       setEditingSale(null);
     } catch (error) {
       console.error('Error saving sale:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      
+      // Enhanced error display with debugging info
+      let errorMessage = 'Erro desconhecido';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // If it's a UUID error, provide helpful guidance
+        if (errorMessage.includes('UUID') || errorMessage.includes('uuid')) {
+          errorMessage += '\n\n🔍 Para debug: Verifique no console do navegador os dados enviados e consulte a tabela create_sale_errors no Supabase.';
+        }
+      }
+      
       alert('Erro ao salvar venda: ' + errorMessage);
     }
   };

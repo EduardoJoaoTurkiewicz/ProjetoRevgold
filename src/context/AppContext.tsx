@@ -339,95 +339,18 @@ export function AppProvider({ children }: AppProviderProps) {
   // Sales CRUD operations
   const createSale = async (saleData: CreateSalePayload | Partial<Sale>) => {
     try {
+      console.log('🔄 Criando venda:', saleData);
+      
       // Check Supabase configuration before attempting to create sale
       if (!isSupabaseConfigured()) {
         throw new Error('Supabase não está configurado. Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env e reinicie o servidor.');
       }
       
-      console.log('🔄 Criando venda:', saleData);
-      
-      // Use simple Sale format
-      const sale = saleData as Partial<Sale>;
-      
-      // Enhanced validation with clear error messages
-      if (!sale.client || !sale.client.trim()) {
-        throw new Error('Nome do cliente é obrigatório e não pode estar vazio');
-      }
-      
-      if (!sale.totalValue || sale.totalValue <= 0) {
-        throw new Error('O valor total da venda deve ser maior que zero');
-      }
-      
-      if (!sale.paymentMethods || sale.paymentMethods.length === 0) {
-        throw new Error('Pelo menos um método de pagamento é obrigatório');
-      }
-      
-      // Validate payment methods total
-      const totalPaymentAmount = sale.paymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
-      if (totalPaymentAmount === 0) {
-        throw new Error('Pelo menos um método de pagamento deve ter valor maior que zero');
-      }
-      
-      if (totalPaymentAmount > sale.totalValue) {
-        throw new Error('O total dos métodos de pagamento não pode ser maior que o valor da venda');
-      }
-      
-      // Critical UUID validation for seller_id
-      if (sale.sellerId && typeof sale.sellerId === 'string') {
-        const trimmedSellerId = sale.sellerId.trim();
-        
-        // If empty string, null string, or undefined string, set to undefined
-        if (trimmedSellerId === '' || trimmedSellerId === 'null' || trimmedSellerId === 'undefined') {
-          sale.sellerId = null;
-        } else {
-          // Validate UUID format (basic check)
-          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-          if (!uuidRegex.test(trimmedSellerId)) {
-            throw new Error('ID do vendedor inválido. Selecione um vendedor válido da lista.');
-          }
-          
-          // Check if seller exists and is active
-          const seller = employees.find(emp => emp.id === trimmedSellerId && emp.isActive);
-          if (!seller) {
-            throw new Error('Vendedor selecionado não existe ou não está ativo. Selecione um vendedor válido ou deixe em branco.');
-          }
-          
-          sale.sellerId = trimmedSellerId;
-        }
-      } else {
-        // Ensure sellerId is null if not provided
-        sale.sellerId = null;
-      }
-      
-      // Clean sale data before sending to service
-      const cleanedSale = {
-        ...sale,
-        sellerId: sale.sellerId, // Already cleaned above
-        observations: sale.observations?.trim() || null,
-        paymentDescription: sale.paymentDescription?.trim() || null,
-        paymentObservations: sale.paymentObservations?.trim() || null,
-        deliveryDate: sale.deliveryDate?.trim() || null
-      };
-      
-      console.log('📝 Sale data limpo antes do envio:', cleanedSale);
-      
-      await salesService.create(cleanedSale);
+      // Use the robust salesService.create which now handles all validation and sanitization
+      await salesService.create(saleData as Partial<Sale>);
       console.log('✅ Venda criada com sucesso');
       await loadAllData();
-    } catch (error) {
       console.error('❌ Erro ao criar venda:', error);
-      
-      // Enhanced error handling
-      if (error instanceof Error) {
-        if (error.message.includes('duplicate') || error.message.includes('duplicata')) {
-          throw new Error('Venda duplicada: Uma venda similar já foi registrada. Verifique os dados ou aguarde alguns segundos antes de tentar novamente.');
-        } else if (error.message.includes('vendedor') || error.message.includes('seller')) {
-          throw new Error('Problema com vendedor: ' + error.message);
-        } else if (error.message.includes('constraint') || error.message.includes('violates')) {
-          throw new Error('Dados inválidos: ' + error.message);
-        }
-      }
-      
       throw error;
     }
   };
