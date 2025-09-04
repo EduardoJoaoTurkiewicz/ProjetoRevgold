@@ -112,6 +112,7 @@ export interface Check {
 export interface Boleto {
   id: string;
   saleId?: string | null;
+  debtId?: string | null;
   client: string;
   value: number;
   dueDate: string;

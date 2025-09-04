@@ -35,8 +35,12 @@ function transformToSnakeCase(obj: any): any {
   const transformed: any = {};
   for (const [key, value] of Object.entries(obj)) {
     const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-    // Convert empty strings, null, undefined to null for database
-    if (value === '' || value === null || value === undefined) {
+    
+    // Special handling for UUID fields - convert empty strings to null
+    if ((snakeKey === 'seller_id' || snakeKey.endsWith('_id')) && 
+        (value === '' || value === 'null' || value === 'undefined')) {
+      transformed[snakeKey] = null;
+    } else if (value === '' || value === null || value === undefined) {
       transformed[snakeKey] = null;
     } else {
       transformed[snakeKey] = value;
@@ -65,8 +69,8 @@ export type SaleCheque = {
 export type CreateSalePayload = {
   date: string;
   delivery_date?: string;
-  client: string;                  // Client name (text)
-  seller_id?: string;              // UUID of seller
+  client: string;
+  seller_id?: string | null;
   custom_commission_rate?: number;
   products?: any[];
   observations?: string;
@@ -105,53 +109,42 @@ export const salesService = {
       throw new Error('Valor total deve ser um número maior que zero');
     }
     
-    // Fix sellerId empty string issue before transformation
+    // CRITICAL: Fix sellerId empty string issue BEFORE transformation
     if (sale.sellerId === '' || sale.sellerId === 'null' || sale.sellerId === 'undefined') {
       sale.sellerId = null;
     }
     
-    // Validate seller_id specifically for UUID issues
-    if (sale.sellerId !== undefined && sale.sellerId !== null) {
-      if (typeof sale.sellerId !== 'string') {
-        throw new Error('seller_id deve ser uma string UUID válida ou null');
-      }
-      
-      const trimmedSellerId = sale.sellerId.trim();
-      if (trimmedSellerId === '' || trimmedSellerId === 'null' || trimmedSellerId === 'undefined') {
-        // Convert invalid values to null
-        sale.sellerId = null;
-      } else {
-        // Validate UUID format
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-        if (!uuidRegex.test(trimmedSellerId)) {
-          throw new Error(`seller_id inválido: "${trimmedSellerId}" não é um UUID válido`);
-        }
-        sale.sellerId = trimmedSellerId;
-      }
-    }
-    
-    // Transform to database format
+    // Transform to database format with proper UUID handling
     const dbData = transformToSnakeCase(sale);
     
-    console.log('📝 Sale data after validation and cleaning:', dbData);
+    console.log('📝 Sale data after transformation:', dbData);
     
-    // Use direct insert
-    const { data, error } = await supabase
+    // Create the sale first
+    const { data: saleData, error: saleError } = await supabase
       .from('sales')
       .insert([dbData])
       .select()
       .single();
     
-    if (error) {
-      console.error('❌ Sales insert error:', error);
-      throw new Error(`Erro ao criar venda: ${error.message}`);
+    if (saleError) {
+      console.error('❌ Sales insert error:', saleError);
+      throw new Error(`Erro ao criar venda: ${saleError.message}`);
     }
     
-    console.log('✅ Sale created:', data);
-    return transformToCamelCase(data);
+    console.log('✅ Sale created:', saleData);
+    
+    // Now create boletos and cheques based on payment methods
+    await createBoletosAndChequesFromSale(saleData, sale.paymentMethods || []);
+    
+    return transformToCamelCase(saleData);
   },
 
   async update(id: string, sale: Partial<Sale>): Promise<Sale> {
+    // Fix sellerId for updates too
+    if (sale.sellerId === '' || sale.sellerId === 'null' || sale.sellerId === 'undefined') {
+      sale.sellerId = null;
+    }
+    
     const dbData = transformToSnakeCase(sale);
     const { data, error } = await supabase
       .from('sales')
@@ -173,6 +166,204 @@ export const salesService = {
     if (error) throw error;
   }
 };
+
+// Function to create boletos and cheques from sale payment methods
+async function createBoletosAndChequesFromSale(saleData: any, paymentMethods: any[]) {
+  console.log('🔄 Creating boletos and cheques for sale:', saleData.id);
+  
+  for (const method of paymentMethods) {
+    if (method.type === 'boleto' && method.installments && method.installments > 1) {
+      // Create multiple boletos
+      for (let i = 1; i <= method.installments; i++) {
+        const dueDate = new Date(method.firstInstallmentDate || saleData.date);
+        dueDate.setDate(dueDate.getDate() + (i - 1) * (method.installmentInterval || 30));
+        
+        const boletoData = {
+          sale_id: saleData.id,
+          client: saleData.client,
+          value: method.installmentValue || (method.amount / method.installments),
+          due_date: dueDate.toISOString().split('T')[0],
+          status: 'pendente',
+          installment_number: i,
+          total_installments: method.installments,
+          observations: `Parcela ${i}/${method.installments} da venda para ${saleData.client}`,
+          is_company_payable: false
+        };
+        
+        const { error } = await supabase.from('boletos').insert([boletoData]);
+        if (error) {
+          console.error('Error creating boleto:', error);
+        }
+      }
+    } else if (method.type === 'boleto') {
+      // Single boleto
+      const boletoData = {
+        sale_id: saleData.id,
+        client: saleData.client,
+        value: method.amount,
+        due_date: method.firstInstallmentDate || saleData.date,
+        status: 'pendente',
+        installment_number: 1,
+        total_installments: 1,
+        observations: `Boleto da venda para ${saleData.client}`,
+        is_company_payable: false
+      };
+      
+      const { error } = await supabase.from('boletos').insert([boletoData]);
+      if (error) {
+        console.error('Error creating single boleto:', error);
+      }
+    }
+    
+    if (method.type === 'cheque' && method.installments && method.installments > 1) {
+      // Create multiple cheques
+      for (let i = 1; i <= method.installments; i++) {
+        const dueDate = new Date(method.firstInstallmentDate || saleData.date);
+        dueDate.setDate(dueDate.getDate() + (i - 1) * (method.installmentInterval || 30));
+        
+        const checkData = {
+          sale_id: saleData.id,
+          client: saleData.client,
+          value: method.installmentValue || (method.amount / method.installments),
+          due_date: dueDate.toISOString().split('T')[0],
+          status: 'pendente',
+          is_own_check: method.isOwnCheck || false,
+          installment_number: i,
+          total_installments: method.installments,
+          observations: `Parcela ${i}/${method.installments} da venda para ${saleData.client}`,
+          used_for: `Venda para ${saleData.client}`,
+          is_company_payable: false
+        };
+        
+        const { error } = await supabase.from('checks').insert([checkData]);
+        if (error) {
+          console.error('Error creating check:', error);
+        }
+      }
+    } else if (method.type === 'cheque') {
+      // Single cheque
+      const checkData = {
+        sale_id: saleData.id,
+        client: saleData.client,
+        value: method.amount,
+        due_date: method.firstInstallmentDate || saleData.date,
+        status: 'pendente',
+        is_own_check: method.isOwnCheck || false,
+        installment_number: 1,
+        total_installments: 1,
+        observations: `Cheque da venda para ${saleData.client}`,
+        used_for: `Venda para ${saleData.client}`,
+        is_company_payable: false
+      };
+      
+      const { error } = await supabase.from('checks').insert([checkData]);
+      if (error) {
+        console.error('Error creating single check:', error);
+      }
+    }
+  }
+}
+
+// Function to create boletos and cheques from debt payment methods
+async function createBoletosAndChequesFromDebt(debtData: any, paymentMethods: any[]) {
+  console.log('🔄 Creating boletos and cheques for debt:', debtData.id);
+  
+  for (const method of paymentMethods) {
+    if (method.type === 'boleto' && method.installments && method.installments > 1) {
+      // Create multiple boletos for debt payment
+      for (let i = 1; i <= method.installments; i++) {
+        const dueDate = new Date(method.firstInstallmentDate || debtData.date);
+        dueDate.setDate(dueDate.getDate() + (i - 1) * (method.installmentInterval || 30));
+        
+        const boletoData = {
+          debt_id: debtData.id,
+          client: debtData.company,
+          value: method.installmentValue || (method.amount / method.installments),
+          due_date: dueDate.toISOString().split('T')[0],
+          status: 'pendente',
+          installment_number: i,
+          total_installments: method.installments,
+          observations: `Parcela ${i}/${method.installments} do pagamento da dívida para ${debtData.company}`,
+          is_company_payable: true,
+          company_name: debtData.company
+        };
+        
+        const { error } = await supabase.from('boletos').insert([boletoData]);
+        if (error) {
+          console.error('Error creating debt boleto:', error);
+        }
+      }
+    } else if (method.type === 'boleto') {
+      // Single boleto for debt
+      const boletoData = {
+        debt_id: debtData.id,
+        client: debtData.company,
+        value: method.amount,
+        due_date: method.firstInstallmentDate || debtData.date,
+        status: 'pendente',
+        installment_number: 1,
+        total_installments: 1,
+        observations: `Boleto do pagamento da dívida para ${debtData.company}`,
+        is_company_payable: true,
+        company_name: debtData.company
+      };
+      
+      const { error } = await supabase.from('boletos').insert([boletoData]);
+      if (error) {
+        console.error('Error creating single debt boleto:', error);
+      }
+    }
+    
+    if (method.type === 'cheque' && method.installments && method.installments > 1) {
+      // Create multiple cheques for debt payment
+      for (let i = 1; i <= method.installments; i++) {
+        const dueDate = new Date(method.firstInstallmentDate || debtData.date);
+        dueDate.setDate(dueDate.getDate() + (i - 1) * (method.installmentInterval || 30));
+        
+        const checkData = {
+          debt_id: debtData.id,
+          client: debtData.company,
+          value: method.installmentValue || (method.amount / method.installments),
+          due_date: dueDate.toISOString().split('T')[0],
+          status: 'pendente',
+          is_own_check: true, // Company's own check for paying debt
+          installment_number: i,
+          total_installments: method.installments,
+          observations: `Parcela ${i}/${method.installments} do pagamento da dívida para ${debtData.company}`,
+          used_for: `Pagamento da dívida para ${debtData.company}`,
+          is_company_payable: true,
+          company_name: debtData.company
+        };
+        
+        const { error } = await supabase.from('checks').insert([checkData]);
+        if (error) {
+          console.error('Error creating debt check:', error);
+        }
+      }
+    } else if (method.type === 'cheque') {
+      // Single cheque for debt
+      const checkData = {
+        debt_id: debtData.id,
+        client: debtData.company,
+        value: method.amount,
+        due_date: method.firstInstallmentDate || debtData.date,
+        status: 'pendente',
+        is_own_check: true, // Company's own check for paying debt
+        installment_number: 1,
+        total_installments: 1,
+        observations: `Cheque do pagamento da dívida para ${debtData.company}`,
+        used_for: `Pagamento da dívida para ${debtData.company}`,
+        is_company_payable: true,
+        company_name: debtData.company
+      };
+      
+      const { error } = await supabase.from('checks').insert([checkData]);
+      if (error) {
+        console.error('Error creating single debt check:', error);
+      }
+    }
+  }
+}
 
 // Sale Boletos Service
 export const saleBoletosService = {
@@ -246,6 +437,10 @@ export const debtsService = {
       .single();
     
     if (error) throw error;
+    
+    // Create boletos and cheques for debt payment methods
+    await createBoletosAndChequesFromDebt(data, debt.paymentMethods || []);
+    
     return transformToCamelCase(data);
   },
 
@@ -850,5 +1045,161 @@ export const reportsService = {
     
     if (error) throw error;
     return (data || []).map(transformToCamelCase);
+  },
+
+  // New functions for receivables and payables
+  async getAllReceivables() {
+    const receivables = [];
+    
+    // Get pending checks (to receive)
+    const { data: checksData, error: checksError } = await supabase
+      .from('checks')
+      .select('*')
+      .eq('status', 'pendente')
+      .eq('is_company_payable', false);
+    
+    if (!checksError && checksData) {
+      checksData.forEach(check => {
+        receivables.push({
+          id: check.id,
+          type: 'Cheque',
+          client: check.client,
+          amount: check.value,
+          dueDate: check.due_date,
+          description: `Cheque - Parcela ${check.installment_number}/${check.total_installments}`,
+          status: check.status,
+          saleId: check.sale_id,
+          debtId: check.debt_id,
+          installment: `${check.installment_number}/${check.total_installments}`,
+          usedFor: check.used_for,
+          observations: check.observations
+        });
+      });
+    }
+    
+    // Get pending boletos (to receive)
+    const { data: boletosData, error: boletosError } = await supabase
+      .from('boletos')
+      .select('*')
+      .eq('status', 'pendente')
+      .eq('is_company_payable', false);
+    
+    if (!boletosError && boletosData) {
+      boletosData.forEach(boleto => {
+        receivables.push({
+          id: boleto.id,
+          type: 'Boleto',
+          client: boleto.client,
+          amount: boleto.value,
+          dueDate: boleto.due_date,
+          description: `Boleto - Parcela ${boleto.installment_number}/${boleto.total_installments}`,
+          status: boleto.status,
+          saleId: boleto.sale_id,
+          installment: `${boleto.installment_number}/${boleto.total_installments}`,
+          observations: boleto.observations
+        });
+      });
+    }
+    
+    // Get pending sales amounts
+    const { data: salesData, error: salesError } = await supabase
+      .from('sales')
+      .select('*')
+      .gt('pending_amount', 0);
+    
+    if (!salesError && salesData) {
+      salesData.forEach(sale => {
+        receivables.push({
+          id: sale.id,
+          type: 'Venda Pendente',
+          client: sale.client,
+          amount: sale.pending_amount,
+          dueDate: sale.date,
+          description: `Valor pendente da venda`,
+          status: sale.status,
+          saleId: sale.id,
+          observations: sale.observations
+        });
+      });
+    }
+    
+    return receivables.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  },
+
+  async getAllPayables() {
+    const payables = [];
+    
+    // Get company payable checks
+    const { data: checksData, error: checksError } = await supabase
+      .from('checks')
+      .select('*')
+      .eq('status', 'pendente')
+      .eq('is_company_payable', true);
+    
+    if (!checksError && checksData) {
+      checksData.forEach(check => {
+        payables.push({
+          id: check.id,
+          type: 'Cheque a Pagar',
+          company: check.company_name || check.client,
+          amount: check.value,
+          dueDate: check.due_date,
+          description: `Cheque - Parcela ${check.installment_number}/${check.total_installments}`,
+          status: check.status,
+          debtId: check.debt_id,
+          installment: `${check.installment_number}/${check.total_installments}`,
+          usedFor: check.used_for,
+          observations: check.observations
+        });
+      });
+    }
+    
+    // Get company payable boletos
+    const { data: boletosData, error: boletosError } = await supabase
+      .from('boletos')
+      .select('*')
+      .eq('status', 'pendente')
+      .eq('is_company_payable', true);
+    
+    if (!boletosError && boletosData) {
+      boletosData.forEach(boleto => {
+        payables.push({
+          id: boleto.id,
+          type: 'Boleto a Pagar',
+          company: boleto.company_name || boleto.client,
+          amount: boleto.value,
+          dueDate: boleto.due_date,
+          description: `Boleto - Parcela ${boleto.installment_number}/${boleto.total_installments}`,
+          status: boleto.status,
+          debtId: boleto.debt_id,
+          installment: `${boleto.installment_number}/${boleto.total_installments}`,
+          observations: boleto.observations
+        });
+      });
+    }
+    
+    // Get pending debts
+    const { data: debtsData, error: debtsError } = await supabase
+      .from('debts')
+      .select('*')
+      .eq('is_paid', false);
+    
+    if (!debtsError && debtsData) {
+      debtsData.forEach(debt => {
+        payables.push({
+          id: debt.id,
+          type: 'Dívida Pendente',
+          company: debt.company,
+          amount: debt.pending_amount,
+          dueDate: debt.date,
+          description: debt.description,
+          status: debt.is_paid ? 'pago' : 'pendente',
+          debtId: debt.id,
+          observations: debt.payment_description || debt.debt_payment_description
+        });
+      });
+    }
+    
+    return payables.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
   }
 };

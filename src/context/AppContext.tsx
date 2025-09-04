@@ -130,6 +130,10 @@ interface AppContextType {
   recalculateCashBalance: () => Promise<void>;
   updateCashBalance: (amount: number, type: 'entrada' | 'saida', description: string, category: string, relatedId?: string) => Promise<void>;
   setError: (error: string | null) => void;
+  
+  // Add reportsService to context
+  reportsService,
+  supabase
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
