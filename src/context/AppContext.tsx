@@ -350,6 +350,7 @@ export function AppProvider({ children }: AppProviderProps) {
       await salesService.create(saleData as Partial<Sale>);
       console.log('✅ Venda criada com sucesso');
       await loadAllData();
+    } catch (error) {
       console.error('❌ Erro ao criar venda:', error);
       throw error;
     }

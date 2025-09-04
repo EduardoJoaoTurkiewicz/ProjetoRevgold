@@ -76,7 +76,6 @@ export function Sales() {
         }
       }
       const totalPaymentAmount = saleData.paymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
-      const totalPaymentAmount = saleData.paymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
       if (totalPaymentAmount === 0) {
         alert('Por favor, informe pelo menos um método de pagamento com valor maior que zero.');
         return;
