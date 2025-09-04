@@ -475,6 +475,90 @@ export const commissionsService = {
 export const employeePaymentsService = {
   async getAll() {
     const { data, error } = await supabase
+      .from('employee_payments')
+      .select(`
+        *,
+        employees(name, position)
+      `)
+      .order('payment_date', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async create(payment: Omit<Tables['employee_payments']['Row'], 'id' | 'created_at' | 'updated_at'>) {
+    const { data, error } = await supabase
+      .from('employee_payments')
+      .insert(payment)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+};
+
+// Employee Advances Services
+export const employeeAdvancesService = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('employee_advances')
+      .select(`
+        *,
+        employees(name, position)
+      `)
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async create(advance: Omit<Tables['employee_advances']['Row'], 'id' | 'created_at' | 'updated_at'>) {
+    const { data, error } = await supabase
+      .from('employee_advances')
+      .insert(advance)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+};
+
+// Employee Overtimes Services
+export const employeeOvertimesService = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('employee_overtimes')
+      .select(`
+        *,
+        employees(name, position)
+      `)
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async create(overtime: Omit<Tables['employee_overtimes']['Row'], 'id' | 'created_at' | 'updated_at'>) {
+    const { data, error } = await supabase
+      .from('employee_overtimes')
+      .insert(overtime)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+};
+
+// Reports Services
+export const reportsService = {
+  async getSalesReport(startDate: string, endDate: string) {
+    const { data, error } = await supabase
+      .from('sales')
+      .select('*')
+      .gte('date', startDate)
       .lte('date', endDate)
       .order('date', { ascending: false });
     
