@@ -475,38 +475,6 @@ export const commissionsService = {
 export const employeePaymentsService = {
   async getAll() {
     const { data, error } = await supabase
-      .from('employee_payments')
-      .select(`
-        *,
-        employees(name, position)
-      `)
-      .order('payment_date', { ascending: false });
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async create(payment: Omit<Tables['employee_payments']['Row'], 'id' | 'created_at' | 'updated_at'>) {
-    const { data, error } = await supabase
-      .from('employee_payments')
-      .insert(payment)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  }
-};
-
-// Employee Advances Services
-export const employeeAdvancesService = {
-  async getAll() {
-    const { data, error } = await supabase
-      .from('employee_advances')
-      .select(`
-        *,
-        employees(name, position)
-      `)
       .lte('date', endDate)
       .order('date', { ascending: false });
     
