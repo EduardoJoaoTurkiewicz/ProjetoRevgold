@@ -26,41 +26,25 @@ export function Sales() {
     try {
       console.log('🔄 Submetendo venda:', saleData);
       
+      // Apply comprehensive UUID sanitization before any processing
+      const sanitizedSaleData = sanitizePayload(saleData);
+      console.log('🔧 Sale data after frontend sanitization:', sanitizedSaleData);
+      
       // Frontend validation before sending to backend
       // Validate required fields before submission
-      if (!saleData.client || !saleData.client.trim()) {
+      if (!sanitizedSaleData.client || !sanitizedSaleData.client.trim()) {
         alert('Por favor, informe o nome do cliente.');
         return;
       }
       
-      // Comprehensive UUID sanitization before submission
-      const sanitizedSaleData = {
-        ...saleData,
-        sellerId: (() => {
-          const sellerId = saleData.sellerId;
-          if (!sellerId || sellerId === '' || sellerId === 'null' || sellerId === 'undefined') {
-            console.log('🔧 sellerId sanitized: empty/invalid → null');
-            return null;
-          }
-          if (typeof sellerId === 'string') {
-            const trimmed = sellerId.trim();
-            if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
-              console.log('🔧 sellerId sanitized: empty string → null');
-              return null;
-            }
-            // Validate that seller exists and is active
-            const seller = employees.find(emp => emp.id === trimmed && emp.isActive);
-            if (!seller) {
-              alert('Vendedor selecionado não existe ou não está ativo. Selecione um vendedor válido ou deixe em branco.');
-              throw new Error('Invalid seller selected');
-            }
-            return trimmed;
-          }
-          return sellerId;
-        })()
-      };
-      
-      console.log('🔧 Sale data after frontend sanitization:', sanitizedSaleData);
+      // Validate seller if provided
+      if (sanitizedSaleData.sellerId) {
+        const seller = employees.find(emp => emp.id === sanitizedSaleData.sellerId && emp.isActive);
+        if (!seller) {
+          alert('Vendedor selecionado não existe ou não está ativo. Selecione um vendedor válido ou deixe em branco.');
+          return;
+        }
+      }
       
       // Validate total value
       if (!sanitizedSaleData.totalValue || sanitizedSaleData.totalValue <= 0) {
@@ -115,7 +99,7 @@ export function Sales() {
         
         // If it's a UUID error, provide helpful guidance
         if (errorMessage.includes('UUID') || errorMessage.includes('uuid')) {
-          errorMessage = 'Erro de UUID detectado. Verifique no console do navegador os logs de sanitização e consulte a tabela create_sale_errors no Supabase para mais detalhes.';
+          errorMessage = 'ERRO CRÍTICO: Campo UUID ainda contém valor inválido após sanitização múltipla. Verifique os logs do console para detalhes.';
         }
       }
       

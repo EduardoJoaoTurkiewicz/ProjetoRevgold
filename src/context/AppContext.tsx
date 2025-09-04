@@ -716,8 +716,8 @@ export function AppProvider({ children }: AppProviderProps) {
     try {
       console.log('🔄 Criando transação de caixa (saldo será atualizado automaticamente pelo banco):', { amount, type, description, category, relatedId });
       
-      // Agora o banco faz tudo: criamos a transação e deixamos o trigger ajustar o saldo
-      await cashTransactionsService.create({
+      // Criar transação com sanitização
+      const transactionData = sanitizePayload({
         date: new Date().toISOString().split('T')[0],
         type, 
         amount, 
@@ -726,6 +726,8 @@ export function AppProvider({ children }: AppProviderProps) {
         relatedId,
         paymentMethod: type === 'entrada' ? 'recebimento' : 'pagamento'
       });
+      
+      await cashTransactionsService.create(transactionData);
       
       console.log('✅ Transação de caixa criada, saldo será atualizado automaticamente pelo trigger');
       

@@ -1151,16 +1151,20 @@ export const agendaEventsService = {
   async create(event: Omit<AgendaEvent, 'id' | 'createdAt' | 'updatedAt'>): Promise<AgendaEvent> {
     console.log('🔄 Creating agenda event with data:', event);
     
-    // Sanitize UUIDs before transforming
-    const uuidSanitized = sanitizePayload(event);
-    console.log('🔧 After UUID sanitization:', uuidSanitized);
+    // Apply comprehensive UUID sanitization
+    const sanitized = sanitizePayload(event);
+    console.log('🔧 After comprehensive UUID sanitization:', sanitized);
     
-    const dbData = transformToSnakeCase(uuidSanitized);
+    const dbData = transformToSnakeCase(sanitized);
     console.log('🔧 After snake_case transformation:', dbData);
+    
+    // Apply final sanitization before database call
+    const finalPayload = sanitizePayload(dbData);
+    console.log('📤 Final agenda event payload (after double sanitization):', finalPayload);
     
     const { data, error } = await supabase
       .from('agenda_events')
-      .insert([dbData])
+      .insert([finalPayload])
       .select()
       .single();
     
@@ -1171,16 +1175,20 @@ export const agendaEventsService = {
   async update(id: string, event: Partial<AgendaEvent>): Promise<void> {
     console.log('🔄 Updating agenda event with data:', event);
     
-    // Sanitize UUIDs before transforming
-    const uuidSanitized = sanitizePayload(event);
-    console.log('🔧 After UUID sanitization:', uuidSanitized);
+    // Apply comprehensive UUID sanitization
+    const sanitized = sanitizePayload(event);
+    console.log('🔧 After comprehensive UUID sanitization:', sanitized);
     
-    const dbData = transformToSnakeCase(uuidSanitized);
+    const dbData = transformToSnakeCase(sanitized);
     console.log('🔧 After snake_case transformation:', dbData);
+    
+    // Apply final sanitization before database call
+    const finalPayload = sanitizePayload(dbData);
+    console.log('📤 Final agenda event update payload (after double sanitization):', finalPayload);
     
     const { error } = await supabase
       .from('agenda_events')
-      .update(dbData)
+      .update(finalPayload)
       .eq('id', id);
     
     if (error) throw error;
