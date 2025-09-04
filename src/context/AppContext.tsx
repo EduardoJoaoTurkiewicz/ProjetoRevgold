@@ -346,8 +346,17 @@ export function AppProvider({ children }: AppProviderProps) {
         throw new Error('Supabase não está configurado. Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env e reinicie o servidor.');
       }
       
+      // Additional UUID sanitization at context level
+      const sanitizedSaleData = {
+        ...saleData,
+        sellerId: saleData.sellerId && typeof saleData.sellerId === 'string' && saleData.sellerId.trim() !== '' ? saleData.sellerId.trim() : null,
+        // Add any other UUID fields that might be present
+      };
+      
+      console.log('🔧 Sale data after context-level sanitization:', sanitizedSaleData);
+      
       // Use the robust salesService.create which now handles all validation and sanitization
-      await salesService.create(saleData as Partial<Sale>);
+      await salesService.create(sanitizedSaleData as Partial<Sale>);
       console.log('✅ Venda criada com sucesso');
       await loadAllData();
     } catch (error) {

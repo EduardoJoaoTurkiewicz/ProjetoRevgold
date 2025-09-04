@@ -1064,9 +1064,15 @@ export const agendaEventsService = {
   },
 
   async create(event: Omit<AgendaEvent, 'id' | 'createdAt' | 'updatedAt'>): Promise<AgendaEvent> {
+    console.log('🔄 Creating agenda event with data:', event);
+    
     // Sanitize UUIDs before transforming
-    const uuidSanitized = sanitizeUUIDs(event);
+    const uuidSanitized = sanitizePayload(event);
+    console.log('🔧 After UUID sanitization:', uuidSanitized);
+    
     const dbData = transformToSnakeCase(uuidSanitized);
+    console.log('🔧 After snake_case transformation:', dbData);
+    
     const { data, error } = await supabase
       .from('agenda_events')
       .insert([dbData])
@@ -1078,9 +1084,15 @@ export const agendaEventsService = {
   },
 
   async update(id: string, event: Partial<AgendaEvent>): Promise<void> {
+    console.log('🔄 Updating agenda event with data:', event);
+    
     // Sanitize UUIDs before transforming
-    const uuidSanitized = sanitizeUUIDs(event);
+    const uuidSanitized = sanitizePayload(event);
+    console.log('🔧 After UUID sanitization:', uuidSanitized);
+    
     const dbData = transformToSnakeCase(uuidSanitized);
+    console.log('🔧 After snake_case transformation:', dbData);
+    
     const { error } = await supabase
       .from('agenda_events')
       .update(dbData)
