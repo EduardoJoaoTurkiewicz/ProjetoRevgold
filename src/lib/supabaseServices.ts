@@ -1,6 +1,70 @@
 import { supabase } from './supabase';
 import type { Database } from './database.types';
 
+// Image Upload Services
+export const uploadCheckImage = async (file: File, checkId: string, type: 'front' | 'back'): Promise<string> => {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${checkId}_${type}.${fileExt}`;
+  const filePath = `checks/${fileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('check_images')
+    .upload(filePath, file, {
+      upsert: true
+    });
+
+  if (uploadError) throw uploadError;
+  return filePath;
+};
+
+export const deleteCheckImage = async (filePath: string): Promise<void> => {
+  const { error } = await supabase.storage
+    .from('check_images')
+    .remove([filePath]);
+
+  if (error) throw error;
+};
+
+export const getCheckImageUrl = async (filePath: string): Promise<string> => {
+  const { data } = supabase.storage
+    .from('check_images')
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
+};
+
+// Image Upload Services
+export const uploadCheckImage = async (file: File, checkId: string, type: 'front' | 'back'): Promise<string> => {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${checkId}_${type}.${fileExt}`;
+  const filePath = `checks/${fileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('check_images')
+    .upload(filePath, file, {
+      upsert: true
+    });
+
+  if (uploadError) throw uploadError;
+  return filePath;
+};
+
+export const deleteCheckImage = async (filePath: string): Promise<void> => {
+  const { error } = await supabase.storage
+    .from('check_images')
+    .remove([filePath]);
+
+  if (error) throw error;
+};
+
+export const getCheckImageUrl = async (filePath: string): Promise<string> => {
+  const { data } = supabase.storage
+    .from('check_images')
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
+};
+
 type Tables = Database['public']['Tables'];
 type Sale = Tables['sales']['Row'];
 type Debt = Tables['debts']['Row'];
