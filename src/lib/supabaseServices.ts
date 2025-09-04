@@ -29,15 +29,24 @@ function transformToCamelCase(obj: any): any {
 }
 
 // Transform camelCase to snake_case for database
-function transformToSnakeCase(obj: any): any {
+function transformToSnakeCase(obj: any, depth = 0): any {
   if (!obj || typeof obj !== 'object') return obj;
+  
+  // Handle arrays recursively
+  if (Array.isArray(obj)) {
+    return obj.map(item => transformToSnakeCase(item, depth + 1));
+  }
   
   const transformed: any = {};
   for (const [key, value] of Object.entries(obj)) {
     const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
     
+    // Recursively handle nested objects and arrays
+    if (value && typeof value === 'object') {
+      transformed[snakeKey] = transformToSnakeCase(value, depth + 1);
+    }
     // Special handling for UUID fields - convert empty strings to null
-    if (snakeKey.endsWith('_id') && 
+    else if (snakeKey.endsWith('_id') && 
         (value === '' || value === 'null' || value === 'undefined' || value === null)) {
       transformed[snakeKey] = null;
     } else if (value === '' || value === null || value === undefined) {
@@ -47,6 +56,32 @@ function transformToSnakeCase(obj: any): any {
     }
   }
   return transformed;
+}
+
+// Utility function to sanitize UUID fields
+function sanitizeUUIDs(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj;
+  
+  // Handle arrays
+  if (Array.isArray(obj)) {
+    return obj.map(item => sanitizeUUIDs(item));
+  }
+  
+  const sanitized: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    // Recursively sanitize nested objects and arrays
+    if (value && typeof value === 'object') {
+      sanitized[key] = sanitizeUUIDs(value);
+    }
+    // Sanitize UUID fields (both camelCase and snake_case)
+    else if ((key.endsWith('_id') || key.endsWith('Id')) && 
+        (value === '' || value === 'null' || value === 'undefined')) {
+      sanitized[key] = null;
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
 }
 
 // Sale types for RPC
@@ -110,30 +145,35 @@ export const salesService = {
   },
 
   async create(sale: Partial<Sale>): Promise<Sale> {
-    // 1) Sanitização básica: trim e converter "" -> null para campos de UUID
+    // 1) First sanitize all UUID fields recursively
+    const uuidSanitized = sanitizeUUIDs(sale);
+    
+    // 2) Transform to snake_case and apply additional sanitization
+    const dbData = transformToSnakeCase(uuidSanitized);
+    
+    // 3) Apply final sanitization and defaults
     const sanitized = {
-      ...sale,
-      client: sale.client && typeof sale.client === 'string' && sale.client.trim() !== '' ? sale.client.trim() : null,
-      seller_id: sale.sellerId && typeof sale.sellerId === 'string' && sale.sellerId.trim() !== '' ? sale.sellerId.trim() : null,
-      // garantir tipos mínimos
-      total_value: sale.totalValue ?? 0,
-      received_amount: sale.receivedAmount ?? 0,
-      pending_amount: sale.pendingAmount ?? 0,
-      products: sale.products ?? [],
-      payment_methods: sale.paymentMethods ?? [],
-      date: sale.date || new Date().toISOString().split('T')[0],
-      delivery_date: sale.deliveryDate && sale.deliveryDate.trim() !== '' ? sale.deliveryDate.trim() : null,
-      observations: sale.observations && sale.observations.trim() !== '' ? sale.observations.trim() : null,
-      payment_description: sale.paymentDescription && sale.paymentDescription.trim() !== '' ? sale.paymentDescription.trim() : null,
-      payment_observations: sale.paymentObservations && sale.paymentObservations.trim() !== '' ? sale.paymentObservations.trim() : null,
-      custom_commission_rate: sale.customCommissionRate ?? 5.00,
-      status: sale.status || 'pendente'
+      ...dbData,
+      client: dbData.client && typeof dbData.client === 'string' && dbData.client.trim() !== '' ? dbData.client.trim() : null,
+      seller_id: dbData.seller_id,
+      total_value: dbData.total_value ?? 0,
+      received_amount: dbData.received_amount ?? 0,
+      pending_amount: dbData.pending_amount ?? 0,
+      products: dbData.products ?? [],
+      payment_methods: dbData.payment_methods ?? [],
+      date: dbData.date || new Date().toISOString().split('T')[0],
+      delivery_date: dbData.delivery_date && dbData.delivery_date.trim() !== '' ? dbData.delivery_date.trim() : null,
+      observations: dbData.observations && dbData.observations.trim() !== '' ? dbData.observations.trim() : null,
+      payment_description: dbData.payment_description && dbData.payment_description.trim() !== '' ? dbData.payment_description.trim() : null,
+      payment_observations: dbData.payment_observations && dbData.payment_observations.trim() !== '' ? dbData.payment_observations.trim() : null,
+      custom_commission_rate: dbData.custom_commission_rate ?? 5.00,
+      status: dbData.status || 'pendente'
     };
 
-    // 2) DEBUG: log no console o payload que será enviado (temporário para achar origem)
+    // 4) DEBUG: log no console o payload que será enviado (temporário para achar origem)
     console.debug('createSale -> sanitized payload:', JSON.stringify(sanitized, null, 2));
 
-    // 3) Validação adicional no frontend antes de enviar
+    // 5) Validação adicional no frontend antes de enviar
     if (!sanitized.client) {
       throw new Error('O nome do cliente é obrigatório e não pode estar vazio.');
     }
@@ -142,7 +182,7 @@ export const salesService = {
       throw new Error('O valor total da venda deve ser maior que zero.');
     }
 
-    // 4) Chamada RPC segura
+    // 6) Chamada RPC segura
     const { data, error } = await supabase.rpc('create_sale', { payload: sanitized });
 
     if (error) {
@@ -172,25 +212,13 @@ export const salesService = {
   },
 
   async update(id: string, sale: Partial<Sale>): Promise<Sale> {
-    // Fix all UUID fields for updates too
-    if (sale.sellerId === '' || sale.sellerId === 'null' || sale.sellerId === 'undefined' || sale.sellerId === null) {
-      sale.sellerId = null;
-    }
+    // 1) First sanitize all UUID fields recursively
+    const uuidSanitized = sanitizeUUIDs(sale);
     
-    // Handle products field for updates
-    if (sale.products && Array.isArray(sale.products)) {
-      sale.products = JSON.stringify(sale.products);
-    }
+    // 2) Transform to snake_case (which will also sanitize recursively)
+    const dbData = transformToSnakeCase(uuidSanitized);
     
-    const dbData = transformToSnakeCase(sale);
-    
-    // Double-check that no UUID fields have empty strings
-    Object.keys(dbData).forEach(key => {
-      if (key.endsWith('_id') && dbData[key] === '') {
-        dbData[key] = null;
-      }
-    });
-    
+    // 3) Update in database
     const { data, error } = await supabase
       .from('sales')
       .update(dbData)
@@ -474,7 +502,9 @@ export const debtsService = {
   },
 
   async create(debt: Omit<Debt, 'id' | 'createdAt' | 'updatedAt'>): Promise<Debt> {
-    const dbData = transformToSnakeCase(debt);
+    // Sanitize UUIDs before transforming
+    const uuidSanitized = sanitizeUUIDs(debt);
+    const dbData = transformToSnakeCase(uuidSanitized);
     const { data, error } = await supabase
       .from('debts')
       .insert([dbData])
@@ -490,7 +520,9 @@ export const debtsService = {
   },
 
   async update(id: string, debt: Partial<Debt>): Promise<void> {
-    const dbData = transformToSnakeCase(debt);
+    // Sanitize UUIDs before transforming
+    const uuidSanitized = sanitizeUUIDs(debt);
+    const dbData = transformToSnakeCase(uuidSanitized);
     const { error } = await supabase
       .from('debts')
       .update(dbData)
@@ -522,7 +554,9 @@ export const checksService = {
   },
 
   async create(check: Omit<Check, 'id' | 'createdAt' | 'updatedAt'>): Promise<Check> {
-    const dbData = transformToSnakeCase(check);
+    // Sanitize UUIDs before transforming
+    const uuidSanitized = sanitizeUUIDs(check);
+    const dbData = transformToSnakeCase(uuidSanitized);
     const { data, error } = await supabase
       .from('checks')
       .insert([dbData])
@@ -566,7 +600,9 @@ export const boletosService = {
   },
 
   async create(boleto: Omit<Boleto, 'id' | 'createdAt' | 'updatedAt'>): Promise<Boleto> {
-    const dbData = transformToSnakeCase(boleto);
+    // Sanitize UUIDs before transforming
+    const uuidSanitized = sanitizeUUIDs(boleto);
+    const dbData = transformToSnakeCase(uuidSanitized);
     const { data, error } = await supabase
       .from('boletos')
       .insert([dbData])
@@ -710,7 +746,9 @@ export const employeeAdvancesService = {
   },
 
   async update(id: string, advance: Partial<EmployeeAdvance>): Promise<void> {
-    const dbData = transformToSnakeCase(advance);
+    // Sanitize UUIDs before transforming
+    const uuidSanitized = sanitizeUUIDs(advance);
+    const dbData = transformToSnakeCase(uuidSanitized);
     const { error } = await supabase
       .from('employee_advances')
       .update(dbData)
@@ -798,7 +836,9 @@ export const employeeCommissionsService = {
   },
 
   async update(id: string, commission: Partial<EmployeeCommission>): Promise<void> {
-    const dbData = transformToSnakeCase(commission);
+    // Sanitize UUIDs before transforming
+    const uuidSanitized = sanitizeUUIDs(commission);
+    const dbData = transformToSnakeCase(uuidSanitized);
     const { error } = await supabase
       .from('employee_commissions')
       .update(dbData)
@@ -830,7 +870,9 @@ export const cashTransactionsService = {
   },
 
   async create(transaction: Omit<CashTransaction, 'id' | 'createdAt' | 'updatedAt'>): Promise<CashTransaction> {
-    const dbData = transformToSnakeCase(transaction);
+    // Sanitize UUIDs before transforming
+    const uuidSanitized = sanitizeUUIDs(transaction);
+    const dbData = transformToSnakeCase(uuidSanitized);
     const { data, error } = await supabase
       .from('cash_transactions')
       .insert([dbData])
@@ -842,7 +884,9 @@ export const cashTransactionsService = {
   },
 
   async update(id: string, transaction: Partial<CashTransaction>): Promise<void> {
-    const dbData = transformToSnakeCase(transaction);
+    // Sanitize UUIDs before transforming
+    const uuidSanitized = sanitizeUUIDs(transaction);
+    const dbData = transformToSnakeCase(uuidSanitized);
     const { error } = await supabase
       .from('cash_transactions')
       .update(dbData)
@@ -876,7 +920,9 @@ export const cashBalancesService = {
   },
 
   async create(balance: Omit<CashBalance, 'id' | 'createdAt' | 'updatedAt'>): Promise<CashBalance> {
-    const dbData = transformToSnakeCase(balance);
+    // Sanitize UUIDs before transforming
+    const uuidSanitized = sanitizeUUIDs(balance);
+    const dbData = transformToSnakeCase(uuidSanitized);
     const { data, error } = await supabase
       .from('cash_balances')
       .insert([dbData])
@@ -901,7 +947,9 @@ export const pixFeesService = {
   },
 
   async create(fee: Omit<PixFee, 'id' | 'createdAt' | 'updatedAt'>): Promise<PixFee> {
-    const dbData = transformToSnakeCase(fee);
+    // Sanitize UUIDs before transforming
+    const uuidSanitized = sanitizeUUIDs(fee);
+    const dbData = transformToSnakeCase(uuidSanitized);
     const { data, error } = await supabase
       .from('pix_fees')
       .insert([dbData])
@@ -913,7 +961,9 @@ export const pixFeesService = {
   },
 
   async update(id: string, fee: Partial<PixFee>): Promise<void> {
-    const dbData = transformToSnakeCase(fee);
+    // Sanitize UUIDs before transforming
+    const uuidSanitized = sanitizeUUIDs(fee);
+    const dbData = transformToSnakeCase(uuidSanitized);
     const { error } = await supabase
       .from('pix_fees')
       .update(dbData)
@@ -945,7 +995,9 @@ export const taxesService = {
   },
 
   async create(tax: Omit<Tax, 'id' | 'createdAt' | 'updatedAt'>): Promise<Tax> {
-    const dbData = transformToSnakeCase(tax);
+    // Sanitize UUIDs before transforming
+    const uuidSanitized = sanitizeUUIDs(tax);
+    const dbData = transformToSnakeCase(uuidSanitized);
     const { data, error } = await supabase
       .from('taxes')
       .insert([dbData])
@@ -957,7 +1009,9 @@ export const taxesService = {
   },
 
   async update(id: string, tax: Partial<Tax>): Promise<void> {
-    const dbData = transformToSnakeCase(tax);
+    // Sanitize UUIDs before transforming
+    const uuidSanitized = sanitizeUUIDs(tax);
+    const dbData = transformToSnakeCase(uuidSanitized);
     const { error } = await supabase
       .from('taxes')
       .update(dbData)
@@ -989,7 +1043,9 @@ export const agendaEventsService = {
   },
 
   async create(event: Omit<AgendaEvent, 'id' | 'createdAt' | 'updatedAt'>): Promise<AgendaEvent> {
-    const dbData = transformToSnakeCase(event);
+    // Sanitize UUIDs before transforming
+    const uuidSanitized = sanitizeUUIDs(event);
+    const dbData = transformToSnakeCase(uuidSanitized);
     const { data, error } = await supabase
       .from('agenda_events')
       .insert([dbData])
@@ -1001,7 +1057,9 @@ export const agendaEventsService = {
   },
 
   async update(id: string, event: Partial<AgendaEvent>): Promise<void> {
-    const dbData = transformToSnakeCase(event);
+    // Sanitize UUIDs before transforming
+    const uuidSanitized = sanitizeUUIDs(event);
+    const dbData = transformToSnakeCase(uuidSanitized);
     const { error } = await supabase
       .from('agenda_events')
       .update(dbData)
