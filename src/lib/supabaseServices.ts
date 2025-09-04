@@ -24,6 +24,12 @@ function isValidUUID(value: string): boolean {
 
 // Comprehensive UUID sanitization function - exported for use in other files
 export function sanitizePayload(data: any, depth = 0): any {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(value);
+}
+
+// Comprehensive UUID sanitization function - exported for use in other files
+export function sanitizePayload(data: any, depth = 0): any {
   if (!data || typeof data !== 'object') return data;
   
   // Handle arrays recursively
@@ -47,14 +53,20 @@ export function sanitizePayload(data: any, depth = 0): any {
           value === null || 
           value === undefined ||
           (typeof value === 'string' && value.trim() === '')) {
+          value === '' || 
+          value === 'null' || 
+          value === 'undefined' || 
+          value === null || 
+          value === undefined ||
+          (typeof value === 'string' && value.trim() === '')) {
         sanitized[key] = null;
         if (value === '' || value === 'null' || value === 'undefined' || (typeof value === 'string' && value.trim() === '')) {
           console.warn(`⚠️ UUID field '${key}' sanitized: "${value}" → null`);
           hasChanges = true;
         }
       } else if (typeof value === 'string' && !isValidUUID(value.trim())) {
+      } else if (typeof value === 'string' && !isValidUUID(value.trim())) {
         console.warn(`⚠️ Invalid UUID format for field '${key}': "${value}" → null`);
-        sanitized[key] = null;
         hasChanges = true;
       } else {
         sanitized[key] = value;
