@@ -1,7 +1,39 @@
 import React, { useState, useMemo } from 'react';
-import { FileText, TrendingUp, Calendar, DollarSign, Filter, Eye, ArrowUpCircle, ArrowDownCircle, CreditCard, Receipt, Users, Building2, Clock, CheckCircle, AlertTriangle, Download } from 'lucide-react';
+import { 
+  FileText, 
+  Download, 
+  Calendar, 
+  DollarSign, 
+  TrendingUp, 
+  TrendingDown,
+  Filter,
+  BarChart3,
+  PieChart,
+  Activity,
+  Receipt,
+  CreditCard
+} from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell
+} from 'recharts';
 import { ExportButtons } from './reports/ExportButtons';
+import { ReceivablesReport } from './reports/ReceivablesReport';
+import { PayablesReport } from './reports/PayablesReport';
+
+const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4'];
 
 export default function Reports() {
   const { 
@@ -10,52 +42,31 @@ export default function Reports() {
     checks, 
     boletos, 
     employees, 
-    employeeCommissions,
     employeePayments,
-    employeeAdvances,
-    employeeOvertimes,
     pixFees,
     cashBalance,
-    cashTransactions
+    loading 
   } = useAppContext();
 
-  const [startDate, setStartDate] = useState(() => {
-    const date = new Date();
-    date.setDate(1); // Primeiro dia do mês atual
-    return date.toISOString().split('T')[0];
-  });
-  
-  const [endDate, setEndDate] = useState(() => {
-    return new Date().toISOString().split('T')[0];
+  const [filters, setFilters] = useState({
+    startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0],
+    categories: [] as string[],
+    methods: [] as string[],
+    status: 'all'
   });
 
-  const getPaymentMethodColor = (method: string) => {
-    switch (method.toLowerCase()) {
-      case 'dinheiro': return 'bg-green-100 text-green-800 border-green-200';
-      case 'pix': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'cartao_credito': 
-      case 'cartão de crédito': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'cartao_debito':
-      case 'cartão de débito': return 'bg-indigo-100 text-indigo-800 border-indigo-200';
-      case 'cheque': 
-      case 'cheque próprio': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'boleto': return 'bg-cyan-100 text-cyan-800 border-cyan-200';
-      case 'transferencia': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-slate-100 text-slate-800 border-slate-200';
-    }
-  };
-
-  // Filtrar dados por período
-  const filteredData = useMemo(() => {
-    // Vendas do período
+  // Calculate report data based on filters
+  const reportData = useMemo(() => {
+    // Filter sales by period
     const periodSales = sales.filter(sale => 
-      sale.date >= startDate && sale.date <= endDate
+      sale.date >= filters.startDate && sale.date <= filters.endDate
     );
 
-    // Valores efetivamente recebidos no período
+    // Calculate received values
     const receivedValues = [];
     
-    // 1. Vendas com pagamento instantâneo no período
+    // Sales with instant payment
     periodSales.forEach(sale => {
       (sale.paymentMethods || []).forEach((method, methodIndex) => {
         if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
@@ -79,9 +90,9 @@ export default function Reports() {
       });
     });
 
-    // 2. Cheques compensados no período
+    // Checks compensated in period
     checks.forEach(check => {
-      if (check.dueDate >= startDate && check.dueDate <= endDate && check.status === 'compensado') {
+      if (check.dueDate >= filters.startDate && check.dueDate <= filters.endDate && check.status === 'compensado') {
         receivedValues.push({
           id: `check-${check.id}`,
           date: check.dueDate,
@@ -102,9 +113,9 @@ export default function Reports() {
       }
     });
 
-    // 3. Boletos pagos no período
+    // Boletos paid in period
     boletos.forEach(boleto => {
-      if (boleto.dueDate >= startDate && boleto.dueDate <= endDate && boleto.status === 'compensado') {
+      if (boleto.dueDate >= filters.startDate && boleto.dueDate <= filters.endDate && boleto.status === 'compensado') {
         const finalAmount = boleto.finalAmount || boleto.value;
         const notaryCosts = boleto.notaryCosts || 0;
         const netReceived = finalAmount - notaryCosts;
@@ -129,15 +140,15 @@ export default function Reports() {
       }
     });
 
-    // Dívidas feitas no período
+    // Period debts
     const periodDebts = debts.filter(debt => 
-      debt.date >= startDate && debt.date <= endDate
+      debt.date >= filters.startDate && debt.date <= filters.endDate
     );
 
-    // Valores efetivamente pagos no período
+    // Calculate paid values
     const paidValues = [];
 
-    // 1. Dívidas pagas no período
+    // Paid debts in period
     periodDebts.forEach(debt => {
       if (debt.isPaid) {
         (debt.paymentMethods || []).forEach((method, methodIndex) => {
@@ -163,30 +174,9 @@ export default function Reports() {
       }
     });
 
-    // 2. Cheques próprios pagos no período
-    checks.forEach(check => {
-      if (check.isOwnCheck && check.dueDate >= startDate && check.dueDate <= endDate && check.status === 'compensado') {
-        paidValues.push({
-          id: `own-check-${check.id}`,
-          date: check.dueDate,
-          type: 'Cheque Próprio',
-          description: `Cheque próprio pago - ${check.client}`,
-          paymentMethod: 'CHEQUE PRÓPRIO',
-          amount: check.value,
-          details: {
-            checkId: check.id,
-            client: check.client,
-            usedFor: check.usedFor,
-            installment: check.installmentNumber && check.totalInstallments ? 
-              `${check.installmentNumber}/${check.totalInstallments}` : 'Único'
-          }
-        });
-      }
-    });
-
-    // 3. Pagamentos de funcionários no período
+    // Employee payments in period
     employeePayments.forEach(payment => {
-      if (payment.paymentDate >= startDate && payment.paymentDate <= endDate) {
+      if (payment.paymentDate >= filters.startDate && payment.paymentDate <= filters.endDate) {
         const employee = employees.find(e => e.id === payment.employeeId);
         paidValues.push({
           id: `employee-payment-${payment.id}`,
@@ -206,9 +196,9 @@ export default function Reports() {
       }
     });
 
-    // 4. Tarifas PIX no período
+    // PIX fees in period
     pixFees.forEach(fee => {
-      if (fee.date >= startDate && fee.date <= endDate) {
+      if (fee.date >= filters.startDate && fee.date <= filters.endDate) {
         paidValues.push({
           id: `pix-fee-${fee.id}`,
           date: fee.date,
@@ -226,14 +216,11 @@ export default function Reports() {
       }
     });
 
-    // Calcular totais
+    // Calculate totals
     const totalSales = periodSales.reduce((sum, sale) => sum + sale.totalValue, 0);
     const totalReceived = receivedValues.reduce((sum, item) => sum + item.amount, 0);
     const totalDebts = periodDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
     const totalPaid = paidValues.reduce((sum, item) => sum + item.amount, 0);
-
-    // Calcular saldo do caixa no final do período
-    const endDateCashBalance = cashBalance?.currentBalance || 0;
 
     return {
       sales: periodSales,
@@ -245,920 +232,348 @@ export default function Reports() {
         received: totalReceived,
         debts: totalDebts,
         paid: totalPaid,
-        cashBalance: endDateCashBalance
+        cashBalance: cashBalance?.currentBalance || 0
       }
     };
-  }, [sales, debts, checks, boletos, employees, employeePayments, pixFees, cashBalance, startDate, endDate]);
+  }, [sales, debts, checks, boletos, employees, employeePayments, pixFees, cashBalance, filters]);
+
+  // Chart data for financial flow
+  const flowChartData = useMemo(() => {
+    const last30Days = [];
+    const today = new Date();
+    
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      // Sales for this day
+      const daySales = sales.filter(sale => sale.date === dateStr);
+      const salesValue = daySales.reduce((sum, sale) => sum + sale.totalValue, 0);
+      
+      // Debts for this day
+      const dayDebts = debts.filter(debt => debt.date === dateStr);
+      const debtsValue = dayDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
+      
+      last30Days.push({
+        date: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+        vendas: salesValue,
+        dividas: debtsValue,
+        lucro: salesValue - debtsValue
+      });
+    }
+    
+    return last30Days;
+  }, [sales, debts]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-4">
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 modern-shadow-xl">
-          <TrendingUp className="w-8 h-8 text-white" />
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 shadow-xl">
+            <FileText className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Relatórios Financeiros</h1>
+            <p className="text-slate-600 text-lg">Análise completa do desempenho financeiro</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Relatórios</h1>
-          <p className="text-slate-600 text-lg">Análise detalhada dos dados do negócio</p>
-        </div>
-        <button
-          onClick={() => {}}
-          className="btn-primary flex items-center gap-2 modern-shadow-xl hover:modern-shadow-lg ml-auto"
-          style={{ visibility: 'hidden' }}
-        >
-          <Download className="w-5 h-5" />
-          Exportar PDF
-        </button>
-        <ExportButtons 
-          filters={{ startDate, endDate, status: 'all' }}
-          data={filteredData}
-        />
       </div>
 
-      {/* Filtro de Período */}
-      <div className="card modern-shadow-xl" id="report-content">
+      {/* Filters */}
+      <div className="card modern-shadow-xl">
         <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 rounded-xl bg-blue-600">
-            <Filter className="w-6 h-6 text-white" />
-          </div>
-          <h3 className="text-xl font-bold text-slate-900">Filtro de Período</h3>
+          <Filter className="w-6 h-6 text-blue-600" />
+          <h3 className="text-xl font-bold text-slate-900">Filtros do Relatório</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="form-group">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
             <label className="form-label">Data Inicial</label>
             <input
               type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              value={filters.startDate}
+              onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
               className="input-field"
             />
           </div>
-          <div className="form-group">
+          
+          <div>
             <label className="form-label">Data Final</label>
             <input
               type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              value={filters.endDate}
+              onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
               className="input-field"
             />
           </div>
+          
+          <div>
+            <label className="form-label">Status</label>
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+              className="input-field"
+            >
+              <option value="all">Todos</option>
+              <option value="pago">Pago</option>
+              <option value="pendente">Pendente</option>
+              <option value="parcial">Parcial</option>
+            </select>
+          </div>
+          
+          <div className="flex items-end">
+            <ExportButtons filters={filters} data={reportData} />
+          </div>
         </div>
-        
-        <div className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
-          <h4 className="font-bold text-blue-900 mb-4">Resumo do Período Selecionado</h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div>
-              <p className="text-blue-600 font-semibold">Período</p>
-              <p className="text-lg font-bold text-blue-800">
-                {Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} dias
-              </p>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-green-600">
+              <DollarSign className="w-8 h-8 text-white" />
             </div>
             <div>
-              <p className="text-blue-600 font-semibold">Vendas</p>
-              <p className="text-lg font-bold text-green-600">
-                {filteredData.sales.length}
+              <h3 className="font-bold text-green-900 text-lg">Vendas</h3>
+              <p className="text-3xl font-black text-green-700">
+                R$ {reportData.totals.sales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-green-600 font-semibold">
+                {reportData.sales.length} venda(s)
               </p>
             </div>
-            <div>
-              <p className="text-blue-600 font-semibold">Dívidas</p>
-              <p className="text-lg font-bold text-red-600">
-                {filteredData.debts.length}
-              </p>
+          </div>
+        </div>
+
+        <div className="card bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-emerald-600">
+              <TrendingUp className="w-8 h-8 text-white" />
             </div>
             <div>
-              <p className="text-blue-600 font-semibold">Saldo Final</p>
-              <p className="text-lg font-bold text-blue-600">
-                R$ {filteredData.totals.cashBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              <h3 className="font-bold text-emerald-900 text-lg">Recebido</h3>
+              <p className="text-3xl font-black text-emerald-700">
+                R$ {reportData.totals.received.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-emerald-600 font-semibold">
+                Entradas efetivas
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-red-600">
+              <TrendingDown className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-red-900 text-lg">Pago</h3>
+              <p className="text-3xl font-black text-red-700">
+                R$ {reportData.totals.paid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-red-600 font-semibold">
+                Saídas efetivas
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-blue-600">
+              <Activity className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-blue-900 text-lg">Resultado</h3>
+              <p className={`text-3xl font-black ${
+                (reportData.totals.received - reportData.totals.paid) >= 0 ? 'text-green-700' : 'text-red-700'
+              }`}>
+                {(reportData.totals.received - reportData.totals.paid) >= 0 ? '+' : ''}R$ {(reportData.totals.received - reportData.totals.paid).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-blue-600 font-semibold">
+                Recebido - Pago
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Observação Detalhada */}
-      <div className="card modern-shadow-xl">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-xl">
-            <Eye className="w-8 h-8 text-white" />
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Financial Flow Chart */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-blue-600">
+              <BarChart3 className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Fluxo Financeiro (30 dias)</h3>
           </div>
-          <div>
-            <h2 className="text-3xl font-bold text-slate-900">Observação Detalhada</h2>
-            <p className="text-slate-600 text-lg">
-              Período: {new Date(startDate).toLocaleDateString('pt-BR')} até {new Date(endDate).toLocaleDateString('pt-BR')}
-            </p>
-          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={flowChartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip 
+                formatter={(value, name) => [
+                  `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+                  name === 'vendas' ? 'Vendas' : name === 'dividas' ? 'Dívidas' : 'Lucro'
+                ]}
+                labelFormatter={(label) => `Data: ${label}`}
+              />
+              <Legend />
+              <Bar dataKey="vendas" fill="#10b981" name="Vendas" />
+              <Bar dataKey="dividas" fill="#ef4444" name="Dívidas" />
+              <Line dataKey="lucro" stroke="#3b82f6" strokeWidth={3} name="Lucro" />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
-        <div className="space-y-12">
-          {/* 1. VENDAS */}
-          <div className="space-y-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-green-600">
-                <DollarSign className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold text-green-900">1. VENDAS</h3>
-              <span className="px-4 py-2 bg-green-100 text-green-800 rounded-full font-bold">
-                {filteredData.sales.length} venda(s)
-              </span>
+        {/* Payment Methods Distribution */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-purple-600">
+              <PieChart className="w-6 h-6 text-white" />
             </div>
-
-            {filteredData.sales.length > 0 ? (
-              <div className="space-y-4">
-                {filteredData.sales.map(sale => (
-                  <div key={sale.id} className="p-6 bg-green-50 rounded-2xl border border-green-200">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div>
-                        <h4 className="text-xl font-bold text-green-900 mb-3">{sale.client}</h4>
-                        <div className="space-y-2 text-sm">
-                          <p><strong>Data:</strong> {new Date(sale.date).toLocaleDateString('pt-BR')}</p>
-                          {sale.deliveryDate && (
-                            <p><strong>Data de Entrega:</strong> {new Date(sale.deliveryDate).toLocaleDateString('pt-BR')}</p>
-                          )}
-                          <p><strong>Produtos:</strong> {typeof sale.products === 'string' ? sale.products : 'Produtos vendidos'}</p>
-                          {sale.sellerId && (
-                            <p><strong>Vendedor:</strong> {employees.find(e => e.id === sale.sellerId)?.name || 'N/A'}</p>
-                          )}
-                          <p><strong>Status:</strong> 
-                            <span className={`ml-2 px-2 py-1 rounded-full text-xs font-bold ${
+            <h3 className="text-xl font-bold text-slate-900">Métodos de Pagamento</h3>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <RechartsPieChart>
+              <Pie
+                data={[
+                  { name: 'Dinheiro', value: 35, fill: '#10b981' },
+                  { name: 'PIX', value: 30, fill: '#3b82f6' },
+                  { name: 'Cartão', value: 20, fill: '#8b5cf6' },
+                  { name: 'Cheque', value: 10, fill: '#f59e0b' },
+                  { name: 'Boleto', value: 5, fill: '#ef4444' }
+                ]}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, value }) => `${name}: ${value}%`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {[].map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </RechartsPieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
 
       {/* Valores a Receber */}
       <ReceivablesReport />
 
       {/* Valores a Pagar */}
       <PayablesReport />
-                              sale.status === 'pago' ? 'bg-green-200 text-green-800' :
-                              sale.status === 'parcial' ? 'bg-yellow-200 text-yellow-800' :
-                              'bg-red-200 text-red-800'
-                            }`}>
-                              {sale.status.toUpperCase()}
-                            </span>
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <div className="mb-4">
-                          <h5 className="font-bold text-green-800 mb-2">Valores</h5>
-                          <div className="space-y-1 text-sm">
-                            <p><strong>Total:</strong> R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                            <p><strong>Recebido:</strong> R$ {sale.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                            <p><strong>Pendente:</strong> R$ {sale.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <h5 className="font-bold text-green-800 mb-2">Formas de Pagamento</h5>
-                          <div className="space-y-2">
-                            {(sale.paymentMethods || []).map((method, index) => (
-                              <div key={index} className="p-3 bg-white rounded-xl border border-green-100">
-                                <div className="flex justify-between items-center">
-                                  <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getPaymentMethodColor(method.type)}`}>
-                                    {method.type.replace('_', ' ').toUpperCase()}
-                                  </span>
-                                  <span className="font-bold text-green-600">
-                                    R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                  </span>
-                                </div>
-                                {method.installments && method.installments > 1 && (
-                                  <div className="text-xs text-green-600 mt-1 font-semibold">
-                                    {method.installments}x de R$ {(method.installmentValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    {method.installmentInterval && ` (${method.installmentInterval} dias)`}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
+
+      {/* Detailed Tables */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Received Values */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-green-600">
+              <TrendingUp className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Valores Recebidos</h3>
+          </div>
+          
+          <div className="space-y-3 max-h-80 overflow-y-auto modern-scrollbar">
+            {reportData.receivedValues.slice(0, 10).map(item => (
+              <div key={item.id} className="p-4 bg-green-50 rounded-xl border border-green-200">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                        item.type === 'Venda' ? 'bg-blue-100 text-blue-800' :
+                        item.type === 'Cheque' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-cyan-100 text-cyan-800'
+                      }`}>
+                        {item.type}
+                      </span>
                     </div>
-                    
-                    {sale.observations && (
-                      <div className="mt-4 p-4 bg-white rounded-xl border border-green-100">
-                        <h5 className="font-bold text-green-800 mb-2">Observações</h5>
-                        <p className="text-sm text-green-700">{sale.observations}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                
-                <div className="p-6 bg-gradient-to-r from-green-100 to-emerald-100 rounded-2xl border-2 border-green-300">
-                  <div className="text-center">
-                    <h4 className="text-xl font-bold text-green-900 mb-2">TOTAL DE VENDAS</h4>
-                    <p className="text-4xl font-black text-green-700">
-                      R$ {filteredData.totals.sales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    <h4 className="font-bold text-green-900">{item.details.client}</h4>
+                    <p className="text-sm text-green-700">{item.description}</p>
+                    <p className="text-xs text-green-600">
+                      {new Date(item.date).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-green-50 rounded-2xl">
-                <DollarSign className="w-16 h-16 mx-auto mb-4 text-green-300" />
-                <p className="text-green-600 font-medium">Nenhuma venda no período selecionado</p>
-              </div>
-            )}
-          </div>
-
-          {/* 2. VALOR RECEBIDO */}
-          <div className="space-y-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-emerald-600">
-                <ArrowUpCircle className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold text-emerald-900">2. VALOR RECEBIDO</h3>
-              <span className="px-4 py-2 bg-emerald-100 text-emerald-800 rounded-full font-bold">
-                {filteredData.receivedValues.length} recebimento(s)
-              </span>
-            </div>
-
-            {filteredData.receivedValues.length > 0 ? (
-              <div className="space-y-4">
-                {filteredData.receivedValues.map(item => (
-                  <div key={item.id} className="p-6 bg-emerald-50 rounded-2xl border border-emerald-200">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                            item.type === 'Venda' ? 'bg-green-100 text-green-800 border-green-200' :
-                            item.type === 'Cheque' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                            'bg-blue-100 text-blue-800 border-blue-200'
-                          }`}>
-                            {item.type}
-                          </span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getPaymentMethodColor(item.paymentMethod)}`}>
-                            {item.paymentMethod}
-                          </span>
-                        </div>
-                        <h4 className="text-lg font-bold text-emerald-900">{item.description}</h4>
-                        <p className="text-sm text-emerald-700">
-                          Data: {new Date(item.date).toLocaleDateString('pt-BR')}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-black text-emerald-600">
-                          R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      {item.type === 'Venda' && (
-                        <>
-                          <div>
-                            <p><strong>Cliente:</strong> {item.details.client}</p>
-                            <p><strong>Produtos:</strong> {item.details.products}</p>
-                            <p><strong>Valor Total da Venda:</strong> R$ {item.details.totalSaleValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                          </div>
-                          <div>
-                            <p><strong>Vendedor:</strong> {item.details.seller}</p>
-                            <p><strong>ID da Venda:</strong> <span className="font-mono text-xs">{item.details.saleId}</span></p>
-                          </div>
-                        </>
-                      )}
-                      
-                      {item.type === 'Cheque' && (
-                        <>
-                          <div>
-                            <p><strong>Cliente:</strong> {item.details.client}</p>
-                            <p><strong>Parcela:</strong> {item.details.installment}</p>
-                            <p><strong>Tipo:</strong> {item.details.isOwnCheck ? 'Cheque Próprio' : 'Cheque de Terceiros'}</p>
-                          </div>
-                          <div>
-                            <p><strong>Usado em:</strong> {item.details.usedFor}</p>
-                            <p><strong>ID do Cheque:</strong> <span className="font-mono text-xs">{item.details.checkId}</span></p>
-                          </div>
-                        </>
-                      )}
-                      
-                      {item.type === 'Boleto' && (
-                        <>
-                          <div>
-                            <p><strong>Cliente:</strong> {item.details.client}</p>
-                            <p><strong>Parcela:</strong> {item.details.installment}</p>
-                            <p><strong>Valor Original:</strong> R$ {item.details.originalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                          </div>
-                          <div>
-                            {item.details.finalAmount !== item.details.originalValue && (
-                              <p><strong>Valor Final:</strong> R$ {item.details.finalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                            )}
-                            {item.details.notaryCosts > 0 && (
-                              <p><strong>Custos de Cartório:</strong> R$ {item.details.notaryCosts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                            )}
-                            {item.details.overdueAction && (
-                              <p><strong>Situação:</strong> {item.details.overdueAction.replace('_', ' ')}</p>
-                            )}
-                            <p><strong>ID do Boleto:</strong> <span className="font-mono text-xs">{item.details.boletoId}</span></p>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                
-                <div className="p-6 bg-gradient-to-r from-emerald-100 to-green-100 rounded-2xl border-2 border-emerald-300">
-                  <div className="text-center">
-                    <h4 className="text-xl font-bold text-emerald-900 mb-2">TOTAL RECEBIDO</h4>
-                    <p className="text-4xl font-black text-emerald-700">
-                      R$ {filteredData.totals.received.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-emerald-50 rounded-2xl">
-                <ArrowUpCircle className="w-16 h-16 mx-auto mb-4 text-emerald-300" />
-                <p className="text-emerald-600 font-medium">Nenhum valor recebido no período selecionado</p>
-              </div>
-            )}
-          </div>
-
-          {/* 3. DÍVIDAS FEITAS */}
-          <div className="space-y-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-red-600">
-                <CreditCard className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold text-red-900">3. DÍVIDAS FEITAS</h3>
-              <span className="px-4 py-2 bg-red-100 text-red-800 rounded-full font-bold">
-                {filteredData.debts.length} dívida(s)
-              </span>
-            </div>
-
-            {filteredData.debts.length > 0 ? (
-              <div className="space-y-4">
-                {filteredData.debts.map(debt => (
-                  <div key={debt.id} className="p-6 bg-red-50 rounded-2xl border border-red-200">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div>
-                        <h4 className="text-xl font-bold text-red-900 mb-3">{debt.company}</h4>
-                        <div className="space-y-2 text-sm">
-                          <p><strong>Data:</strong> {new Date(debt.date).toLocaleDateString('pt-BR')}</p>
-                          <p><strong>Descrição:</strong> {debt.description}</p>
-                          <p><strong>Status:</strong> 
-                            <span className={`ml-2 px-2 py-1 rounded-full text-xs font-bold ${
-                              debt.isPaid ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'
-                            }`}>
-                              {debt.isPaid ? 'PAGO' : 'PENDENTE'}
-                            </span>
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <div className="mb-4">
-                          <h5 className="font-bold text-red-800 mb-2">Valores</h5>
-                          <div className="space-y-1 text-sm">
-                            <p><strong>Total:</strong> R$ {debt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                            <p><strong>Pago:</strong> R$ {debt.paidAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                            <p><strong>Pendente:</strong> R$ {debt.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <h5 className="font-bold text-red-800 mb-2">Como será/foi pago</h5>
-                          <div className="space-y-2">
-                            {(debt.paymentMethods || []).map((method, index) => (
-                              <div key={index} className="p-2 bg-white rounded-lg border border-red-100">
-                                <div className="flex justify-between items-center">
-                                  <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getPaymentMethodColor(method.type)}`}>
-                                    {method.type.replace('_', ' ').toUpperCase()}
-                                  </span>
-                                  <span className="font-bold text-red-600">
-                                    R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                  </span>
-                                </div>
-                                {method.installments && method.installments > 1 && (
-                                  <div className="text-xs text-red-600 mt-1 font-semibold">
-                                    {method.installments}x de R$ {(method.installmentValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {(debt.paymentDescription || debt.debtPaymentDescription) && (
-                      <div className="mt-4 p-4 bg-white rounded-xl border border-red-100">
-                        <h5 className="font-bold text-red-800 mb-2">Descrições Adicionais</h5>
-                        {debt.paymentDescription && (
-                          <p className="text-sm text-red-700 mb-2">
-                            <strong>Pagamento:</strong> {debt.paymentDescription}
-                          </p>
-                        )}
-                        {debt.debtPaymentDescription && (
-                          <p className="text-sm text-red-700">
-                            <strong>Dívida:</strong> {debt.debtPaymentDescription}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    
-                    {debt.checksUsed && debt.checksUsed.length > 0 && (
-                      <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                        <h5 className="font-bold text-blue-800 mb-2">Cheques Utilizados</h5>
-                        <div className="space-y-2">
-                          {debt.checksUsed.map(checkId => {
-                            const check = checks.find(c => c.id === checkId);
-                            return check ? (
-                              <div key={checkId} className="text-sm text-blue-700">
-                                <p><strong>{check.client}:</strong> R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} 
-                                   (Venc: {new Date(check.dueDate).toLocaleDateString('pt-BR')})</p>
-                              </div>
-                            ) : null;
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                
-                <div className="p-6 bg-gradient-to-r from-red-100 to-red-200 rounded-2xl border-2 border-red-300">
-                  <div className="text-center">
-                    <h4 className="text-xl font-bold text-red-900 mb-2">TOTAL DE DÍVIDAS</h4>
-                    <p className="text-4xl font-black text-red-700">
-                      R$ {filteredData.totals.debts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-red-50 rounded-2xl">
-                <CreditCard className="w-16 h-16 mx-auto mb-4 text-red-300" />
-                <p className="text-red-600 font-medium">Nenhuma dívida no período selecionado</p>
-              </div>
-            )}
-          </div>
-
-          {/* 4. TOTAL PAGO */}
-          <div className="space-y-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-orange-600">
-                <ArrowDownCircle className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold text-orange-900">4. TOTAL PAGO</h3>
-              <span className="px-4 py-2 bg-orange-100 text-orange-800 rounded-full font-bold">
-                {filteredData.paidValues.length} pagamento(s)
-              </span>
-            </div>
-
-            {filteredData.paidValues.length > 0 ? (
-              <div className="space-y-4">
-                {filteredData.paidValues.map(item => (
-                  <div key={item.id} className="p-6 bg-orange-50 rounded-2xl border border-orange-200">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                            item.type === 'Dívida' ? 'bg-red-100 text-red-800 border-red-200' :
-                            item.type === 'Cheque Próprio' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                            item.type === 'Salário' ? 'bg-purple-100 text-purple-800 border-purple-200' :
-                            'bg-blue-100 text-blue-800 border-blue-200'
-                          }`}>
-                            {item.type}
-                          </span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getPaymentMethodColor(item.paymentMethod)}`}>
-                            {item.paymentMethod}
-                          </span>
-                        </div>
-                        <h4 className="text-lg font-bold text-orange-900">{item.description}</h4>
-                        <p className="text-sm text-orange-700">
-                          Data: {new Date(item.date).toLocaleDateString('pt-BR')}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-black text-orange-600">
-                          R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      {item.type === 'Dívida' && (
-                        <>
-                          <div>
-                            <p><strong>Empresa:</strong> {item.details.company}</p>
-                            <p><strong>Descrição:</strong> {item.details.description}</p>
-                            <p><strong>Valor Total da Dívida:</strong> R$ {item.details.totalDebtValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                          </div>
-                          <div>
-                            <p><strong>Valor Pago:</strong> R$ {item.details.paidAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                            <p><strong>Valor Pendente:</strong> R$ {item.details.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                            <p><strong>ID da Dívida:</strong> <span className="font-mono text-xs">{item.details.debtId}</span></p>
-                          </div>
-                        </>
-                      )}
-                      
-                      {item.type === 'Cheque Próprio' && (
-                        <>
-                          <div>
-                            <p><strong>Cliente:</strong> {item.details.client}</p>
-                            <p><strong>Parcela:</strong> {item.details.installment}</p>
-                          </div>
-                          <div>
-                            <p><strong>Usado em:</strong> {item.details.usedFor}</p>
-                            <p><strong>ID do Cheque:</strong> <span className="font-mono text-xs">{item.details.checkId}</span></p>
-                          </div>
-                        </>
-                      )}
-                      
-                      {item.type === 'Salário' && (
-                        <>
-                          <div>
-                            <p><strong>Funcionário:</strong> {item.details.employeeName}</p>
-                            <p><strong>Cargo:</strong> {item.details.position}</p>
-                          </div>
-                          <div>
-                            {item.details.observations && (
-                              <p><strong>Observações:</strong> {item.details.observations}</p>
-                            )}
-                            {item.details.receipt && (
-                              <p><strong>Recibo:</strong> ✓ Anexado</p>
-                            )}
-                            <p><strong>ID do Funcionário:</strong> <span className="font-mono text-xs">{item.details.employeeId}</span></p>
-                          </div>
-                        </>
-                      )}
-                      
-                      {item.type === 'Tarifa PIX' && (
-                        <>
-                          <div>
-                            <p><strong>Banco:</strong> {item.details.bank}</p>
-                            <p><strong>Tipo:</strong> {item.details.transactionType.replace('_', ' ').toUpperCase()}</p>
-                          </div>
-                          <div>
-                            <p><strong>Descrição:</strong> {item.details.description}</p>
-                            {item.details.relatedTransactionId && (
-                              <p><strong>Transação Relacionada:</strong> <span className="font-mono text-xs">{item.details.relatedTransactionId}</span></p>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                
-                <div className="p-6 bg-gradient-to-r from-orange-100 to-red-100 rounded-2xl border-2 border-orange-300">
-                  <div className="text-center">
-                    <h4 className="text-xl font-bold text-orange-900 mb-2">TOTAL PAGO</h4>
-                    <p className="text-4xl font-black text-orange-700">
-                      R$ {filteredData.totals.paid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-orange-50 rounded-2xl">
-                <ArrowDownCircle className="w-16 h-16 mx-auto mb-4 text-orange-300" />
-                <p className="text-orange-600 font-medium">Nenhum pagamento no período selecionado</p>
-              </div>
-            )}
-          </div>
-
-          {/* RESUMO FINAL */}
-          <div className="p-8 bg-gradient-to-br from-blue-100 via-indigo-100 to-purple-100 rounded-3xl border-2 border-blue-300 modern-shadow-xl">
-            <div className="text-center mb-8">
-              <h3 className="text-3xl font-bold text-blue-900 mb-4">RESUMO FINAL DO PERÍODO</h3>
-              <p className="text-blue-700 font-semibold text-lg">
-                {new Date(startDate).toLocaleDateString('pt-BR')} até {new Date(endDate).toLocaleDateString('pt-BR')}
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div className="text-center p-6 bg-white rounded-2xl border border-blue-200">
-                <h4 className="font-bold text-blue-900 mb-2">Vendas Realizadas</h4>
-                <p className="text-3xl font-black text-green-600">
-                  R$ {filteredData.totals.sales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-                <p className="text-sm text-blue-600 mt-1">{filteredData.sales.length} venda(s)</p>
-              </div>
-              
-              <div className="text-center p-6 bg-white rounded-2xl border border-blue-200">
-                <h4 className="font-bold text-blue-900 mb-2">Valores Recebidos</h4>
-                <p className="text-3xl font-black text-emerald-600">
-                  R$ {filteredData.totals.received.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-                <p className="text-sm text-blue-600 mt-1">{filteredData.receivedValues.length} recebimento(s)</p>
-              </div>
-              
-              <div className="text-center p-6 bg-white rounded-2xl border border-blue-200">
-                <h4 className="font-bold text-blue-900 mb-2">Dívidas Feitas</h4>
-                <p className="text-3xl font-black text-red-600">
-                  R$ {filteredData.totals.debts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-                <p className="text-sm text-blue-600 mt-1">{filteredData.debts.length} dívida(s)</p>
-              </div>
-              
-              <div className="text-center p-6 bg-white rounded-2xl border border-blue-200">
-                <h4 className="font-bold text-blue-900 mb-2">Valores Pagos</h4>
-                <p className="text-3xl font-black text-orange-600">
-                  R$ {filteredData.totals.paid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-                <p className="text-sm text-blue-600 mt-1">{filteredData.paidValues.length} pagamento(s)</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="text-center p-6 bg-gradient-to-r from-green-100 to-emerald-100 rounded-2xl border-2 border-green-300">
-                <h4 className="font-bold text-green-900 mb-2">RESULTADO LÍQUIDO</h4>
-                <p className={`text-4xl font-black ${
-                  (filteredData.totals.received - filteredData.totals.paid) >= 0 ? 'text-green-700' : 'text-red-700'
-                }`}>
-                  {(filteredData.totals.received - filteredData.totals.paid) >= 0 ? '+' : ''}R$ {(filteredData.totals.received - filteredData.totals.paid).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-                <p className="text-sm text-green-600 mt-1">Recebido - Pago</p>
-              </div>
-              
-              <div className="text-center p-6 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-2xl border-2 border-blue-300">
-                <h4 className="font-bold text-blue-900 mb-2">SALDO FINAL DO CAIXA</h4>
-                <p className="text-4xl font-black text-blue-700">
-                  R$ {filteredData.totals.cashBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-                <p className="text-sm text-blue-600 mt-1">
-                  Em {new Date(endDate).toLocaleDateString('pt-BR')}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Relatórios Rápidos */}
-      <div className="card modern-shadow-xl">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Relatórios Rápidos</h2>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-            <div>
-              <h3 className="font-medium text-gray-900">Relatório de Vendas</h3>
-              <p className="text-sm text-gray-600">Análise detalhada das vendas por período</p>
-            </div>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              Gerar
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-            <div>
-              <h3 className="font-medium text-gray-900">Relatório Financeiro</h3>
-              <p className="text-sm text-gray-600">Resumo das movimentações financeiras</p>
-            </div>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              Gerar
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-            <div>
-              <h3 className="font-medium text-gray-900">Relatório de Funcionários</h3>
-              <p className="text-sm text-gray-600">Dados sobre funcionários e folha de pagamento</p>
-            </div>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              Gerar
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-// New component for receivables report
-function ReceivablesReport() {
-  const { reportsService } = useAppContext();
-  const [receivables, setReceivables] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadReceivables = async () => {
-      try {
-        const data = await reportsService.getAllReceivables();
-        setReceivables(data);
-      } catch (error) {
-        console.error('Error loading receivables:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadReceivables();
-  }, []);
-
-  const totalReceivables = receivables.reduce((sum, item) => sum + item.amount, 0);
-
-  if (loading) {
-    return (
-      <div className="card modern-shadow-xl">
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
-          <p className="text-slate-600 mt-4">Carregando valores a receber...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="card modern-shadow-xl">
-      <div className="flex items-center gap-4 mb-6">
-        <div className="p-3 rounded-xl bg-green-600">
-          <ArrowUpCircle className="w-6 h-6 text-white" />
-        </div>
-        <div>
-          <h3 className="text-xl font-bold text-slate-900">Valores a Receber</h3>
-          <p className="text-green-700 font-semibold">
-            Total: R$ {totalReceivables.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </p>
-        </div>
-      </div>
-      
-      {receivables.length > 0 ? (
-        <div className="overflow-x-auto modern-scrollbar">
-          <table className="min-w-full table-auto">
-            <thead>
-              <tr className="border-b border-slate-200">
-                <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-green-50 to-emerald-50">Tipo</th>
-                <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-green-50 to-emerald-50">Cliente</th>
-                <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-green-50 to-emerald-50">Descrição</th>
-                <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-green-50 to-emerald-50">Valor</th>
-                <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-green-50 to-emerald-50">Vencimento</th>
-                <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-green-50 to-emerald-50">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {receivables.map(item => (
-                <tr key={item.id} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-green-50/50 hover:to-emerald-50/50 transition-all duration-300">
-                  <td className="py-4 px-6 text-sm">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                      item.type === 'Cheque' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                      item.type === 'Boleto' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                      'bg-purple-100 text-purple-800 border-purple-200'
-                    }`}>
-                      {item.type}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6 text-sm font-bold text-slate-900">{item.client}</td>
-                  <td className="py-4 px-6 text-sm text-slate-700">{item.description}</td>
-                  <td className="py-4 px-6 text-sm font-black text-green-600">
+                  <span className="text-lg font-black text-green-600">
                     R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="py-4 px-6 text-sm">
-                    <span className={
-                      new Date(item.dueDate) < new Date() ? 'text-red-600 font-medium' :
-                      new Date(item.dueDate).toDateString() === new Date().toDateString() ? 'text-blue-600 font-medium' :
-                      'text-gray-900'
-                    }>
-                      {new Date(item.dueDate).toLocaleDateString('pt-BR')}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6 text-sm">
-                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                      new Date(item.dueDate) < new Date() ? 'bg-red-100 text-red-800' :
-                      new Date(item.dueDate).toDateString() === new Date().toDateString() ? 'bg-blue-100 text-blue-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {new Date(item.dueDate) < new Date() ? 'Vencido' :
-                       new Date(item.dueDate).toDateString() === new Date().toDateString() ? 'Hoje' :
-                       'Pendente'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              <tr className="bg-green-50 border-t-2 border-green-200">
-                <td colSpan={3} className="py-4 px-6 text-right font-bold text-green-900">TOTAL A RECEBER:</td>
-                <td className="py-4 px-6 text-lg font-black text-green-600">
-                  R$ {totalReceivables.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </td>
-                <td colSpan={2}></td>
-              </tr>
-            </tbody>
-          </table>
+                  </span>
+                </div>
+              </div>
+            ))}
+            {reportData.receivedValues.length === 0 && (
+              <div className="text-center py-8">
+                <TrendingUp className="w-12 h-12 mx-auto mb-3 text-green-300" />
+                <p className="text-green-600 font-medium">Nenhum valor recebido no período</p>
+              </div>
+            )}
+          </div>
         </div>
-      ) : (
-        <div className="text-center py-12">
-          <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500" />
-          <p className="text-green-600 font-semibold">Nenhum valor a receber!</p>
-          <p className="text-green-500 text-sm mt-2">Todos os valores foram recebidos</p>
-        </div>
-      )}
-    </div>
-  );
-}
 
-// New component for payables report
-function PayablesReport() {
-  const { reportsService } = useAppContext();
-  const [payables, setPayables] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadPayables = async () => {
-      try {
-        const data = await reportsService.getAllPayables();
-        setPayables(data);
-      } catch (error) {
-        console.error('Error loading payables:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadPayables();
-  }, []);
-
-  const totalPayables = payables.reduce((sum, item) => sum + item.amount, 0);
-
-  if (loading) {
-    return (
-      <div className="card modern-shadow-xl">
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
-          <p className="text-slate-600 mt-4">Carregando valores a pagar...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="card modern-shadow-xl">
-      <div className="flex items-center gap-4 mb-6">
-        <div className="p-3 rounded-xl bg-red-600">
-          <ArrowDownCircle className="w-6 h-6 text-white" />
-        </div>
-        <div>
-          <h3 className="text-xl font-bold text-slate-900">Valores a Pagar</h3>
-          <p className="text-red-700 font-semibold">
-            Total: R$ {totalPayables.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </p>
-        </div>
-      </div>
-      
-      {payables.length > 0 ? (
-        <div className="overflow-x-auto modern-scrollbar">
-          <table className="min-w-full table-auto">
-            <thead>
-              <tr className="border-b border-slate-200">
-                <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-red-50 to-orange-50">Tipo</th>
-                <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-red-50 to-orange-50">Empresa</th>
-                <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-red-50 to-orange-50">Descrição</th>
-                <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-red-50 to-orange-50">Valor</th>
-                <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-red-50 to-orange-50">Vencimento</th>
-                <th className="text-left py-4 px-6 font-bold text-slate-700 bg-gradient-to-r from-red-50 to-orange-50">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {payables.map(item => (
-                <tr key={item.id} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-red-50/50 hover:to-orange-50/50 transition-all duration-300">
-                  <td className="py-4 px-6 text-sm">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                      item.type === 'Cheque a Pagar' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                      item.type === 'Boleto a Pagar' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                      'bg-red-100 text-red-800 border-red-200'
-                    }`}>
-                      {item.type}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6 text-sm font-bold text-slate-900">{item.company}</td>
-                  <td className="py-4 px-6 text-sm text-slate-700">{item.description}</td>
-                  <td className="py-4 px-6 text-sm font-black text-red-600">
+        {/* Paid Values */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-red-600">
+              <TrendingDown className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Valores Pagos</h3>
+          </div>
+          
+          <div className="space-y-3 max-h-80 overflow-y-auto modern-scrollbar">
+            {reportData.paidValues.slice(0, 10).map(item => (
+              <div key={item.id} className="p-4 bg-red-50 rounded-xl border border-red-200">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                        item.type === 'Dívida' ? 'bg-red-100 text-red-800' :
+                        item.type === 'Salário' ? 'bg-purple-100 text-purple-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {item.type}
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-red-900">
+                      {item.details.company || item.details.employeeName || 'N/A'}
+                    </h4>
+                    <p className="text-sm text-red-700">{item.description}</p>
+                    <p className="text-xs text-red-600">
+                      {new Date(item.date).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  <span className="text-lg font-black text-red-600">
                     R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="py-4 px-6 text-sm">
-                    <span className={
-                      new Date(item.dueDate) < new Date() ? 'text-red-600 font-medium' :
-                      new Date(item.dueDate).toDateString() === new Date().toDateString() ? 'text-blue-600 font-medium' :
-                      'text-gray-900'
-                    }>
-                      {new Date(item.dueDate).toLocaleDateString('pt-BR')}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6 text-sm">
-                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                      new Date(item.dueDate) < new Date() ? 'bg-red-100 text-red-800' :
-                      new Date(item.dueDate).toDateString() === new Date().toDateString() ? 'bg-blue-100 text-blue-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {new Date(item.dueDate) < new Date() ? 'Vencido' :
-                       new Date(item.dueDate).toDateString() === new Date().toDateString() ? 'Hoje' :
-                       'Pendente'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              <tr className="bg-red-50 border-t-2 border-red-200">
-                <td colSpan={3} className="py-4 px-6 text-right font-bold text-red-900">TOTAL A PAGAR:</td>
-                <td className="py-4 px-6 text-lg font-black text-red-600">
-                  R$ {totalPayables.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </td>
-                <td colSpan={2}></td>
-              </tr>
-            </tbody>
-          </table>
+                  </span>
+                </div>
+              </div>
+            ))}
+            {reportData.paidValues.length === 0 && (
+              <div className="text-center py-8">
+                <TrendingDown className="w-12 h-12 mx-auto mb-3 text-red-300" />
+                <p className="text-red-600 font-medium">Nenhum valor pago no período</p>
+              </div>
+            )}
+          </div>
         </div>
-      ) : (
-        <div className="text-center py-12">
-          <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500" />
-          <p className="text-green-600 font-semibold">Nenhum valor a pagar!</p>
-          <p className="text-green-500 text-sm mt-2">Todas as dívidas foram quitadas</p>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
