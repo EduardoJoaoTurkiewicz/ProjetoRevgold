@@ -556,10 +556,10 @@ export function Sales() {
                     <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
                       <div className="flex justify-between items-center">
                         <span className="text-purple-700 font-semibold">
-                          Comissão ({sale.customCommissionRate}%):
+                          Comissão ({sale.custom_commission_rate}%):
                         </span>
                         <span className="text-xl font-black text-purple-600">
-                          {formatCurrency((sale.totalValue * (sale.customCommissionRate || 0)) / 100)}
+                          {formatCurrency((sale.totalValue * (sale.custom_commission_rate || 0)) / 100)}
                         </span>
                       </div>
                     </div>
@@ -707,10 +707,10 @@ export function Sales() {
                     <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
                       <h4 className="font-bold text-purple-900 mb-2">Comissão</h4>
                       <div className="space-y-2 text-sm">
-                        <p><strong>Taxa:</strong> {viewingSale.customCommissionRate}%</p>
+                        <p><strong>Taxa:</strong> {viewingSale.custom_commission_rate}%</p>
                         <p><strong>Valor:</strong> 
                           <span className="text-purple-600 font-bold ml-1">
-                            {formatCurrency((viewingSale.totalValue * (viewingSale.customCommissionRate || 0)) / 100)}
+                            {formatCurrency((viewingSale.totalValue * (viewingSale.custom_commission_rate || 0)) / 100)}
                           </span>
                         </p>
                       </div>

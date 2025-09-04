@@ -34,7 +34,7 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     paymentMethods: sale?.paymentMethods || [{ type: 'dinheiro' as const, amount: 0 }],
     paymentDescription: sale?.paymentDescription || '',
     paymentObservations: sale?.paymentObservations || '',
-    customCommissionRate: sale?.customCommissionRate || 5.00,
+    custom_commission_rate: sale?.custom_commission_rate || 5.00,
     // New fields for boletos and cheques
     boletos: [] as SaleBoleto[],
     cheques: [] as SaleCheque[]
@@ -298,7 +298,7 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       deliveryDate: formData.deliveryDate?.trim() || null,
       client: formData.client.trim(),
       sellerId: cleanSellerId,
-      customCommissionRate: formData.customCommissionRate,
+      custom_commission_rate: formData.custom_commission_rate,
       products: typeof formData.products === 'string' ? [{ name: formData.products }] : formData.products,
       observations: formData.observations?.trim() || null,
       totalValue: formData.totalValue,
@@ -479,8 +479,8 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                       step="0.01"
                       min="0"
                       max="100"
-                      value={formData.customCommissionRate}
-                      onChange={(e) => setFormData(prev => ({ ...prev, customCommissionRate: parseFloat(e.target.value) || 0 }))}
+                      value={formData.custom_commission_rate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, custom_commission_rate: parseFloat(e.target.value) || 0 }))}
                       className="input-field"
                       placeholder="5.00"
                     />
@@ -492,7 +492,7 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                       <div>
                         <p className="text-purple-600 font-semibold">Valor da Comissão</p>
                         <p className="text-2xl font-black text-purple-700">
-                          R$ {((formData.totalValue * (formData.customCommissionRate || 0)) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          R$ {((formData.totalValue * (formData.custom_commission_rate || 0)) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                       </div>
                     </div>

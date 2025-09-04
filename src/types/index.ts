@@ -60,7 +60,7 @@ export interface Sale {
   paymentObservations?: string | null;
   createdAt: string;
   updatedAt?: string | null;
-  customCommissionRate: number;
+  custom_commission_rate: number;
 }
 
 // Debt interface
