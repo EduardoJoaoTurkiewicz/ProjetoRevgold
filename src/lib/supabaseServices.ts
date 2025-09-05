@@ -1267,6 +1267,75 @@ export function getCheckImageUrl(imagePath: string): string {
   return data.publicUrl;
 }
 
+// Agenda Events Service
+export const agendaService = {
+  async getAll(): Promise<AgendaEvent[]> {
+    try {
+      checkSupabaseClient();
+      const { data, error } = await supabase
+        .from('agenda_events')
+        .select('*')
+        .order('date', { ascending: false });
+      
+      if (error) throw error;
+      return (data || []).map(toCamelCase);
+    } catch (error) {
+      console.error('Error loading agenda events:', error);
+      throw error;
+    }
+  },
+
+  async create(eventData: Omit<AgendaEvent, 'id' | 'createdAt' | 'updatedAt'>): Promise<AgendaEvent> {
+    try {
+      const sanitizedData = sanitizePayload(eventData);
+      const dbData = transformToSnakeCase(sanitizedData);
+      
+      const { data, error } = await supabase
+        .from('agenda_events')
+        .insert([dbData])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return toCamelCase(data);
+    } catch (error) {
+      console.error('Error creating agenda event:', error);
+      throw error;
+    }
+  },
+
+  async update(id: string, eventData: Partial<AgendaEvent>): Promise<void> {
+    try {
+      const sanitizedData = sanitizePayload(eventData);
+      const dbData = transformToSnakeCase(sanitizedData);
+      
+      const { error } = await supabase
+        .from('agenda_events')
+        .update(dbData)
+        .eq('id', id);
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating agenda event:', error);
+      throw error;
+    }
+  },
+
+  async delete(id: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('agenda_events')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting agenda event:', error);
+      throw error;
+    }
+  }
+};
+
 // Debug service for sale creation errors
 export const debugService = {
   async getRecentSaleErrors(limit: number = 10): Promise<any[]> {
