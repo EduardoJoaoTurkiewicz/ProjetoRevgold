@@ -708,141 +708,6 @@ export const agendaService = {
   }
 };
 
-// Taxes Services
-export const taxesService = {
-  async getAll() {
-    const { data, error } = await supabase
-      .from('taxes')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async create(tax: Omit<Tax, 'id' | 'created_at' | 'updated_at'>) {
-    const { data, error } = await supabase
-      .from('taxes')
-      .insert(tax)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async update(id: string, updates: Partial<Tax>) {
-    const { data, error } = await supabase
-      .from('taxes')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async delete(id: string) {
-    const { error } = await supabase
-      .from('taxes')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-  }
-};
-
-// PIX Fees Services
-export const pixFeesService = {
-  async getAll() {
-    const { data, error } = await supabase
-      .from('pix_fees')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async create(fee: Omit<PixFee, 'id' | 'created_at' | 'updated_at'>) {
-    const { data, error } = await supabase
-      .from('pix_fees')
-      .insert(fee)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async update(id: string, updates: Partial<PixFee>) {
-    const { data, error } = await supabase
-      .from('pix_fees')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async delete(id: string) {
-    const { error } = await supabase
-      .from('pix_fees')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-  }
-};
-
-// Add missing services that are referenced in context
-export const employeePaymentsService = {
-  async getAll() {
-    const { data, error } = await supabase
-      .from('employee_payments')
-      .select('*')
-      .order('payment_date', { ascending: false });
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async create(payment: Omit<Tables['employee_payments']['Row'], 'id' | 'created_at' | 'updated_at'>) {
-    const { data, error } = await supabase
-      .from('employee_payments')
-      .insert(payment)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async update(id: string, updates: Partial<Tables['employee_payments']['Row']>) {
-    const { data, error } = await supabase
-      .from('employee_payments')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async delete(id: string) {
-    const { error } = await supabase
-      .from('employee_payments')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-  }
-};
-
 export const employeeAdvancesService = {
   async getAll() {
     const { data, error } = await supabase
@@ -998,6 +863,108 @@ export const employeeCommissionsService = {
 export const employeePaymentsService = {
   async getAll() {
     const { data, error } = await supabase
+      .from('employee_payments')
+      .select(`
+        *,
+        employees(name, position)
+      `)
+      .order('payment_date', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async create(payment: Omit<Tables['employee_payments']['Row'], 'id' | 'created_at' | 'updated_at'>) {
+    const { data, error } = await supabase
+      .from('employee_payments')
+      .insert(payment)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id: string, updates: Partial<Tables['employee_payments']['Row']>) {
+    const { data, error } = await supabase
+      .from('employee_payments')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+      .from('employee_payments')
+      .select(`
+        *,
+        employees(name, position)
+      `)
+      .order('payment_date', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async create(payment: Omit<Tables['employee_payments']['Row'], 'id' | 'created_at' | 'updated_at'>) {
+    const { data, error } = await supabase
+      .from('employee_payments')
+      .insert(payment)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id: string, updates: Partial<Tables['employee_payments']['Row']>) {
+    const { data, error } = await supabase
+      .from('employee_payments')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+      .from('employee_payments')
+      .select(`
+        *,
+        employees(name, position)
+      `)
+      .order('payment_date', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async create(payment: Omit<Tables['employee_payments']['Row'], 'id' | 'created_at' | 'updated_at'>) {
+    const { data, error } = await supabase
+      .from('employee_payments')
+      .insert(payment)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id: string, updates: Partial<Tables['employee_payments']['Row']>) {
+    const { data, error } = await supabase
+      .from('employee_payments')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
       .from('employee_payments')
       .select(`
         *,
