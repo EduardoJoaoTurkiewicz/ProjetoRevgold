@@ -343,17 +343,23 @@ export function AppProvider({ children }: AppProviderProps) {
         throw new Error('Supabase não está configurado. Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env e reinicie o servidor.');
       }
       
-      // Additional UUID sanitization at context level
-      const sanitizedSaleData = {
-        ...saleData,
-        sellerId: saleData.sellerId && typeof saleData.sellerId === 'string' && saleData.sellerId.trim() !== '' ? saleData.sellerId.trim() : null,
-        // Add any other UUID fields that might be present
-      };
+      // Validate required fields before processing
+      if (!saleData.client || !saleData.client.trim()) {
+        throw new Error('Nome do cliente é obrigatório');
+      }
       
-      console.log('🔧 Sale data after context-level sanitization:', sanitizedSaleData);
+      if (!saleData.totalValue || saleData.totalValue <= 0) {
+        throw new Error('Valor total deve ser maior que zero');
+      }
+      
+      if (!saleData.paymentMethods || saleData.paymentMethods.length === 0) {
+        throw new Error('Pelo menos um método de pagamento é obrigatório');
+      }
+      
+      console.log('✅ Validação inicial passou, enviando para salesService');
       
       // Use the robust salesService.create which now handles all validation and sanitization
-      await salesService.create(sanitizedSaleData as Partial<Sale>);
+      await salesService.create(saleData);
       console.log('✅ Venda criada com sucesso');
       await loadAllData();
     } catch (error) {

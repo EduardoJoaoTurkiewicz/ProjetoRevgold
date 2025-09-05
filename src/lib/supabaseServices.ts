@@ -38,6 +38,123 @@ export const sanitizePayload = (data: any): any => {
   return sanitized;
 };
 
+// Helper function to map frontend fields to database fields
+export const mapSaleFieldsToDatabase = (saleData: any): any => {
+  if (!saleData || typeof saleData !== 'object') {
+    return saleData;
+  }
+
+  const mapped = { ...saleData };
+
+  // Map camelCase frontend fields to snake_case database fields
+  const fieldMappings = {
+    deliveryDate: 'delivery_date',
+    sellerId: 'seller_id',
+    totalValue: 'total_value',
+    paymentMethods: 'payment_methods',
+    receivedAmount: 'received_amount',
+    pendingAmount: 'pending_amount',
+    paymentDescription: 'payment_description',
+    paymentObservations: 'payment_observations',
+    customCommissionRate: 'custom_commission_rate',
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
+  };
+
+  // Apply field mappings
+  for (const [frontendField, dbField] of Object.entries(fieldMappings)) {
+    if (frontendField in mapped) {
+      mapped[dbField] = mapped[frontendField];
+      delete mapped[frontendField];
+    }
+  }
+
+  // Handle special cases
+  if ('delivery_date' in mapped) {
+    // Ensure delivery_date is properly formatted or null
+    if (!mapped.delivery_date || mapped.delivery_date.trim() === '') {
+      mapped.delivery_date = null;
+    }
+  }
+
+  if ('seller_id' in mapped) {
+    // Ensure seller_id is properly formatted or null
+    if (!mapped.seller_id || mapped.seller_id.toString().trim() === '') {
+      mapped.seller_id = null;
+    }
+  }
+
+  return mapped;
+};
+
+// Helper function to map database fields back to frontend fields
+export const mapSaleFieldsFromDatabase = (dbData: any): any => {
+  if (!dbData || typeof dbData !== 'object') {
+    return dbData;
+  }
+
+  const mapped = { ...dbData };
+
+  // Map snake_case database fields to camelCase frontend fields
+  const fieldMappings = {
+    delivery_date: 'deliveryDate',
+    seller_id: 'sellerId',
+    total_value: 'totalValue',
+    payment_methods: 'paymentMethods',
+    received_amount: 'receivedAmount',
+    pending_amount: 'pendingAmount',
+    payment_description: 'paymentDescription',
+    payment_observations: 'paymentObservations',
+    custom_commission_rate: 'custom_commission_rate', // Keep as is for now
+    created_at: 'createdAt',
+    updated_at: 'updatedAt'
+  };
+
+  // Apply field mappings
+  for (const [dbField, frontendField] of Object.entries(fieldMappings)) {
+    if (dbField in mapped) {
+      mapped[frontendField] = mapped[dbField];
+      delete mapped[dbField];
+    }
+  }
+
+  return mapped;
+};
+// Add missing CreateSalePayload type
+export interface CreateSalePayload {
+  date: string;
+  deliveryDate?: string | null;
+  client: string;
+  sellerId?: string | null;
+  products?: string | any[] | null;
+  observations?: string | null;
+  totalValue: number;
+  paymentMethods: any[];
+  paymentDescription?: string | null;
+  paymentObservations?: string | null;
+  receivedAmount: number;
+  pendingAmount: number;
+  status: 'pago' | 'pendente' | 'parcial';
+  custom_commission_rate?: number;
+}
+
+// Add missing SaleBoleto and SaleCheque types
+export interface SaleBoleto {
+  number: string;
+  due_date: string;
+  value: number;
+  observations?: string;
+}
+
+export interface SaleCheque {
+  bank?: string;
+  number?: string;
+  due_date: string;
+  value: number;
+  used_for_debt: boolean;
+  observations?: string;
+}
+
 // Image Upload Services
 export const uploadCheckImage = async (file: File, checkId: string, type: 'front' | 'back'): Promise<string> => {
   const fileExt = file.name.split('.').pop();
@@ -90,32 +207,56 @@ export const salesService = {
       .order('date', { ascending: false });
     
     if (error) throw error;
-    return data;
+    
+    // Map database fields to frontend fields
+    return data.map(mapSaleFieldsFromDatabase);
   },
 
-  async create(sale: Omit<Sale, 'id' | 'created_at' | 'updated_at'>) {
+  async create(sale: any) {
+    console.log('🔄 salesService.create - dados recebidos:', sale);
+    
+    // First sanitize UUID fields
     const sanitizedSale = sanitizePayload(sale);
+    console.log('🔧 Após sanitização UUID:', sanitizedSale);
+    
+    // Then map frontend fields to database fields
+    const mappedSale = mapSaleFieldsToDatabase(sanitizedSale);
+    console.log('🗃️ Dados mapeados para o banco:', mappedSale);
+    
     const { data, error } = await supabase
       .from('sales')
-      .insert(sanitizedSale)
+      .insert(mappedSale)
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    
+    // Map response back to frontend format
+    return mapSaleFieldsFromDatabase(data);
   },
 
-  async update(id: string, updates: Partial<Sale>) {
+  async update(id: string, updates: any) {
+    console.log('🔄 salesService.update - dados recebidos:', updates);
+    
+    // First sanitize UUID fields
     const sanitizedUpdates = sanitizePayload(updates);
+    console.log('🔧 Após sanitização UUID:', sanitizedUpdates);
+    
+    // Then map frontend fields to database fields
+    const mappedUpdates = mapSaleFieldsToDatabase(sanitizedUpdates);
+    console.log('🗃️ Dados mapeados para o banco:', mappedUpdates);
+    
     const { data, error } = await supabase
       .from('sales')
-      .update(sanitizedUpdates)
+      .update(mappedUpdates)
       .eq('id', id)
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    
+    // Map response back to frontend format
+    return mapSaleFieldsFromDatabase(data);
   },
 
   async delete(id: string) {
@@ -657,6 +798,139 @@ export const pixFeesService = {
   }
 };
 
+// Add missing services that are referenced in context
+export const employeePaymentsService = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('employee_payments')
+      .select('*')
+      .order('payment_date', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async create(payment: Omit<Tables['employee_payments']['Row'], 'id' | 'created_at' | 'updated_at'>) {
+    const { data, error } = await supabase
+      .from('employee_payments')
+      .insert(payment)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id: string, updates: Partial<Tables['employee_payments']['Row']>) {
+    const { data, error } = await supabase
+      .from('employee_payments')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async delete(id: string) {
+    const { error } = await supabase
+      .from('employee_payments')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+export const employeeAdvancesService = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('employee_advances')
+      .select('*')
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async create(advance: Omit<Tables['employee_advances']['Row'], 'id' | 'created_at' | 'updated_at'>) {
+    const { data, error } = await supabase
+      .from('employee_advances')
+      .insert(advance)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id: string, updates: Partial<Tables['employee_advances']['Row']>) {
+    const { data, error } = await supabase
+      .from('employee_advances')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async delete(id: string) {
+    const { error } = await supabase
+      .from('employee_advances')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+export const employeeOvertimesService = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('employee_overtimes')
+      .select('*')
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async create(overtime: Omit<Tables['employee_overtimes']['Row'], 'id' | 'created_at' | 'updated_at'>) {
+    const { data, error } = await supabase
+      .from('employee_overtimes')
+      .insert(overtime)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id: string, updates: Partial<Tables['employee_overtimes']['Row']>) {
+    const { data, error } = await supabase
+      .from('employee_overtimes')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async delete(id: string) {
+    const { error } = await supabase
+      .from('employee_overtimes')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
 // Employee Commissions Services
 export const employeeCommissionsService = {
   async getAll() {
@@ -737,103 +1011,13 @@ export const employeePaymentsService = {
 
   async create(payment: Omit<Tables['employee_payments']['Row'], 'id' | 'created_at' | 'updated_at'>) {
     const { data, error } = await supabase
+  async delete(id: string) {
+    const { error } = await supabase
       .from('employee_payments')
-      .insert(payment)
-      .select()
-      .single();
+      .delete()
+      .eq('id', id);
     
     if (error) throw error;
-    return data;
-  },
-
-  async update(id: string, updates: Partial<Tables['employee_payments']['Row']>) {
-    const { data, error } = await supabase
-      .from('employee_payments')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  }
-};
-
-// Employee Advances Services
-export const employeeAdvancesService = {
-  async getAll() {
-    const { data, error } = await supabase
-      .from('employee_advances')
-      .select(`
-        *,
-        employees(name, position)
-      `)
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async create(advance: Omit<Tables['employee_advances']['Row'], 'id' | 'created_at' | 'updated_at'>) {
-    const { data, error } = await supabase
-      .from('employee_advances')
-      .insert(advance)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async update(id: string, updates: Partial<Tables['employee_advances']['Row']>) {
-    const { data, error } = await supabase
-      .from('employee_advances')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  }
-};
-
-// Employee Overtimes Services
-export const employeeOvertimesService = {
-  async getAll() {
-    const { data, error } = await supabase
-      .from('employee_overtimes')
-      .select(`
-        *,
-        employees(name, position)
-      `)
-      .order('date', { ascending: false });
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async create(overtime: Omit<Tables['employee_overtimes']['Row'], 'id' | 'created_at' | 'updated_at'>) {
-    const { data, error } = await supabase
-      .from('employee_overtimes')
-      .insert(overtime)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  async update(id: string, updates: Partial<Tables['employee_overtimes']['Row']>) {
-    const { data, error } = await supabase
-      .from('employee_overtimes')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
   }
 };
 

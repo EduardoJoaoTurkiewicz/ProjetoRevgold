@@ -269,7 +269,7 @@ export function Sales() {
                         {sale.deliveryDate && (
                           <span className="flex items-center gap-1">
                             <Package className="w-4 h-4" />
-                            Entrega: {formatDate(sale.deliveryDate)}
+                            Entrega: {sale.deliveryDate ? formatDate(sale.deliveryDate) : 'Não definida'}
                           </span>
                         )}
                         <span className="flex items-center gap-1">
@@ -683,7 +683,7 @@ export function Sales() {
                       <p><strong>Cliente:</strong> {viewingSale.client}</p>
                       <p><strong>Data:</strong> {formatDate(viewingSale.date)}</p>
                       {viewingSale.deliveryDate && (
-                        <p><strong>Entrega:</strong> {formatDate(viewingSale.deliveryDate)}</p>
+                        <p><strong>Entrega:</strong> {viewingSale.deliveryDate ? formatDate(viewingSale.deliveryDate) : 'Não definida'}</p>
                       )}
                       <p><strong>Vendedor:</strong> {getSellerName(viewingSale.sellerId)}</p>
                       <p><strong>Status:</strong> 

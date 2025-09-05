@@ -227,6 +227,9 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     // Clean sellerId - ensure it's either a valid UUID or null
     const cleanSellerId = formData.sellerId && formData.sellerId.trim() !== '' ? formData.sellerId : null;
     
+    // Clean deliveryDate - ensure it's properly formatted or null
+    const cleanDeliveryDate = formData.deliveryDate && formData.deliveryDate.trim() !== '' ? formData.deliveryDate : null;
+    
     // Recalculate amounts with cleaned payment methods
     const recalculatedAmounts = (() => {
       const totalPayments = cleanedPaymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
@@ -256,46 +259,10 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       };
     })();
     
-    // Generate boletos and cheques from payment methods
-    const boletos: SaleBoleto[] = [];
-    const cheques: SaleCheque[] = [];
-    
-    cleanedPaymentMethods.forEach(method => {
-      if (method.type === 'boleto' && method.installments && method.installments > 1) {
-        // Generate multiple boletos
-        for (let i = 1; i <= method.installments; i++) {
-          const dueDate = new Date(method.firstInstallmentDate || formData.date);
-          dueDate.setDate(dueDate.getDate() + (i - 1) * (method.installmentInterval || 30));
-          
-          boletos.push({
-            number: `BOL-${Date.now()}-${i}`,
-            due_date: dueDate.toISOString().split('T')[0],
-            value: method.installmentValue || (method.amount / method.installments),
-            observations: `Parcela ${i}/${method.installments} da venda`
-          });
-        }
-      } else if (method.type === 'cheque' && method.installments && method.installments > 1) {
-        // Generate multiple cheques
-        for (let i = 1; i <= method.installments; i++) {
-          const dueDate = new Date(method.firstInstallmentDate || formData.date);
-          dueDate.setDate(dueDate.getDate() + (i - 1) * (method.installmentInterval || 30));
-          
-          cheques.push({
-            bank: method.thirdPartyDetails?.[0]?.bank || 'Banco não especificado',
-            number: method.thirdPartyDetails?.[0]?.checkNumber || `CHQ-${Date.now()}-${i}`,
-            due_date: dueDate.toISOString().split('T')[0],
-            value: method.installmentValue || (method.amount / method.installments),
-            used_for_debt: false,
-            observations: `Parcela ${i}/${method.installments} da venda`
-          });
-        }
-      }
-    });
-    
-    // Create payload - use simple Sale format instead of complex RPC
+    // Create clean payload with proper field mapping
     const saleToSubmit = {
       date: formData.date,
-      deliveryDate: formData.deliveryDate?.trim() || null,
+      deliveryDate: cleanDeliveryDate,
       client: formData.client.trim(),
       sellerId: cleanSellerId,
       custom_commission_rate: formData.custom_commission_rate,
