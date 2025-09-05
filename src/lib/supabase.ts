@@ -19,15 +19,13 @@ export function isSupabaseConfigured(): boolean {
   );
   
   if (!isConfigured) {
-    console.error('❌ SUPABASE NÃO CONFIGURADO CORRETAMENTE');
-    console.error('📝 Para corrigir este erro:');
-    console.error('1. Abra o arquivo .env na raiz do projeto');
-    console.error('2. Configure as variáveis:');
-    console.error('   VITE_SUPABASE_URL=https://seu-projeto-id.supabase.co');
-    console.error('   VITE_SUPABASE_ANON_KEY=sua-chave-anon-aqui');
-    console.error('3. Reinicie o servidor de desenvolvimento');
-    console.error('🔗 URL atual:', url || 'não definida');
-    console.error('🔑 Key atual:', key ? `${key.substring(0, 10)}...` : 'não definida');
+    console.warn('❌ SUPABASE NÃO CONFIGURADO CORRETAMENTE');
+    console.warn('📝 Para corrigir este erro:');
+    console.warn('1. Clique no botão "Connect to Supabase" no canto superior direito');
+    console.warn('2. Configure seu projeto Supabase');
+    console.warn('3. As variáveis de ambiente serão configuradas automaticamente');
+    console.warn('🔗 URL atual:', url || 'não definida');
+    console.warn('🔑 Key atual:', key ? `${key.substring(0, 10)}...` : 'não definida');
   }
   
   return isConfigured;
@@ -36,8 +34,7 @@ export function isSupabaseConfigured(): boolean {
 // Create client with proper error handling
 export const supabase = (() => {
   if (!isSupabaseConfigured()) {
-    console.error('❌ Criando cliente Supabase com valores placeholder devido à configuração incorreta');
-    console.error('⚠️ TODAS AS OPERAÇÕES DE BANCO DE DADOS FALHARÃO ATÉ QUE O SUPABASE SEJA CONFIGURADO');
+    console.warn('❌ Criando cliente Supabase com valores placeholder devido à configuração incorreta');
     return createClient<Database>('https://placeholder.supabase.co', 'placeholder-key');
   }
   

@@ -151,8 +151,8 @@ export async function createSaleRPC(payload: any): Promise<string> {
 
 // Utility function to check Supabase client initialization
 function checkSupabaseClient() {
-  if (!isSupabaseConfigured()) {
-    throw new Error('Supabase não está configurado. Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env e reinicie o servidor.');
+  if (!supabase) {
+    throw new Error('Supabase client is not initialized. Please check your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables in your .env file.');
   }
 }
 
