@@ -1,359 +1,755 @@
-import React, { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, TrendingDown, Calendar, Plus, Minus, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { DollarSign, TrendingUp, TrendingDown, Calendar, ArrowUpCircle, ArrowDownCircle, PieChart, BarChart3, Activity, Wallet, Plus, Minus } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
-import { fmtBRL, fmtDate } from '../utils/format';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
-interface CashTransaction {
-  id: string;
-  date: string;
-  type: 'entrada' | 'saida';
-  amount: number;
-  description: string;
-  category: string;
-  payment_method?: string;
-  created_at: string;
-}
+const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4'];
 
-interface CashBalance {
-  id: string;
-  current_balance: number;
-  initial_balance: number;
-  initial_date: string;
-  last_updated: string;
-}
+export function CashManagement() {
+  const { cashBalance, sales, checks, boletos, pixFees, debts, taxes, employeePayments, employeeAdvances, isLoading, error, initializeCashBalance, updateCashBalance, recalculateCashBalance, loadAllData } = useAppContext();
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [initialAmount, setInitialAmount] = useState(0);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showRealTimeUpdates, setShowRealTimeUpdates] = useState(true);
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
-export default function CashManagement() {
-  const { supabase } = useAppContext();
-  const [transactions, setTransactions] = useState<CashTransaction[]>([]);
-  const [balance, setBalance] = useState<CashBalance | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [showBalance, setShowBalance] = useState(true);
-  const [newTransaction, setNewTransaction] = useState({
-    type: 'entrada' as 'entrada' | 'saida',
-    amount: '',
-    description: '',
-    category: 'outro',
-    payment_method: 'dinheiro',
-    date: new Date().toISOString().split('T')[0]
-  });
-
-  const categories = [
-    { value: 'venda', label: 'Venda' },
-    { value: 'divida', label: 'Dívida' },
-    { value: 'adiantamento', label: 'Adiantamento' },
-    { value: 'salario', label: 'Salário' },
-    { value: 'comissao', label: 'Comissão' },
-    { value: 'cheque', label: 'Cheque' },
-    { value: 'boleto', label: 'Boleto' },
-    { value: 'outro', label: 'Outro' }
-  ];
-
-  const paymentMethods = [
-    { value: 'dinheiro', label: 'Dinheiro' },
-    { value: 'pix', label: 'PIX' },
-    { value: 'transferencia', label: 'Transferência' },
-    { value: 'cartao_debito', label: 'Cartão Débito' },
-    { value: 'cartao_credito', label: 'Cartão Crédito' },
-    { value: 'cheque', label: 'Cheque' },
-    { value: 'boleto', label: 'Boleto' }
-  ];
-
-  useEffect(() => {
-    fetchData();
+  const today = new Date().toISOString().split('T')[0];
+  
+  // Force reload cash balance on mount
+  React.useEffect(() => {
+    console.log('🔄 CashManagement montado, verificando saldo...');
+    loadAllData().catch(error => {
+      console.error('Erro ao carregar dados do caixa:', error);
+    });
   }, []);
+  
+  // Debug cash balance
+  React.useEffect(() => {
+    console.log('💰 Estado atual do caixa:', cashBalance);
+  }, [cashBalance]);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
+  // Calcular transações do dia selecionado
+  const dayTransactions = useMemo(() => {
+    const transactions = [];
+    
+    // Vendas recebidas no dia
+    sales.forEach(sale => {
+      if (sale.date === selectedDate) {
+        (sale.paymentMethods || []).forEach(method => {
+          if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
+              (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
+            transactions.push({
+              id: `sale-${sale.id}-${method.type}`,
+              type: 'entrada' as const,
+              amount: method.amount,
+              description: `Venda - ${sale.client} (${method.type.replace('_', ' ')})`,
+              category: 'venda',
+              time: new Date(sale.createdAt || sale.date + 'T12:00:00').toLocaleTimeString('pt-BR'),
+              relatedId: sale.id
+            });
+          }
+        });
+      }
+    });
+
+    // Cheques compensados no dia
+    checks.forEach(check => {
+      if (check.dueDate === selectedDate && check.status === 'compensado' && !check.isOwnCheck) {
+        transactions.push({
+          id: `check-${check.id}`,
+          type: 'entrada' as const,
+          amount: check.value,
+          description: `Cheque compensado - ${check.client}`,
+          category: 'cheque',
+          time: new Date(check.updatedAt || check.dueDate + 'T12:00:00').toLocaleTimeString('pt-BR'),
+          relatedId: check.id
+        });
+      }
+    });
+
+    // Boletos pagos no dia
+    boletos.forEach(boleto => {
+      if (boleto.dueDate === selectedDate && boleto.status === 'compensado') {
+        // Calcular valor líquido (valor final menos custos de cartório)
+        const finalAmount = boleto.finalAmount || boleto.value;
+        const notaryCosts = boleto.notaryCosts || 0;
+        const netReceived = finalAmount - notaryCosts;
+        
+        transactions.push({
+          id: `boleto-${boleto.id}`,
+          type: 'entrada' as const,
+          amount: netReceived,
+          description: `Boleto pago - ${boleto.client}${boleto.overdueAction ? ` (${boleto.overdueAction})` : ''}`,
+          category: 'boleto',
+          time: new Date(boleto.updatedAt || boleto.dueDate + 'T12:00:00').toLocaleTimeString('pt-BR'),
+          relatedId: boleto.id
+        });
+        
+        // Se houve custos de cartório, adicionar como saída separada
+        if (notaryCosts > 0) {
+          transactions.push({
+            id: `boleto-costs-${boleto.id}`,
+            type: 'saida' as const,
+            amount: notaryCosts,
+            description: `Custos de cartório - Boleto ${boleto.client}`,
+            category: 'outro',
+            time: new Date(boleto.updatedAt || boleto.dueDate + 'T12:00:00').toLocaleTimeString('pt-BR'),
+            relatedId: boleto.id
+          });
+        }
+      }
+    });
+
+    // Cheques próprios pagos no dia
+    checks.forEach(check => {
+      if (check.dueDate === selectedDate && check.status === 'compensado' && check.isOwnCheck) {
+        transactions.push({
+          id: `own-check-${check.id}`,
+          type: 'saida' as const,
+          amount: check.value,
+          description: `Cheque próprio pago - ${check.client}`,
+          category: 'cheque',
+          time: new Date(check.updatedAt || check.dueDate + 'T12:00:00').toLocaleTimeString('pt-BR'),
+          relatedId: check.id
+        });
+      }
+    });
+
+    // Tarifas PIX do dia
+    pixFees.forEach(pixFee => {
+      if (pixFee.date === selectedDate) {
+        transactions.push({
+          id: `pix-fee-${pixFee.id}`,
+          type: 'saida' as const,
+          amount: pixFee.amount,
+          description: `Tarifa PIX - ${pixFee.bank}: ${pixFee.description}`,
+          category: 'outro',
+          time: new Date(pixFee.createdAt || pixFee.date + 'T12:00:00').toLocaleTimeString('pt-BR'),
+          relatedId: pixFee.id
+        });
+      }
+    });
+
+    // Dívidas pagas no dia
+    debts.forEach(debt => {
+      if (debt.date === selectedDate && debt.isPaid) {
+        (debt.paymentMethods || []).forEach(method => {
+          if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type)) {
+            transactions.push({
+              id: `debt-${debt.id}-${method.type}`,
+              type: 'saida' as const,
+              amount: method.amount,
+              description: `Pagamento - ${debt.company} (${method.type.replace('_', ' ')})`,
+              category: 'divida',
+              time: new Date(debt.createdAt || debt.date + 'T12:00:00').toLocaleTimeString('pt-BR'),
+              relatedId: debt.id
+            });
+          }
+        });
+      }
+    });
+
+    // Pagamentos de funcionários no dia
+    employeePayments.forEach(payment => {
+      if (payment.paymentDate === selectedDate) {
+        transactions.push({
+          id: `employee-payment-${payment.id}`,
+          type: 'saida' as const,
+          amount: payment.amount,
+          description: `Pagamento de salário - ${payment.employeeId}`,
+          category: 'salario',
+          time: new Date(payment.createdAt || payment.paymentDate + 'T12:00:00').toLocaleTimeString('pt-BR'),
+          relatedId: payment.id
+        });
+      }
+    });
+
+    // Adiantamentos no dia
+    employeeAdvances.forEach(advance => {
+      if (advance.date === selectedDate) {
+        transactions.push({
+          id: `employee-advance-${advance.id}`,
+          type: 'saida' as const,
+          amount: advance.amount,
+          description: `Adiantamento - ${advance.employeeId}`,
+          category: 'adiantamento',
+          time: new Date(advance.createdAt || advance.date + 'T12:00:00').toLocaleTimeString('pt-BR'),
+          relatedId: advance.id
+        });
+      }
+    });
+
+    // Impostos pagos no dia
+    taxes.forEach(tax => {
+      if (tax.date === selectedDate) {
+        transactions.push({
+          id: `tax-${tax.id}`,
+          type: 'saida' as const,
+          amount: tax.amount,
+          description: `Imposto - ${tax.description}`,
+          category: 'outro',
+          time: new Date(tax.createdAt || tax.date + 'T12:00:00').toLocaleTimeString('pt-BR'),
+          relatedId: tax.id
+        });
+      }
+    });
+
+    return transactions.sort((a, b) => a.time.localeCompare(b.time));
+  }, [sales, checks, boletos, pixFees, debts, employeePayments, employeeAdvances, taxes, selectedDate]);
+
+  // Calcular totais do dia
+  const dayTotals = useMemo(() => {
+    const entrada = dayTransactions.filter(t => t.type === 'entrada').reduce((sum, t) => sum + t.amount, 0);
+    const saida = dayTransactions.filter(t => t.type === 'saida').reduce((sum, t) => sum + t.amount, 0);
+    const saldo = entrada - saida;
+    
+    return { entrada, saida, saldo };
+  }, [dayTransactions]);
+
+  // Dados para gráficos - últimos 30 dias
+  const chartData = useMemo(() => {
+    const last30Days = [];
+    const today = new Date();
+    
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
       
-      // Fetch cash balance
-      const { data: balanceData } = await supabase
-        .from('cash_balances')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (balanceData) {
-        setBalance(balanceData);
-      }
-
-      // Fetch recent transactions
-      const { data: transactionsData } = await supabase
-        .from('cash_transactions')
-        .select('*')
-        .order('date', { ascending: false })
-        .limit(50);
-
-      if (transactionsData) {
-        setTransactions(transactionsData);
-      }
-    } catch (error) {
-      console.error('Error fetching cash data:', error);
-    } finally {
-      setLoading(false);
+      let entrada = 0;
+      let saida = 0;
+      
+      // Calcular entradas do dia
+      sales.forEach(sale => {
+        if (sale.date === dateStr) {
+          (sale.paymentMethods || []).forEach(method => {
+            if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
+                (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
+              entrada += method.amount;
+            }
+          });
+        }
+      });
+      
+      // Cheques compensados
+      checks.forEach(check => {
+        if (check.dueDate === dateStr && check.status === 'compensado' && !check.isOwnCheck) {
+          entrada += check.value;
+        }
+      });
+      
+      // Boletos pagos
+      boletos.forEach(boleto => {
+        if (boleto.dueDate === dateStr && boleto.status === 'compensado') {
+          // Calcular valor líquido (valor final menos custos de cartório)
+          const finalAmount = boleto.finalAmount || boleto.value;
+          const notaryCosts = boleto.notaryCosts || 0;
+          const netReceived = finalAmount - notaryCosts;
+          entrada += netReceived;
+          
+          // Custos de cartório são saídas
+          if (notaryCosts > 0) {
+            saida += notaryCosts;
+          }
+        }
+      });
+      
+      // Calcular saídas do dia
+      debts.forEach(debt => {
+        if (debt.date === dateStr && debt.isPaid) {
+          (debt.paymentMethods || []).forEach(method => {
+            if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type)) {
+              saida += method.amount;
+            }
+          });
+        }
+      });
+      
+      // Cheques próprios pagos
+      checks.forEach(check => {
+        if (check.dueDate === dateStr && check.status === 'compensado' && check.isOwnCheck) {
+          saida += check.value;
+        }
+      });
+      
+      // Tarifas PIX do dia
+      pixFees.forEach(pixFee => {
+        if (pixFee.date === dateStr) {
+          saida += pixFee.amount;
+        }
+      });
+      
+      // Pagamentos de funcionários
+      employeePayments.forEach(payment => {
+        if (payment.paymentDate === dateStr) {
+          saida += payment.amount;
+        }
+      });
+      
+      // Adiantamentos
+      employeeAdvances.forEach(advance => {
+        if (advance.date === dateStr) {
+          saida += advance.amount;
+        }
+      });
+      
+      // Impostos
+      taxes.forEach(tax => {
+        if (tax.date === dateStr) {
+          saida += tax.amount;
+        }
+      });
+      
+      last30Days.push({
+        date: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+        entrada,
+        saida,
+        lucro: entrada - saida
+      });
     }
-  };
+    
+    return last30Days;
+  }, [sales, checks, boletos, debts, pixFees, employeePayments, employeeAdvances, taxes]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Distribuição por categoria
+  const categoryData = useMemo(() => {
+    const categories = {};
+    
+    dayTransactions.forEach(transaction => {
+      if (!categories[transaction.category]) {
+        categories[transaction.category] = { entrada: 0, saida: 0 };
+      }
+      
+      if (transaction.type === 'entrada') {
+        categories[transaction.category].entrada += transaction.amount;
+      } else {
+        categories[transaction.category].saida += transaction.amount;
+      }
+    });
+    
+    return Object.entries(categories).map(([name, values]) => ({
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      entrada: values.entrada,
+      saida: values.saida,
+      total: values.entrada - values.saida
+    }));
+  }, [dayTransactions]);
+
+  const handleInitializeCash = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!newTransaction.amount || !newTransaction.description) {
-      alert('Por favor, preencha todos os campos obrigatórios.');
+    if (initialAmount <= 0) {
+      alert('O valor inicial deve ser maior que zero.');
       return;
     }
-
+    
+    setIsInitializing(true);
+    
     try {
-      const { error } = await supabase
-        .from('cash_transactions')
-        .insert([{
-          type: newTransaction.type,
-          amount: parseFloat(newTransaction.amount),
-          description: newTransaction.description,
-          category: newTransaction.category,
-          payment_method: newTransaction.payment_method,
-          date: newTransaction.date
-        }]);
-
-      if (error) throw error;
-
-      // Reset form
-      setNewTransaction({
-        type: 'entrada',
-        amount: '',
-        description: '',
-        category: 'outro',
-        payment_method: 'dinheiro',
-        date: new Date().toISOString().split('T')[0]
-      });
-
-      // Refresh data
-      fetchData();
+      console.log('🔄 Inicializando caixa com valor:', initialAmount);
+      await initializeCashBalance(initialAmount);
+      console.log('✅ Caixa inicializado com sucesso');
+      
+      // Forçar recarregamento dos dados
+      await loadAllData();
     } catch (error) {
-      console.error('Error adding transaction:', error);
-      alert('Erro ao adicionar transação.');
+      console.error('Erro ao inicializar caixa:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      alert('Erro ao inicializar caixa: ' + errorMessage);
+    } finally {
+      setIsInitializing(false);
     }
   };
 
-  if (loading) {
+  const handleRecalculateBalance = async () => {
+    if (!cashBalance) {
+      alert('Caixa não foi inicializado ainda.');
+      return;
+    }
+    
+    setIsRecalculating(true);
+    try {
+      console.log('🔄 Recalculando saldo...');
+      await recalculateCashBalance();
+      console.log('✅ Saldo recalculado com sucesso');
+      
+      // Forçar recarregamento dos dados
+      await loadAllData();
+    } catch (error) {
+      console.error('Erro ao recalcular saldo:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      alert('Erro ao recalcular saldo: ' + errorMessage);
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
+
+  // Se não há saldo inicial, mostrar formulário de inicialização
+  if (!cashBalance) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center p-8">
+        <div className="card modern-shadow-xl max-w-2xl w-full">
+          <div className="text-center mb-8">
+            <div className="w-24 h-24 bg-gradient-to-br from-green-600 to-emerald-700 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Wallet className="w-12 h-12 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-slate-900 mb-4">
+              Inicializar Caixa
+            </h1>
+            <p className="text-slate-600 text-lg">
+              Para começar a usar o sistema de caixa, informe o valor atual em caixa da empresa.
+            </p>
+          </div>
+
+          <form onSubmit={handleInitializeCash} className="space-y-6">
+            <div className="form-group">
+              <label className="form-label">Valor Atual em Caixa *</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={initialAmount}
+                onChange={(e) => setInitialAmount(parseFloat(e.target.value) || 0)}
+                className="input-field text-center text-2xl font-bold"
+                placeholder="0,00"
+                required
+              />
+              <p className="text-sm text-slate-500 mt-2">
+                Este será o valor base do seu caixa. Todas as transações futuras serão calculadas a partir deste valor.
+              </p>
+            </div>
+
+            <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
+              <h3 className="font-bold text-blue-900 mb-2">Como funciona?</h3>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• <strong>ENTRADAS:</strong> Toda venda em dinheiro, PIX, débito ou crédito à vista aumenta o saldo</li>
+                <li>• <strong>ENTRADAS:</strong> Cheques de terceiros compensados aumentam o saldo</li>
+                <li>• <strong>ENTRADAS:</strong> Boletos recebidos aumentam o saldo</li>
+                <li>• <strong>SAÍDAS:</strong> Pagamentos de dívidas diminuem o saldo</li>
+                <li>• <strong>SAÍDAS:</strong> Salários e adiantamentos diminuem o saldo</li>
+                <li>• <strong>SAÍDAS:</strong> Impostos e tarifas diminuem o saldo</li>
+                <li>• <strong>MATEMÁTICA EXATA:</strong> Saldo sempre reflete a realidade financeira</li>
+              </ul>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isInitializing}
+              className="btn-primary w-full"
+            >
+              {isInitializing ? 'Inicializando...' : 'Inicializar Caixa'}
+            </button>
+          </form>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Gestão de Caixa</h1>
-        <button
-          onClick={() => setShowBalance(!showBalance)}
-          className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-        >
-          {showBalance ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          {showBalance ? 'Ocultar Saldo' : 'Mostrar Saldo'}
-        </button>
+    <div className="space-y-8">
+      <div className="flex items-center gap-4">
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-xl">
+          <Wallet className="w-8 h-8 text-white" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Gestão de Caixa</h1>
+          <p className="text-slate-600 text-lg">Controle completo do fluxo de caixa da empresa</p>
+        </div>
       </div>
 
-      {/* Balance Card */}
-      {balance && (
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-100 text-sm">Saldo Atual</p>
-              <p className="text-3xl font-bold">
-                {showBalance ? fmtBRL(balance.current_balance) : '••••••'}
+      {/* Saldo Atual */}
+      <div className="card bg-gradient-to-br from-green-100 to-emerald-100 border-green-300 modern-shadow-xl relative overflow-hidden">
+        {/* Real-time indicator */}
+        <div className="absolute top-4 right-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleRecalculateBalance}
+              disabled={isRecalculating}
+              className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-bold disabled:opacity-50"
+              title="Recalcular saldo baseado em todas as transações"
+            >
+              {isRecalculating ? 'Recalculando...' : 'Recalcular'}
+            </button>
+            <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+            <span className="text-green-700 text-sm font-bold">Atualização Automática</span>
+          </div>
+        </div>
+        
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-green-900 mb-4">Saldo Atual em Caixa</h2>
+          <p className="text-6xl font-black text-green-700 mb-4">
+            R$ {cashBalance.currentBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </p>
+          <p className="text-green-600 font-semibold">
+            Última atualização: {new Date(cashBalance.lastUpdated).toLocaleString('pt-BR')}
+          </p>
+          {cashBalance.initialBalance !== undefined && (
+            <p className="text-green-600 text-sm mt-2">
+              Saldo inicial: R$ {cashBalance.initialBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              {cashBalance.initialDate && ` (${new Date(cashBalance.initialDate).toLocaleDateString('pt-BR')})`}
+            </p>
+          )}
+          <div className="mt-4 p-4 bg-white/70 rounded-xl border border-green-200">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <p className="text-sm text-green-800 font-bold">
+                🤖 Sistema de Caixa Automático Ativo
               </p>
             </div>
-            <DollarSign className="w-12 h-12 text-blue-200" />
-          </div>
-          <div className="mt-4 flex items-center gap-4 text-sm text-blue-100">
-            <span>Última atualização: {fmtDate(balance.last_updated)}</span>
+            <div className="grid grid-cols-2 gap-4 text-xs text-green-700">
+              <div>
+                <p className="font-semibold mb-1">📈 ENTRADAS AUTOMÁTICAS:</p>
+                <ul className="space-y-1">
+                  <li>• Vendas (dinheiro, PIX, débito)</li>
+                  <li>• Cheques de terceiros compensados</li>
+                  <li>• Boletos recebidos</li>
+                  <li>• Cartão de crédito à vista</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-semibold mb-1">📉 SAÍDAS AUTOMÁTICAS:</p>
+                <ul className="space-y-1">
+                  <li>• Dívidas pagas (dinheiro, PIX, débito)</li>
+                  <li>• Salários e adiantamentos</li>
+                  <li>• Cheques próprios pagos</li>
+                  <li>• Impostos e tarifas PIX</li>
+                </ul>
+              </div>
+            </div>
+            <div className="mt-3 p-2 bg-green-100 rounded-lg">
+              <p className="text-xs text-green-800 font-bold text-center">
+                ⚡ Atualização em tempo real • 🛡️ Prevenção de duplicatas • 📊 Controle total
+              </p>
+            </div>
           </div>
         </div>
-      )}
-
-      {/* Add Transaction Form */}
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Nova Transação</h2>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo
-              </label>
-              <select
-                value={newTransaction.type}
-                onChange={(e) => setNewTransaction(prev => ({ 
-                  ...prev, 
-                  type: e.target.value as 'entrada' | 'saida' 
-                }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="entrada">Entrada</option>
-                <option value="saida">Saída</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Valor *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={newTransaction.amount}
-                onChange={(e) => setNewTransaction(prev => ({ ...prev, amount: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="0,00"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Descrição *
-              </label>
-              <input
-                type="text"
-                value={newTransaction.description}
-                onChange={(e) => setNewTransaction(prev => ({ ...prev, description: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Descrição da transação"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Categoria
-              </label>
-              <select
-                value={newTransaction.category}
-                onChange={(e) => setNewTransaction(prev => ({ ...prev, category: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {categories.map(category => (
-                  <option key={category.value} value={category.value}>
-                    {category.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Método de Pagamento
-              </label>
-              <select
-                value={newTransaction.payment_method}
-                onChange={(e) => setNewTransaction(prev => ({ ...prev, payment_method: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {paymentMethods.map(method => (
-                  <option key={method.value} value={method.value}>
-                    {method.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Data
-              </label>
-              <input
-                type="date"
-                value={newTransaction.date}
-                onChange={(e) => setNewTransaction(prev => ({ ...prev, date: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-          >
-            {newTransaction.type === 'entrada' ? <Plus className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
-            Adicionar {newTransaction.type === 'entrada' ? 'Entrada' : 'Saída'}
-          </button>
-        </form>
       </div>
 
-      {/* Recent Transactions */}
-      <div className="bg-white rounded-lg shadow-sm border">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Transações Recentes</h2>
+      {/* Resumo do Dia */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-green-600">
+              <ArrowUpCircle className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-green-900">Entradas Hoje</h3>
+              <p className="text-2xl font-black text-green-700">
+                R$ {dayTotals.entrada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
         </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Data
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tipo
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Descrição
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Categoria
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Valor
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {transactions.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                    Nenhuma transação encontrada
-                  </td>
-                </tr>
-              ) : (
-                transactions.map((transaction) => (
-                  <tr key={transaction.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {fmtDate(transaction.date)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        {transaction.type === 'entrada' ? (
-                          <TrendingUp className="w-4 h-4 text-green-600" />
-                        ) : (
-                          <TrendingDown className="w-4 h-4 text-red-600" />
-                        )}
-                        <span className={`text-sm font-medium ${
-                          transaction.type === 'entrada' ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {transaction.type === 'entrada' ? 'Entrada' : 'Saída'}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {transaction.description}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {categories.find(c => c.value === transaction.category)?.label || transaction.category}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <span className={transaction.type === 'entrada' ? 'text-green-600' : 'text-red-600'}>
-                        {transaction.type === 'entrada' ? '+' : '-'}{fmtBRL(transaction.amount)}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+
+        <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-red-600">
+              <ArrowDownCircle className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-red-900">Saídas Hoje</h3>
+              <p className="text-2xl font-black text-red-700">
+                R$ {dayTotals.saida.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-blue-600">
+              <Activity className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-blue-900">Saldo do Dia</h3>
+              <p className={`text-2xl font-black ${dayTotals.saldo >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                R$ {dayTotals.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-purple-600">
+              <BarChart3 className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-purple-900">Transações</h3>
+              <p className="text-2xl font-black text-purple-700">
+                {dayTransactions.length}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Seletor de Data */}
+      <div className="card modern-shadow-xl">
+        <div className="flex items-center gap-4 mb-6">
+          <Calendar className="w-6 h-6 text-blue-600" />
+          <h3 className="text-xl font-bold text-slate-900">Transações por Data</h3>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="input-field max-w-48"
+          />
+        </div>
+
+        {/* Transações do Dia */}
+        {dayTransactions.length > 0 ? (
+          <div className="space-y-4">
+            {dayTransactions.map(transaction => (
+              <div
+                key={transaction.id}
+                className={`p-4 rounded-xl border-2 ${
+                  transaction.type === 'entrada' 
+                    ? 'bg-green-50 border-green-200' 
+                    : 'bg-red-50 border-red-200'
+                }`}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${
+                      transaction.type === 'entrada' ? 'bg-green-600' : 'bg-red-600'
+                    }`}>
+                      {transaction.type === 'entrada' ? 
+                        <Plus className="w-4 h-4 text-white" /> : 
+                        <Minus className="w-4 h-4 text-white" />
+                      }
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900">{transaction.description}</h4>
+                      <p className="text-sm text-slate-600">
+                        {transaction.time} • Categoria: {transaction.category}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-xl font-black ${
+                      transaction.type === 'entrada' ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {transaction.type === 'entrada' ? '+' : '-'}R$ {transaction.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            {/* Total do Dia */}
+            <div className="p-6 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-2xl border-2 border-blue-300 relative">
+              <div className="absolute top-2 right-2">
+                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+              </div>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="text-blue-600 font-semibold">Entradas</p>
+                  <p className="text-2xl font-black text-green-600">
+                    +R$ {dayTotals.entrada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-blue-600 font-semibold">Saídas</p>
+                  <p className="text-2xl font-black text-red-600">
+                    -R$ {dayTotals.saida.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-blue-600 font-semibold">Saldo do Dia</p>
+                  <p className={`text-3xl font-black ${dayTotals.saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {dayTotals.saldo >= 0 ? '+' : ''}R$ {dayTotals.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 text-center">
+                <p className="text-xs text-blue-600 font-semibold">
+                  ⚡ Valores atualizados em tempo real conforme as operações
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <Activity className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+            <p className="text-slate-500 font-medium">Nenhuma transação nesta data</p>
+          </div>
+        )}
+      </div>
+
+      {/* Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Fluxo de Caixa - Últimos 30 Dias */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-blue-600">
+              <TrendingUp className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Fluxo de Caixa (30 dias)</h3>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip formatter={(value) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
+              <Legend />
+              <Area type="monotone" dataKey="entrada" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} name="Entradas" />
+              <Area type="monotone" dataKey="saida" stackId="2" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} name="Saídas" />
+              <Line type="monotone" dataKey="lucro" stroke="#3b82f6" strokeWidth={3} name="Lucro" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Distribuição por Categoria */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-purple-600">
+              <PieChart className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Distribuição por Categoria</h3>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <RechartsPieChart>
+              <Pie
+                data={categoryData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, total }) => `${name}: R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="total"
+              >
+                {categoryData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
+            </RechartsPieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Evolução do Saldo */}
+        <div className="card modern-shadow-xl lg:col-span-2">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-green-600">
+              <Activity className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Evolução do Saldo</h3>
+          </div>
+          <ResponsiveContainer width="100%" height={400}>
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip formatter={(value) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
+              <Legend />
+              <Line type="monotone" dataKey="entrada" stroke="#10b981" strokeWidth={3} name="Entradas" />
+              <Line type="monotone" dataKey="saida" stroke="#ef4444" strokeWidth={3} name="Saídas" />
+              <Line type="monotone" dataKey="lucro" stroke="#3b82f6" strokeWidth={4} name="Lucro Diário" />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
