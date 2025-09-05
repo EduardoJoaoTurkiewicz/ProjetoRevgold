@@ -1336,6 +1336,43 @@ export const agendaService = {
   }
 };
 
+// Cash Service (wrapper for cash transactions and balances)
+export const cashService = {
+  async getTransactions(): Promise<CashTransaction[]> {
+    return await cashTransactionsService.getAll();
+  },
+
+  async getBalance(): Promise<number> {
+    try {
+      const balance = await cashBalancesService.get();
+      return balance?.currentBalance || 0;
+    } catch (error) {
+      console.error('Error getting cash balance:', error);
+      return 0;
+    }
+  },
+
+  async createTransaction(transactionData: Partial<CashTransaction>): Promise<string> {
+    const transaction = await cashTransactionsService.create(transactionData as Omit<CashTransaction, 'id' | 'createdAt' | 'updatedAt'>);
+    return transaction.id;
+  },
+
+  async updateTransaction(id: string, transactionData: Partial<CashTransaction>): Promise<CashTransaction> {
+    await cashTransactionsService.update(id, transactionData);
+    // Since the underlying service doesn't return the updated object, we need to fetch it
+    const transactions = await cashTransactionsService.getAll();
+    const updatedTransaction = transactions.find(t => t.id === id);
+    if (!updatedTransaction) {
+      throw new Error('Transaction not found after update');
+    }
+    return updatedTransaction;
+  },
+
+  async deleteTransaction(id: string): Promise<void> {
+    await cashTransactionsService.delete(id);
+  }
+};
+
 // Debug service for sale creation errors
 export const debugService = {
   async getRecentSaleErrors(limit: number = 10): Promise<any[]> {
