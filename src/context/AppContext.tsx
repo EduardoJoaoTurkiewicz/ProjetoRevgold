@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { 
   salesService, 
   employeesService, 
@@ -104,10 +104,20 @@ export function AppProvider({ children }: AppProviderProps) {
   const [pixFees, setPixFees] = useState<PixFee[]>([]);
   const [cashBalance, setCashBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadData = async () => {
     try {
       setLoading(true);
+      setIsLoading(true);
+      setError(null);
+      
+      // Check if Supabase is configured before attempting to load data
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase não está configurado. Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env');
+      }
+      
       const [
         salesData,
         employeesData,
@@ -142,11 +152,31 @@ export function AppProvider({ children }: AppProviderProps) {
       setTaxes(taxesData);
       setPixFees(pixFeesData);
       setCashBalance(cashBalanceData);
+      
+      console.log('✅ Todos os dados carregados com sucesso');
     } catch (error) {
       console.error('Error loading data:', error);
+      
+      let errorMessage = 'Erro desconhecido ao carregar dados';
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch') || error.message.includes('fetch')) {
+          errorMessage = 'Erro de conexão: Não foi possível conectar ao Supabase. Verifique sua conexão com a internet e as configurações do Supabase no arquivo .env';
+        } else if (error.message.includes('não está configurado')) {
+          errorMessage = error.message;
+        } else {
+          errorMessage = `Erro ao carregar dados: ${error.message}`;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
+      setIsLoading(false);
     }
+  };
+  
+  const loadAllData = async () => {
+    await loadData();
   };
 
   useEffect(() => {
@@ -332,6 +362,12 @@ export function AppProvider({ children }: AppProviderProps) {
     pixFees,
     cashBalance,
     loading,
+    
+    // Additional state
+    error,
+    isLoading,
+    setError,
+    loadAllData,
     
     // Methods
     createSale,
