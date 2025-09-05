@@ -931,7 +931,6 @@ export function Sales() {
         isOpen={showTestPanel}
         onClose={() => setShowTestPanel(false)}
       />
-      )}
     </div>
   );
 }

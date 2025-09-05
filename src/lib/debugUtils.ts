@@ -126,6 +126,3 @@ export class SalesDebugger {
     };
   }
 }
-
-// Export for use in components
-export { SalesDebugger };
