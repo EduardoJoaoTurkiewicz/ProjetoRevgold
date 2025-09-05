@@ -171,19 +171,19 @@ export function Employees() {
   };
 
   const getEmployeePayments = (employeeId: string) => {
-    return employeePayments.filter(payment => payment.employeeId === employeeId);
+    return (employeePayments || []).filter(payment => payment.employeeId === employeeId);
   };
 
   const getEmployeeAdvances = (employeeId: string) => {
-    return employeeAdvances.filter(advance => advance.employeeId === employeeId);
+    return (employeeAdvances || []).filter(advance => advance.employeeId === employeeId);
   };
 
   const getEmployeeOvertimes = (employeeId: string) => {
-    return employeeOvertimes.filter(overtime => overtime.employeeId === employeeId);
+    return (employeeOvertimes || []).filter(overtime => overtime.employeeId === employeeId);
   };
 
   const getEmployeeCommissions = (employeeId: string) => {
-    return employeeCommissions.filter(commission => commission.employeeId === employeeId);
+    return (employeeCommissions || []).filter(commission => commission.employeeId === employeeId);
   };
 
   const calculateEmployeePayroll = (employeeId: string) => {
