@@ -331,42 +331,34 @@ const Dashboard: React.FC = () => {
     sales.forEach(sale => {
       if (sale && sale.sellerId && sale.date) {
         const saleDate = new Date(sale.date);
-        sale.paymentMethods.forEach(method => {
-          if (method && method.type && method.amount) {
-            if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
-                (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
-              totalReceivedToday += method.amount;
-            }
+        if (saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear) {
+          if (!sellerStats[sale.sellerId]) {
+            const employee = employees.find(emp => emp.id === sale.sellerId);
+            sellerStats[sale.sellerId] = {
+              name: employee ? employee.name : 'Vendedor não encontrado',
+              totalSales: 0,
+              salesCount: 0,
+              totalCommissions: 0
+            };
           }
-        });
+          sellerStats[sale.sellerId].totalSales += sale.totalValue;
+          sellerStats[sale.sellerId].salesCount += 1;
+        }
       }
     });
     
-    // Cheques compensados hoje
-    checks.forEach(check => {
-      if (check && check.dueDate === today && check.status === 'compensado') {
-        totalReceivedToday += check.value;
+    // Adicionar comissões
+    employeeCommissions.forEach(commission => {
+      if (commission && commission.employeeId && commission.date) {
+        const commissionDate = new Date(commission.date);
+        if (commissionDate.getMonth() === currentMonth && commissionDate.getFullYear() === currentYear) {
+          if (sellerStats[commission.employeeId]) {
+            sellerStats[commission.employeeId].totalCommissions += commission.commissionAmount;
+          }
+        }
       }
     });
     
-    // Boletos pagos hoje
-    boletos.forEach(boleto => {
-      if (boleto && boleto.dueDate === today && boleto.status === 'compensado') {
-        const finalAmount = boleto.finalAmount || boleto.value;
-        const notaryCosts = boleto.notaryCosts || 0;
-        totalReceivedToday += (finalAmount - notaryCosts);
-      }
-    });
-
-    // 3. Total de Dívidas do dia
-    const todayDebts = debts.filter(debt => debt && debt.date === today);
-    const totalDebtsToday = todayDebts.reduce((sum, debt) => sum + (debt ? debt.totalValue : 0), 0);
-
-    // 4. Total Pago hoje
-    let totalPaidToday = 0;
-    
-    // Dívidas pagas hoje
-    todayDebts.forEach(debt => {
     return Object.values(sellerStats)
       .filter(seller => seller && typeof seller === 'object')
       .sort((a, b) => b.totalSales - a.totalSales)
