@@ -94,9 +94,10 @@ export const salesService = {
   },
 
   async create(sale: Omit<Sale, 'id' | 'created_at' | 'updated_at'>) {
+    const sanitizedSale = sanitizePayload(sale);
     const { data, error } = await supabase
       .from('sales')
-      .insert(sale)
+      .insert(sanitizedSale)
       .select()
       .single();
     
@@ -105,9 +106,10 @@ export const salesService = {
   },
 
   async update(id: string, updates: Partial<Sale>) {
+    const sanitizedUpdates = sanitizePayload(updates);
     const { data, error } = await supabase
       .from('sales')
-      .update(updates)
+      .update(sanitizedUpdates)
       .eq('id', id)
       .select()
       .single();
