@@ -91,24 +91,28 @@ const Dashboard: React.FC = () => {
     
     // Vendas com pagamento instantâneo
     todaySales.forEach(sale => {
-      (sale.paymentMethods || []).forEach(method => {
-        if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
-            (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
-          totalReceivedToday += method.amount;
-        }
-      });
+      if (sale && sale.paymentMethods && Array.isArray(sale.paymentMethods)) {
+        sale.paymentMethods.forEach(method => {
+          if (method && method.type && method.amount) {
+            if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
+                (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
+              totalReceivedToday += method.amount;
+            }
+          }
+        });
+      }
     });
     
     // Cheques compensados hoje
     checks.forEach(check => {
-      if (check.dueDate === today && check.status === 'compensado') {
+      if (check && check.dueDate === today && check.status === 'compensado') {
         totalReceivedToday += check.value;
       }
     });
     
     // Boletos pagos hoje
     boletos.forEach(boleto => {
-      if (boleto.dueDate === today && boleto.status === 'compensado') {
+      if (boleto && boleto.dueDate === today && boleto.status === 'compensado') {
         const finalAmount = boleto.finalAmount || boleto.value;
         const notaryCosts = boleto.notaryCosts || 0;
         totalReceivedToday += (finalAmount - notaryCosts);
@@ -116,17 +120,17 @@ const Dashboard: React.FC = () => {
     });
 
     // 3. Total de Dívidas do dia
-    const todayDebts = debts.filter(debt => debt.date === today);
-    const totalDebtsToday = todayDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
+    const todayDebts = debts.filter(debt => debt && debt.date === today);
+    const totalDebtsToday = todayDebts.reduce((sum, debt) => sum + (debt ? debt.totalValue : 0), 0);
 
     // 4. Total Pago hoje
     let totalPaidToday = 0;
     
     // Dívidas pagas hoje
     todayDebts.forEach(debt => {
-      if (debt.isPaid) {
-        (debt.paymentMethods || []).forEach(method => {
-          if (['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(method.type)) {
+      if (debt && debt.isPaid && debt.paymentMethods && Array.isArray(debt.paymentMethods)) {
+        debt.paymentMethods.forEach(method => {
+          if (method && method.type && method.amount && ['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(method.type)) {
             totalPaidToday += method.amount;
           }
         });
@@ -135,14 +139,14 @@ const Dashboard: React.FC = () => {
     
     // Pagamentos de funcionários hoje
     employeePayments.forEach(payment => {
-      if (payment.paymentDate === today) {
+      if (payment && payment.paymentDate === today) {
         totalPaidToday += payment.amount;
       }
     });
     
     // Tarifas PIX hoje
     pixFees.forEach(fee => {
-      if (fee.date === today) {
+      if (fee && fee.date === today) {
         totalPaidToday += fee.amount;
       }
     });
@@ -165,24 +169,26 @@ const Dashboard: React.FC = () => {
   const monthlyMetrics = useMemo(() => {
     // Comissões do mês
     const monthlyCommissions = employeeCommissions.filter(commission => {
+      if (!commission || !commission.date) return false;
       const commissionDate = new Date(commission.date);
       return commissionDate.getMonth() === currentMonth && 
              commissionDate.getFullYear() === currentYear;
     });
-    const totalCommissionsMonth = monthlyCommissions.reduce((sum, c) => sum + c.commissionAmount, 0);
+    const totalCommissionsMonth = monthlyCommissions.reduce((sum, c) => sum + (c ? c.commissionAmount : 0), 0);
 
     // Folha de pagamento do mês
     const monthlyPayroll = employees
-      .filter(emp => emp.isActive)
-      .reduce((sum, emp) => sum + emp.salary, 0);
+      .filter(emp => emp && emp.isActive)
+      .reduce((sum, emp) => sum + (emp ? emp.salary : 0), 0);
 
     // Vendas do mês
     const monthlySales = sales.filter(sale => {
+      if (!sale || !sale.date) return false;
       const saleDate = new Date(sale.date);
       return saleDate.getMonth() === currentMonth && 
              saleDate.getFullYear() === currentYear;
     });
-    const totalSalesMonth = monthlySales.reduce((sum, sale) => sum + sale.totalValue, 0);
+    const totalSalesMonth = monthlySales.reduce((sum, sale) => sum + (sale ? sale.totalValue : 0), 0);
 
     // Lucro do mês (simplificado)
     const monthlyProfit = totalSalesMonth - monthlyPayroll - totalCommissionsMonth;
@@ -199,13 +205,13 @@ const Dashboard: React.FC = () => {
   // Boletos vencidos
   const overdueBoletos = useMemo(() => {
     return boletos.filter(boleto => 
-      boleto.dueDate < today && boleto.status === 'pendente'
+      boleto && boleto.dueDate && boleto.dueDate < today && boleto.status === 'pendente'
     );
   }, [boletos, today]);
 
   // Dívidas para pagar
   const debtsToPay = useMemo(() => {
-    return debts.filter(debt => !debt.isPaid);
+    return debts.filter(debt => debt && !debt.isPaid);
   }, [debts]);
 
   // Valores a receber
@@ -214,7 +220,7 @@ const Dashboard: React.FC = () => {
     
     // Cheques pendentes
     checks.forEach(check => {
-      if (check.status === 'pendente' && !check.isOwnCheck) {
+      if (check && check.status === 'pendente' && !check.isOwnCheck) {
         toReceive.push({
           id: check.id,
           type: 'Cheque',
@@ -229,7 +235,7 @@ const Dashboard: React.FC = () => {
     
     // Boletos pendentes
     boletos.forEach(boleto => {
-      if (boleto.status === 'pendente') {
+      if (boleto && boleto.status === 'pendente') {
         toReceive.push({
           id: boleto.id,
           type: 'Boleto',
@@ -244,7 +250,7 @@ const Dashboard: React.FC = () => {
     
     // Vendas com valores pendentes
     sales.forEach(sale => {
-      if (sale.pendingAmount > 0) {
+      if (sale && sale.pendingAmount > 0) {
         toReceive.push({
           id: sale.id,
           type: 'Venda',
@@ -271,12 +277,12 @@ const Dashboard: React.FC = () => {
       const dateStr = date.toISOString().split('T')[0];
       
       // Vendas do dia
-      const daySales = sales.filter(sale => sale.date === dateStr);
-      const salesValue = daySales.reduce((sum, sale) => sum + sale.totalValue, 0);
+      const daySales = sales.filter(sale => sale && sale.date === dateStr);
+      const salesValue = daySales.reduce((sum, sale) => sum + (sale ? sale.totalValue : 0), 0);
       
       // Dívidas do dia
-      const dayDebts = debts.filter(debt => debt.date === dateStr);
-      const debtsValue = dayDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
+      const dayDebts = debts.filter(debt => debt && debt.date === dateStr);
+      const debtsValue = dayDebts.reduce((sum, debt) => sum + (debt ? debt.totalValue : 0), 0);
       
       // Lucro do dia (vendas - dívidas)
       const profit = salesValue - debtsValue;
@@ -297,13 +303,17 @@ const Dashboard: React.FC = () => {
     const methods = {};
     
     sales.forEach(sale => {
-      (sale.paymentMethods || []).forEach(method => {
-        const methodName = method.type.replace('_', ' ').toUpperCase();
-        if (!methods[methodName]) {
-          methods[methodName] = 0;
-        }
-        methods[methodName] += method.amount;
-      });
+      if (sale && sale.paymentMethods && Array.isArray(sale.paymentMethods)) {
+        sale.paymentMethods.forEach(method => {
+          if (method && method.type && method.amount) {
+            const methodName = method.type.replace('_', ' ').toUpperCase();
+            if (!methods[methodName]) {
+              methods[methodName] = 0;
+            }
+            methods[methodName] += method.amount;
+          }
+        });
+      }
     });
     
     return Object.entries(methods).map(([name, value]) => ({
@@ -319,34 +329,44 @@ const Dashboard: React.FC = () => {
     
     // Vendas do mês por vendedor
     sales.forEach(sale => {
-      if (sale.sellerId) {
+      if (sale && sale.sellerId && sale.date) {
         const saleDate = new Date(sale.date);
-        if (saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear) {
-          if (!sellerStats[sale.sellerId]) {
-            const seller = employees.find(e => e.id === sale.sellerId);
-            sellerStats[sale.sellerId] = {
-              name: seller?.name || 'Vendedor',
-              totalSales: 0,
-              salesCount: 0,
-              totalCommissions: 0
-            };
+        sale.paymentMethods.forEach(method => {
+          if (method && method.type && method.amount) {
+            if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
+                (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
+              totalReceivedToday += method.amount;
+            }
           }
-          sellerStats[sale.sellerId].totalSales += sale.totalValue;
-          sellerStats[sale.sellerId].salesCount += 1;
-        }
+        });
       }
     });
     
-    // Comissões do mês por vendedor
-    employeeCommissions.forEach(commission => {
-      const commissionDate = new Date(commission.date);
-      if (commissionDate.getMonth() === currentMonth && commissionDate.getFullYear() === currentYear) {
-        if (sellerStats[commission.employeeId]) {
-          sellerStats[commission.employeeId].totalCommissions += commission.commissionAmount;
-        }
+    // Cheques compensados hoje
+    checks.forEach(check => {
+      if (check && check.dueDate === today && check.status === 'compensado') {
+        totalReceivedToday += check.value;
       }
     });
     
+    // Boletos pagos hoje
+    boletos.forEach(boleto => {
+      if (boleto && boleto.dueDate === today && boleto.status === 'compensado') {
+        const finalAmount = boleto.finalAmount || boleto.value;
+        const notaryCosts = boleto.notaryCosts || 0;
+        totalReceivedToday += (finalAmount - notaryCosts);
+      }
+    });
+
+    // 3. Total de Dívidas do dia
+    const todayDebts = debts.filter(debt => debt && debt.date === today);
+    const totalDebtsToday = todayDebts.reduce((sum, debt) => sum + (debt ? debt.totalValue : 0), 0);
+
+    // 4. Total Pago hoje
+    let totalPaidToday = 0;
+    
+    // Dívidas pagas hoje
+    todayDebts.forEach(debt => {
     return Object.values(sellerStats)
       .filter(seller => seller && typeof seller === 'object')
       .sort((a, b) => b.totalSales - a.totalSales)
