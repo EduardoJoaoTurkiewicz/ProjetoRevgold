@@ -1011,6 +1011,7 @@ export const employeePaymentsService = {
 
   async create(payment: Omit<Tables['employee_payments']['Row'], 'id' | 'created_at' | 'updated_at'>) {
     const { data, error } = await supabase
+  }
   async delete(id: string) {
     const { error } = await supabase
       .from('employee_payments')
