@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { v4 as uuidv4 } from 'uuid';
 import type { 
   Sale, 
   Debt, 
@@ -16,26 +17,137 @@ import type {
   AgendaEvent,
 } from '../types';
 
-// Utility function to sanitize payloads
-export function sanitizePayload(payload: any): any {
+// UUID validation utility
+export function isValidUUID(value?: string | null): boolean {
+  if (!value || typeof value !== 'string') return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(value);
+}
+
+// Enhanced payload sanitization with UUID validation
+export function sanitizePayload(data: any): any {
+  if (!data || typeof data !== 'object') return data;
+  
   const sanitized: any = {};
   
-  for (const [key, value] of Object.entries(payload)) {
-    if (value === undefined) {
-      continue; // Skip undefined values
+  for (const [key, value] of Object.entries(data)) {
+    // Handle UUID fields specifically
+    if (key.endsWith('_id') || key.endsWith('Id') || key === 'id') {
+      if (value === '' || value === 'null' || value === undefined || value === null) {
+        sanitized[key] = null;
+      } else if (typeof value === 'string') {
+        if (isValidUUID(value)) {
+          sanitized[key] = value;
+        } else {
+          console.warn(`⚠️ Invalid UUID for ${key}:`, value, '- converting to null');
+          sanitized[key] = null;
+        }
+      } else {
+        sanitized[key] = value;
+      }
     }
-    
-    if (typeof value === 'string') {
-      sanitized[key] = value.trim() || null;
-    } else if (value === null || value === '') {
-      sanitized[key] = null;
-    } else {
+    // Handle string fields
+    else if (typeof value === 'string') {
+      const trimmed = value.trim();
+      sanitized[key] = trimmed === '' ? null : trimmed;
+    }
+    // Handle arrays and objects
+    else if (Array.isArray(value)) {
+      sanitized[key] = value.map(item => 
+        typeof item === 'object' ? sanitizePayload(item) : item
+      );
+    }
+    else if (value && typeof value === 'object') {
+      sanitized[key] = sanitizePayload(value);
+    }
+    // Handle other types
+    else {
       sanitized[key] = value;
     }
   }
   
   return sanitized;
 }
+
+// Transform camelCase to snake_case for database operations
+export function transformToSnakeCase(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj;
+  
+  if (Array.isArray(obj)) {
+    return obj.map(item => transformToSnakeCase(item));
+  }
+  
+  const result: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      result[snakeKey] = transformToSnakeCase(value);
+    } else if (Array.isArray(value)) {
+      result[snakeKey] = value.map(item => 
+        typeof item === 'object' ? transformToSnakeCase(item) : item
+      );
+    } else {
+      result[snakeKey] = value;
+    }
+  }
+  
+  return result;
+}
+
+// Enhanced create sale function using RPC
+export async function createSaleRPC(payload: any): Promise<string> {
+  try {
+    console.log('🔄 Creating sale with RPC...');
+    console.log('📤 Original payload:', payload);
+    
+    // Step 1: Sanitize the payload
+    const sanitized = sanitizePayload(payload);
+    console.log('🧹 Sanitized payload:', sanitized);
+    
+    // Step 2: Transform to snake_case
+    const snakeCasePayload = transformToSnakeCase(sanitized);
+    console.log('🐍 Snake case payload:', snakeCasePayload);
+    
+    // Step 3: Call the RPC function
+    const { data: saleId, error } = await supabase.rpc('create_sale', { 
+      payload: snakeCasePayload 
+    });
+    
+    if (error) {
+      console.error('❌ RPC create_sale error:', error);
+      
+      // Enhanced error logging
+      console.error('🔍 Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      
+      // Log the payload that caused the error
+      console.error('💥 Failed payload:', JSON.stringify(snakeCasePayload, null, 2));
+      
+      throw new Error(`Erro ao criar venda: ${error.message}`);
+    }
+    
+    console.log('✅ Sale created successfully with ID:', saleId);
+    return saleId;
+    
+  } catch (error) {
+    console.error('❌ Error in createSaleRPC:', error);
+    
+    // Additional error context
+    if (error instanceof Error) {
+      console.error('🔍 Error stack:', error.stack);
+    }
+    
+    throw error;
+  }
+}
+
+// Utility function to sanitize payloads
+// Note: Enhanced sanitizePayload function is defined above
 
 // Utility function to check Supabase client initialization
 function checkSupabaseClient() {
@@ -45,14 +157,7 @@ function checkSupabaseClient() {
 }
 
 // Transform camelCase to snake_case for database
-function toSnakeCase(obj: any): any {
-  const result: any = {};
-  for (const [key, value] of Object.entries(obj)) {
-    const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-    result[snakeKey] = value;
-  }
-  return result;
-}
+// Note: Enhanced transformToSnakeCase function is defined above
 
 // Transform snake_case to camelCase from database
 function toCamelCase(obj: any): any {
@@ -106,32 +211,43 @@ export const salesService = {
     }
   },
 
-  async create(saleData: CreateSalePayload | Partial<Sale>): Promise<Sale> {
+  async create(saleData: CreateSalePayload | Partial<Sale>): Promise<string> {
     try {
-      // Sanitize and validate the payload
-      const sanitizedData = sanitizePayload(saleData);
+      console.log('🔄 salesService.create called with:', saleData);
       
-      // Convert to snake_case for database
-      const dbData = toSnakeCase(sanitizedData);
+      // Validate required fields before processing
+      if (!saleData.client || (typeof saleData.client === 'string' && !saleData.client.trim())) {
+        throw new Error('Cliente é obrigatório e não pode estar vazio');
+      }
       
-      const { data, error } = await supabase
-        .from('sales')
-        .insert([dbData])
-        .select()
-        .single();
+      if (!saleData.totalValue || saleData.totalValue <= 0) {
+        throw new Error('Valor total deve ser maior que zero');
+      }
       
-      if (error) throw error;
-      return toCamelCase(data);
+      if (!saleData.paymentMethods || !Array.isArray(saleData.paymentMethods) || saleData.paymentMethods.length === 0) {
+        throw new Error('Pelo menos um método de pagamento é obrigatório');
+      }
+      
+      // Use the robust RPC function
+      const saleId = await createSaleRPC(saleData);
+      return saleId;
+      
     } catch (error) {
-      console.error('Error creating sale:', error);
+      console.error('❌ Error in salesService.create:', error);
       throw error;
     }
   },
 
   async update(id: string, saleData: Partial<Sale>): Promise<Sale> {
     try {
+      console.log('🔄 Updating sale:', id, saleData);
+      
+      // Enhanced sanitization for updates
       const sanitizedData = sanitizePayload(saleData);
-      const dbData = toSnakeCase(sanitizedData);
+      console.log('🧹 Sanitized update data:', sanitizedData);
+      
+      const dbData = transformToSnakeCase(sanitizedData);
+      console.log('🐍 Snake case update data:', dbData);
       
       const { data, error } = await supabase
         .from('sales')
@@ -141,23 +257,27 @@ export const salesService = {
         .single();
       
       if (error) throw error;
+      console.log('✅ Sale updated successfully');
       return toCamelCase(data);
     } catch (error) {
-      console.error('Error updating sale:', error);
+      console.error('❌ Error updating sale:', error);
       throw error;
     }
   },
 
   async delete(id: string): Promise<void> {
     try {
+      console.log('🔄 Deleting sale:', id);
+      
       const { error } = await supabase
         .from('sales')
         .delete()
         .eq('id', id);
       
       if (error) throw error;
+      console.log('✅ Sale deleted successfully');
     } catch (error) {
-      console.error('Error deleting sale:', error);
+      console.error('❌ Error deleting sale:', error);
       throw error;
     }
   }
@@ -184,7 +304,7 @@ export const debtsService = {
   async create(debtData: Omit<Debt, 'id' | 'createdAt' | 'updatedAt'>): Promise<Debt> {
     try {
       const sanitizedData = sanitizePayload(debtData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { data, error } = await supabase
         .from('debts')
@@ -203,7 +323,7 @@ export const debtsService = {
   async update(id: string, debtData: Partial<Debt>): Promise<void> {
     try {
       const sanitizedData = sanitizePayload(debtData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { error } = await supabase
         .from('debts')
@@ -253,7 +373,7 @@ export const checksService = {
   async create(checkData: Omit<Check, 'id' | 'createdAt' | 'updatedAt'>): Promise<Check> {
     try {
       const sanitizedData = sanitizePayload(checkData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { data, error } = await supabase
         .from('checks')
@@ -272,7 +392,7 @@ export const checksService = {
   async update(id: string, checkData: Partial<Check>): Promise<void> {
     try {
       const sanitizedData = sanitizePayload(checkData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { error } = await supabase
         .from('checks')
@@ -322,7 +442,7 @@ export const boletosService = {
   async create(boletoData: Omit<Boleto, 'id' | 'createdAt' | 'updatedAt'>): Promise<Boleto> {
     try {
       const sanitizedData = sanitizePayload(boletoData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { data, error } = await supabase
         .from('boletos')
@@ -341,7 +461,7 @@ export const boletosService = {
   async update(id: string, boletoData: Partial<Boleto>): Promise<void> {
     try {
       const sanitizedData = sanitizePayload(boletoData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { error } = await supabase
         .from('boletos')
@@ -391,7 +511,7 @@ export const employeesService = {
   async create(employeeData: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>): Promise<Employee> {
     try {
       const sanitizedData = sanitizePayload(employeeData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { data, error } = await supabase
         .from('employees')
@@ -410,7 +530,7 @@ export const employeesService = {
   async update(id: string, employeeData: Partial<Employee>): Promise<void> {
     try {
       const sanitizedData = sanitizePayload(employeeData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { error } = await supabase
         .from('employees')
@@ -460,7 +580,7 @@ export const employeePaymentsService = {
   async create(paymentData: Omit<EmployeePayment, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeePayment> {
     try {
       const sanitizedData = sanitizePayload(paymentData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { data, error } = await supabase
         .from('employee_payments')
@@ -479,7 +599,7 @@ export const employeePaymentsService = {
   async update(id: string, paymentData: Partial<EmployeePayment>): Promise<void> {
     try {
       const sanitizedData = sanitizePayload(paymentData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { error } = await supabase
         .from('employee_payments')
@@ -529,7 +649,7 @@ export const employeeAdvancesService = {
   async create(advanceData: Omit<EmployeeAdvance, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeeAdvance> {
     try {
       const sanitizedData = sanitizePayload(advanceData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { data, error } = await supabase
         .from('employee_advances')
@@ -548,7 +668,7 @@ export const employeeAdvancesService = {
   async update(id: string, advanceData: Partial<EmployeeAdvance>): Promise<void> {
     try {
       const sanitizedData = sanitizePayload(advanceData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { error } = await supabase
         .from('employee_advances')
@@ -598,7 +718,7 @@ export const employeeOvertimesService = {
   async create(overtimeData: Omit<EmployeeOvertime, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeeOvertime> {
     try {
       const sanitizedData = sanitizePayload(overtimeData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { data, error } = await supabase
         .from('employee_overtimes')
@@ -617,7 +737,7 @@ export const employeeOvertimesService = {
   async update(id: string, overtimeData: Partial<EmployeeOvertime>): Promise<void> {
     try {
       const sanitizedData = sanitizePayload(overtimeData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { error } = await supabase
         .from('employee_overtimes')
@@ -667,7 +787,7 @@ export const employeeCommissionsService = {
   async create(commissionData: Omit<EmployeeCommission, 'id' | 'createdAt' | 'updatedAt'>): Promise<EmployeeCommission> {
     try {
       const sanitizedData = sanitizePayload(commissionData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { data, error } = await supabase
         .from('employee_commissions')
@@ -686,7 +806,7 @@ export const employeeCommissionsService = {
   async update(id: string, commissionData: Partial<EmployeeCommission>): Promise<void> {
     try {
       const sanitizedData = sanitizePayload(commissionData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { error } = await supabase
         .from('employee_commissions')
@@ -736,7 +856,7 @@ export const cashTransactionsService = {
   async create(transactionData: Omit<CashTransaction, 'id' | 'createdAt' | 'updatedAt'>): Promise<CashTransaction> {
     try {
       const sanitizedData = sanitizePayload(transactionData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { data, error } = await supabase
         .from('cash_transactions')
@@ -755,7 +875,7 @@ export const cashTransactionsService = {
   async update(id: string, transactionData: Partial<CashTransaction>): Promise<void> {
     try {
       const sanitizedData = sanitizePayload(transactionData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { error } = await supabase
         .from('cash_transactions')
@@ -805,7 +925,7 @@ export const pixFeesService = {
   async create(feeData: Omit<PixFee, 'id' | 'createdAt' | 'updatedAt'>): Promise<PixFee> {
     try {
       const sanitizedData = sanitizePayload(feeData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { data, error } = await supabase
         .from('pix_fees')
@@ -824,7 +944,7 @@ export const pixFeesService = {
   async update(id: string, feeData: Partial<PixFee>): Promise<void> {
     try {
       const sanitizedData = sanitizePayload(feeData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { error } = await supabase
         .from('pix_fees')
@@ -876,7 +996,7 @@ export const cashBalancesService = {
   async create(balanceData: Omit<CashBalance, 'id' | 'createdAt' | 'updatedAt'>): Promise<CashBalance> {
     try {
       const sanitizedData = sanitizePayload(balanceData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { data, error } = await supabase
         .from('cash_balances')
@@ -895,7 +1015,7 @@ export const cashBalancesService = {
   async update(id: string, balanceData: Partial<CashBalance>): Promise<void> {
     try {
       const sanitizedData = sanitizePayload(balanceData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { error } = await supabase
         .from('cash_balances')
@@ -931,7 +1051,7 @@ export const taxesService = {
   async create(taxData: Omit<Tax, 'id' | 'createdAt' | 'updatedAt'>): Promise<Tax> {
     try {
       const sanitizedData = sanitizePayload(taxData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { data, error } = await supabase
         .from('taxes')
@@ -950,7 +1070,7 @@ export const taxesService = {
   async update(id: string, taxData: Partial<Tax>): Promise<void> {
     try {
       const sanitizedData = sanitizePayload(taxData);
-      const dbData = toSnakeCase(sanitizedData);
+      const dbData = transformToSnakeCase(sanitizedData);
       
       const { error } = await supabase
         .from('taxes')
@@ -1146,3 +1266,34 @@ export function getCheckImageUrl(imagePath: string): string {
   
   return data.publicUrl;
 }
+
+// Debug service for sale creation errors
+export const debugService = {
+  async getRecentSaleErrors(limit: number = 10): Promise<any[]> {
+    try {
+      const { data, error } = await supabase.rpc('get_recent_sale_errors', { 
+        limit_count: limit 
+      });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting sale creation errors:', error);
+      return [];
+    }
+  },
+
+  async cleanupOldErrors(daysOld: number = 30): Promise<number> {
+    try {
+      const { data, error } = await supabase.rpc('cleanup_old_sale_errors', { 
+        days_old: daysOld 
+      });
+      
+      if (error) throw error;
+      return data || 0;
+    } catch (error) {
+      console.error('Error cleaning up old errors:', error);
+      return 0;
+    }
+  }
+};

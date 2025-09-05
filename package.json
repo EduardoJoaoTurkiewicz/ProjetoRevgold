@@ -20,7 +20,8 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0",
     "recharts": "^3.1.0",
-    "three": "^0.158.0"
+    "three": "^0.158.0",
+    "uuid": "^12.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
@@ -28,6 +29,7 @@
     "@types/react-dom": "^18.3.7",
     "@types/react-router-dom": "^5.3.3",
     "@types/three": "^0.178.1",
+    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.18",
     "eslint": "^9.9.1",

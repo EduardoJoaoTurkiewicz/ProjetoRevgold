@@ -4,6 +4,8 @@ import { isSupabaseConfigured } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import {
   salesService,
+  createSaleRPC,
+  debugService,
   saleBoletosService,
   saleChequesService,
   debtsService,
@@ -72,7 +74,7 @@ interface AppContextType {
   loadAllData: () => Promise<void>;
   
   // CRUD operations
-  createSale: (sale: CreateSalePayload | Partial<Sale>) => Promise<void>;
+  createSale: (sale: CreateSalePayload | Partial<Sale>) => Promise<string>;
   updateSale: (id: string, sale: Partial<Sale>) => Promise<Sale>;
   deleteSale: (id: string) => Promise<void>;
   
@@ -131,6 +133,9 @@ interface AppContextType {
   
   // Add reportsService to context
   reportsService: typeof reportsService;
+  
+  // Debug service
+  debugService: typeof debugService;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -334,9 +339,8 @@ export function AppProvider({ children }: AppProviderProps) {
   };
 
   // Sales CRUD operations
-  const createSale = async (saleData: CreateSalePayload | Partial<Sale>) => {
-    try {
-      console.log('🔄 Criando venda:', saleData);
+  const createSale = async (saleData: CreateSalePayload | Partial<Sale>): Promise<string> => {
+      console.log('🔄 AppContext.createSale called with:', saleData);
       
       // Check Supabase configuration before attempting to create sale
       if (!isSupabaseConfigured()) {
@@ -344,7 +348,7 @@ export function AppProvider({ children }: AppProviderProps) {
       }
       
       // Validate required fields before processing
-      if (!saleData.client || !saleData.client.trim()) {
+      if (!saleData.client || (typeof saleData.client === 'string' && !saleData.client.trim())) {
         throw new Error('Nome do cliente é obrigatório');
       }
       
@@ -356,14 +360,41 @@ export function AppProvider({ children }: AppProviderProps) {
         throw new Error('Pelo menos um método de pagamento é obrigatório');
       }
       
-      console.log('✅ Validação inicial passou, enviando para salesService');
+      // Additional frontend validation
+      const totalPaymentAmount = saleData.paymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
+      if (totalPaymentAmount === 0) {
+        throw new Error('Pelo menos um método de pagamento deve ter valor maior que zero');
+      }
       
-      // Use the robust salesService.create which now handles all validation and sanitization
-      await salesService.create(saleData);
-      console.log('✅ Venda criada com sucesso');
+      if (totalPaymentAmount > saleData.totalValue) {
+        throw new Error('Total dos métodos de pagamento não pode exceder o valor da venda');
+      }
+      
+      console.log('✅ Frontend validation passed, calling salesService.create');
+      
+      // Use the robust salesService.create which returns sale ID
+      const saleId = await salesService.create(saleData);
+      console.log('✅ Sale created successfully with ID:', saleId);
+      
+      // Reload data to reflect changes
       await loadAllData();
+      
+      return saleId;
     } catch (error) {
-      console.error('❌ Erro ao criar venda:', error);
+      console.error('❌ Error in AppContext.createSale:', error);
+      
+      // Enhanced error logging for debugging
+      if (error instanceof Error) {
+        console.error('🔍 Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+      }
+      
+      // Log the payload that caused the error
+      console.error('💥 Failed sale payload:', JSON.stringify(saleData, null, 2));
+      
       throw error;
     }
   };
@@ -907,6 +938,9 @@ export function AppProvider({ children }: AppProviderProps) {
     
     // Add reportsService to context
     reportsService,
+    
+    // Debug service
+    debugService,
   };
 
   return (

@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Calendar, DollarSign, User, Package, FileText, Eye, Edit, Trash2, X, CreditCard, Receipt, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Play } from 'lucide-react';
 import SaleForm from './forms/SaleForm';
 import { useAppContext } from '../context/AppContext';
-import { sanitizePayload } from '../lib/supabaseServices';
+import { sanitizePayload, isValidUUID, debugService } from '../lib/supabaseServices';
 import type { Sale } from '../types';
+import { DebugPanel } from './DebugPanel';
+import { TestSaleCreation } from './TestSaleCreation';
 
 export function Sales() {
   const { 
@@ -22,41 +25,67 @@ export function Sales() {
   const [viewingSale, setViewingSale] = useState<Sale | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showDebugErrors, setShowDebugErrors] = useState(false);
+  const [showTestPanel, setShowTestPanel] = useState(false);
 
   const handleSaleSubmit = async (saleData: Partial<Sale>) => {
     try {
-      console.log('🔄 Submetendo venda:', saleData);
+      console.log('🔄 Sales.handleSaleSubmit called with:', saleData);
       
-      // Apply comprehensive UUID sanitization before any processing
+      // Enhanced frontend validation and sanitization
       const sanitizedSaleData = sanitizePayload(saleData);
-      console.log('🔧 Sale data after frontend sanitization:', sanitizedSaleData);
+      console.log('🧹 Sanitized sale data:', sanitizedSaleData);
       
-      // Frontend validation before sending to backend
-      // Validate required fields before submission
+      // Comprehensive frontend validation
       if (!sanitizedSaleData.client || !sanitizedSaleData.client.trim()) {
         alert('Por favor, informe o nome do cliente.');
         return;
       }
       
-      // Validate seller if provided
+      // Enhanced seller validation
       if (sanitizedSaleData.sellerId) {
-        const seller = employees.find(emp => emp.id === sanitizedSaleData.sellerId && emp.isActive);
-        if (!seller) {
-          alert('Vendedor selecionado não existe ou não está ativo. Selecione um vendedor válido ou deixe em branco.');
+        if (!isValidUUID(sanitizedSaleData.sellerId)) {
+          console.warn('⚠️ Invalid seller UUID, converting to null:', sanitizedSaleData.sellerId);
+          sanitizedSaleData.sellerId = null;
+        } else {
+          const seller = employees.find(emp => emp.id === sanitizedSaleData.sellerId && emp.isActive);
+          if (!seller) {
+            alert('Vendedor selecionado não existe ou não está ativo. Selecione um vendedor válido ou deixe em branco.');
+            return;
+          }
+        }
+      }
+      
+      // Validate client UUID if it looks like one
+      if (sanitizedSaleData.client && sanitizedSaleData.client.length === 36) {
+        if (!isValidUUID(sanitizedSaleData.client)) {
+          alert('ID do cliente parece ser um UUID inválido. Use o nome do cliente em vez do ID.');
           return;
         }
       }
       
-      // Validate total value
+      // Enhanced value validation
       if (!sanitizedSaleData.totalValue || sanitizedSaleData.totalValue <= 0) {
         alert('O valor total da venda deve ser maior que zero.');
         return;
       }
       
-      // Validate payment methods
+      // Enhanced payment methods validation
       if (!sanitizedSaleData.paymentMethods || sanitizedSaleData.paymentMethods.length === 0) {
         alert('Por favor, adicione pelo menos um método de pagamento.');
         return;
+      }
+      
+      // Validate payment methods structure
+      for (const method of sanitizedSaleData.paymentMethods) {
+        if (!method.type || typeof method.type !== 'string') {
+          alert('Todos os métodos de pagamento devem ter um tipo válido.');
+          return;
+        }
+        if (typeof method.amount !== 'number' || method.amount <= 0) {
+          alert('Todos os métodos de pagamento devem ter um valor válido maior que zero.');
+          return;
+        }
       }
       
       const totalPaymentAmount = sanitizedSaleData.paymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
@@ -70,41 +99,68 @@ export function Sales() {
         return;
       }
       
-      // Log the data being sent for debugging
-      console.log('📤 Final sale data being sent to backend:', {
+      // Enhanced logging for debugging
+      console.log('📤 Final sale data being sent:', {
         client: sanitizedSaleData.client,
         sellerId: sanitizedSaleData.sellerId,
         totalValue: sanitizedSaleData.totalValue,
-        paymentMethodsCount: sanitizedSaleData.paymentMethods?.length || 0
+        paymentMethodsCount: sanitizedSaleData.paymentMethods?.length || 0,
+        receivedAmount: sanitizedSaleData.receivedAmount,
+        pendingAmount: sanitizedSaleData.pendingAmount,
+        status: sanitizedSaleData.status
       });
       
       if (editingSale) {
-        console.log('🔄 Atualizando venda existente:', editingSale.id);
+        console.log('🔄 Updating existing sale:', editingSale.id);
         const updatedSale = await updateSale(editingSale.id, sanitizedSaleData);
-        console.log('✅ Venda atualizada:', updatedSale);
+        console.log('✅ Sale updated successfully:', updatedSale);
       } else {
-        console.log('🔄 Criando nova venda');
-        await createSale(sanitizedSaleData);
+        console.log('🔄 Creating new sale');
+        const saleId = await createSale(sanitizedSaleData);
+        console.log('✅ Sale created with ID:', saleId);
       }
 
-      console.log('✅ Venda processada com sucesso');
+      console.log('✅ Sale processed successfully');
       setShowForm(false);
       setEditingSale(null);
     } catch (error) {
-      console.error('Error saving sale:', error);
+      console.error('❌ Error in handleSaleSubmit:', error);
       
-      // Enhanced error display with debugging info
+      // Enhanced error handling and debugging
       let errorMessage = 'Erro desconhecido';
       if (error instanceof Error) {
         errorMessage = error.message;
         
-        // If it's a UUID error, provide helpful guidance
-        if (errorMessage.includes('UUID') || errorMessage.includes('uuid')) {
-          errorMessage = 'ERRO CRÍTICO: Campo UUID ainda contém valor inválido após sanitização múltipla. Verifique os logs do console para detalhes.';
+        // Provide specific guidance for common errors
+        if (errorMessage.includes('UUID') || errorMessage.includes('uuid') || errorMessage.includes('invalid input syntax')) {
+          errorMessage = 'Erro de validação de dados: Verifique se todos os campos estão preenchidos corretamente. Detalhes no console.';
+        } else if (errorMessage.includes('duplicate') || errorMessage.includes('unique')) {
+          errorMessage = 'Esta venda já existe no sistema. Verifique se não é uma duplicata.';
+        } else if (errorMessage.includes('foreign key') || errorMessage.includes('not found')) {
+          errorMessage = 'Dados relacionados não encontrados. Verifique se o vendedor selecionado existe.';
         }
       }
       
+      // Show user-friendly error
       alert('Erro ao salvar venda: ' + errorMessage);
+      
+      // Log detailed error for debugging
+      console.error('🔍 Detailed error information:', {
+        originalError: error,
+        saleData: sanitizedSaleData,
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
+  
+  const loadDebugErrors = async () => {
+    try {
+      const errors = await debugService.getRecentSaleErrors(20);
+      setDebugErrors(errors);
+      setShowDebugErrors(true);
+    } catch (error) {
+      console.error('Error loading debug errors:', error);
+      alert('Erro ao carregar logs de debug: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
     }
   };
 
@@ -212,6 +268,22 @@ export function Sales() {
         >
           <Plus className="w-5 h-5" />
           Nova Venda
+        </button>
+        <button
+          onClick={() => setShowDebugErrors(true)}
+          className="btn-secondary flex items-center gap-2"
+          title="Ver logs de erro para debug"
+        >
+          <AlertTriangle className="w-5 h-5" />
+          Debug Logs
+        </button>
+        <button
+          onClick={() => setShowTestPanel(true)}
+          className="btn-info flex items-center gap-2"
+          title="Executar testes automatizados"
+        >
+          <Play className="w-5 h-5" />
+          Testes
         </button>
       </div>
 
@@ -846,6 +918,19 @@ export function Sales() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Debug Panel */}
+      <DebugPanel 
+        isOpen={showDebugErrors}
+        onClose={() => setShowDebugErrors(false)}
+      />
+      
+      {/* Test Panel */}
+      <TestSaleCreation
+        isOpen={showTestPanel}
+        onClose={() => setShowTestPanel(false)}
+      />
       )}
     </div>
   );

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Calendar, DollarSign, User, Package, FileText, CreditCard, AlertCircle, Calculator, CheckCircle } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { Sale, PaymentMethod, ThirdPartyCheckDetails } from '../../types';
-import { CreateSalePayload, SaleBoleto, SaleCheque } from '../../lib/supabaseServices';
+import { CreateSalePayload, SaleBoleto, SaleCheque, sanitizePayload, isValidUUID } from '../../lib/supabaseServices';
+import { SalesDebugger } from '../../lib/debugUtils';
 
 interface SaleFormProps {
   sale?: Sale | null;
@@ -128,21 +129,46 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('📝 Dados do formulário antes da validação:', formData);
+    console.log('📝 SaleForm.handleSubmit called');
     
+    // Log the attempt for debugging
+    SalesDebugger.logSaleCreationAttempt(formData, 'SaleForm.handleSubmit');
+    
+    // Enhanced client validation
     if (!formData.client || !formData.client.trim()) {
       alert('Por favor, informe o nome do cliente.');
       return;
     }
     
+    // Check if client looks like a UUID (common mistake)
+    if (formData.client.length === 36 && isValidUUID(formData.client)) {
+      alert('Erro: O campo cliente deve conter o NOME do cliente, não um ID. Por favor, digite o nome do cliente.');
+      return;
+    }
+    
+    // Enhanced total value validation
     if (!formData.totalValue || formData.totalValue <= 0) {
       alert('O valor total da venda deve ser maior que zero.');
       return;
     }
     
+    // Enhanced payment methods validation
     if (!formData.paymentMethods || formData.paymentMethods.length === 0) {
       alert('Por favor, adicione pelo menos um método de pagamento.');
       return;
+    }
+    
+    // Validate each payment method
+    for (let i = 0; i < formData.paymentMethods.length; i++) {
+      const method = formData.paymentMethods[i];
+      if (!method.type || typeof method.type !== 'string') {
+        alert(`Método de pagamento ${i + 1}: Tipo é obrigatório.`);
+        return;
+      }
+      if (typeof method.amount !== 'number' || method.amount <= 0) {
+        alert(`Método de pagamento ${i + 1}: Valor deve ser maior que zero.`);
+        return;
+      }
     }
     
     const amounts = calculateAmounts();
@@ -157,7 +183,7 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       return;
     }
     
-    // Validate third party check details if needed
+    // Enhanced third party check validation
     for (const method of formData.paymentMethods) {
       if (method.type === 'cheque' && method.isThirdPartyCheck && method.thirdPartyDetails) {
         for (const detail of method.thirdPartyDetails) {
@@ -165,11 +191,18 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
             alert('Por favor, preencha todos os campos obrigatórios dos cheques de terceiros.');
             return;
           }
+          
+          // Validate CPF/CNPJ format (basic)
+          const cpfCnpj = detail.cpfCnpj.replace(/\D/g, '');
+          if (cpfCnpj.length !== 11 && cpfCnpj.length !== 14) {
+            alert('CPF deve ter 11 dígitos e CNPJ deve ter 14 dígitos.');
+            return;
+          }
         }
       }
     }
     
-    // Clean and validate payment methods data
+    // Enhanced payment methods cleaning and validation
     const cleanedPaymentMethods = formData.paymentMethods
       .filter(method => method.amount > 0) // Remove methods with zero amount
       .map(method => {
@@ -222,15 +255,23 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       return;
     }
     
-    console.log('✅ Métodos de pagamento limpos:', cleanedPaymentMethods);
+    console.log('✅ Cleaned payment methods:', cleanedPaymentMethods);
       
-    // Clean sellerId - ensure it's either a valid UUID or null
-    const cleanSellerId = formData.sellerId && formData.sellerId.trim() !== '' ? formData.sellerId : null;
+    // Enhanced seller ID cleaning with UUID validation
+    let cleanSellerId = null;
+    if (formData.sellerId && formData.sellerId.trim() !== '') {
+      if (isValidUUID(formData.sellerId)) {
+        cleanSellerId = formData.sellerId;
+      } else {
+        console.warn('⚠️ Invalid seller UUID, setting to null:', formData.sellerId);
+        cleanSellerId = null;
+      }
+    }
     
-    // Clean deliveryDate - ensure it's properly formatted or null
+    // Enhanced delivery date cleaning
     const cleanDeliveryDate = formData.deliveryDate && formData.deliveryDate.trim() !== '' ? formData.deliveryDate : null;
     
-    // Recalculate amounts with cleaned payment methods
+    // Recalculate amounts with cleaned data
     const recalculatedAmounts = (() => {
       const totalPayments = cleanedPaymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
       const receivedAmount = cleanedPaymentMethods.reduce((sum, method) => {
@@ -259,13 +300,13 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       };
     })();
     
-    // Create clean payload with proper field mapping
+    // Create enhanced payload with comprehensive validation
     const saleToSubmit = {
       date: formData.date,
       deliveryDate: cleanDeliveryDate,
       client: formData.client.trim(),
       sellerId: cleanSellerId,
-      custom_commission_rate: formData.custom_commission_rate,
+      customCommissionRate: formData.custom_commission_rate || 5.00,
       products: typeof formData.products === 'string' ? [{ name: formData.products }] : formData.products,
       observations: formData.observations?.trim() || null,
       totalValue: formData.totalValue,
@@ -277,20 +318,57 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       status: recalculatedAmounts.status,
     };
     
-    // Final validation before submission
+    // Final comprehensive validation
     if (!saleToSubmit.client || saleToSubmit.client.trim() === '') {
       alert('Nome do cliente é obrigatório e não pode estar vazio.');
       return;
     }
     
-    if (saleToSubmit.sellerId === '') {
-      alert('Erro interno: seller_id não pode ser string vazia. Selecione um vendedor válido ou deixe em branco.');
+    if (saleToSubmit.sellerId === '' || (saleToSubmit.sellerId && !isValidUUID(saleToSubmit.sellerId))) {
+      console.warn('⚠️ Invalid seller ID detected, converting to null:', saleToSubmit.sellerId);
+      saleToSubmit.sellerId = null;
+    }
+    
+    if (saleToSubmit.totalValue <= 0) {
+      alert('Valor total deve ser maior que zero.');
       return;
     }
     
-    console.log('📤 Dados finais para submissão:', saleToSubmit);
+    if (!saleToSubmit.paymentMethods || saleToSubmit.paymentMethods.length === 0) {
+      alert('Pelo menos um método de pagamento é obrigatório.');
+      return;
+    }
     
-    onSubmit(saleToSubmit);
+    // Apply final sanitization
+    const finalPayload = sanitizePayload(saleToSubmit);
+    
+    // Use debugger for final validation
+    const validation = SalesDebugger.validateSalePayload(finalPayload);
+    if (!validation.isValid) {
+      console.error('❌ Payload validation failed:', validation.errors);
+      alert('Erro de validação:\n' + validation.errors.join('\n'));
+      return;
+    }
+    
+    console.log('📤 Final validated payload for submission:', finalPayload);
+    
+    // Additional logging for debugging
+    console.log('🔍 Payload validation summary:', {
+      hasClient: !!finalPayload.client,
+      clientLength: finalPayload.client?.length,
+      hasSellerId: !!finalPayload.sellerId,
+      sellerIdValid: finalPayload.sellerId ? isValidUUID(finalPayload.sellerId) : 'null',
+      totalValue: finalPayload.totalValue,
+      paymentMethodsCount: finalPayload.paymentMethods?.length,
+      receivedAmount: finalPayload.receivedAmount,
+      pendingAmount: finalPayload.pendingAmount,
+      status: finalPayload.status
+    });
+    
+    // Final debug log before submission
+    SalesDebugger.logSaleCreationAttempt(finalPayload, 'Final Submission');
+    
+    onSubmit(finalPayload);
   };
 
   const amounts = calculateAmounts();
