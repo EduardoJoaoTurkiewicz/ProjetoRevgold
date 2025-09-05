@@ -83,7 +83,7 @@ const Dashboard: React.FC = () => {
   // Calcular métricas do dia
   const dailyMetrics = useMemo(() => {
     // 1. Total de Vendas do dia
-    const todaySales = sales.filter(sale => sale.date === today);
+    const todaySales = (sales || []).filter(sale => sale.date === today);
     const totalSalesToday = todaySales.reduce((sum, sale) => sum + sale.totalValue, 0);
 
     // 2. Valor Recebido do dia (vendas instantâneas + cheques compensados + boletos pagos)
@@ -104,14 +104,14 @@ const Dashboard: React.FC = () => {
     });
     
     // Cheques compensados hoje
-    checks.forEach(check => {
+    (checks || []).forEach(check => {
       if (check && check.dueDate === today && check.status === 'compensado') {
         totalReceivedToday += check.value;
       }
     });
     
     // Boletos pagos hoje
-    boletos.forEach(boleto => {
+    (boletos || []).forEach(boleto => {
       if (boleto && boleto.dueDate === today && boleto.status === 'compensado') {
         const finalAmount = boleto.finalAmount || boleto.value;
         const notaryCosts = boleto.notaryCosts || 0;
@@ -120,7 +120,7 @@ const Dashboard: React.FC = () => {
     });
 
     // 3. Total de Dívidas do dia
-    const todayDebts = debts.filter(debt => debt && debt.date === today);
+    const todayDebts = (debts || []).filter(debt => debt && debt.date === today);
     const totalDebtsToday = todayDebts.reduce((sum, debt) => sum + (debt ? debt.totalValue : 0), 0);
 
     // 4. Total Pago hoje
@@ -138,14 +138,14 @@ const Dashboard: React.FC = () => {
     });
     
     // Pagamentos de funcionários hoje
-    employeePayments.forEach(payment => {
+    (employeePayments || []).forEach(payment => {
       if (payment && payment.paymentDate === today) {
         totalPaidToday += payment.amount;
       }
     });
     
     // Tarifas PIX hoje
-    pixFees.forEach(fee => {
+    (pixFees || []).forEach(fee => {
       if (fee && fee.date === today) {
         totalPaidToday += fee.amount;
       }
@@ -168,7 +168,7 @@ const Dashboard: React.FC = () => {
   // Calcular métricas do mês
   const monthlyMetrics = useMemo(() => {
     // Comissões do mês
-    const monthlyCommissions = employeeCommissions.filter(commission => {
+    const monthlyCommissions = (employeeCommissions || []).filter(commission => {
       if (!commission || !commission.date) return false;
       const commissionDate = new Date(commission.date);
       return commissionDate.getMonth() === currentMonth && 
@@ -177,12 +177,12 @@ const Dashboard: React.FC = () => {
     const totalCommissionsMonth = monthlyCommissions.reduce((sum, c) => sum + (c ? c.commissionAmount : 0), 0);
 
     // Folha de pagamento do mês
-    const monthlyPayroll = employees
+    const monthlyPayroll = (employees || [])
       .filter(emp => emp && emp.isActive)
       .reduce((sum, emp) => sum + (emp ? emp.salary : 0), 0);
 
     // Vendas do mês
-    const monthlySales = sales.filter(sale => {
+    const monthlySales = (sales || []).filter(sale => {
       if (!sale || !sale.date) return false;
       const saleDate = new Date(sale.date);
       return saleDate.getMonth() === currentMonth && 
@@ -204,14 +204,14 @@ const Dashboard: React.FC = () => {
 
   // Boletos vencidos
   const overdueBoletos = useMemo(() => {
-    return boletos.filter(boleto => 
+    return (boletos || []).filter(boleto => 
       boleto && boleto.dueDate && boleto.dueDate < today && boleto.status === 'pendente'
     );
   }, [boletos, today]);
 
   // Dívidas para pagar
   const debtsToPay = useMemo(() => {
-    return debts.filter(debt => debt && !debt.isPaid);
+    return (debts || []).filter(debt => debt && !debt.isPaid);
   }, [debts]);
 
   // Valores a receber
@@ -219,7 +219,7 @@ const Dashboard: React.FC = () => {
     const toReceive = [];
     
     // Cheques pendentes
-    checks.forEach(check => {
+    (checks || []).forEach(check => {
       if (check && check.status === 'pendente' && !check.isOwnCheck) {
         toReceive.push({
           id: check.id,
@@ -234,7 +234,7 @@ const Dashboard: React.FC = () => {
     });
     
     // Boletos pendentes
-    boletos.forEach(boleto => {
+    (boletos || []).forEach(boleto => {
       if (boleto && boleto.status === 'pendente') {
         toReceive.push({
           id: boleto.id,
@@ -249,7 +249,7 @@ const Dashboard: React.FC = () => {
     });
     
     // Vendas com valores pendentes
-    sales.forEach(sale => {
+    (sales || []).forEach(sale => {
       if (sale && sale.pendingAmount > 0) {
         toReceive.push({
           id: sale.id,
@@ -277,11 +277,11 @@ const Dashboard: React.FC = () => {
       const dateStr = date.toISOString().split('T')[0];
       
       // Vendas do dia
-      const daySales = sales.filter(sale => sale && sale.date === dateStr);
+      const daySales = (sales || []).filter(sale => sale && sale.date === dateStr);
       const salesValue = daySales.reduce((sum, sale) => sum + (sale ? sale.totalValue : 0), 0);
       
       // Dívidas do dia
-      const dayDebts = debts.filter(debt => debt && debt.date === dateStr);
+      const dayDebts = (debts || []).filter(debt => debt && debt.date === dateStr);
       const debtsValue = dayDebts.reduce((sum, debt) => sum + (debt ? debt.totalValue : 0), 0);
       
       // Lucro do dia (vendas - dívidas)
@@ -302,7 +302,7 @@ const Dashboard: React.FC = () => {
   const paymentMethodsData = useMemo(() => {
     const methods = {};
     
-    sales.forEach(sale => {
+    (sales || []).forEach(sale => {
       if (sale && sale.paymentMethods && Array.isArray(sale.paymentMethods)) {
         sale.paymentMethods.forEach(method => {
           if (method && method.type && method.amount) {
@@ -328,12 +328,12 @@ const Dashboard: React.FC = () => {
     const sellerStats = {};
     
     // Vendas do mês por vendedor
-    sales.forEach(sale => {
+    (sales || []).forEach(sale => {
       if (sale && sale.sellerId && sale.date) {
         const saleDate = new Date(sale.date);
         if (saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear) {
           if (!sellerStats[sale.sellerId]) {
-            const employee = employees.find(emp => emp.id === sale.sellerId);
+            const employee = (employees || []).find(emp => emp.id === sale.sellerId);
             sellerStats[sale.sellerId] = {
               name: employee ? employee.name : 'Vendedor não encontrado',
               totalSales: 0,
@@ -348,7 +348,7 @@ const Dashboard: React.FC = () => {
     });
     
     // Adicionar comissões
-    employeeCommissions.forEach(commission => {
+    (employeeCommissions || []).forEach(commission => {
       if (commission && commission.employeeId && commission.date) {
         const commissionDate = new Date(commission.date);
         if (commissionDate.getMonth() === currentMonth && commissionDate.getFullYear() === currentYear) {
@@ -588,10 +588,10 @@ const Dashboard: React.FC = () => {
             <div>
               <h3 className="font-bold text-indigo-900 text-lg">Funcionários</h3>
               <p className="text-3xl font-black text-indigo-700">
-                {employees.filter(emp => emp.isActive).length}
+                {(employees || []).filter(emp => emp.isActive).length}
               </p>
               <p className="text-sm text-indigo-600 font-semibold">
-                {employees.filter(emp => emp.isActive && emp.isSeller).length} vendedor(es)
+                {(employees || []).filter(emp => emp.isActive && emp.isSeller).length} vendedor(es)
               </p>
             </div>
           </div>
@@ -907,19 +907,19 @@ const Dashboard: React.FC = () => {
               { 
                 status: 'pago', 
                 label: 'Pagas', 
-                count: sales.filter(s => s.status === 'pago').length,
+                count: (sales || []).filter(s => s.status === 'pago').length,
                 color: 'bg-green-50 border-green-200 text-green-800'
               },
               { 
                 status: 'parcial', 
                 label: 'Parciais', 
-                count: sales.filter(s => s.status === 'parcial').length,
+                count: (sales || []).filter(s => s.status === 'parcial').length,
                 color: 'bg-yellow-50 border-yellow-200 text-yellow-800'
               },
               { 
                 status: 'pendente', 
                 label: 'Pendentes', 
-                count: sales.filter(s => s.status === 'pendente').length,
+                count: (sales || []).filter(s => s.status === 'pendente').length,
                 color: 'bg-red-50 border-red-200 text-red-800'
               }
             ].map(item => (
@@ -953,15 +953,15 @@ const Dashboard: React.FC = () => {
               { 
                 status: true, 
                 label: 'Pagas', 
-                count: debts.filter(d => d.isPaid).length,
-                total: debts.filter(d => d.isPaid).reduce((sum, d) => sum + d.totalValue, 0),
+                count: (debts || []).filter(d => d.isPaid).length,
+                total: (debts || []).filter(d => d.isPaid).reduce((sum, d) => sum + d.totalValue, 0),
                 color: 'bg-green-50 border-green-200 text-green-800'
               },
               { 
                 status: false, 
                 label: 'Pendentes', 
-                count: debts.filter(d => !d.isPaid).length,
-                total: debts.filter(d => !d.isPaid).reduce((sum, d) => sum + d.pendingAmount, 0),
+                count: (debts || []).filter(d => !d.isPaid).length,
+                total: (debts || []).filter(d => !d.isPaid).reduce((sum, d) => sum + d.pendingAmount, 0),
                 color: 'bg-red-50 border-red-200 text-red-800'
               }
             ].map(item => (
@@ -992,10 +992,10 @@ const Dashboard: React.FC = () => {
           <div className="text-center p-6 bg-green-50 rounded-2xl border border-green-200">
             <h4 className="font-bold text-green-900 mb-2">Cheques Pendentes</h4>
             <p className="text-2xl font-black text-green-700">
-              {checks.filter(c => c.status === 'pendente' && !c.isOwnCheck).length}
+              {(checks || []).filter(c => c.status === 'pendente' && !c.isOwnCheck).length}
             </p>
             <p className="text-sm text-green-600 font-semibold">
-              R$ {checks
+              R$ {(checks || [])
                 .filter(c => c.status === 'pendente' && !c.isOwnCheck)
                 .reduce((sum, c) => sum + c.value, 0)
                 .toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -1005,10 +1005,10 @@ const Dashboard: React.FC = () => {
           <div className="text-center p-6 bg-blue-50 rounded-2xl border border-blue-200">
             <h4 className="font-bold text-blue-900 mb-2">Boletos Pendentes</h4>
             <p className="text-2xl font-black text-blue-700">
-              {boletos.filter(b => b.status === 'pendente').length}
+              {(boletos || []).filter(b => b.status === 'pendente').length}
             </p>
             <p className="text-sm text-blue-600 font-semibold">
-              R$ {boletos
+              R$ {(boletos || [])
                 .filter(b => b.status === 'pendente')
                 .reduce((sum, b) => sum + b.value, 0)
                 .toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -1018,10 +1018,10 @@ const Dashboard: React.FC = () => {
           <div className="text-center p-6 bg-purple-50 rounded-2xl border border-purple-200">
             <h4 className="font-bold text-purple-900 mb-2">Vendas Pendentes</h4>
             <p className="text-2xl font-black text-purple-700">
-              {sales.filter(s => s.status === 'pendente').length}
+              {(sales || []).filter(s => s.status === 'pendente').length}
             </p>
             <p className="text-sm text-purple-600 font-semibold">
-              R$ {sales
+              R$ {(sales || [])
                 .filter(s => s.status === 'pendente')
                 .reduce((sum, s) => sum + s.pendingAmount, 0)
                 .toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
