@@ -37,6 +37,13 @@ export function sanitizePayload(payload: any): any {
   return sanitized;
 }
 
+// Utility function to check Supabase client initialization
+function checkSupabaseClient() {
+  if (!supabase) {
+    throw new Error('Supabase client is not initialized. Please check your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables in your .env file.');
+  }
+}
+
 // Transform camelCase to snake_case for database
 function toSnakeCase(obj: any): any {
   const result: any = {};
@@ -85,6 +92,7 @@ export interface CreateSalePayload {
 export const salesService = {
   async getAll(): Promise<Sale[]> {
     try {
+      checkSupabaseClient();
       const { data, error } = await supabase
         .from('sales')
         .select('*')
@@ -159,6 +167,7 @@ export const salesService = {
 export const debtsService = {
   async getAll(): Promise<Debt[]> {
     try {
+      checkSupabaseClient();
       const { data, error } = await supabase
         .from('debts')
         .select('*')
@@ -227,6 +236,7 @@ export const debtsService = {
 export const checksService = {
   async getAll(): Promise<Check[]> {
     try {
+      checkSupabaseClient();
       const { data, error } = await supabase
         .from('checks')
         .select('*')
@@ -295,6 +305,7 @@ export const checksService = {
 export const boletosService = {
   async getAll(): Promise<Boleto[]> {
     try {
+      checkSupabaseClient();
       const { data, error } = await supabase
         .from('boletos')
         .select('*')
@@ -363,6 +374,7 @@ export const boletosService = {
 export const employeesService = {
   async getAll(): Promise<Employee[]> {
     try {
+      checkSupabaseClient();
       const { data, error } = await supabase
         .from('employees')
         .select('*')
@@ -431,6 +443,7 @@ export const employeesService = {
 export const employeePaymentsService = {
   async getAll(): Promise<EmployeePayment[]> {
     try {
+      checkSupabaseClient();
       const { data, error } = await supabase
         .from('employee_payments')
         .select('*')
@@ -499,6 +512,7 @@ export const employeePaymentsService = {
 export const employeeAdvancesService = {
   async getAll(): Promise<EmployeeAdvance[]> {
     try {
+      checkSupabaseClient();
       const { data, error } = await supabase
         .from('employee_advances')
         .select('*')
@@ -567,6 +581,7 @@ export const employeeAdvancesService = {
 export const employeeOvertimesService = {
   async getAll(): Promise<EmployeeOvertime[]> {
     try {
+      checkSupabaseClient();
       const { data, error } = await supabase
         .from('employee_overtimes')
         .select('*')
@@ -635,6 +650,7 @@ export const employeeOvertimesService = {
 export const employeeCommissionsService = {
   async getAll(): Promise<EmployeeCommission[]> {
     try {
+      checkSupabaseClient();
       const { data, error } = await supabase
         .from('employee_commissions')
         .select('*')
@@ -703,6 +719,7 @@ export const employeeCommissionsService = {
 export const cashTransactionsService = {
   async getAll(): Promise<CashTransaction[]> {
     try {
+      checkSupabaseClient();
       const { data, error } = await supabase
         .from('cash_transactions')
         .select('*')
@@ -771,6 +788,7 @@ export const cashTransactionsService = {
 export const pixFeesService = {
   async getAll(): Promise<PixFee[]> {
     try {
+      checkSupabaseClient();
       const { data, error } = await supabase
         .from('pix_fees')
         .select('*')
@@ -839,6 +857,7 @@ export const pixFeesService = {
 export const cashBalancesService = {
   async get(): Promise<CashBalance | null> {
     try {
+      checkSupabaseClient();
       const { data, error } = await supabase
         .from('cash_balances')
         .select('*')
@@ -895,6 +914,7 @@ export const cashBalancesService = {
 export const taxesService = {
   async getAll(): Promise<Tax[]> {
     try {
+      checkSupabaseClient();
       const { data, error } = await supabase
         .from('taxes')
         .select('*')
@@ -963,6 +983,7 @@ export const taxesService = {
 export const saleBoletosService = {
   async getAll(): Promise<any[]> {
     try {
+      checkSupabaseClient();
       const { data, error } = await supabase
         .from('sale_boletos')
         .select('*')
@@ -1004,6 +1025,7 @@ export const saleBoletosService = {
 export const saleChequesService = {
   async getAll(): Promise<any[]> {
     try {
+      checkSupabaseClient();
       const { data, error } = await supabase
         .from('sale_cheques')
         .select('*')
