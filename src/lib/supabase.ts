@@ -19,13 +19,59 @@ export function isSupabaseConfigured(): boolean {
   );
   
   if (!isConfigured) {
-    console.warn('❌ SUPABASE NÃO CONFIGURADO CORRETAMENTE');
-    console.warn('📝 Para corrigir este erro:');
-    console.warn('1. Clique no botão "Connect to Supabase" no canto superior direito');
-    console.warn('2. Configure seu projeto Supabase');
-    console.warn('3. As variáveis de ambiente serão configuradas automaticamente');
-    console.warn('🔗 URL atual:', url || 'não definida');
-    console.warn('🔑 Key atual:', key ? `${key.substring(0, 10)}...` : 'não definida');
+    console.error('❌ SUPABASE NÃO CONFIGURADO CORRETAMENTE');
+    console.error('📝 Para corrigir este erro:');
+    console.error('1. Abra o arquivo .env na raiz do projeto');
+    console.error('2. Configure VITE_SUPABASE_URL com a URL do seu projeto Supabase');
+    console.error('3. Configure VITE_SUPABASE_ANON_KEY com a chave anônima do seu projeto');
+    console.error('4. Reinicie o servidor de desenvolvimento (npm run dev)');
+    console.error('🔗 URL atual:', url || 'não definida');
+    console.error('🔑 Key atual:', key ? `${key.substring(0, 10)}...` : 'não definida');
+    
+    // Show user-friendly error in the browser
+    if (typeof window !== 'undefined') {
+      const errorMessage = `
+ERRO DE CONFIGURAÇÃO DO SUPABASE
+
+Para corrigir este erro:
+
+1. Abra o arquivo .env na raiz do projeto
+2. Configure suas credenciais do Supabase:
+   - VITE_SUPABASE_URL=https://seu-projeto-id.supabase.co
+   - VITE_SUPABASE_ANON_KEY=sua-chave-anonima-aqui
+3. Reinicie o servidor (npm run dev)
+
+Encontre suas credenciais em:
+https://supabase.com/dashboard → Seu Projeto → Settings → API
+      `;
+      
+      setTimeout(() => {
+        alert(errorMessage);
+      }, 1000);
+    }
+    console.error('🔑 Key atual:', key ? `${key.substring(0, 10)}...` : 'não definida');
+    
+    // Show user-friendly error in the browser
+    if (typeof window !== 'undefined') {
+      const errorMessage = `
+ERRO DE CONFIGURAÇÃO DO SUPABASE
+
+Para corrigir este erro:
+
+1. Abra o arquivo .env na raiz do projeto
+2. Configure suas credenciais do Supabase:
+   - VITE_SUPABASE_URL=https://seu-projeto-id.supabase.co
+   - VITE_SUPABASE_ANON_KEY=sua-chave-anonima-aqui
+3. Reinicie o servidor (npm run dev)
+
+Encontre suas credenciais em:
+https://supabase.com/dashboard → Seu Projeto → Settings → API
+      `;
+      
+      setTimeout(() => {
+        alert(errorMessage);
+      }, 1000);
+    }
   }
   
   return isConfigured;
@@ -34,7 +80,7 @@ export function isSupabaseConfigured(): boolean {
 // Create client with proper error handling
 export const supabase = (() => {
   if (!isSupabaseConfigured()) {
-    console.warn('❌ Criando cliente Supabase com valores placeholder devido à configuração incorreta');
+    console.error('❌ Criando cliente Supabase com valores placeholder devido à configuração incorreta');
     return createClient<Database>('https://placeholder.supabase.co', 'placeholder-key');
   }
   
