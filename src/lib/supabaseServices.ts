@@ -81,11 +81,6 @@ export function transformToSnakeCase(obj: any): any {
   for (const [key, value] of Object.entries(obj)) {
     const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
     
-    // Skip null values for UUID fields to prevent database errors
-    if (value === null && (snakeKey.endsWith('_id') || snakeKey === 'id')) {
-      continue;
-    }
-    
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       result[snakeKey] = transformToSnakeCase(value);
     } else if (Array.isArray(value)) {
