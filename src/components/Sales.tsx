@@ -147,7 +147,7 @@ export function Sales() {
       // Log detailed error for debugging
       console.error('🔍 Detailed error information:', {
         originalError: error,
-        saleData: sanitizedSaleData,
+        saleData: saleData,
         timestamp: new Date().toISOString()
       });
     }
