@@ -20,7 +20,8 @@ import type {
   CashTransaction, 
   AgendaEvent, 
   Tax, 
-  PixFee 
+  PixFee,
+  CashBalance
 } from '../types';
 
 interface AppContextType {
@@ -34,7 +35,7 @@ interface AppContextType {
   agendaEvents: AgendaEvent[];
   taxes: Tax[];
   pixFees: PixFee[];
-  cashBalance: number;
+  cashBalance: CashBalance | null;
   loading: boolean;
   
   // Sales methods
@@ -102,7 +103,7 @@ export function AppProvider({ children }: AppProviderProps) {
   const [agendaEvents, setAgendaEvents] = useState<AgendaEvent[]>([]);
   const [taxes, setTaxes] = useState<Tax[]>([]);
   const [pixFees, setPixFees] = useState<PixFee[]>([]);
-  const [cashBalance, setCashBalance] = useState<number>(0);
+  const [cashBalance, setCashBalance] = useState<CashBalance | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
@@ -129,7 +130,7 @@ export function AppProvider({ children }: AppProviderProps) {
         agendaService.getAll(),
         taxesService.getAll(),
         pixFeesService.getAll(),
-        cashService.getBalance()
+        cashService.getCashBalance()
       ]);
 
       setSales(salesData);
