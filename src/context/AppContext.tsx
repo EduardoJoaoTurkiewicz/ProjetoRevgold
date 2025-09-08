@@ -130,7 +130,7 @@ export function AppProvider({ children }: AppProviderProps) {
         agendaService.getAll(),
         taxesService.getAll(),
         pixFeesService.getAll(),
-        cashService.getCashBalance()
+        cashService.getBalance()
       ]);
 
       setSales(salesData);

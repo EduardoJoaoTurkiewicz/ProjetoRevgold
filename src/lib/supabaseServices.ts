@@ -1342,6 +1342,10 @@ export const cashService = {
     return await cashTransactionsService.getAll();
   },
 
+  async getCashBalance(): Promise<CashBalance | null> {
+    return await cashBalancesService.get();
+  },
+
   async getBalance(): Promise<number> {
     try {
       const balance = await cashBalancesService.get();
