@@ -305,7 +305,7 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       date: formData.date,
       deliveryDate: cleanDeliveryDate,
       client: formData.client.trim(),
-      sellerId: cleanSellerId,
+      sellerId: cleanSellerId || undefined,
       customCommissionRate: formData.custom_commission_rate || 5.00,
       products: typeof formData.products === 'string' ? [{ name: formData.products }] : formData.products,
       observations: formData.observations?.trim() || null,
