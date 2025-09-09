@@ -5,7 +5,7 @@ export class ErrorHandler {
     'appsignal-endpoint.net',
     'browser.sentry-cdn.com',
     'sentry.io',
-    'stackblitz.com'
+    'stackblitz.com',
     'bolt.new'
   ];
 
