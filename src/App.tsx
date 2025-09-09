@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AppProvider } from './context/AppContext';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import { Sales } from './components/Sales';
@@ -17,14 +18,16 @@ import { PrintReportPage } from './components/reports/PrintReportPage';
 
 function App() {
   return (
-    <Router>
-      <AppProvider>
-        <Routes>
-          <Route path="/print/reports" element={<PrintReportPage />} />
-          <Route path="/*" element={<AppContent />} />
-        </Routes>
-      </AppProvider>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <AppProvider>
+          <Routes>
+            <Route path="/print/reports" element={<PrintReportPage />} />
+            <Route path="/*" element={<AppContent />} />
+          </Routes>
+        </AppProvider>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

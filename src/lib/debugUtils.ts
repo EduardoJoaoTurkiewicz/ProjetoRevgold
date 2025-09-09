@@ -1,6 +1,7 @@
 // Debug utilities for troubleshooting sales creation issues
 
 import { debugService } from './supabaseServices';
+import { ErrorHandler } from './errorHandler';
 
 export interface SaleCreationError {
   id: string;
@@ -69,7 +70,7 @@ export class SalesDebugger {
     try {
       return await debugService.getRecentSaleErrors(limit);
     } catch (error) {
-      console.error('Error fetching debug errors:', error);
+      ErrorHandler.logProjectError(error, 'Fetch Debug Errors');
       return [];
     }
   }
@@ -78,7 +79,7 @@ export class SalesDebugger {
     try {
       return await debugService.cleanupOldErrors(daysOld);
     } catch (error) {
-      console.error('Error cleaning up old errors:', error);
+      ErrorHandler.logProjectError(error, 'Cleanup Old Errors');
       return 0;
     }
   }
@@ -125,4 +126,11 @@ export class SalesDebugger {
       errors
     };
   }
+}
+
+// Export isValidUUID function that was missing
+export function isValidUUID(value?: string | null): boolean {
+  if (!value || typeof value !== 'string') return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(value);
 }

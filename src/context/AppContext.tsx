@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { isSupabaseConfigured, healthCheck } from '../lib/supabase';
+import { ErrorHandler } from '../lib/errorHandler';
 import { 
   salesService, 
   employeesService, 
@@ -202,9 +203,9 @@ export function AppProvider({ children }: AppProviderProps) {
       
       console.log('✅ All data loaded successfully');
     } catch (error) {
-      console.error('❌ Error loading data:', error);
+      ErrorHandler.logProjectError(error, 'Load All Data');
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao carregar dados';
-      setError(errorMessage);
+      setError(ErrorHandler.handleSupabaseError(error));
     } finally {
       setLoading(false);
       setIsLoading(false);
@@ -221,7 +222,7 @@ export function AppProvider({ children }: AppProviderProps) {
       await cashService.initializeBalance(initialAmount);
       await loadAllData();
     } catch (error) {
-      console.error('Error initializing cash balance:', error);
+      ErrorHandler.logProjectError(error, 'Initialize Cash Balance');
       throw error;
     }
   };
@@ -231,7 +232,7 @@ export function AppProvider({ children }: AppProviderProps) {
       await cashService.recalculateBalance();
       await loadAllData();
     } catch (error) {
-      console.error('Error recalculating cash balance:', error);
+      ErrorHandler.logProjectError(error, 'Recalculate Cash Balance');
       throw error;
     }
   };
@@ -243,7 +244,7 @@ export function AppProvider({ children }: AppProviderProps) {
       await loadAllData();
       return result;
     } catch (error) {
-      console.error('Error creating employee payment:', error);
+      ErrorHandler.logProjectError(error, 'Create Employee Payment');
       throw error;
     }
   };
@@ -254,7 +255,7 @@ export function AppProvider({ children }: AppProviderProps) {
       await loadAllData();
       return commissionData;
     } catch (error) {
-      console.error('Error updating employee commission:', error);
+      ErrorHandler.logProjectError(error, 'Update Employee Commission');
       throw error;
     }
   };

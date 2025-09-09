@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertTriangle, RefreshCw, Trash2, Eye, X, CheckCircle, Database } from 'lucide-react';
 import { debugService } from '../lib/supabaseServices';
 import { SalesDebugger } from '../lib/debugUtils';
+import { ErrorHandler } from '../lib/errorHandler';
 
 interface DebugPanelProps {
   isOpen: boolean;
@@ -19,8 +20,8 @@ export function DebugPanel({ isOpen, onClose }: DebugPanelProps) {
       const recentErrors = await debugService.getRecentSaleErrors(50);
       setErrors(recentErrors);
     } catch (error) {
-      console.error('Error loading debug errors:', error);
-      alert('Erro ao carregar logs: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+      ErrorHandler.logProjectError(error, 'Load Debug Errors');
+      alert('Erro ao carregar logs: ' + ErrorHandler.handleSupabaseError(error));
     } finally {
       setLoading(false);
     }
@@ -32,7 +33,8 @@ export function DebugPanel({ isOpen, onClose }: DebugPanelProps) {
       alert(`${cleaned} erro(s) antigo(s) removido(s)`);
       loadErrors();
     } catch (error) {
-      alert('Erro ao limpar logs: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+      ErrorHandler.logProjectError(error, 'Cleanup Debug Errors');
+      alert('Erro ao limpar logs: ' + ErrorHandler.handleSupabaseError(error));
     }
   };
 

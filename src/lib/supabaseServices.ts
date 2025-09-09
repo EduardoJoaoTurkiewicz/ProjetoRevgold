@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { v4 as uuidv4 } from 'uuid';
+import { ErrorHandler } from './errorHandler';
 import type { 
   Sale, 
   Debt, 
@@ -115,10 +116,10 @@ export async function createSaleRPC(payload: any): Promise<string> {
     });
     
     if (error) {
-      console.error('❌ RPC create_sale error:', error);
+      ErrorHandler.logProjectError(error, 'RPC create_sale');
       
       // Enhanced error logging
-      console.error('🔍 Error details:', {
+      console.log('🔍 Error details:', {
         message: error.message,
         details: error.details,
         hint: error.hint,
@@ -126,20 +127,20 @@ export async function createSaleRPC(payload: any): Promise<string> {
       });
       
       // Log the payload that caused the error
-      console.error('💥 Failed payload:', JSON.stringify(snakeCasePayload, null, 2));
+      console.log('💥 Failed payload:', JSON.stringify(snakeCasePayload, null, 2));
       
-      throw new Error(`Erro ao criar venda: ${error.message}`);
+      throw new Error(ErrorHandler.handleSupabaseError(error));
     }
     
     console.log('✅ Sale created successfully with ID:', saleId);
     return saleId;
     
   } catch (error) {
-    console.error('❌ Error in createSaleRPC:', error);
+    ErrorHandler.logProjectError(error, 'createSaleRPC');
     
     // Additional error context
     if (error instanceof Error) {
-      console.error('🔍 Error stack:', error.stack);
+      console.log('🔍 Error stack:', error.stack);
     }
     
     throw error;
@@ -206,7 +207,7 @@ export const salesService = {
       if (error) throw error;
       return (data || []).map(toCamelCase);
     } catch (error) {
-      console.error('Error loading sales:', error);
+      ErrorHandler.logProjectError(error, 'Load Sales');
       throw error;
     }
   },
@@ -233,7 +234,7 @@ export const salesService = {
       return saleId;
       
     } catch (error) {
-      console.error('❌ Error in salesService.create:', error);
+      ErrorHandler.logProjectError(error, 'salesService.create');
       throw error;
     }
   },
@@ -260,7 +261,7 @@ export const salesService = {
       console.log('✅ Sale updated successfully');
       return toCamelCase(data);
     } catch (error) {
-      console.error('❌ Error updating sale:', error);
+      ErrorHandler.logProjectError(error, 'Update Sale');
       throw error;
     }
   },
@@ -277,7 +278,7 @@ export const salesService = {
       if (error) throw error;
       console.log('✅ Sale deleted successfully');
     } catch (error) {
-      console.error('❌ Error deleting sale:', error);
+      ErrorHandler.logProjectError(error, 'Delete Sale');
       throw error;
     }
   }

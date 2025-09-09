@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { ErrorHandler } from '../lib/errorHandler';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -75,7 +76,7 @@ const Dashboard: React.FC = () => {
     if (!loading && !isLoading) {
       console.log('🔄 Dashboard montado, forçando reload dos dados...');
       loadAllData().catch(error => {
-        console.error('Erro ao recarregar dados no dashboard:', error);
+        ErrorHandler.logProjectError(error, 'Dashboard Data Reload');
       });
     }
   }, []);

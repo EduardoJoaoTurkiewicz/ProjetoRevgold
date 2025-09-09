@@ -4,6 +4,7 @@ import { Play } from 'lucide-react';
 import SaleForm from './forms/SaleForm';
 import { useAppContext } from '../context/AppContext';
 import { sanitizePayload, isValidUUID, debugService } from '../lib/supabaseServices';
+import { ErrorHandler } from '../lib/errorHandler';
 import type { Sale } from '../types';
 import { DebugPanel } from './DebugPanel';
 import { TestSaleCreation } from './TestSaleCreation';
@@ -124,28 +125,16 @@ export function Sales() {
       setShowForm(false);
       setEditingSale(null);
     } catch (error) {
-      console.error('❌ Error in handleSaleSubmit:', error);
+      ErrorHandler.logProjectError(error, 'handleSaleSubmit');
       
       // Enhanced error handling and debugging
-      let errorMessage = 'Erro desconhecido';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-        
-        // Provide specific guidance for common errors
-        if (errorMessage.includes('UUID') || errorMessage.includes('uuid') || errorMessage.includes('invalid input syntax')) {
-          errorMessage = 'Erro de validação de dados: Verifique se todos os campos estão preenchidos corretamente. Detalhes no console.';
-        } else if (errorMessage.includes('duplicate') || errorMessage.includes('unique')) {
-          errorMessage = 'Esta venda já existe no sistema. Verifique se não é uma duplicata.';
-        } else if (errorMessage.includes('foreign key') || errorMessage.includes('not found')) {
-          errorMessage = 'Dados relacionados não encontrados. Verifique se o vendedor selecionado existe.';
-        }
-      }
+      const errorMessage = ErrorHandler.handleSupabaseError(error);
       
       // Show user-friendly error
       alert('Erro ao salvar venda: ' + errorMessage);
       
       // Log detailed error for debugging
-      console.error('🔍 Detailed error information:', {
+      console.log('🔍 Detailed error information:', {
         originalError: error,
         saleData: saleData,
         timestamp: new Date().toISOString()
@@ -159,8 +148,8 @@ export function Sales() {
       setDebugErrors(errors);
       setShowDebugErrors(true);
     } catch (error) {
-      console.error('Error loading debug errors:', error);
-      alert('Erro ao carregar logs de debug: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+      ErrorHandler.logProjectError(error, 'Load Debug Errors');
+      alert('Erro ao carregar logs de debug: ' + ErrorHandler.handleSupabaseError(error));
     }
   };
 
@@ -175,7 +164,7 @@ export function Sales() {
     try {
       await deleteSale(id);
     } catch (error) {
-      console.error('Error deleting sale:', error);
+      ErrorHandler.logProjectError(error, 'Delete Sale');
     }
   };
 

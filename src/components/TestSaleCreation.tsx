@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Play, CheckCircle, AlertTriangle, X } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { SalesDebugger } from '../lib/debugUtils';
-import { isValidUUID } from '../lib/supabaseServices';
+import { isValidUUID } from '../lib/debugUtils';
+import { ErrorHandler } from '../lib/errorHandler';
 
 interface TestSaleCreationProps {
   isOpen: boolean;
@@ -130,6 +131,7 @@ export function TestSaleCreation({ isOpen, onClose }: TestSaleCreationProps) {
         }]);
         
       } catch (error) {
+        ErrorHandler.logProjectError(error, `Test: ${test.name}`);
         const duration = Date.now() - Date.now();
         
         setTestResults(prev => [...prev, {
@@ -138,7 +140,7 @@ export function TestSaleCreation({ isOpen, onClose }: TestSaleCreationProps) {
           result: null,
           duration: duration,
           payload: test.payload,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: ErrorHandler.handleSupabaseError(error)
         }]);
       }
       

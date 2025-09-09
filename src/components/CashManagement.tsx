@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { ErrorHandler } from '../lib/errorHandler';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -64,7 +65,7 @@ export function CashManagement() {
   React.useEffect(() => {
     console.log('🔄 CashManagement montado, verificando saldo...');
     loadAllData().catch(error => {
-      console.error('Erro ao carregar dados do caixa:', error);
+      ErrorHandler.logProjectError(error, 'Cash Management Data Load');
     });
   }, []);
 
@@ -110,9 +111,9 @@ export function CashManagement() {
       // Forçar recarregamento dos dados
       await loadAllData();
     } catch (error) {
-      console.error('Erro ao inicializar caixa:', error);
+      ErrorHandler.logProjectError(error, 'Initialize Cash');
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      alert('Erro ao inicializar caixa: ' + errorMessage);
+      alert('Erro ao inicializar caixa: ' + ErrorHandler.handleSupabaseError(error));
     } finally {
       setIsInitializing(false);
     }
@@ -133,9 +134,9 @@ export function CashManagement() {
       // Forçar recarregamento dos dados
       await loadAllData();
     } catch (error) {
-      console.error('Erro ao recalcular saldo:', error);
+      ErrorHandler.logProjectError(error, 'Recalculate Balance');
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      alert('Erro ao recalcular saldo: ' + errorMessage);
+      alert('Erro ao recalcular saldo: ' + ErrorHandler.handleSupabaseError(error));
     } finally {
       setIsRecalculating(false);
     }
@@ -156,8 +157,8 @@ export function CashManagement() {
       setShowTransactionForm(false);
       setEditingTransaction(null);
     } catch (error) {
-      console.error('Error saving transaction:', error);
-      alert('Erro ao salvar transação: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+      ErrorHandler.logProjectError(error, 'Save Transaction');
+      alert('Erro ao salvar transação: ' + ErrorHandler.handleSupabaseError(error));
     }
   };
 
@@ -167,8 +168,8 @@ export function CashManagement() {
     try {
       await deleteCashTransaction(id);
     } catch (error) {
-      console.error('Error deleting transaction:', error);
-      alert('Erro ao excluir transação: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+      ErrorHandler.logProjectError(error, 'Delete Transaction');
+      alert('Erro ao excluir transação: ' + ErrorHandler.handleSupabaseError(error));
     }
   };
 
