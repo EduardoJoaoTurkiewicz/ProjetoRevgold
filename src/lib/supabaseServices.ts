@@ -1342,17 +1342,47 @@ export const cashService = {
     return await cashTransactionsService.getAll();
   },
 
-  async getCashBalance(): Promise<CashBalance | null> {
+  async getBalance(): Promise<CashBalance | null> {
     return await cashBalancesService.get();
   },
 
-  async getBalance(): Promise<number> {
+  async getCurrentBalance(): Promise<number> {
     try {
       const balance = await cashBalancesService.get();
       return balance?.currentBalance || 0;
     } catch (error) {
       console.error('Error getting cash balance:', error);
       return 0;
+    }
+  },
+  
+  async initializeBalance(initialAmount: number): Promise<void> {
+    try {
+      await cashBalancesService.create({
+        currentBalance: initialAmount,
+        initialBalance: initialAmount,
+        initialDate: new Date().toISOString().split('T')[0],
+        lastUpdated: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error initializing cash balance:', error);
+      throw error;
+    }
+  },
+  
+  async recalculateBalance(): Promise<void> {
+    try {
+      // This would typically call a stored procedure to recalculate
+      // For now, we'll just refresh the balance
+      const balance = await cashBalancesService.get();
+      if (balance) {
+        await cashBalancesService.update(balance.id!, {
+          lastUpdated: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('Error recalculating cash balance:', error);
+      throw error;
     }
   },
 
