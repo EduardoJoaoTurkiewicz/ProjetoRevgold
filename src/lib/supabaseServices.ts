@@ -37,11 +37,14 @@ export function sanitizePayload(data: any): any {
   for (const [key, value] of Object.entries(data)) {
     // Handle UUID fields specifically
     if (key.endsWith('_id') || key.endsWith('Id') || key === 'id') {
-      if (value === '' || value === 'null' || value === undefined || value === null) {
+      if (value === '' || value === 'null' || value === 'undefined' || value === undefined || value === null) {
         sanitized[key] = null;
       } else if (typeof value === 'string') {
-        if (isValidUUID(value)) {
-          sanitized[key] = value;
+        const trimmed = value.trim();
+        if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
+          sanitized[key] = null;
+        } else if (isValidUUID(trimmed)) {
+          sanitized[key] = trimmed;
         } else {
           console.warn(`⚠️ Invalid UUID for ${key}:`, value, '- converting to null');
           sanitized[key] = null;
@@ -71,6 +74,42 @@ export function sanitizePayload(data: any): any {
   }
   
   return sanitized;
+}
+
+// Enhanced UUID cleaning function
+export function cleanUUIDFields(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj;
+  
+  const cleaned = { ...obj };
+  
+  Object.keys(cleaned).forEach(key => {
+    if (key.endsWith('_id') || key.endsWith('Id') || key === 'id') {
+      const value = cleaned[key];
+      if (value === '' || value === 'null' || value === 'undefined' || !value) {
+        cleaned[key] = null;
+      } else if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (isValidUUID(value)) {
+          sanitized[key] = value;
+        } else {
+          console.warn(`⚠️ Invalid UUID for ${key}:`, value, '- converting to null');
+          sanitized[key] = null;
+        }
+        if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
+          cleaned[key] = null;
+        } else if (!isValidUUID(trimmed)) {
+          console.warn(`⚠️ Invalid UUID for ${key}:`, trimmed, '- converting to null');
+          cleaned[key] = null;
+        } else {
+          cleaned[key] = trimmed;
+        }
+      } else {
+        cleaned[key] = value;
+      }
+    }
+  });
+  
+  return cleaned;
 }
 
 // Transform camelCase to snake_case for database operations
@@ -109,9 +148,21 @@ export async function createSaleRPC(payload: any): Promise<string> {
     const sanitized = sanitizePayload(payload);
     console.log('🧹 Sanitized payload:', sanitized);
     
+    // Step 1.5: Additional UUID field cleaning
+    const uuidCleaned = cleanUUIDFields(sanitized);
+    console.log('🔧 UUID cleaned payload:', uuidCleaned);
+    
     // Step 2: Transform to snake_case
-    const snakeCasePayload = transformToSnakeCase(sanitized);
+    const snakeCasePayload = transformToSnakeCase(uuidCleaned);
     console.log('🐍 Snake case payload:', snakeCasePayload);
+    
+    // Step 2.5: Final UUID validation before sending to database
+    Object.keys(snakeCasePayload).forEach(key => {
+      if (key.endsWith('_id') && snakeCasePayload[key] === '') {
+        console.warn(`⚠️ Found empty string UUID field ${key}, converting to null`);
+        snakeCasePayload[key] = null;
+      }
+    });
     
     // Step 3: Try to call the RPC function with offline support
     const result = await safeSupabaseCall(async () => {
@@ -125,11 +176,11 @@ export async function createSaleRPC(payload: any): Promise<string> {
     // Handle offline mode
     if (result.offline) {
       console.log('📴 Working offline, saving sale locally...');
-      const offlineId = await saveOffline('sales', sanitized);
+      const offlineId = await saveOffline('sales', uuidCleaned);
       await addToSyncQueue({
         type: 'create',
         table: 'sales',
-        data: sanitized,
+        data: uuidCleaned,
         maxRetries: 5
       });
       
@@ -229,21 +280,25 @@ export const salesService = {
     try {
       console.log('🔄 salesService.create called with:', saleData);
       
+      // Step 1: Clean UUID fields first
+      const uuidCleanedData = cleanUUIDFields(saleData);
+      console.log('🔧 UUID cleaned data:', uuidCleanedData);
+      
       // Validate required fields before processing
-      if (!saleData.client || (typeof saleData.client === 'string' && !saleData.client.trim())) {
+      if (!uuidCleanedData.client || (typeof uuidCleanedData.client === 'string' && !uuidCleanedData.client.trim())) {
         throw new Error('Cliente é obrigatório e não pode estar vazio');
       }
       
-      if (!saleData.totalValue || saleData.totalValue <= 0) {
+      if (!uuidCleanedData.totalValue || uuidCleanedData.totalValue <= 0) {
         throw new Error('Valor total deve ser maior que zero');
       }
       
-      if (!saleData.paymentMethods || !Array.isArray(saleData.paymentMethods) || saleData.paymentMethods.length === 0) {
+      if (!uuidCleanedData.paymentMethods || !Array.isArray(uuidCleanedData.paymentMethods) || uuidCleanedData.paymentMethods.length === 0) {
         throw new Error('Pelo menos um método de pagamento é obrigatório');
       }
       
       // Use the robust RPC function
-      const saleId = await createSaleRPC(saleData);
+      const saleId = await createSaleRPC(uuidCleanedData);
       return saleId;
       
     } catch (error) {

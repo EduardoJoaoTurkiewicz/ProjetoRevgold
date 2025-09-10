@@ -279,6 +279,15 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     // Enhanced delivery date cleaning
     const cleanDeliveryDate = formData.deliveryDate && formData.deliveryDate.trim() !== '' ? formData.deliveryDate : null;
     
+    // Enhanced UUID field cleaning - ensure all UUID fields are properly handled
+    const cleanUUIDField = (value: any): string | null => {
+      if (!value) return null;
+      if (typeof value !== 'string') return null;
+      const trimmed = value.trim();
+      if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') return null;
+      return isValidUUID(trimmed) ? trimmed : null;
+    };
+    
     // Recalculate amounts with cleaned data
     const recalculatedAmounts = (() => {
       const totalPayments = cleanedPaymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
@@ -313,7 +322,7 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       date: formData.date,
       deliveryDate: cleanDeliveryDate,
       client: formData.client.trim(),
-      sellerId: cleanSellerId || undefined,
+      sellerId: cleanUUIDField(formData.sellerId),
       customCommissionRate: formData.custom_commission_rate || 5.00,
       products: typeof formData.products === 'string' ? [{ name: formData.products }] : formData.products,
       observations: formData.observations?.trim() || null,
@@ -326,16 +335,20 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       status: recalculatedAmounts.status,
     };
     
+    // Additional UUID field validation for any other UUID fields that might be present
+    Object.keys(saleToSubmit).forEach(key => {
+      if (key.endsWith('Id') || key.endsWith('_id')) {
+        saleToSubmit[key] = cleanUUIDField(saleToSubmit[key]);
+      }
+    });
+    
     // Final comprehensive validation
     if (!saleToSubmit.client || saleToSubmit.client.trim() === '') {
       toast.error('Nome do cliente é obrigatório e não pode estar vazio.');
       return;
     }
     
-    if (saleToSubmit.sellerId === '' || (saleToSubmit.sellerId && !isValidUUID(saleToSubmit.sellerId))) {
-      console.warn('⚠️ Invalid seller ID detected, converting to null:', saleToSubmit.sellerId);
-      saleToSubmit.sellerId = null;
-    }
+    // Seller ID is already cleaned by cleanUUIDField function above
     
     if (saleToSubmit.totalValue <= 0) {
       toast.error('Valor total deve ser maior que zero.');

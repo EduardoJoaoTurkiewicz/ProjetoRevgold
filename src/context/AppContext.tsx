@@ -388,9 +388,41 @@ export function AppProvider({ children }: AppProviderProps) {
 
   // Sales methods
   const createSale = async (saleData: Partial<Sale>): Promise<string> => {
-    const id = await salesService.create(saleData);
-    await loadAllData();
-    return id;
+    try {
+      console.log('🔄 AppContext.createSale called with:', saleData);
+      
+      // Enhanced UUID field validation and cleaning
+      const cleanedSaleData = { ...saleData };
+      
+      // Clean all UUID fields
+      Object.keys(cleanedSaleData).forEach(key => {
+        if (key.endsWith('Id') || key.endsWith('_id')) {
+          const value = cleanedSaleData[key];
+          if (value === '' || value === 'null' || value === 'undefined' || !value) {
+            cleanedSaleData[key] = null;
+          } else if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
+              cleanedSaleData[key] = null;
+            } else if (!isValidUUID(trimmed)) {
+              console.warn(`⚠️ Invalid UUID for ${key}:`, trimmed, '- converting to null');
+              cleanedSaleData[key] = null;
+            } else {
+              cleanedSaleData[key] = trimmed;
+            }
+          }
+        }
+      });
+      
+      console.log('🧹 UUID cleaned sale data:', cleanedSaleData);
+      
+      const id = await salesService.create(cleanedSaleData);
+      await loadAllData();
+      return id;
+    } catch (error) {
+      ErrorHandler.logProjectError(error, 'AppContext.createSale');
+      throw error;
+    }
   };
 
   const updateSale = async (id: string, saleData: Partial<Sale>): Promise<Sale> => {
