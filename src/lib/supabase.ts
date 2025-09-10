@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 import { ErrorHandler } from './errorHandler';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://gzazwmgiptnswkaljqhy.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 // Check if Supabase is properly configured
@@ -13,7 +13,8 @@ export function isSupabaseConfigured(): boolean {
   const isConfigured = !!(
     url && 
     key && 
-    url !== 'https://your-project-id.supabase.co' && 
+    url !== 'https://your-project-id.supabase.co' &&
+    url !== 'https://placeholder.supabase.co' &&
     key !== 'your-anon-key-here' &&
     url.length > 10 && 
     key.length > 10
@@ -23,7 +24,7 @@ export function isSupabaseConfigured(): boolean {
     ErrorHandler.logProjectError('SUPABASE NÃO CONFIGURADO CORRETAMENTE', 'Configuration Check');
     console.group('📝 Para corrigir este erro:');
     console.log('1. Abra o arquivo .env na raiz do projeto');
-    console.log('2. Configure VITE_SUPABASE_URL com a URL do seu projeto Supabase');
+    console.log('2. Configure VITE_SUPABASE_URL=https://gzazwmgiptnswkaljqhy.supabase.co');
     console.log('3. Configure VITE_SUPABASE_ANON_KEY com a chave anônima do seu projeto');
     console.log('4. Reinicie o servidor de desenvolvimento (npm run dev)');
     console.log('🔗 URL atual:', url || 'não definida');

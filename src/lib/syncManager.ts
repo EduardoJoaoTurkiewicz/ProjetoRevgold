@@ -118,16 +118,35 @@ class SyncManager {
 
   private async syncOfflineData(data: OfflineData): Promise<void> {
     console.log(`🔄 Syncing offline ${data.table} data:`, data.id);
-    await this.syncCreate(data.table, data.data);
+    try {
+      await this.syncCreate(data.table, data.data);
+      console.log('✅ Successfully synced offline data:', data.id);
+    } catch (error) {
+      console.error('❌ Failed to sync offline data:', data.id, error);
+      
+      // Show user-friendly error message
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast.error(`Erro ao sincronizar ${data.table}: ${errorMessage}`);
+      
+      throw error;
+    }
   }
 
   private async syncCreate(table: string, data: any): Promise<void> {
-    // Remove offline ID and add proper data
-    const { id: offlineId, ...cleanData } = data;
+    // Use the existing UUID from offline data, remove isOffline flag
+    const { isOffline, ...cleanData } = data;
+    
+    console.log(`🔄 Syncing ${table} with ID:`, cleanData.id);
     
     switch (table) {
       case 'sales':
-        const { data: saleData, error: saleError } = await supabase.rpc('create_sale', { 
+        // Use the existing ID from offline data
+        const salePayload = {
+          ...this.transformToSnakeCase(cleanData),
+          id: cleanData.id // Preserve the UUID generated offline
+        };
+        
+        const { data: saleData, error: saleError } = await supabase.rpc('create_sale_with_id', { 
           payload: this.transformToSnakeCase(cleanData) 
         });
         if (saleError) throw saleError;
@@ -137,33 +156,57 @@ class SyncManager {
       case 'employees':
         const { error: empError } = await supabase
           .from('employees')
-          .insert([this.transformToSnakeCase(cleanData)]);
+          .upsert([this.transformToSnakeCase(cleanData)], { onConflict: 'id' });
         if (empError) throw empError;
+        console.log('✅ Employee synced:', cleanData.id);
         break;
         
       case 'debts':
         const { error: debtError } = await supabase
           .from('debts')
-          .insert([this.transformToSnakeCase(cleanData)]);
+          .upsert([this.transformToSnakeCase(cleanData)], { onConflict: 'id' });
         if (debtError) throw debtError;
+        console.log('✅ Debt synced:', cleanData.id);
         break;
         
       case 'checks':
         const { error: checkError } = await supabase
           .from('checks')
-          .insert([this.transformToSnakeCase(cleanData)]);
+          .upsert([this.transformToSnakeCase(cleanData)], { onConflict: 'id' });
         if (checkError) throw checkError;
+        console.log('✅ Check synced:', cleanData.id);
         break;
         
       case 'boletos':
         const { error: boletoError } = await supabase
           .from('boletos')
-          .insert([this.transformToSnakeCase(cleanData)]);
+          .upsert([this.transformToSnakeCase(cleanData)], { onConflict: 'id' });
         if (boletoError) throw boletoError;
+        console.log('✅ Boleto synced:', cleanData.id);
         break;
         
       default:
         throw new Error(`Unknown table for sync: ${table}`);
+    }
+    
+    // Mark as synced in offline storage
+    try {
+      await this.markAsSynced(data.id);
+    } catch (error) {
+      console.warn('⚠️ Could not mark as synced:', error);
+    }
+  }
+
+  private async markAsSynced(offlineId: string): Promise<void> {
+    try {
+      const offlineData = await offlineDB.getItem<OfflineData>(offlineId);
+      if (offlineData) {
+        offlineData.synced = true;
+        offlineData.isOffline = false;
+        await offlineDB.setItem(offlineId, offlineData);
+      }
+    } catch (error) {
+      console.error('Error marking as synced:', error);
     }
   }
 

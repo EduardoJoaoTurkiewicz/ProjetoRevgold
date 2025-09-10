@@ -1,5 +1,16 @@
 import localforage from 'localforage';
-import { v4 as uuidv4 } from 'uuid';
+// Use crypto.randomUUID() for better UUID generation
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 
 // Configure offline storage
 export const offlineDB = localforage.createInstance({
@@ -31,17 +42,20 @@ export interface OfflineData {
   data: any;
   timestamp: number;
   synced: boolean;
+  isOffline: boolean;
 }
 
 // Save data offline
 export async function saveOffline(table: string, data: any): Promise<string> {
-  const id = `offline-${Date.now()}-${uuidv4()}`;
+  // Generate a proper UUID for offline data
+  const id = generateUUID();
   const offlineData: OfflineData = {
     id,
     table,
-    data: { ...data, id },
+    data: { ...data, id, isOffline: true },
     timestamp: Date.now(),
-    synced: false
+    synced: false,
+    isOffline: true
   };
   
   await offlineDB.setItem(id, offlineData);
@@ -51,7 +65,7 @@ export async function saveOffline(table: string, data: any): Promise<string> {
 
 // Add operation to sync queue
 export async function addToSyncQueue(operation: Omit<OfflineOperation, 'id' | 'timestamp' | 'retryCount'>): Promise<void> {
-  const id = `sync-${Date.now()}-${uuidv4()}`;
+  const id = `sync-${Date.now()}-${generateUUID()}`;
   const syncOperation: OfflineOperation = {
     ...operation,
     id,
