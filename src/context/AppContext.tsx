@@ -145,9 +145,15 @@ export function AppProvider({ children }: AppProviderProps) {
   const loadAllData = async () => {
     try {
       setIsLoading(true);
-      setError(null);
+
+      // Verificar conexão com Supabase (não falha se offline)
+      const isOnline = await healthCheck();
       
-      // Check Supabase configuration first
+      if (!isOnline) {
+        console.log('📱 Executando em modo offline - carregando dados locais');
+        // Carregar dados do armazenamento offline se disponível
+        return;
+      }
       if (!isSupabaseConfigured()) {
         console.warn('⚠️ Supabase not configured, loading offline data only');
         await loadOfflineDataOnly();

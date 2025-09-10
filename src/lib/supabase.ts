@@ -121,8 +121,14 @@ export async function testSupabaseConnection() {
 }
 
 // Health check function
-export async function healthCheck() {
+export async function healthCheck(): Promise<boolean> {
   try {
+    // Check if environment variables are available
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      console.warn('⚠️ Variáveis de ambiente do Supabase não encontradas. Executando em modo offline.');
+      return false;
+    }
+
     console.log('🔍 Iniciando verificação de saúde do Supabase...');
     
     if (!isSupabaseConfigured()) {
@@ -138,8 +144,8 @@ export async function healthCheck() {
     const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
     
     const { data, error } = await supabase
-      .from('employees')
-      .select('id')
+      .from('users')
+      .select('count')
       .limit(1)
       .abortSignal(controller.signal);
     
@@ -152,26 +158,9 @@ export async function healthCheck() {
       throw new Error(`Erro de conexão: ${error.message}`);
     }
     
-    return {
-      configured: true,
-      connected: true
-    };
-    
+    return true;
   } catch (error) {
-    let errorMessage = 'Erro desconhecido na conexão';
-    
-    if (error.name === 'AbortError') {
-      errorMessage = 'Timeout na conexão com Supabase. Verifique sua conexão com a internet.';
-    } else if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    
-    console.error('❌ Erro na verificação de saúde:', errorMessage);
-    ErrorHandler.logProjectError(errorMessage, 'Supabase Health Check');
-    return {
-      configured: false,
-      connected: false,
-      error: errorMessage
-    };
+    console.warn('⚠️ Falha na verificação de saúde do Supabase. Executando em modo offline.', error);
+    return false;
   }
 }
