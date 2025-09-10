@@ -56,8 +56,29 @@ export function Sales() {
     try {
       console.log('🔄 Sales.handleSaleSubmit called with:', saleData);
       
+      // Step 1: Clean UUID fields before any other processing
+      const uuidCleanedData = { ...saleData };
+      Object.keys(uuidCleanedData).forEach(key => {
+        if (key.endsWith('Id') || key.endsWith('_id')) {
+          const value = uuidCleanedData[key];
+          if (value === '' || value === 'null' || value === 'undefined' || !value) {
+            uuidCleanedData[key] = null;
+          } else if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
+              uuidCleanedData[key] = null;
+            } else if (!isValidUUID(trimmed)) {
+              console.warn(`⚠️ Invalid UUID for ${key}:`, trimmed, '- converting to null');
+              uuidCleanedData[key] = null;
+            }
+          }
+        }
+      });
+      
+      console.log('🔧 UUID cleaned data:', uuidCleanedData);
+      
       // Enhanced frontend validation and sanitization
-      const sanitizedSaleData = sanitizePayload(saleData);
+      const sanitizedSaleData = sanitizePayload(uuidCleanedData);
       console.log('🧹 Sanitized sale data:', sanitizedSaleData);
       
       // Comprehensive frontend validation
@@ -68,15 +89,10 @@ export function Sales() {
       
       // Enhanced seller validation
       if (sanitizedSaleData.sellerId) {
-        if (!isValidUUID(sanitizedSaleData.sellerId)) {
-          console.warn('⚠️ Invalid seller UUID, converting to null:', sanitizedSaleData.sellerId);
-          sanitizedSaleData.sellerId = null;
-        } else {
-          const seller = employees.find(emp => emp.id === sanitizedSaleData.sellerId && emp.isActive);
-          if (!seller) {
-            toast.error('Vendedor selecionado não existe ou não está ativo. Selecione um vendedor válido ou deixe em branco.');
-            return;
-          }
+        const seller = employees.find(emp => emp.id === sanitizedSaleData.sellerId && emp.isActive);
+        if (!seller) {
+          toast.error('Vendedor selecionado não existe ou não está ativo. Selecione um vendedor válido ou deixe em branco.');
+          return;
         }
       }
       

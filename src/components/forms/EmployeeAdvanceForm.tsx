@@ -51,9 +51,18 @@ export function EmployeeAdvanceForm({ employeeId, employeeName, onSubmit, onCanc
     // Clean UUID fields - ensure employeeId is valid
     const cleanedData = {
       ...formData,
-      employeeId: !formData.employeeId || formData.employeeId.trim() === '' ? null : formData.employeeId,
+      employeeId: cleanUUIDField(formData.employeeId),
       description: formData.description.trim()
     };
+    
+    // Helper function to clean UUID fields
+    function cleanUUIDField(value: any): string | null {
+      if (!value) return null;
+      if (typeof value !== 'string') return null;
+      const trimmed = value.trim();
+      if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') return null;
+      return trimmed;
+    }
     
     // Validate that employeeId is not null after cleaning
     if (!cleanedData.employeeId) {

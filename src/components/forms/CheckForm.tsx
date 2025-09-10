@@ -40,12 +40,21 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
     // Clean UUID fields - convert empty strings to null
     const cleanedData = {
       ...formData,
-      saleId: !formData.saleId || formData.saleId.toString().trim() === '' ? null : formData.saleId,
-      debtId: !formData.debtId || formData.debtId.toString().trim() === '' ? null : formData.debtId,
+      saleId: cleanUUIDField(formData.saleId),
+      debtId: cleanUUIDField(formData.debtId),
       companyName: !formData.companyName || formData.companyName.trim() === '' ? null : formData.companyName,
       installmentNumber: !formData.installmentNumber ? null : formData.installmentNumber,
       totalInstallments: !formData.totalInstallments ? null : formData.totalInstallments
     };
+    
+    // Helper function to clean UUID fields
+    function cleanUUIDField(value: any): string | null {
+      if (!value) return null;
+      if (typeof value !== 'string') return null;
+      const trimmed = value.toString().trim();
+      if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') return null;
+      return trimmed;
+    }
     
     console.log('📝 Enviando cheque:', cleanedData);
     onSubmit(cleanedData as Omit<Check, 'id' | 'createdAt'>);

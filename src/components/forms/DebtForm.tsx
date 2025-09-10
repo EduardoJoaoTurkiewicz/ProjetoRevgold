@@ -139,6 +139,10 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
         if (typeof value === 'string' && value.trim() === '') {
           delete cleaned[key as keyof PaymentMethod];
         }
+        // Clean UUID fields specifically
+        if ((key.endsWith('Id') || key.endsWith('_id')) && (value === '' || value === 'null' || value === 'undefined')) {
+          cleaned[key as keyof PaymentMethod] = null;
+        }
       });
       
       return cleaned;

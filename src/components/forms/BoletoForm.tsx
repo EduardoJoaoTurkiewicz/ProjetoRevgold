@@ -37,9 +37,18 @@ export function BoletoForm({ boleto, onSubmit, onCancel }: BoletoFormProps) {
     // Clean UUID fields - convert empty strings to null
     const cleanedData = {
       ...formData,
-      saleId: !formData.saleId || formData.saleId.toString().trim() === '' ? null : formData.saleId,
+      saleId: cleanUUIDField(formData.saleId),
       companyName: !formData.companyName || formData.companyName.trim() === '' ? null : formData.companyName
     };
+    
+    // Helper function to clean UUID fields
+    function cleanUUIDField(value: any): string | null {
+      if (!value) return null;
+      if (typeof value !== 'string') return null;
+      const trimmed = value.toString().trim();
+      if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') return null;
+      return trimmed;
+    }
     
     console.log('📝 Enviando boleto:', cleanedData);
     onSubmit(cleanedData as Omit<Boleto, 'id' | 'createdAt'>);
