@@ -142,33 +142,81 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     // Log the attempt for debugging
     SalesDebugger.logSaleCreationAttempt(formData, 'SaleForm.handleSubmit');
     
+    // Step 1: Enhanced UUID field validation and cleaning BEFORE other validation
+    const preCleanedData = { ...formData };
+    
+    // Clean all potential UUID fields
+    ['sellerId', 'customerId', 'paymentMethodId', 'saleId'].forEach(field => {
+      if (preCleanedData[field] === '' || preCleanedData[field] === 'null' || 
+          preCleanedData[field] === 'undefined' || !preCleanedData[field]) {
+        preCleanedData[field] = null;
+      } else if (typeof preCleanedData[field] === 'string') {
+        const trimmed = preCleanedData[field].trim();
+        if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
+          preCleanedData[field] = null;
+        } else if (!isValidUUID(trimmed)) {
+          console.warn(`⚠️ Invalid UUID for ${field}:`, trimmed, '- converting to null');
+          preCleanedData[field] = null;
+        }
+      }
+    });
+    
+    // Clean payment methods UUID fields
+    if (preCleanedData.paymentMethods && Array.isArray(preCleanedData.paymentMethods)) {
+      preCleanedData.paymentMethods = preCleanedData.paymentMethods.map(method => {
+        const cleanedMethod = { ...method };
+        
+        // Clean UUID fields in payment methods
+        Object.keys(cleanedMethod).forEach(key => {
+          if (key.endsWith('Id') || key.endsWith('_id')) {
+            const value = cleanedMethod[key];
+            if (value === '' || value === 'null' || value === 'undefined' || !value) {
+              cleanedMethod[key] = null;
+            } else if (typeof value === 'string') {
+              const trimmed = value.trim();
+              if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
+                cleanedMethod[key] = null;
+              } else if (!isValidUUID(trimmed)) {
+                console.warn(`⚠️ Invalid UUID in payment method ${key}:`, trimmed, '- converting to null');
+                cleanedMethod[key] = null;
+              }
+            }
+          }
+        });
+        
+        return cleanedMethod;
+      });
+    }
+    
+    console.log('🔧 Pre-cleaned data:', preCleanedData);
+    
     // Enhanced client validation
-    if (!formData.client || !formData.client.trim()) {
+    if (!preCleanedData.client || !preCleanedData.client.trim()) {
       alert('Por favor, informe o nome do cliente.');
       return;
     }
     
     // Check if client looks like a UUID (common mistake)
-    if (formData.client.length === 36 && isValidUUID(formData.client)) {
+    if (preCleanedData.client.length === 36 && isValidUUID(preCleanedData.client)) {
       alert('Erro: O campo cliente deve conter o NOME do cliente, não um ID. Por favor, digite o nome do cliente.');
       return;
     }
     
     // Enhanced total value validation
-    if (!formData.totalValue || formData.totalValue <= 0) {
+    if (!preCleanedData.totalValue || preCleanedData.totalValue <= 0) {
       alert('O valor total da venda deve ser maior que zero.');
       return;
     }
     
     // Enhanced payment methods validation
-    if (!formData.paymentMethods || formData.paymentMethods.length === 0) {
+    if (!preCleanedData.paymentMethods || preCleanedData.paymentMethods.length === 0) {
       alert('Por favor, adicione pelo menos um método de pagamento.');
       return;
     }
     
     // Validate each payment method
-    for (let i = 0; i < formData.paymentMethods.length; i++) {
-      const method = formData.paymentMethods[i];
+    for (let i = 0; i < preCleanedData.paymentMethods.length; i++) {
+      const method = preCleanedData.paymentMethods[i];
       if (!method.type || typeof method.type !== 'string') {
         alert(`Método de pagamento ${i + 1}: Tipo é obrigatório.`);
         return;
@@ -179,20 +227,47 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       }
     }
     
-    const amounts = calculateAmounts();
+    // Recalculate amounts with cleaned data
+    const amounts = (() => {
+      const totalPayments = preCleanedData.paymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
+      const receivedAmount = preCleanedData.paymentMethods.reduce((sum, method) => {
+        // Immediate payment methods
+        if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
+            (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
+          return sum + method.amount;
+        }
+        return sum;
+      }, 0);
+      
+      const pendingAmount = Math.max(0, preCleanedData.totalValue - receivedAmount);
+      
+      let status: Sale['status'] = 'pendente';
+      if (receivedAmount >= preCleanedData.totalValue) {
+        status = 'pago';
+      } else if (receivedAmount > 0) {
+        status = 'parcial';
+      }
+      
+      return {
+        receivedAmount,
+        pendingAmount,
+        status,
+        totalPayments
+      };
+    })();
     
     if (amounts.totalPayments === 0) {
       alert('Por favor, informe pelo menos um método de pagamento com valor maior que zero.');
       return;
     }
     
-    if (amounts.totalPayments > formData.totalValue) {
+    if (amounts.totalPayments > preCleanedData.totalValue) {
       alert('O total dos métodos de pagamento não pode ser maior que o valor total da venda.');
       return;
     }
     
     // Enhanced third party check validation
-    for (const method of formData.paymentMethods) {
+    for (const method of preCleanedData.paymentMethods) {
       if (method.type === 'cheque' && method.isThirdPartyCheck && method.thirdPartyDetails) {
         for (const detail of method.thirdPartyDetails) {
           if (!detail.issuer || !detail.cpfCnpj || !detail.bank || !detail.agency || !detail.account || !detail.checkNumber) {
@@ -211,10 +286,28 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     }
     
     // Enhanced payment methods cleaning and validation
-    const cleanedPaymentMethods = formData.paymentMethods
+    const cleanedPaymentMethods = preCleanedData.paymentMethods
       .filter(method => method.amount > 0) // Remove methods with zero amount
       .map(method => {
         const cleaned: any = { ...method };
+        
+        // Clean UUID fields in payment methods
+        Object.keys(cleaned).forEach(key => {
+          if (key.endsWith('Id') || key.endsWith('_id')) {
+            const value = cleaned[key];
+            if (value === '' || value === 'null' || value === 'undefined' || !value) {
+              cleaned[key] = null;
+            } else if (typeof value === 'string') {
+              const trimmed = value.trim();
+              if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
+                cleaned[key] = null;
+              } else if (!isValidUUID(trimmed)) {
+                console.warn(`⚠️ Invalid UUID in payment method ${key}:`, trimmed, '- converting to null');
+                cleaned[key] = null;
+              }
+            }
+          }
+        });
         
         // Ensure required fields are properly typed
         if (!cleaned.type || typeof cleaned.type !== 'string') {
@@ -267,17 +360,17 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       
     // Enhanced seller ID cleaning with UUID validation
     let cleanSellerId = null;
-    if (formData.sellerId && formData.sellerId.trim() !== '') {
-      if (isValidUUID(formData.sellerId)) {
-        cleanSellerId = formData.sellerId;
+    if (preCleanedData.sellerId && preCleanedData.sellerId.trim() !== '') {
+      if (isValidUUID(preCleanedData.sellerId)) {
+        cleanSellerId = preCleanedData.sellerId;
       } else {
-        console.warn('⚠️ Invalid seller UUID, setting to null:', formData.sellerId);
+        console.warn('⚠️ Invalid seller UUID, setting to null:', preCleanedData.sellerId);
         cleanSellerId = null;
       }
     }
     
     // Enhanced delivery date cleaning
-    const cleanDeliveryDate = formData.deliveryDate && formData.deliveryDate.trim() !== '' ? formData.deliveryDate : null;
+    const cleanDeliveryDate = preCleanedData.deliveryDate && preCleanedData.deliveryDate.trim() !== '' ? preCleanedData.deliveryDate : null;
     
     // Enhanced UUID field cleaning - ensure all UUID fields are properly handled
     const cleanUUIDField = (value: any): string | null => {
@@ -300,10 +393,10 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
         return sum;
       }, 0);
       
-      const pendingAmount = Math.max(0, formData.totalValue - receivedAmount);
+      const pendingAmount = Math.max(0, preCleanedData.totalValue - receivedAmount);
       
       let status: Sale['status'] = 'pendente';
-      if (receivedAmount >= formData.totalValue) {
+      if (receivedAmount >= preCleanedData.totalValue) {
         status = 'pago';
       } else if (receivedAmount > 0) {
         status = 'parcial';
@@ -319,17 +412,17 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     
     // Create enhanced payload with comprehensive validation
     const saleToSubmit = {
-      date: formData.date,
+      date: preCleanedData.date,
       deliveryDate: cleanDeliveryDate,
-      client: formData.client.trim(),
-      sellerId: cleanUUIDField(formData.sellerId),
-      customCommissionRate: formData.custom_commission_rate || 5.00,
-      products: typeof formData.products === 'string' ? [{ name: formData.products }] : formData.products,
-      observations: formData.observations?.trim() || null,
-      totalValue: formData.totalValue,
+      client: preCleanedData.client.trim(),
+      sellerId: cleanUUIDField(preCleanedData.sellerId),
+      customCommissionRate: preCleanedData.custom_commission_rate || 5.00,
+      products: typeof preCleanedData.products === 'string' ? [{ name: preCleanedData.products }] : preCleanedData.products,
+      observations: preCleanedData.observations?.trim() || null,
+      totalValue: preCleanedData.totalValue,
       paymentMethods: cleanedPaymentMethods,
-      paymentDescription: formData.paymentDescription?.trim() || null,
-      paymentObservations: formData.paymentObservations?.trim() || null,
+      paymentDescription: preCleanedData.paymentDescription?.trim() || null,
+      paymentObservations: preCleanedData.paymentObservations?.trim() || null,
       receivedAmount: recalculatedAmounts.receivedAmount,
       pendingAmount: recalculatedAmounts.pendingAmount,
       status: recalculatedAmounts.status,

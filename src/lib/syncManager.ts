@@ -136,18 +136,15 @@ class SyncManager {
     // Use the existing UUID from offline data, remove isOffline flag
     const { isOffline, ...cleanData } = data;
     
+    // Enhanced UUID cleaning for sync
+    const uuidCleanedData = this.cleanUUIDFieldsForSync(cleanData);
+    
     console.log(`🔄 Syncing ${table} with ID:`, cleanData.id);
     
     switch (table) {
       case 'sales':
-        // Use the existing ID from offline data
-        const salePayload = {
-          ...this.transformToSnakeCase(cleanData),
-          id: cleanData.id // Preserve the UUID generated offline
-        };
-        
         const { data: saleData, error: saleError } = await supabase.rpc('create_sale_with_id', { 
-          payload: this.transformToSnakeCase(cleanData) 
+          payload: this.transformToSnakeCase(uuidCleanedData) 
         });
         if (saleError) throw saleError;
         console.log('✅ Sale synced:', saleData);
@@ -156,7 +153,7 @@ class SyncManager {
       case 'employees':
         const { error: empError } = await supabase
           .from('employees')
-          .upsert([this.transformToSnakeCase(cleanData)], { onConflict: 'id' });
+          .upsert([this.transformToSnakeCase(uuidCleanedData)], { onConflict: 'id' });
         if (empError) throw empError;
         console.log('✅ Employee synced:', cleanData.id);
         break;
@@ -164,7 +161,7 @@ class SyncManager {
       case 'debts':
         const { error: debtError } = await supabase
           .from('debts')
-          .upsert([this.transformToSnakeCase(cleanData)], { onConflict: 'id' });
+          .upsert([this.transformToSnakeCase(uuidCleanedData)], { onConflict: 'id' });
         if (debtError) throw debtError;
         console.log('✅ Debt synced:', cleanData.id);
         break;
@@ -172,7 +169,7 @@ class SyncManager {
       case 'checks':
         const { error: checkError } = await supabase
           .from('checks')
-          .upsert([this.transformToSnakeCase(cleanData)], { onConflict: 'id' });
+          .upsert([this.transformToSnakeCase(uuidCleanedData)], { onConflict: 'id' });
         if (checkError) throw checkError;
         console.log('✅ Check synced:', cleanData.id);
         break;
@@ -180,7 +177,7 @@ class SyncManager {
       case 'boletos':
         const { error: boletoError } = await supabase
           .from('boletos')
-          .upsert([this.transformToSnakeCase(cleanData)], { onConflict: 'id' });
+          .upsert([this.transformToSnakeCase(uuidCleanedData)], { onConflict: 'id' });
         if (boletoError) throw boletoError;
         console.log('✅ Boleto synced:', cleanData.id);
         break;
@@ -253,6 +250,40 @@ class SyncManager {
     }
     
     return result;
+  }
+
+  private cleanUUIDFieldsForSync(obj: any): any {
+    if (!obj || typeof obj !== 'object') return obj;
+    
+    const cleaned = { ...obj };
+    
+    Object.keys(cleaned).forEach(key => {
+      if (key.endsWith('_id') || key.endsWith('Id') || key === 'id' || 
+          key === 'customerId' || key === 'paymentMethodId' || key === 'saleId') {
+        const value = cleaned[key];
+        if (value === '' || value === 'null' || value === 'undefined' || !value) {
+          cleaned[key] = null;
+        } else if (typeof value === 'string') {
+          const trimmed = value.trim();
+          if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
+            cleaned[key] = null;
+          } else {
+            // For sync, we need to validate UUIDs more carefully
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            if (!uuidRegex.test(trimmed)) {
+              console.warn(`⚠️ Invalid UUID for ${key} during sync:`, trimmed, '- converting to null');
+              cleaned[key] = null;
+            } else {
+              cleaned[key] = trimmed;
+            }
+          }
+        } else {
+          cleaned[key] = value;
+        }
+      }
+    });
+    
+    return cleaned;
   }
 
   public addSyncListener(listener: (status: { isSyncing: boolean; progress: number; total: number }) => void): () => void {

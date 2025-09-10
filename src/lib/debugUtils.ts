@@ -92,6 +92,12 @@ export class SalesDebugger {
       errors.push('Cliente é obrigatório');
     }
 
+    // Enhanced client validation - check if it looks like a UUID
+    if (payload.client && typeof payload.client === 'string' && payload.client.length === 36) {
+      if (isValidUUID(payload.client)) {
+        errors.push('Cliente parece ser um UUID - use o nome do cliente');
+      }
+    }
     if (!payload.totalValue || typeof payload.totalValue !== 'number' || payload.totalValue <= 0) {
       errors.push('Valor total deve ser um número maior que zero');
     }
@@ -109,6 +115,18 @@ export class SalesDebugger {
         if (typeof method.amount !== 'number' || method.amount <= 0) {
           errors.push(`Método ${index + 1}: Valor deve ser maior que zero`);
         }
+        
+        // Validate UUID fields in payment methods
+        Object.keys(method).forEach(key => {
+          if (key.endsWith('Id') || key.endsWith('_id')) {
+            const value = method[key];
+            if (value === '') {
+              errors.push(`Método ${index + 1}: Campo ${key} não pode ser string vazia (use null)`);
+            } else if (value && typeof value === 'string' && !isValidUUID(value)) {
+              errors.push(`Método ${index + 1}: Campo ${key} deve ser UUID válido ou null`);
+            }
+          }
+        });
       });
     }
 
@@ -121,6 +139,15 @@ export class SalesDebugger {
       }
     }
 
+    // Additional UUID field validation
+    ['customerId', 'paymentMethodId', 'saleId'].forEach(field => {
+      const value = payload[field];
+      if (value === '') {
+        errors.push(`Campo ${field} não pode ser string vazia (use null)`);
+      } else if (value && typeof value === 'string' && !isValidUUID(value)) {
+        errors.push(`Campo ${field} deve ser UUID válido ou null`);
+      }
+    });
     return {
       isValid: errors.length === 0,
       errors

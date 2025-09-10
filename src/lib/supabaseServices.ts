@@ -36,7 +36,8 @@ export function sanitizePayload(data: any): any {
   
   for (const [key, value] of Object.entries(data)) {
     // Handle UUID fields specifically
-    if (key.endsWith('_id') || key.endsWith('Id') || key === 'id') {
+    if (key.endsWith('_id') || key.endsWith('Id') || key === 'id' || 
+        key === 'customerId' || key === 'paymentMethodId' || key === 'saleId') {
       if (value === '' || value === 'null' || value === 'undefined' || value === undefined || value === null) {
         sanitized[key] = null;
       } else if (typeof value === 'string') {
@@ -83,18 +84,13 @@ export function cleanUUIDFields(obj: any): any {
   const cleaned = { ...obj };
   
   Object.keys(cleaned).forEach(key => {
-    if (key.endsWith('_id') || key.endsWith('Id') || key === 'id') {
+    if (key.endsWith('_id') || key.endsWith('Id') || key === 'id' || 
+        key === 'customerId' || key === 'paymentMethodId' || key === 'saleId') {
       const value = cleaned[key];
       if (value === '' || value === 'null' || value === 'undefined' || !value) {
         cleaned[key] = null;
       } else if (typeof value === 'string') {
         const trimmed = value.trim();
-        if (isValidUUID(value)) {
-          sanitized[key] = value;
-        } else {
-          console.warn(`⚠️ Invalid UUID for ${key}:`, value, '- converting to null');
-          sanitized[key] = null;
-        }
         if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
           cleaned[key] = null;
         } else if (!isValidUUID(trimmed)) {
@@ -144,27 +140,28 @@ export async function createSaleRPC(payload: any): Promise<string> {
     console.log('🔄 Creating sale with RPC...');
     console.log('📤 Original payload:', payload);
     
-    // Step 1: Sanitize the payload
-    const sanitized = sanitizePayload(payload);
-    console.log('🧹 Sanitized payload:', sanitized);
-    
-    // Step 1.5: Additional UUID field cleaning
-    const uuidCleaned = cleanUUIDFields(sanitized);
+    // Step 1: Enhanced UUID field cleaning first
+    const uuidCleaned = cleanUUIDFields(payload);
     console.log('🔧 UUID cleaned payload:', uuidCleaned);
     
-    // Step 2: Transform to snake_case
-    const snakeCasePayload = transformToSnakeCase(uuidCleaned);
+    // Step 2: Sanitize the payload
+    const sanitized = sanitizePayload(uuidCleaned);
+    console.log('🧹 Sanitized payload:', sanitized);
+    
+    // Step 3: Transform to snake_case
+    const snakeCasePayload = transformToSnakeCase(sanitized);
     console.log('🐍 Snake case payload:', snakeCasePayload);
     
-    // Step 2.5: Final UUID validation before sending to database
+    // Step 4: Final UUID validation before sending to database
     Object.keys(snakeCasePayload).forEach(key => {
-      if (key.endsWith('_id') && snakeCasePayload[key] === '') {
+      if ((key.endsWith('_id') || key === 'customer_id' || key === 'payment_method_id') && 
+          (snakeCasePayload[key] === '' || snakeCasePayload[key] === 'null' || snakeCasePayload[key] === 'undefined')) {
         console.warn(`⚠️ Found empty string UUID field ${key}, converting to null`);
         snakeCasePayload[key] = null;
       }
     });
     
-    // Step 3: Try to call the RPC function with offline support
+    // Step 5: Try to call the RPC function with offline support
     const result = await safeSupabaseCall(async () => {
       const { data, error } = await supabase.rpc('create_sale', { 
         payload: snakeCasePayload 
@@ -176,11 +173,11 @@ export async function createSaleRPC(payload: any): Promise<string> {
     // Handle offline mode
     if (result.offline) {
       console.log('📴 Working offline, saving sale locally...');
-      const offlineId = await saveOffline('sales', uuidCleaned);
+      const offlineId = await saveOffline('sales', sanitized);
       await addToSyncQueue({
         type: 'create',
         table: 'sales',
-        data: uuidCleaned,
+        data: sanitized,
         maxRetries: 5
       });
       

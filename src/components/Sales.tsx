@@ -56,10 +56,14 @@ export function Sales() {
     try {
       console.log('🔄 Sales.handleSaleSubmit called with:', saleData);
       
-      // Step 1: Clean UUID fields before any other processing
+      // Step 1: Comprehensive UUID field cleaning before any other processing
       const uuidCleanedData = { ...saleData };
+      
+      // Define all possible UUID fields that might be present
+      const uuidFields = ['sellerId', 'customerId', 'paymentMethodId', 'saleId', 'id'];
+      
       Object.keys(uuidCleanedData).forEach(key => {
-        if (key.endsWith('Id') || key.endsWith('_id')) {
+        if (key.endsWith('Id') || key.endsWith('_id') || uuidFields.includes(key)) {
           const value = uuidCleanedData[key];
           if (value === '' || value === 'null' || value === 'undefined' || !value) {
             uuidCleanedData[key] = null;
@@ -75,6 +79,57 @@ export function Sales() {
         }
       });
       
+      // Step 2: Clean UUID fields in nested structures (payment methods, third party details)
+      if (uuidCleanedData.paymentMethods && Array.isArray(uuidCleanedData.paymentMethods)) {
+        uuidCleanedData.paymentMethods = uuidCleanedData.paymentMethods.map(method => {
+          const cleanedMethod = { ...method };
+          
+          // Clean UUID fields in payment methods
+          Object.keys(cleanedMethod).forEach(key => {
+            if (key.endsWith('Id') || key.endsWith('_id') || uuidFields.includes(key)) {
+              const value = cleanedMethod[key];
+              if (value === '' || value === 'null' || value === 'undefined' || !value) {
+                cleanedMethod[key] = null;
+              } else if (typeof value === 'string') {
+                const trimmed = value.trim();
+                if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
+                  cleanedMethod[key] = null;
+                } else if (!isValidUUID(trimmed)) {
+                  console.warn(`⚠️ Invalid UUID in payment method ${key}:`, trimmed, '- converting to null');
+                  cleanedMethod[key] = null;
+                }
+              }
+            }
+          });
+          
+          // Clean UUID fields in third party check details
+          if (cleanedMethod.thirdPartyDetails && Array.isArray(cleanedMethod.thirdPartyDetails)) {
+            cleanedMethod.thirdPartyDetails = cleanedMethod.thirdPartyDetails.map(detail => {
+              const cleanedDetail = { ...detail };
+              Object.keys(cleanedDetail).forEach(key => {
+                if (key.endsWith('Id') || key.endsWith('_id') || uuidFields.includes(key)) {
+                  const value = cleanedDetail[key];
+                  if (value === '' || value === 'null' || value === 'undefined' || !value) {
+                    cleanedDetail[key] = null;
+                  } else if (typeof value === 'string') {
+                    const trimmed = value.trim();
+                    if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
+                      cleanedDetail[key] = null;
+                    } else if (!isValidUUID(trimmed)) {
+                      console.warn(`⚠️ Invalid UUID in third party detail ${key}:`, trimmed, '- converting to null');
+                      cleanedDetail[key] = null;
+                    }
+                  }
+                }
+              });
+              return cleanedDetail;
+            });
+          }
+          
+          return cleanedMethod;
+        });
+      }
+      
       console.log('🔧 UUID cleaned data:', uuidCleanedData);
       
       // Enhanced frontend validation and sanitization
@@ -89,10 +144,17 @@ export function Sales() {
       
       // Enhanced seller validation
       if (sanitizedSaleData.sellerId) {
+        // Double-check UUID validity
+        if (!isValidUUID(sanitizedSaleData.sellerId)) {
+          console.warn('⚠️ Invalid seller UUID detected, setting to null:', sanitizedSaleData.sellerId);
+          sanitizedSaleData.sellerId = null;
+        } else {
+          // Validate seller exists and is active
         const seller = employees.find(emp => emp.id === sanitizedSaleData.sellerId && emp.isActive);
         if (!seller) {
           toast.error('Vendedor selecionado não existe ou não está ativo. Selecione um vendedor válido ou deixe em branco.');
           return;
+        }
         }
       }
       
@@ -126,6 +188,20 @@ export function Sales() {
           toast.error('Todos os métodos de pagamento devem ter um valor válido maior que zero.');
           return;
         }
+        
+        // Validate UUID fields in payment methods
+        Object.keys(method).forEach(key => {
+          if (key.endsWith('Id') || key.endsWith('_id')) {
+            const value = method[key];
+            if (value === '') {
+              console.warn(`⚠️ Empty string UUID in payment method ${key}, converting to null`);
+              method[key] = null;
+            } else if (value && typeof value === 'string' && !isValidUUID(value)) {
+              console.warn(`⚠️ Invalid UUID in payment method ${key}:`, value, '- converting to null');
+              method[key] = null;
+            }
+          }
+        });
       }
       
       const totalPaymentAmount = sanitizedSaleData.paymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
@@ -143,6 +219,7 @@ export function Sales() {
       console.log('📤 Final sale data being sent:', {
         client: sanitizedSaleData.client,
         sellerId: sanitizedSaleData.sellerId,
+        sellerIdValid: sanitizedSaleData.sellerId ? isValidUUID(sanitizedSaleData.sellerId) : 'null',
         totalValue: sanitizedSaleData.totalValue,
         paymentMethodsCount: sanitizedSaleData.paymentMethods?.length || 0,
         receivedAmount: sanitizedSaleData.receivedAmount,
