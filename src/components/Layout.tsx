@@ -1,4 +1,5 @@
 import React from 'react';
+import { OfflineIndicator } from './OfflineIndicator';
 import { 
   Home, 
   Users, 
@@ -36,6 +37,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50 flex">
+      <OfflineIndicator />
       {/* Sidebar */}
       <div className="w-80 bg-gradient-to-b from-slate-800 via-green-900 to-emerald-900 shadow-2xl relative overflow-hidden">
         {/* Background Effects */}

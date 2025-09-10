@@ -4,6 +4,8 @@ import { useAppContext } from '../../context/AppContext';
 import { Sale, PaymentMethod, ThirdPartyCheckDetails } from '../../types';
 import { CreateSalePayload, SaleBoleto, SaleCheque, sanitizePayload, isValidUUID } from '../../lib/supabaseServices';
 import { SalesDebugger } from '../../lib/debugUtils';
+import { connectionManager } from '../../lib/connectionManager';
+import toast from 'react-hot-toast';
 
 interface SaleFormProps {
   sale?: Sale | null;
@@ -23,6 +25,7 @@ const PAYMENT_TYPES = [
 
 export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   const { employees } = useAppContext();
+  const [connectionStatus, setConnectionStatus] = useState(connectionManager.getStatus());
   
   const [formData, setFormData] = useState({
     date: sale?.date || new Date().toISOString().split('T')[0],
@@ -43,6 +46,11 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
 
   const activeEmployees = employees.filter(emp => emp.isActive);
   const sellers = activeEmployees.filter(emp => emp.isSeller);
+
+  useEffect(() => {
+    const unsubscribe = connectionManager.addListener(setConnectionStatus);
+    return unsubscribe;
+  }, []);
 
   const addPaymentMethod = () => {
     setFormData(prev => ({
@@ -188,14 +196,14 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       if (method.type === 'cheque' && method.isThirdPartyCheck && method.thirdPartyDetails) {
         for (const detail of method.thirdPartyDetails) {
           if (!detail.issuer || !detail.cpfCnpj || !detail.bank || !detail.agency || !detail.account || !detail.checkNumber) {
-            alert('Por favor, preencha todos os campos obrigatórios dos cheques de terceiros.');
+            toast.error('Por favor, preencha todos os campos obrigatórios dos cheques de terceiros.');
             return;
           }
           
           // Validate CPF/CNPJ format (basic)
           const cpfCnpj = detail.cpfCnpj.replace(/\D/g, '');
           if (cpfCnpj.length !== 11 && cpfCnpj.length !== 14) {
-            alert('CPF deve ter 11 dígitos e CNPJ deve ter 14 dígitos.');
+            toast.error('CPF deve ter 11 dígitos e CNPJ deve ter 14 dígitos.');
             return;
           }
         }
@@ -251,7 +259,7 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       .filter(method => method !== null); // Remove null methods
     
     if (cleanedPaymentMethods.length === 0) {
-      alert('Pelo menos um método de pagamento deve ter valor maior que zero.');
+      toast.error('Pelo menos um método de pagamento deve ter valor maior que zero.');
       return;
     }
     
@@ -320,7 +328,7 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     
     // Final comprehensive validation
     if (!saleToSubmit.client || saleToSubmit.client.trim() === '') {
-      alert('Nome do cliente é obrigatório e não pode estar vazio.');
+      toast.error('Nome do cliente é obrigatório e não pode estar vazio.');
       return;
     }
     
@@ -330,12 +338,12 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     }
     
     if (saleToSubmit.totalValue <= 0) {
-      alert('Valor total deve ser maior que zero.');
+      toast.error('Valor total deve ser maior que zero.');
       return;
     }
     
     if (!saleToSubmit.paymentMethods || saleToSubmit.paymentMethods.length === 0) {
-      alert('Pelo menos um método de pagamento é obrigatório.');
+      toast.error('Pelo menos um método de pagamento é obrigatório.');
       return;
     }
     
@@ -346,7 +354,7 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     const validation = SalesDebugger.validateSalePayload(finalPayload);
     if (!validation.isValid) {
       console.error('❌ Payload validation failed:', validation.errors);
-      alert('Erro de validação:\n' + validation.errors.join('\n'));
+      toast.error('Erro de validação: ' + validation.errors.join(', '));
       return;
     }
     
@@ -403,6 +411,21 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                 </div>
                 <h3 className="text-xl font-bold text-green-900">Informações Básicas</h3>
               </div>
+              
+              {/* Connection Status Indicator */}
+              {!connectionStatus.isOnline && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 text-blue-600" />
+                    <div>
+                      <p className="text-blue-800 font-semibold">Modo Offline</p>
+                      <p className="text-blue-700 text-sm">
+                        Venda será salva localmente e sincronizada quando online
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="form-group">

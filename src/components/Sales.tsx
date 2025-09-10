@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import type { Sale } from '../types';
 import { DebugPanel } from './DebugPanel';
 import { TestSaleCreation } from './TestSaleCreation';
+import { OfflineDataViewer } from './OfflineDataViewer';
 
 export function Sales() {
   const { 
@@ -31,6 +32,7 @@ export function Sales() {
   const [showDebugErrors, setShowDebugErrors] = useState(false);
   const [showTestPanel, setShowTestPanel] = useState(false);
   const [offlineSales, setOfflineSales] = useState<any[]>([]);
+  const [showOfflineData, setShowOfflineData] = useState(false);
 
   // Load offline sales data
   useEffect(() => {
@@ -297,6 +299,14 @@ export function Sales() {
         >
           <Play className="w-5 h-5" />
           Testes
+        </button>
+        <button
+          onClick={() => setShowOfflineData(true)}
+          className="btn-secondary flex items-center gap-2"
+          title="Ver dados offline"
+        >
+          <Database className="w-5 h-5" />
+          Dados Offline
         </button>
       </div>
 
@@ -943,6 +953,12 @@ export function Sales() {
       <TestSaleCreation
         isOpen={showTestPanel}
         onClose={() => setShowTestPanel(false)}
+      />
+      
+      {/* Offline Data Viewer */}
+      <OfflineDataViewer
+        isOpen={showOfflineData}
+        onClose={() => setShowOfflineData(false)}
       />
     </div>
   );
