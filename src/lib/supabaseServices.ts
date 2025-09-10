@@ -39,16 +39,31 @@ export function sanitizePayload(data: any): any {
     if (key.endsWith('_id') || key.endsWith('Id') || key === 'id' || 
         key === 'customerId' || key === 'paymentMethodId' || key === 'saleId') {
       if (value === '' || value === 'null' || value === 'undefined' || value === undefined || value === null) {
-        sanitized[key] = null;
+        // Auto-generate UUID for primary key fields when missing
+        if (key === 'id') {
+          sanitized[key] = uuidv4();
+        } else {
+          sanitized[key] = null;
+        }
       } else if (typeof value === 'string') {
         const trimmed = value.trim();
         if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
-          sanitized[key] = null;
+          // Auto-generate UUID for primary key fields when empty
+          if (key === 'id') {
+            sanitized[key] = uuidv4();
+          } else {
+            sanitized[key] = null;
+          }
         } else if (isValidUUID(trimmed)) {
           sanitized[key] = trimmed;
         } else {
           console.warn(`⚠️ Invalid UUID for ${key}:`, value, '- converting to null');
-          sanitized[key] = null;
+          // Auto-generate UUID for primary key fields when invalid
+          if (key === 'id') {
+            sanitized[key] = uuidv4();
+          } else {
+            sanitized[key] = null;
+          }
         }
       } else {
         sanitized[key] = value;

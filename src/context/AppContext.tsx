@@ -391,70 +391,18 @@ export function AppProvider({ children }: AppProviderProps) {
     try {
       console.log('🔄 AppContext.createSale called with:', saleData);
       
-      // Step 1: Enhanced UUID field validation and cleaning
-      const cleanedSaleData = { ...saleData };
-      
-      // Clean all UUID fields with comprehensive validation
-      Object.keys(cleanedSaleData).forEach(key => {
-        if (key.endsWith('Id') || key.endsWith('_id') || 
-            key === 'customerId' || key === 'paymentMethodId' || key === 'saleId') {
-          const value = cleanedSaleData[key];
-          if (value === '' || value === 'null' || value === 'undefined' || !value) {
-            cleanedSaleData[key] = null;
-          } else if (typeof value === 'string') {
-            const trimmed = value.trim();
-            if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
-              cleanedSaleData[key] = null;
-            } else if (!isValidUUID(trimmed)) {
-              console.warn(`⚠️ Invalid UUID for ${key}:`, trimmed, '- converting to null');
-              cleanedSaleData[key] = null;
-            } else {
-              cleanedSaleData[key] = trimmed;
-            }
-          }
-        }
-      });
-      
-      // Step 2: Clean UUID fields in nested objects (payment methods)
-      if (cleanedSaleData.paymentMethods && Array.isArray(cleanedSaleData.paymentMethods)) {
-        cleanedSaleData.paymentMethods = cleanedSaleData.paymentMethods.map(method => {
-          const cleanedMethod = { ...method };
-          
-          Object.keys(cleanedMethod).forEach(key => {
-            if (key.endsWith('Id') || key.endsWith('_id')) {
-              const value = cleanedMethod[key];
-              if (value === '' || value === 'null' || value === 'undefined' || !value) {
-                cleanedMethod[key] = null;
-              } else if (typeof value === 'string') {
-                const trimmed = value.trim();
-                if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
-                  cleanedMethod[key] = null;
-                } else if (!isValidUUID(trimmed)) {
-                  console.warn(`⚠️ Invalid UUID in payment method ${key}:`, trimmed, '- converting to null');
-                  cleanedMethod[key] = null;
-                }
-              }
-            }
-          });
-          
-          return cleanedMethod;
-        });
-      }
-      
-      console.log('🧹 UUID cleaned sale data:', cleanedSaleData);
-      
-      // Step 3: Additional validation before calling service
-      if (!cleanedSaleData.client || (typeof cleanedSaleData.client === 'string' && !cleanedSaleData.client.trim())) {
+      // Validation before calling service
+      if (!saleData.client || (typeof saleData.client === 'string' && !saleData.client.trim())) {
         throw new Error('Cliente é obrigatório e não pode estar vazio');
       }
       
       // Validate seller if provided
-      if (cleanedSaleData.sellerId && !isValidUUID(cleanedSaleData.sellerId)) {
-        console.warn('⚠️ Invalid seller UUID in context, setting to null:', cleanedSaleData.sellerId);
-        cleanedSaleData.sellerId = null;
+      if (saleData.sellerId && !isValidUUID(saleData.sellerId)) {
+        console.warn('⚠️ Invalid seller UUID in context, setting to null:', saleData.sellerId);
+        saleData.sellerId = null;
       }
       
-      const id = await salesService.create(cleanedSaleData);
+      const id = await salesService.create(saleData);
       await loadAllData();
       return id;
     } catch (error) {
