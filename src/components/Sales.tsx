@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Calendar, DollarSign, User, Package, FileText, Eye, Edit, Trash2, X, CreditCard, Receipt, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Play } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import SaleForm from './forms/SaleForm';
 import { useAppContext } from '../context/AppContext';
 import { sanitizePayload, isValidUUID, debugService } from '../lib/supabaseServices';
@@ -305,7 +306,7 @@ export function Sales() {
           className="btn-secondary flex items-center gap-2"
           title="Ver dados offline"
         >
-          <Database className="w-5 h-5" />
+          <FileText className="w-5 h-5" />
           Dados Offline
         </button>
       </div>
