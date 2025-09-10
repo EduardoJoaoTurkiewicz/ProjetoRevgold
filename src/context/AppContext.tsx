@@ -2,6 +2,10 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase } from '../lib/supabase';
 import { isSupabaseConfigured, healthCheck } from '../lib/supabase';
 import { ErrorHandler } from '../lib/errorHandler';
+import { connectionManager } from '../lib/connectionManager';
+import { syncManager } from '../lib/syncManager';
+import { getOfflineData } from '../lib/offlineStorage';
+import toast from 'react-hot-toast';
 import { 
   salesService, 
   employeesService, 
@@ -145,13 +149,17 @@ export function AppProvider({ children }: AppProviderProps) {
       
       // Check Supabase configuration first
       if (!isSupabaseConfigured()) {
-        throw new Error('Supabase não está configurado. Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env');
+        console.warn('⚠️ Supabase not configured, loading offline data only');
+        await loadOfflineDataOnly();
+        return;
       }
       
       // Test connection
       const healthStatus = await healthCheck();
       if (!healthStatus.connected) {
-        throw new Error(healthStatus.error || 'Não foi possível conectar ao Supabase');
+        console.warn('⚠️ Supabase not reachable, loading offline data only');
+        await loadOfflineDataOnly();
+        return;
       }
       
       const [
@@ -204,16 +212,84 @@ export function AppProvider({ children }: AppProviderProps) {
       console.log('✅ All data loaded successfully');
     } catch (error) {
       ErrorHandler.logProjectError(error, 'Load All Data');
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao carregar dados';
-      setError(ErrorHandler.handleSupabaseError(error));
+      
+      // Try to load offline data as fallback
+      console.warn('⚠️ Failed to load from Supabase, trying offline data...');
+      try {
+        await loadOfflineDataOnly();
+        toast.error('❌ Sem conexão com servidor. Mostrando dados offline.');
+      } catch (offlineError) {
+        const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao carregar dados';
+        setError(ErrorHandler.handleSupabaseError(error));
+      }
     } finally {
       setLoading(false);
       setIsLoading(false);
     }
   };
 
+  // Load offline data only
+  const loadOfflineDataOnly = async () => {
+    try {
+      console.log('📱 Loading offline data...');
+      
+      const offlineData = await getOfflineData();
+      
+      // Group offline data by table
+      const salesData = offlineData.filter(d => d.table === 'sales').map(d => d.data);
+      const employeesData = offlineData.filter(d => d.table === 'employees').map(d => d.data);
+      const debtsData = offlineData.filter(d => d.table === 'debts').map(d => d.data);
+      const checksData = offlineData.filter(d => d.table === 'checks').map(d => d.data);
+      const boletosData = offlineData.filter(d => d.table === 'boletos').map(d => d.data);
+      
+      // Set offline data
+      setSales(salesData);
+      setEmployees(employeesData);
+      setDebts(debtsData);
+      setChecks(checksData);
+      setBoletos(boletosData);
+      
+      // Set empty arrays for data that doesn't have offline support yet
+      setCashTransactions([]);
+      setAgendaEvents([]);
+      setTaxes([]);
+      setPixFees([]);
+      setCashBalance(null);
+      setEmployeePayments([]);
+      setEmployeeAdvances([]);
+      setEmployeeOvertimes([]);
+      setEmployeeCommissions([]);
+      
+      console.log('📱 Offline data loaded:', {
+        sales: salesData.length,
+        employees: employeesData.length,
+        debts: debtsData.length,
+        checks: checksData.length,
+        boletos: boletosData.length
+      });
+      
+    } catch (error) {
+      console.error('Error loading offline data:', error);
+      throw error;
+    }
+  };
   useEffect(() => {
     loadAllData();
+    
+    // Setup connection monitoring and auto-sync
+    const unsubscribe = connectionManager.addListener((status) => {
+      if (status.isOnline && status.isSupabaseReachable) {
+        console.log('🌐 Connection restored, starting auto-sync...');
+        syncManager.startSync().then(() => {
+          // Reload data after successful sync
+          loadAllData();
+        });
+      }
+    });
+    
+    return () => {
+      unsubscribe();
+    };
   }, []);
   
   // Cash methods

@@ -1,6 +1,9 @@
 import { supabase } from './supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { ErrorHandler } from './errorHandler';
+import { safeSupabaseCall } from './connectionManager';
+import { saveOffline, addToSyncQueue } from './offlineStorage';
+import toast from 'react-hot-toast';
 import type { 
   Sale, 
   Debt, 
@@ -110,30 +113,40 @@ export async function createSaleRPC(payload: any): Promise<string> {
     const snakeCasePayload = transformToSnakeCase(sanitized);
     console.log('🐍 Snake case payload:', snakeCasePayload);
     
-    // Step 3: Call the RPC function
-    const { data: saleId, error } = await supabase.rpc('create_sale', { 
-      payload: snakeCasePayload 
+    // Step 3: Try to call the RPC function with offline support
+    const result = await safeSupabaseCall(async () => {
+      const { data, error } = await supabase.rpc('create_sale', { 
+        payload: snakeCasePayload 
+      });
+      if (error) throw error;
+      return data;
     });
     
-    if (error) {
-      ErrorHandler.logProjectError(error, 'RPC create_sale');
-      
-      // Enhanced error logging
-      console.log('🔍 Error details:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
+    // Handle offline mode
+    if (result.offline) {
+      console.log('📴 Working offline, saving sale locally...');
+      const offlineId = await saveOffline('sales', sanitized);
+      await addToSyncQueue({
+        type: 'create',
+        table: 'sales',
+        data: sanitized,
+        maxRetries: 5
       });
       
-      // Log the payload that caused the error
-      console.log('💥 Failed payload:', JSON.stringify(snakeCasePayload, null, 2));
-      
-      throw new Error(ErrorHandler.handleSupabaseError(error));
+      toast.success('💾 Venda salva localmente. Será sincronizada quando online.');
+      return offlineId;
     }
     
-    console.log('✅ Sale created successfully with ID:', saleId);
-    return saleId;
+    // Handle errors
+    if (result.error) {
+      ErrorHandler.logProjectError(result.error, 'RPC create_sale');
+      console.log('💥 Failed payload:', JSON.stringify(snakeCasePayload, null, 2));
+      throw new Error(ErrorHandler.handleSupabaseError(result.error));
+    }
+    
+    console.log('✅ Sale created successfully with ID:', result.data);
+    toast.success('✅ Venda criada com sucesso!');
+    return result.data;
     
   } catch (error) {
     ErrorHandler.logProjectError(error, 'createSaleRPC');
@@ -250,16 +263,36 @@ export const salesService = {
       const dbData = transformToSnakeCase(sanitizedData);
       console.log('🐍 Snake case update data:', dbData);
       
-      const { data, error } = await supabase
-        .from('sales')
-        .update(dbData)
-        .eq('id', id)
-        .select()
-        .single();
+      const result = await safeSupabaseCall(async () => {
+        const { data, error } = await supabase
+          .from('sales')
+          .update(dbData)
+          .eq('id', id)
+          .select()
+          .single();
+        if (error) throw error;
+        return data;
+      });
       
-      if (error) throw error;
+      // Handle offline mode
+      if (result.offline) {
+        console.log('📴 Working offline, queuing sale update...');
+        await addToSyncQueue({
+          type: 'update',
+          table: 'sales',
+          data: { id, ...sanitizedData },
+          maxRetries: 3
+        });
+        
+        toast.success('💾 Atualização salva localmente. Será sincronizada quando online.');
+        return { ...sanitizedData, id } as Sale;
+      }
+      
+      if (result.error) throw result.error;
+      
       console.log('✅ Sale updated successfully');
-      return toCamelCase(data);
+      toast.success('✅ Venda atualizada com sucesso!');
+      return toCamelCase(result.data);
     } catch (error) {
       ErrorHandler.logProjectError(error, 'Update Sale');
       throw error;
@@ -270,13 +303,33 @@ export const salesService = {
     try {
       console.log('🔄 Deleting sale:', id);
       
-      const { error } = await supabase
-        .from('sales')
-        .delete()
-        .eq('id', id);
+      const result = await safeSupabaseCall(async () => {
+        const { error } = await supabase
+          .from('sales')
+          .delete()
+          .eq('id', id);
+        if (error) throw error;
+        return true;
+      });
       
-      if (error) throw error;
+      // Handle offline mode
+      if (result.offline) {
+        console.log('📴 Working offline, queuing sale deletion...');
+        await addToSyncQueue({
+          type: 'delete',
+          table: 'sales',
+          data: { id },
+          maxRetries: 3
+        });
+        
+        toast.success('💾 Exclusão salva localmente. Será sincronizada quando online.');
+        return;
+      }
+      
+      if (result.error) throw result.error;
+      
       console.log('✅ Sale deleted successfully');
+      toast.success('✅ Venda excluída com sucesso!');
     } catch (error) {
       ErrorHandler.logProjectError(error, 'Delete Sale');
       throw error;
@@ -514,14 +567,34 @@ export const employeesService = {
       const sanitizedData = sanitizePayload(employeeData);
       const dbData = transformToSnakeCase(sanitizedData);
       
-      const { data, error } = await supabase
-        .from('employees')
-        .insert([dbData])
-        .select()
-        .single();
+      const result = await safeSupabaseCall(async () => {
+        const { data, error } = await supabase
+          .from('employees')
+          .insert([dbData])
+          .select()
+          .single();
+        if (error) throw error;
+        return data;
+      });
       
-      if (error) throw error;
-      return toCamelCase(data);
+      // Handle offline mode
+      if (result.offline) {
+        const offlineId = await saveOffline('employees', sanitizedData);
+        await addToSyncQueue({
+          type: 'create',
+          table: 'employees',
+          data: sanitizedData,
+          maxRetries: 3
+        });
+        
+        toast.success('💾 Funcionário salvo localmente. Será sincronizado quando online.');
+        return { ...sanitizedData, id: offlineId } as Employee;
+      }
+      
+      if (result.error) throw result.error;
+      
+      toast.success('✅ Funcionário criado com sucesso!');
+      return toCamelCase(result.data);
     } catch (error) {
       console.error('Error creating employee:', error);
       throw error;

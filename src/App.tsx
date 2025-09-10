@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { AppProvider } from './context/AppContext';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ConnectionStatus } from './components/ConnectionStatus';
+import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import { Sales } from './components/Sales';
@@ -21,6 +23,33 @@ function App() {
     <ErrorBoundary>
       <Router>
         <AppProvider>
+          <Toaster 
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: '#fff',
+                color: '#333',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                fontSize: '14px',
+                fontWeight: '600'
+              },
+              success: {
+                iconTheme: {
+                  primary: '#10b981',
+                  secondary: '#fff',
+                },
+              },
+              error: {
+                iconTheme: {
+                  primary: '#ef4444',
+                  secondary: '#fff',
+                },
+              },
+            }}
+          />
+          <ConnectionStatus />
           <Routes>
             <Route path="/print/reports" element={<PrintReportPage />} />
             <Route path="/*" element={<AppContent />} />

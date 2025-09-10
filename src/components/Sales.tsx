@@ -5,6 +5,8 @@ import SaleForm from './forms/SaleForm';
 import { useAppContext } from '../context/AppContext';
 import { sanitizePayload, isValidUUID, debugService } from '../lib/supabaseServices';
 import { ErrorHandler } from '../lib/errorHandler';
+import { getOfflineData } from '../lib/offlineStorage';
+import toast from 'react-hot-toast';
 import type { Sale } from '../types';
 import { DebugPanel } from './DebugPanel';
 import { TestSaleCreation } from './TestSaleCreation';
@@ -28,7 +30,25 @@ export function Sales() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showDebugErrors, setShowDebugErrors] = useState(false);
   const [showTestPanel, setShowTestPanel] = useState(false);
+  const [offlineSales, setOfflineSales] = useState<any[]>([]);
 
+  // Load offline sales data
+  useEffect(() => {
+    const loadOfflineSales = async () => {
+      try {
+        const offlineData = await getOfflineData('sales');
+        setOfflineSales(offlineData.map(d => d.data));
+      } catch (error) {
+        console.error('Error loading offline sales:', error);
+      }
+    };
+    
+    loadOfflineSales();
+    
+    // Update offline sales when storage changes
+    const interval = setInterval(loadOfflineSales, 2000);
+    return () => clearInterval(interval);
+  }, []);
   const handleSaleSubmit = async (saleData: Partial<Sale>) => {
     try {
       console.log('🔄 Sales.handleSaleSubmit called with:', saleData);
@@ -39,7 +59,7 @@ export function Sales() {
       
       // Comprehensive frontend validation
       if (!sanitizedSaleData.client || !sanitizedSaleData.client.trim()) {
-        alert('Por favor, informe o nome do cliente.');
+        toast.error('Por favor, informe o nome do cliente.');
         return;
       }
       
@@ -51,7 +71,7 @@ export function Sales() {
         } else {
           const seller = employees.find(emp => emp.id === sanitizedSaleData.sellerId && emp.isActive);
           if (!seller) {
-            alert('Vendedor selecionado não existe ou não está ativo. Selecione um vendedor válido ou deixe em branco.');
+            toast.error('Vendedor selecionado não existe ou não está ativo. Selecione um vendedor válido ou deixe em branco.');
             return;
           }
         }
@@ -60,43 +80,43 @@ export function Sales() {
       // Validate client UUID if it looks like one
       if (sanitizedSaleData.client && sanitizedSaleData.client.length === 36) {
         if (!isValidUUID(sanitizedSaleData.client)) {
-          alert('ID do cliente parece ser um UUID inválido. Use o nome do cliente em vez do ID.');
+          toast.error('ID do cliente parece ser um UUID inválido. Use o nome do cliente em vez do ID.');
           return;
         }
       }
       
       // Enhanced value validation
       if (!sanitizedSaleData.totalValue || sanitizedSaleData.totalValue <= 0) {
-        alert('O valor total da venda deve ser maior que zero.');
+        toast.error('O valor total da venda deve ser maior que zero.');
         return;
       }
       
       // Enhanced payment methods validation
       if (!sanitizedSaleData.paymentMethods || sanitizedSaleData.paymentMethods.length === 0) {
-        alert('Por favor, adicione pelo menos um método de pagamento.');
+        toast.error('Por favor, adicione pelo menos um método de pagamento.');
         return;
       }
       
       // Validate payment methods structure
       for (const method of sanitizedSaleData.paymentMethods) {
         if (!method.type || typeof method.type !== 'string') {
-          alert('Todos os métodos de pagamento devem ter um tipo válido.');
+          toast.error('Todos os métodos de pagamento devem ter um tipo válido.');
           return;
         }
         if (typeof method.amount !== 'number' || method.amount <= 0) {
-          alert('Todos os métodos de pagamento devem ter um valor válido maior que zero.');
+          toast.error('Todos os métodos de pagamento devem ter um valor válido maior que zero.');
           return;
         }
       }
       
       const totalPaymentAmount = sanitizedSaleData.paymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
       if (totalPaymentAmount === 0) {
-        alert('Por favor, informe pelo menos um método de pagamento com valor maior que zero.');
+        toast.error('Por favor, informe pelo menos um método de pagamento com valor maior que zero.');
         return;
       }
       
       if (totalPaymentAmount > sanitizedSaleData.totalValue) {
-        alert('O total dos métodos de pagamento não pode ser maior que o valor total da venda.');
+        toast.error('O total dos métodos de pagamento não pode ser maior que o valor total da venda.');
         return;
       }
       
@@ -131,7 +151,7 @@ export function Sales() {
       const errorMessage = ErrorHandler.handleSupabaseError(error);
       
       // Show user-friendly error
-      alert('Erro ao salvar venda: ' + errorMessage);
+      toast.error('Erro ao salvar venda: ' + errorMessage);
       
       // Log detailed error for debugging
       console.log('🔍 Detailed error information:', {
@@ -159,16 +179,20 @@ export function Sales() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta venda?')) return;
+    if (!window.confirm('Tem certeza que deseja excluir esta venda?')) return;
 
     try {
       await deleteSale(id);
     } catch (error) {
       ErrorHandler.logProjectError(error, 'Delete Sale');
+      toast.error('Erro ao excluir venda: ' + ErrorHandler.handleSupabaseError(error));
     }
   };
 
-  const filteredSales = sales.filter(sale => {
+  // Combine online and offline sales
+  const allSales = [...sales, ...offlineSales];
+  
+  const filteredSales = allSales.filter(sale => {
     const matchesSearch = sale.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          sale.observations?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || sale.status === statusFilter;
