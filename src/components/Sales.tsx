@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Eye, ShoppingCart, DollarSign, Calendar, AlertCircle, X, Bug, TestTube } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Sale } from '../types';
-import { SaleForm } from './forms/SaleForm';
+import SaleForm from './forms/SaleForm';
 import { DebugPanel } from './DebugPanel';
 import { TestSaleCreation } from './TestSaleCreation';
 
