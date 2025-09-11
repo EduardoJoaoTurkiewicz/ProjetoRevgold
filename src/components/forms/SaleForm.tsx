@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Calendar, User, DollarSign, FileText, CreditCard } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { formatCurrency, parseCurrency } from '../../utils/format';
+import { fmtBRL } from '../../utils/format';
 
 interface Product {
   name: string;
@@ -352,7 +352,7 @@ export default function SaleForm({ isOpen, onClose, onSaleCreated, editingSale }
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-gray-900">
-                      {formatCurrency(product.total)}
+                      {fmtBRL(product.total)}
                     </span>
                     {products.length > 1 && (
                       <button
@@ -433,15 +433,15 @@ export default function SaleForm({ isOpen, onClose, onSaleCreated, editingSale }
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-sm text-gray-600">Total da Venda</p>
-                <p className="text-lg font-semibold text-gray-900">{formatCurrency(totalValue)}</p>
+                <p className="text-lg font-semibold text-gray-900">{fmtBRL(totalValue)}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Valor Recebido</p>
-                <p className="text-lg font-semibold text-green-600">{formatCurrency(receivedAmount)}</p>
+                <p className="text-lg font-semibold text-green-600">{fmtBRL(receivedAmount)}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Valor Pendente</p>
-                <p className="text-lg font-semibold text-red-600">{formatCurrency(pendingAmount)}</p>
+                <p className="text-lg font-semibold text-red-600">{fmtBRL(pendingAmount)}</p>
               </div>
             </div>
           </div>
