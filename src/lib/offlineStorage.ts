@@ -47,8 +47,8 @@ export interface OfflineData {
 
 // Save data offline
 export async function saveOffline(table: string, data: any): Promise<string> {
-  // Generate a proper UUID for offline data
-  const id = generateUUID();
+  // Generate a proper offline ID that won't conflict with UUIDs
+  const id = `offline-${Date.now()}-${generateUUID()}`;
   const offlineData: OfflineData = {
     id,
     table,

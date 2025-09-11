@@ -92,12 +92,21 @@ export class SalesDebugger {
       errors.push('Cliente é obrigatório');
     }
 
-    // Enhanced client validation - check if it looks like a UUID
+    // Enhanced client validation - comprehensive UUID detection
     if (payload.client && typeof payload.client === 'string' && payload.client.length === 36) {
       if (isValidUUID(payload.client)) {
         errors.push('Cliente parece ser um UUID - use o nome do cliente');
       }
     }
+    
+    // Additional client validation - check for common UUID patterns
+    if (payload.client && typeof payload.client === 'string') {
+      const client = payload.client.trim();
+      if (client.includes('-') && client.length >= 32 && /^[0-9a-f-]+$/i.test(client)) {
+        errors.push('Cliente parece conter caracteres de UUID - use o nome real do cliente');
+      }
+    }
+    
     if (!payload.totalValue || typeof payload.totalValue !== 'number' || payload.totalValue <= 0) {
       errors.push('Valor total deve ser um número maior que zero');
     }
@@ -106,7 +115,7 @@ export class SalesDebugger {
       errors.push('Pelo menos um método de pagamento é obrigatório');
     }
 
-    // Payment methods validation
+    // Enhanced payment methods validation with comprehensive UUID checking
     if (payload.paymentMethods && Array.isArray(payload.paymentMethods)) {
       payload.paymentMethods.forEach((method: any, index: number) => {
         if (!method.type || typeof method.type !== 'string') {
@@ -116,38 +125,51 @@ export class SalesDebugger {
           errors.push(`Método ${index + 1}: Valor deve ser maior que zero`);
         }
         
-        // Validate UUID fields in payment methods
+        // Comprehensive UUID field validation in payment methods
         Object.keys(method).forEach(key => {
-          if (key.endsWith('Id') || key.endsWith('_id')) {
+          const isUUIDField = key.endsWith('Id') || key.endsWith('_id') || key === 'id' ||
+              ['customerId', 'productId', 'paymentMethodId', 'referenceId', 'transactionId',
+               'customer_id', 'product_id', 'payment_method_id', 'reference_id', 'transaction_id'].includes(key);
+          
+          if (isUUIDField) {
             const value = method[key];
             if (value === '') {
               errors.push(`Método ${index + 1}: Campo ${key} não pode ser string vazia (use null)`);
             } else if (value && typeof value === 'string' && !isValidUUID(value)) {
               errors.push(`Método ${index + 1}: Campo ${key} deve ser UUID válido ou null`);
+            } else if (value && typeof value === 'string' && value.startsWith('offline-')) {
+              errors.push(`Método ${index + 1}: Campo ${key} contém ID temporário offline - deve ser convertido`);
             }
           }
         });
       });
     }
 
-    // Seller ID validation
+    // Enhanced seller ID validation
     if (payload.sellerId && typeof payload.sellerId === 'string') {
       if (payload.sellerId.trim() === '') {
         errors.push('Seller ID não pode ser string vazia (use null)');
+      } else if (payload.sellerId.startsWith('offline-')) {
+        errors.push('Seller ID contém ID temporário offline - deve ser convertido ou removido');
       } else if (!isValidUUID(payload.sellerId)) {
         errors.push('Seller ID deve ser um UUID válido ou null');
       }
     }
 
-    // Additional UUID field validation
-    ['customerId', 'paymentMethodId', 'saleId'].forEach(field => {
+    // Comprehensive UUID field validation for all possible fields
+    ['customerId', 'paymentMethodId', 'saleId', 'customer_id', 'product_id', 
+     'payment_method_id', 'sale_id', 'debt_id', 'check_id', 'boleto_id',
+     'related_id', 'transaction_id', 'reference_id', 'parent_id'].forEach(field => {
       const value = payload[field];
       if (value === '') {
         errors.push(`Campo ${field} não pode ser string vazia (use null)`);
+      } else if (value && typeof value === 'string' && value.startsWith('offline-')) {
+        errors.push(`Campo ${field} contém ID temporário offline - deve ser convertido`);
       } else if (value && typeof value === 'string' && !isValidUUID(value)) {
         errors.push(`Campo ${field} deve ser UUID válido ou null`);
       }
     });
+    
     return {
       isValid: errors.length === 0,
       errors
@@ -155,9 +177,43 @@ export class SalesDebugger {
   }
 }
 
-// Export isValidUUID function that was missing
+// Enhanced UUID validation function
 export function isValidUUID(value?: string | null): boolean {
   if (!value || typeof value !== 'string') return false;
+  
+  // Check for offline temporary IDs
+  if (value.startsWith('offline-') || value.startsWith('temp-')) {
+    return false;
+  }
+  
+  // Standard UUID validation
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidRegex.test(value);
+}
+
+// Enhanced offline ID detection
+export function isOfflineId(value?: string | null): boolean {
+  if (!value || typeof value !== 'string') return false;
+  return value.startsWith('offline-') || value.startsWith('temp-') || value.includes('local-');
+}
+
+// Convert offline IDs to null for database operations
+export function convertOfflineIdsToNull(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj;
+  
+  const converted = { ...obj };
+  
+  Object.keys(converted).forEach(key => {
+    const value = converted[key];
+    if (typeof value === 'string' && isOfflineId(value)) {
+      console.warn(`🔄 Converting offline ID to null for ${key}:`, value);
+      converted[key] = null;
+    } else if (Array.isArray(value)) {
+      converted[key] = value.map(item => convertOfflineIdsToNull(item));
+    } else if (value && typeof value === 'object') {
+      converted[key] = convertOfflineIdsToNull(value);
+    }
+  });
+  
+  return converted;
 }

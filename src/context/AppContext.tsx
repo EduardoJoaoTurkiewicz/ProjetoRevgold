@@ -391,22 +391,80 @@ export function AppProvider({ children }: AppProviderProps) {
     try {
       console.log('🔄 AppContext.createSale called with:', saleData);
       
-      // Validation before calling service
+      // Enhanced validation before calling service
       if (!saleData.client || (typeof saleData.client === 'string' && !saleData.client.trim())) {
         throw new Error('Cliente é obrigatório e não pode estar vazio');
       }
       
-      // Validate seller if provided
+      // Enhanced seller validation with comprehensive UUID checking
       if (saleData.sellerId && !isValidUUID(saleData.sellerId)) {
         console.warn('⚠️ Invalid seller UUID in context, setting to null:', saleData.sellerId);
         saleData.sellerId = null;
       }
+      
+      // Validate total value
+      if (!saleData.totalValue || saleData.totalValue <= 0) {
+        throw new Error('Valor total deve ser maior que zero');
+      }
+      
+      // Validate payment methods
+      if (!saleData.paymentMethods || !Array.isArray(saleData.paymentMethods) || saleData.paymentMethods.length === 0) {
+        throw new Error('Pelo menos um método de pagamento é obrigatório');
+      }
+      
+      // Enhanced payment method validation with UUID cleaning
+      const cleanedPaymentMethods = saleData.paymentMethods.map((method, index) => {
+        const cleaned = { ...method };
+        
+        // Clean UUID fields in payment methods
+        Object.keys(cleaned).forEach(key => {
+          const isUUIDField = key.endsWith('_id') || key.endsWith('Id') || 
+              ['customerId', 'productId', 'paymentMethodId', 'referenceId'].includes(key);
+          
+          if (isUUIDField) {
+            const value = cleaned[key as keyof typeof cleaned];
+            if (value === '' || value === 'null' || value === 'undefined') {
+              cleaned[key as keyof typeof cleaned] = null;
+              console.log(`🔧 Context: Set payment method ${index} ${key} to null`);
+            } else if (typeof value === 'string' && value.trim() && !isValidUUID(value.trim())) {
+              console.warn(`⚠️ Context: Invalid UUID in payment method ${index} for ${key}:`, value, '- setting to null');
+              cleaned[key as keyof typeof cleaned] = null;
+            }
+          }
+        });
+        
+        // Validate required payment method fields
+        if (!cleaned.type || typeof cleaned.type !== 'string') {
+          throw new Error(`Método de pagamento ${index + 1}: Tipo é obrigatório`);
+        }
+        if (typeof cleaned.amount !== 'number' || cleaned.amount <= 0) {
+          throw new Error(`Método de pagamento ${index + 1}: Valor deve ser maior que zero`);
+        }
+        
+        return cleaned;
+      });
+      
+      // Update sale data with cleaned payment methods
+      const cleanedSaleData = {
+        ...saleData,
+        paymentMethods: cleanedPaymentMethods
+      };
+      
+      console.log('🧹 Context: Cleaned sale data before service call:', cleanedSaleData);
       
       const id = await salesService.create(saleData);
       await loadAllData();
       return id;
     } catch (error) {
       ErrorHandler.logProjectError(error, 'AppContext.createSale');
+      
+      // Enhanced error context logging
+      console.group('🚨 AppContext.createSale Error');
+      console.error('Error:', error);
+      console.log('Sale data:', JSON.stringify(saleData, null, 2));
+      console.log('Timestamp:', new Date().toISOString());
+      console.groupEnd();
+      
       throw error;
     }
   };
@@ -646,4 +704,11 @@ export function useAppContext() {
     throw new Error('useAppContext must be used within an AppProvider');
   }
   return context;
+}
+
+// Helper function for UUID validation (used in context)
+function isValidUUID(value?: string | null): boolean {
+  if (!value || typeof value !== 'string') return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(value);
 }
