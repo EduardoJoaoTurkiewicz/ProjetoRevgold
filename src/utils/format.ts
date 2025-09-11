@@ -11,26 +11,6 @@ export const parseCurrency = (value: string): number => {
   return isNaN(parsed) ? 0 : parsed;
 };
 
-export const formatCurrency = fmtBRL;
-
-export const parseCurrency = (value: string): number => {
-  if (!value) return 0;
-  // Remove currency symbols and convert comma to dot
-  const cleaned = value.replace(/[R$\s]/g, '').replace(',', '.');
-  const parsed = parseFloat(cleaned);
-  return isNaN(parsed) ? 0 : parsed;
-};
-
-export const formatCurrency = fmtBRL;
-
-export const parseCurrency = (value: string): number => {
-  if (!value) return 0;
-  // Remove currency symbols and convert comma to dot
-  const cleaned = value.replace(/[R$\s]/g, '').replace(',', '.');
-  const parsed = parseFloat(cleaned);
-  return isNaN(parsed) ? 0 : parsed;
-};
-
 export const fmtDate = (d?: string | Date) => {
   if (!d) return '—';
   const dt = typeof d === 'string' ? new Date(d) : d;
