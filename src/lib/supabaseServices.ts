@@ -35,46 +35,45 @@ export function sanitizePayload(data: any): any {
   const sanitized: any = {};
   
   for (const [key, value] of Object.entries(data)) {
-    // Handle UUID fields specifically - expanded list to catch all UUID fields
-    if (key.endsWith('_id') || key.endsWith('Id') || key === 'id' || 
-        key === 'customerId' || key === 'paymentMethodId' || key === 'saleId' ||
-        key === 'customer_id' || key === 'product_id' || key === 'seller_id' ||
-        key === 'employee_id' || key === 'sale_id' || key === 'debt_id' ||
-        key === 'check_id' || key === 'boleto_id' || key === 'related_id') {
+    // Comprehensive UUID field detection
+    const isUUIDField = key.endsWith('_id') || key.endsWith('Id') || key === 'id' || 
+        ['customerId', 'paymentMethodId', 'saleId', 'customer_id', 'product_id', 
+         'seller_id', 'employee_id', 'sale_id', 'debt_id', 'check_id', 'boleto_id', 
+         'related_id', 'transaction_id', 'reference_id', 'parent_id', 'owner_id',
+         'created_by', 'updated_by', 'assigned_to'].includes(key);
+    
+    if (isUUIDField) {
       if (value === '' || value === 'null' || value === 'undefined' || value === undefined || value === null) {
-        // Auto-generate UUID for primary key fields when missing
+        // Only auto-generate UUID for primary key 'id' field
         if (key === 'id') {
           sanitized[key] = uuidv4();
-        } else if (key === 'customer_id' || key === 'product_id') {
-          // For customer_id and product_id, generate UUID if empty (as per requirements)
-          sanitized[key] = uuidv4();
+          console.log(`🆔 Auto-generated UUID for ${key}:`, sanitized[key]);
         } else {
           sanitized[key] = null;
+          console.log(`🔧 Set UUID field ${key} to null`);
         }
       } else if (typeof value === 'string') {
         const trimmed = value.trim();
         if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
-          // Auto-generate UUID for primary key fields when empty
+          // Only auto-generate UUID for primary key 'id' field
           if (key === 'id') {
             sanitized[key] = uuidv4();
-          } else if (key === 'customer_id' || key === 'product_id') {
-            // For customer_id and product_id, generate UUID if empty (as per requirements)
-            sanitized[key] = uuidv4();
+            console.log(`🆔 Auto-generated UUID for empty ${key}:`, sanitized[key]);
           } else {
             sanitized[key] = null;
+            console.log(`🔧 Set empty UUID field ${key} to null`);
           }
         } else if (isValidUUID(trimmed)) {
           sanitized[key] = trimmed;
         } else {
           console.warn(`⚠️ Invalid UUID for ${key}:`, value, '- converting to null');
-          // Auto-generate UUID for primary key fields when invalid
+          // Only auto-generate UUID for primary key 'id' field
           if (key === 'id') {
             sanitized[key] = uuidv4();
-          } else if (key === 'customer_id' || key === 'product_id') {
-            // For customer_id and product_id, generate UUID if invalid (as per requirements)
-            sanitized[key] = uuidv4();
+            console.log(`🆔 Auto-generated UUID for invalid ${key}:`, sanitized[key]);
           } else {
             sanitized[key] = null;
+            console.log(`🔧 Set invalid UUID field ${key} to null`);
           }
         }
       } else {
@@ -111,39 +110,44 @@ export function cleanUUIDFields(obj: any): any {
   const cleaned = { ...obj };
   
   Object.keys(cleaned).forEach(key => {
-    // Expanded UUID field detection to catch all possible UUID fields
-    if (key.endsWith('_id') || key.endsWith('Id') || key === 'id' || 
-        key === 'customerId' || key === 'paymentMethodId' || key === 'saleId' ||
-        key === 'customer_id' || key === 'product_id' || key === 'seller_id' ||
-        key === 'employee_id' || key === 'sale_id' || key === 'debt_id' ||
-        key === 'check_id' || key === 'boleto_id' || key === 'related_id') {
+    // Comprehensive UUID field detection - catch ALL possible UUID fields
+    const isUUIDField = key.endsWith('_id') || key.endsWith('Id') || key === 'id' || 
+        ['customerId', 'paymentMethodId', 'saleId', 'customer_id', 'product_id', 
+         'seller_id', 'employee_id', 'sale_id', 'debt_id', 'check_id', 'boleto_id', 
+         'related_id', 'transaction_id', 'reference_id', 'parent_id', 'owner_id',
+         'created_by', 'updated_by', 'assigned_to'].includes(key);
+    
+    if (isUUIDField) {
       const value = cleaned[key];
       if (value === '' || value === 'null' || value === 'undefined' || !value) {
-        // Auto-generate UUID for specific fields that require it
-        if (key === 'id' || key === 'customer_id' || key === 'product_id') {
+        // Only auto-generate UUID for primary key 'id' field
+        if (key === 'id') {
           cleaned[key] = uuidv4();
           console.log(`🔧 Auto-generated UUID for ${key}:`, cleaned[key]);
         } else {
           cleaned[key] = null;
+          console.log(`🔧 Set ${key} to null (was empty string)`);
         }
       } else if (typeof value === 'string') {
         const trimmed = value.trim();
         if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
-          // Auto-generate UUID for specific fields that require it
-          if (key === 'id' || key === 'customer_id' || key === 'product_id') {
+          // Only auto-generate UUID for primary key 'id' field
+          if (key === 'id') {
             cleaned[key] = uuidv4();
             console.log(`🔧 Auto-generated UUID for empty ${key}:`, cleaned[key]);
           } else {
             cleaned[key] = null;
+            console.log(`🔧 Set ${key} to null (was empty string)`);
           }
         } else if (!isValidUUID(trimmed)) {
           console.warn(`⚠️ Invalid UUID for ${key}:`, trimmed, '- converting to null');
-          // Auto-generate UUID for specific fields that require it
-          if (key === 'id' || key === 'customer_id' || key === 'product_id') {
+          // Only auto-generate UUID for primary key 'id' field
+          if (key === 'id') {
             cleaned[key] = uuidv4();
             console.log(`🔧 Auto-generated UUID for invalid ${key}:`, cleaned[key]);
           } else {
             cleaned[key] = null;
+            console.log(`🔧 Set ${key} to null (was invalid UUID)`);
           }
         } else {
           cleaned[key] = trimmed;
@@ -195,7 +199,7 @@ export async function createSaleRPC(payload: any): Promise<string> {
       console.log('🆔 Generated new sale ID:', payload.id);
     }
     
-    // Step 1: Enhanced UUID field cleaning first
+    // Step 1: Comprehensive UUID field cleaning first
     const uuidCleaned = cleanUUIDFields(payload);
     console.log('🔧 UUID cleaned payload:', uuidCleaned);
     
@@ -207,40 +211,73 @@ export async function createSaleRPC(payload: any): Promise<string> {
     const snakeCasePayload = transformToSnakeCase(sanitized);
     console.log('🐍 Snake case payload:', snakeCasePayload);
     
-    // Step 4: Final comprehensive UUID validation before sending to database
+    // Step 4: Final comprehensive UUID validation and cleaning before database
     Object.keys(snakeCasePayload).forEach(key => {
-      // Check all possible UUID field patterns
-      if ((key.endsWith('_id') || key === 'customer_id' || key === 'product_id' || 
-           key === 'payment_method_id' || key === 'seller_id' || key === 'employee_id' ||
-           key === 'sale_id' || key === 'debt_id' || key === 'check_id' || key === 'boleto_id' ||
-           key === 'related_id') && 
-          (snakeCasePayload[key] === '' || snakeCasePayload[key] === 'null' || snakeCasePayload[key] === 'undefined')) {
-        console.warn(`⚠️ Found empty string UUID field ${key}`);
-        // Auto-generate for required fields, null for optional fields
-        if (key === 'id' || key === 'customer_id' || key === 'product_id') {
+      // Comprehensive UUID field detection
+      const isUUIDField = key.endsWith('_id') || key === 'id' || 
+          ['customer_id', 'product_id', 'payment_method_id', 'seller_id', 'employee_id',
+           'sale_id', 'debt_id', 'check_id', 'boleto_id', 'related_id', 'transaction_id',
+           'reference_id', 'parent_id', 'owner_id', 'created_by', 'updated_by'].includes(key);
+      
+      if (isUUIDField && 
+          (snakeCasePayload[key] === '' || snakeCasePayload[key] === 'null' || 
+           snakeCasePayload[key] === 'undefined' || snakeCasePayload[key] === undefined)) {
+        console.warn(`⚠️ Found empty/invalid UUID field ${key}, value:`, snakeCasePayload[key]);
+        
+        // Only auto-generate for primary key 'id' field
+        if (key === 'id') {
           snakeCasePayload[key] = uuidv4();
           console.log(`🔧 Auto-generated UUID for ${key}:`, snakeCasePayload[key]);
         } else {
           snakeCasePayload[key] = null;
-          console.log(`🔧 Set ${key} to null`);
+          console.log(`🔧 Set UUID field ${key} to null`);
+        }
+      }
+      
+      // Additional validation for string UUIDs
+      if (isUUIDField && typeof snakeCasePayload[key] === 'string') {
+        const value = snakeCasePayload[key];
+        if (value && !isValidUUID(value)) {
+          console.warn(`⚠️ Invalid UUID format for ${key}:`, value, '- converting to null');
+          if (key === 'id') {
+            snakeCasePayload[key] = uuidv4();
+            console.log(`🔧 Auto-generated UUID for invalid ${key}:`, snakeCasePayload[key]);
+          } else {
+            snakeCasePayload[key] = null;
+            console.log(`🔧 Set invalid UUID field ${key} to null`);
+          }
         }
       }
     });
     
-    // Step 5: Additional validation for payment methods array
+    // Step 5: Enhanced validation for payment methods array
     if (snakeCasePayload.payment_methods && Array.isArray(snakeCasePayload.payment_methods)) {
       snakeCasePayload.payment_methods = snakeCasePayload.payment_methods.map((method: any, index: number) => {
         const cleanedMethod = { ...method };
         
-        // Clean UUID fields in payment methods
+        // Comprehensive UUID field cleaning in payment methods
         Object.keys(cleanedMethod).forEach(methodKey => {
-          if ((methodKey.endsWith('_id') || methodKey === 'customer_id' || methodKey === 'product_id') &&
-              (cleanedMethod[methodKey] === '' || cleanedMethod[methodKey] === 'null' || cleanedMethod[methodKey] === 'undefined')) {
-            if (methodKey === 'customer_id' || methodKey === 'product_id') {
-              cleanedMethod[methodKey] = uuidv4();
-              console.log(`🔧 Auto-generated UUID for payment method ${index} ${methodKey}:`, cleanedMethod[methodKey]);
-            } else {
+          const isMethodUUIDField = methodKey.endsWith('_id') || methodKey.endsWith('Id') || 
+              ['customer_id', 'product_id', 'payment_method_id', 'reference_id', 'transaction_id'].includes(methodKey);
+          
+          if (isMethodUUIDField) {
+            const methodValue = cleanedMethod[methodKey];
+            if (methodValue === '' || methodValue === 'null' || methodValue === 'undefined' || methodValue === undefined) {
               cleanedMethod[methodKey] = null;
+              console.log(`🔧 Set payment method ${index} ${methodKey} to null (was empty)`);
+            } else if (typeof methodValue === 'string') {
+              const trimmed = methodValue.trim();
+              if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
+                cleanedMethod[methodKey] = null;
+                console.log(`🔧 Set payment method ${index} ${methodKey} to null (was empty string)`);
+              } else if (!isValidUUID(trimmed)) {
+                console.warn(`⚠️ Invalid UUID in payment method ${index} for ${methodKey}:`, trimmed, '- converting to null');
+                cleanedMethod[methodKey] = null;
+              } else {
+                cleanedMethod[methodKey] = trimmed;
+              }
+            } else {
+              cleanedMethod[methodKey] = methodValue;
             }
           }
         });
@@ -376,7 +413,7 @@ export const salesService = {
     try {
       console.log('🔄 salesService.create called with:', saleData);
       
-      // Step 1: Clean UUID fields first
+      // Step 1: Comprehensive UUID field cleaning first
       const uuidCleanedData = cleanUUIDFields(saleData);
       console.log('🔧 UUID cleaned data:', uuidCleanedData);
       
@@ -393,6 +430,24 @@ export const salesService = {
         throw new Error('Pelo menos um método de pagamento é obrigatório');
       }
       
+      // Additional UUID validation for seller
+      if (uuidCleanedData.sellerId && typeof uuidCleanedData.sellerId === 'string') {
+        if (!isValidUUID(uuidCleanedData.sellerId)) {
+          console.warn('⚠️ Invalid seller UUID in service, setting to null:', uuidCleanedData.sellerId);
+          uuidCleanedData.sellerId = null;
+        }
+      }
+      
+      // Validate payment methods structure
+      for (const method of uuidCleanedData.paymentMethods) {
+        if (!method.type || typeof method.type !== 'string') {
+          throw new Error('Todos os métodos de pagamento devem ter um tipo válido');
+        }
+        if (typeof method.amount !== 'number' || method.amount < 0) {
+          throw new Error('Todos os métodos de pagamento devem ter um valor válido');
+        }
+      }
+      
       // Use the robust RPC function
       const saleId = await createSaleRPC(uuidCleanedData);
       return saleId;
@@ -407,7 +462,10 @@ export const salesService = {
     try {
       console.log('🔄 Updating sale:', id, saleData);
       
-      // Enhanced sanitization for updates
+      // Comprehensive UUID cleaning for updates
+      const uuidCleanedData = cleanUUIDFields(saleData);
+      console.log('🔧 UUID cleaned update data:', uuidCleanedData);
+      
       const sanitizedData = sanitizePayload(saleData);
       console.log('🧹 Sanitized update data:', sanitizedData);
       

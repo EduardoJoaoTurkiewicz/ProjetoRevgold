@@ -1,15 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Calendar, DollarSign, User, Package, FileText, CreditCard, AlertCircle, Calculator, CheckCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Plus, Trash2, ShoppingCart, DollarSign } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
-import { Sale, PaymentMethod, ThirdPartyCheckDetails } from '../../types';
-import { CreateSalePayload, SaleBoleto, SaleCheque, sanitizePayload, isValidUUID } from '../../lib/supabaseServices';
-import { SalesDebugger } from '../../lib/debugUtils';
-import { connectionManager } from '../../lib/connectionManager';
-import toast from 'react-hot-toast';
+import { Sale, PaymentMethod } from '../../types';
 
 interface SaleFormProps {
   sale?: Sale | null;
-  onSubmit: (sale: CreateSalePayload | Partial<Sale>) => void;
+  onSubmit: (sale: Omit<Sale, 'id' | 'createdAt'>) => void;
   onCancel: () => void;
 }
 
@@ -23,34 +19,81 @@ const PAYMENT_TYPES = [
   { value: 'transferencia', label: 'Transferência' }
 ];
 
-export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
+export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   const { employees } = useAppContext();
-  const [connectionStatus, setConnectionStatus] = useState(connectionManager.getStatus());
   
   const [formData, setFormData] = useState({
     date: sale?.date || new Date().toISOString().split('T')[0],
     deliveryDate: sale?.deliveryDate || '',
     client: sale?.client || '',
-    sellerId: sale?.sellerId || null,
+    sellerId: sale?.sellerId || '',
     products: sale?.products || '',
     observations: sale?.observations || '',
     totalValue: sale?.totalValue || 0,
     paymentMethods: sale?.paymentMethods || [{ type: 'dinheiro' as const, amount: 0 }],
     paymentDescription: sale?.paymentDescription || '',
     paymentObservations: sale?.paymentObservations || '',
-    custom_commission_rate: sale?.custom_commission_rate || 5.00,
-    // New fields for boletos and cheques
-    boletos: [] as SaleBoleto[],
-    cheques: [] as SaleCheque[]
+    customCommissionRate: sale?.custom_commission_rate || 5.00
   });
 
-  const activeEmployees = employees.filter(emp => emp.isActive);
-  const sellers = activeEmployees.filter(emp => emp.isSeller);
+  // Enhanced UUID validation function
+  const isValidUUID = (value: string): boolean => {
+    if (!value || typeof value !== 'string') return false;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(value);
+  };
 
-  useEffect(() => {
-    const unsubscribe = connectionManager.addListener(setConnectionStatus);
-    return unsubscribe;
-  }, []);
+  // Enhanced UUID field cleaning function
+  const cleanUUIDField = (value: any): string | null => {
+    if (!value) return null;
+    if (typeof value !== 'string') return null;
+    
+    const trimmed = value.trim();
+    if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
+      return null;
+    }
+    
+    // Check if it's a valid UUID
+    if (!isValidUUID(trimmed)) {
+      console.warn('⚠️ Invalid UUID detected:', trimmed, '- converting to null');
+      return null;
+    }
+    
+    return trimmed;
+  };
+
+  // Enhanced payment method cleaning
+  const cleanPaymentMethods = (methods: PaymentMethod[]): PaymentMethod[] => {
+    return methods.map(method => {
+      const cleaned: PaymentMethod = { ...method };
+      
+      // Clean all potential UUID fields in payment methods
+      const uuidFields = ['id', 'customerId', 'productId', 'paymentMethodId', 'saleId', 'relatedId'];
+      uuidFields.forEach(field => {
+        if (cleaned.hasOwnProperty(field)) {
+          cleaned[field as keyof PaymentMethod] = cleanUUIDField(cleaned[field as keyof PaymentMethod]);
+        }
+      });
+      
+      // Ensure required fields are valid
+      if (!cleaned.type || typeof cleaned.type !== 'string') {
+        cleaned.type = 'dinheiro';
+      }
+      
+      if (typeof cleaned.amount !== 'number' || cleaned.amount < 0) {
+        cleaned.amount = 0;
+      }
+      
+      // Clean optional fields
+      if (cleaned.installments === 1) {
+        delete cleaned.installments;
+        delete cleaned.installmentValue;
+        delete cleaned.installmentInterval;
+      }
+      
+      return cleaned;
+    });
+  };
 
   const addPaymentMethod = () => {
     setFormData(prev => ({
@@ -75,426 +118,120 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     }));
   };
 
-  const addThirdPartyCheckDetail = (methodIndex: number) => {
-    const method = formData.paymentMethods[methodIndex];
-    const newDetail: ThirdPartyCheckDetails = {
-      bank: '',
-      agency: '',
-      account: '',
-      checkNumber: '',
-      issuer: '',
-      cpfCnpj: '',
-      observations: ''
-    };
-    
-    updatePaymentMethod(methodIndex, 'thirdPartyDetails', [
-      ...(method.thirdPartyDetails || []),
-      newDetail
-    ]);
-  };
-
-  const updateThirdPartyCheckDetail = (methodIndex: number, detailIndex: number, field: string, value: string) => {
-    const method = formData.paymentMethods[methodIndex];
-    const updatedDetails = [...(method.thirdPartyDetails || [])];
-    updatedDetails[detailIndex] = { ...updatedDetails[detailIndex], [field]: value };
-    updatePaymentMethod(methodIndex, 'thirdPartyDetails', updatedDetails);
-  };
-
-  const removeThirdPartyCheckDetail = (methodIndex: number, detailIndex: number) => {
-    const method = formData.paymentMethods[methodIndex];
-    const updatedDetails = (method.thirdPartyDetails || []).filter((_, i) => i !== detailIndex);
-    updatePaymentMethod(methodIndex, 'thirdPartyDetails', updatedDetails);
-  };
-
   const calculateAmounts = () => {
-    const totalPayments = formData.paymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
-    const receivedAmount = formData.paymentMethods.reduce((sum, method) => {
-      // Immediate payment methods
-      if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
-          (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
+    const totalReceived = formData.paymentMethods.reduce((sum, method) => {
+      if (method.type === 'dinheiro' || method.type === 'pix' || method.type === 'cartao_debito') {
+        return sum + method.amount;
+      }
+      if (method.type === 'cartao_credito' && (!method.installments || method.installments === 1)) {
         return sum + method.amount;
       }
       return sum;
     }, 0);
     
-    const pendingAmount = Math.max(0, formData.totalValue - receivedAmount);
-    
-    let status: Sale['status'] = 'pendente';
-    if (receivedAmount >= formData.totalValue) {
-      status = 'pago';
-    } else if (receivedAmount > 0) {
-      status = 'parcial';
-    }
+    const pending = formData.totalValue - totalReceived;
     
     return {
-      receivedAmount,
-      pendingAmount,
-      status,
-      totalPayments
+      receivedAmount: totalReceived,
+      pendingAmount: Math.max(0, pending),
+      status: pending <= 0 ? 'pago' as const : (totalReceived > 0 ? 'parcial' as const : 'pendente' as const)
     };
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('📝 SaleForm.handleSubmit called');
-    
-    // Log the attempt for debugging
-    SalesDebugger.logSaleCreationAttempt(formData, 'SaleForm.handleSubmit');
-    
-    // Step 1: Enhanced UUID field validation and cleaning BEFORE other validation
-    const preCleanedData = { ...formData };
-    
-    // Clean all potential UUID fields
-    ['sellerId', 'customerId', 'paymentMethodId', 'saleId'].forEach(field => {
-      if (preCleanedData[field] === '' || preCleanedData[field] === 'null' || 
-          preCleanedData[field] === 'undefined' || !preCleanedData[field]) {
-        preCleanedData[field] = null;
-      } else if (typeof preCleanedData[field] === 'string') {
-        const trimmed = preCleanedData[field].trim();
-        if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
-          preCleanedData[field] = null;
-        } else if (!isValidUUID(trimmed)) {
-          console.warn(`⚠️ Invalid UUID for ${field}:`, trimmed, '- converting to null');
-          preCleanedData[field] = null;
-        }
-      }
-    });
-    
-    // Clean payment methods UUID fields
-    if (preCleanedData.paymentMethods && Array.isArray(preCleanedData.paymentMethods)) {
-      preCleanedData.paymentMethods = preCleanedData.paymentMethods.map(method => {
-        const cleanedMethod = { ...method };
-        
-        // Clean UUID fields in payment methods
-        Object.keys(cleanedMethod).forEach(key => {
-          if (key.endsWith('Id') || key.endsWith('_id')) {
-            const value = cleanedMethod[key];
-            if (value === '' || value === 'null' || value === 'undefined' || !value) {
-              cleanedMethod[key] = null;
-            } else if (typeof value === 'string') {
-              const trimmed = value.trim();
-              if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
-                cleanedMethod[key] = null;
-              } else if (!isValidUUID(trimmed)) {
-                console.warn(`⚠️ Invalid UUID in payment method ${key}:`, trimmed, '- converting to null');
-                cleanedMethod[key] = null;
-              }
-            }
-          }
-        });
-        
-        return cleanedMethod;
-      });
-    }
-    
-    console.log('🔧 Pre-cleaned data:', preCleanedData);
-    
-    // Enhanced client validation
-    if (!preCleanedData.client || !preCleanedData.client.trim()) {
+    // Enhanced validation
+    if (!formData.client || !formData.client.trim()) {
       alert('Por favor, informe o nome do cliente.');
       return;
     }
     
-    // Check if client looks like a UUID (common mistake)
-    if (preCleanedData.client.length === 36 && isValidUUID(preCleanedData.client)) {
-      alert('Erro: O campo cliente deve conter o NOME do cliente, não um ID. Por favor, digite o nome do cliente.');
-      return;
-    }
-    
-    // Enhanced total value validation
-    if (!preCleanedData.totalValue || preCleanedData.totalValue <= 0) {
+    if (!formData.totalValue || formData.totalValue <= 0) {
       alert('O valor total da venda deve ser maior que zero.');
       return;
     }
     
-    // Enhanced payment methods validation
-    if (!preCleanedData.paymentMethods || preCleanedData.paymentMethods.length === 0) {
+    if (!formData.paymentMethods || formData.paymentMethods.length === 0) {
       alert('Por favor, adicione pelo menos um método de pagamento.');
       return;
     }
     
-    // Validate each payment method
-    for (let i = 0; i < preCleanedData.paymentMethods.length; i++) {
-      const method = preCleanedData.paymentMethods[i];
-      if (!method.type || typeof method.type !== 'string') {
-        alert(`Método de pagamento ${i + 1}: Tipo é obrigatório.`);
-        return;
-      }
-      if (typeof method.amount !== 'number' || method.amount <= 0) {
-        alert(`Método de pagamento ${i + 1}: Valor deve ser maior que zero.`);
-        return;
-      }
-    }
-    
-    // Recalculate amounts with cleaned data
-    const amounts = (() => {
-      const totalPayments = preCleanedData.paymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
-      const receivedAmount = preCleanedData.paymentMethods.reduce((sum, method) => {
-        // Immediate payment methods
-        if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
-            (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
-          return sum + method.amount;
-        }
-        return sum;
-      }, 0);
-      
-      const pendingAmount = Math.max(0, preCleanedData.totalValue - receivedAmount);
-      
-      let status: Sale['status'] = 'pendente';
-      if (receivedAmount >= preCleanedData.totalValue) {
-        status = 'pago';
-      } else if (receivedAmount > 0) {
-        status = 'parcial';
-      }
-      
-      return {
-        receivedAmount,
-        pendingAmount,
-        status,
-        totalPayments
-      };
-    })();
-    
-    if (amounts.totalPayments === 0) {
+    const totalPaymentAmount = formData.paymentMethods.reduce((sum, method) => sum + method.amount, 0);
+    if (totalPaymentAmount === 0) {
       alert('Por favor, informe pelo menos um método de pagamento com valor maior que zero.');
       return;
     }
     
-    if (amounts.totalPayments > preCleanedData.totalValue) {
+    if (totalPaymentAmount > formData.totalValue) {
       alert('O total dos métodos de pagamento não pode ser maior que o valor total da venda.');
       return;
     }
     
-    // Enhanced third party check validation
-    for (const method of preCleanedData.paymentMethods) {
-      if (method.type === 'cheque' && method.isThirdPartyCheck && method.thirdPartyDetails) {
-        for (const detail of method.thirdPartyDetails) {
-          if (!detail.issuer || !detail.cpfCnpj || !detail.bank || !detail.agency || !detail.account || !detail.checkNumber) {
-            toast.error('Por favor, preencha todos os campos obrigatórios dos cheques de terceiros.');
-            return;
-          }
-          
-          // Validate CPF/CNPJ format (basic)
-          const cpfCnpj = detail.cpfCnpj.replace(/\D/g, '');
-          if (cpfCnpj.length !== 11 && cpfCnpj.length !== 14) {
-            toast.error('CPF deve ter 11 dígitos e CNPJ deve ter 14 dígitos.');
-            return;
-          }
-        }
-      }
-    }
+    // Enhanced data cleaning with comprehensive UUID validation
+    const cleanedPaymentMethods = cleanPaymentMethods(formData.paymentMethods);
+    const amounts = calculateAmounts();
     
-    // Enhanced payment methods cleaning and validation
-    const cleanedPaymentMethods = preCleanedData.paymentMethods
-      .filter(method => method.amount > 0) // Remove methods with zero amount
-      .map(method => {
-        const cleaned: any = { ...method };
-        
-        // Clean UUID fields in payment methods
-        Object.keys(cleaned).forEach(key => {
-          if (key.endsWith('Id') || key.endsWith('_id')) {
-            const value = cleaned[key];
-            if (value === '' || value === 'null' || value === 'undefined' || !value) {
-              cleaned[key] = null;
-            } else if (typeof value === 'string') {
-              const trimmed = value.trim();
-              if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
-                cleaned[key] = null;
-              } else if (!isValidUUID(trimmed)) {
-                console.warn(`⚠️ Invalid UUID in payment method ${key}:`, trimmed, '- converting to null');
-                cleaned[key] = null;
-              }
-            }
-          }
-        });
-        
-        // Ensure required fields are properly typed
-        if (!cleaned.type || typeof cleaned.type !== 'string') {
-          cleaned.type = 'dinheiro';
-        }
-        
-        if (typeof cleaned.amount !== 'number' || cleaned.amount <= 0) {
-          return null; // Will be filtered out
-        }
-        
-        // Clean optional fields - remove empty values
-        Object.keys(cleaned).forEach(key => {
-          const value = cleaned[key];
-          if (value === undefined || value === '' || value === null ||
-              (Array.isArray(value) && value.length === 0) ||
-              (typeof value === 'string' && value.trim() === '')) {
-            cleaned[key] = null;
-          }
-        });
-        
-        // Handle installment fields properly
-        if (cleaned.installments === 1 || !cleaned.installments) {
-          delete cleaned.installments;
-          delete cleaned.installmentValue;
-          delete cleaned.installmentInterval;
-          delete cleaned.firstInstallmentDate;
-          delete cleaned.startDate;
-        }
-        
-        // Validate installment data if present
-        if (cleaned.installments && cleaned.installments > 1) {
-          if (!cleaned.installmentValue || cleaned.installmentValue <= 0) {
-            cleaned.installmentValue = cleaned.amount / cleaned.installments;
-          }
-          if (!cleaned.installmentInterval || cleaned.installmentInterval <= 0) {
-            cleaned.installmentInterval = 30; // Default to 30 days
-          }
-        }
-        
-        return cleaned;
-      })
-      .filter(method => method !== null); // Remove null methods
+    // Clean all UUID fields in the main form data
+    const cleanedSellerId = cleanUUIDField(formData.sellerId);
     
-    if (cleanedPaymentMethods.length === 0) {
-      toast.error('Pelo menos um método de pagamento deve ter valor maior que zero.');
+    // Validate seller ID if provided
+    if (formData.sellerId && formData.sellerId.trim() !== '' && !cleanedSellerId) {
+      alert('ID do vendedor inválido. Por favor, selecione um vendedor válido ou deixe em branco.');
       return;
     }
     
-    console.log('✅ Cleaned payment methods:', cleanedPaymentMethods);
-      
-    // Enhanced seller ID cleaning with UUID validation
-    let cleanSellerId = null;
-    if (preCleanedData.sellerId && preCleanedData.sellerId.trim() !== '') {
-      if (isValidUUID(preCleanedData.sellerId)) {
-        cleanSellerId = preCleanedData.sellerId;
-      } else {
-        console.warn('⚠️ Invalid seller UUID, setting to null:', preCleanedData.sellerId);
-        cleanSellerId = null;
-      }
-    }
-    
-    // Enhanced delivery date cleaning
-    const cleanDeliveryDate = preCleanedData.deliveryDate && preCleanedData.deliveryDate.trim() !== '' ? preCleanedData.deliveryDate : null;
-    
-    // Enhanced UUID field cleaning - ensure all UUID fields are properly handled
-    const cleanUUIDField = (value: any): string | null => {
-      if (!value) return null;
-      if (typeof value !== 'string') return null;
-      const trimmed = value.trim();
-      if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') return null;
-      return isValidUUID(trimmed) ? trimmed : null;
-    };
-    
-    // Recalculate amounts with cleaned data
-    const recalculatedAmounts = (() => {
-      const totalPayments = cleanedPaymentMethods.reduce((sum, method) => sum + (method.amount || 0), 0);
-      const receivedAmount = cleanedPaymentMethods.reduce((sum, method) => {
-        // Immediate payment methods
-        if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
-            (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
-          return sum + method.amount;
-        }
-        return sum;
-      }, 0);
-      
-      const pendingAmount = Math.max(0, preCleanedData.totalValue - receivedAmount);
-      
-      let status: Sale['status'] = 'pendente';
-      if (receivedAmount >= preCleanedData.totalValue) {
-        status = 'pago';
-      } else if (receivedAmount > 0) {
-        status = 'parcial';
-      }
-      
-      return {
-        receivedAmount,
-        pendingAmount,
-        status,
-        totalPayments
-      };
-    })();
-    
-    // Create enhanced payload with comprehensive validation
+    // Prepare final sale data with comprehensive cleaning
     const saleToSubmit = {
-      date: preCleanedData.date,
-      deliveryDate: cleanDeliveryDate,
-      client: preCleanedData.client.trim(),
-      sellerId: cleanUUIDField(preCleanedData.sellerId),
-      customCommissionRate: preCleanedData.custom_commission_rate || 5.00,
-      products: typeof preCleanedData.products === 'string' ? [{ name: preCleanedData.products }] : preCleanedData.products,
-      observations: preCleanedData.observations?.trim() || null,
-      totalValue: preCleanedData.totalValue,
+      date: formData.date,
+      deliveryDate: !formData.deliveryDate || formData.deliveryDate.trim() === '' ? null : formData.deliveryDate,
+      client: formData.client.trim(),
+      sellerId: cleanedSellerId,
+      products: !formData.products || formData.products.trim() === '' ? null : formData.products.trim(),
+      observations: !formData.observations || formData.observations.trim() === '' ? null : formData.observations.trim(),
+      totalValue: formData.totalValue,
       paymentMethods: cleanedPaymentMethods,
-      paymentDescription: preCleanedData.paymentDescription?.trim() || null,
-      paymentObservations: preCleanedData.paymentObservations?.trim() || null,
-      receivedAmount: recalculatedAmounts.receivedAmount,
-      pendingAmount: recalculatedAmounts.pendingAmount,
-      status: recalculatedAmounts.status,
+      paymentDescription: !formData.paymentDescription || formData.paymentDescription.trim() === '' ? null : formData.paymentDescription.trim(),
+      paymentObservations: !formData.paymentObservations || formData.paymentObservations.trim() === '' ? null : formData.paymentObservations.trim(),
+      custom_commission_rate: formData.customCommissionRate,
+      ...amounts
     };
     
-    // Additional UUID field validation for any other UUID fields that might be present
-    Object.keys(saleToSubmit).forEach(key => {
-      if (key.endsWith('Id') || key.endsWith('_id')) {
-        saleToSubmit[key] = cleanUUIDField(saleToSubmit[key]);
+    console.log('📝 Enviando venda com dados limpos:', saleToSubmit);
+    
+    // Final validation before submission
+    if (saleToSubmit.sellerId && !isValidUUID(saleToSubmit.sellerId)) {
+      console.error('❌ Invalid seller UUID after cleaning:', saleToSubmit.sellerId);
+      alert('Erro interno: ID do vendedor inválido após limpeza. Tente novamente.');
+      return;
+    }
+    
+    // Validate payment methods one more time
+    for (const method of saleToSubmit.paymentMethods) {
+      if (!method.type || typeof method.type !== 'string') {
+        alert('Erro interno: Método de pagamento inválido detectado.');
+        return;
       }
-    });
-    
-    // Final comprehensive validation
-    if (!saleToSubmit.client || saleToSubmit.client.trim() === '') {
-      toast.error('Nome do cliente é obrigatório e não pode estar vazio.');
-      return;
+      if (typeof method.amount !== 'number' || method.amount < 0) {
+        alert('Erro interno: Valor de método de pagamento inválido detectado.');
+        return;
+      }
     }
     
-    // Seller ID is already cleaned by cleanUUIDField function above
-    
-    if (saleToSubmit.totalValue <= 0) {
-      toast.error('Valor total deve ser maior que zero.');
-      return;
-    }
-    
-    if (!saleToSubmit.paymentMethods || saleToSubmit.paymentMethods.length === 0) {
-      toast.error('Pelo menos um método de pagamento é obrigatório.');
-      return;
-    }
-    
-    // Apply final sanitization
-    const finalPayload = sanitizePayload(saleToSubmit);
-    
-    // Use debugger for final validation
-    const validation = SalesDebugger.validateSalePayload(finalPayload);
-    if (!validation.isValid) {
-      console.error('❌ Payload validation failed:', validation.errors);
-      toast.error('Erro de validação: ' + validation.errors.join(', '));
-      return;
-    }
-    
-    console.log('📤 Final validated payload for submission:', finalPayload);
-    
-    // Additional logging for debugging
-    console.log('🔍 Payload validation summary:', {
-      hasClient: !!finalPayload.client,
-      clientLength: finalPayload.client?.length,
-      hasSellerId: !!finalPayload.sellerId,
-      sellerIdValid: finalPayload.sellerId ? isValidUUID(finalPayload.sellerId) : 'null',
-      totalValue: finalPayload.totalValue,
-      paymentMethodsCount: finalPayload.paymentMethods?.length,
-      receivedAmount: finalPayload.receivedAmount,
-      pendingAmount: finalPayload.pendingAmount,
-      status: finalPayload.status
-    });
-    
-    // Final debug log before submission
-    SalesDebugger.logSaleCreationAttempt(finalPayload, 'Final Submission');
-    
-    onSubmit(finalPayload);
+    onSubmit(saleToSubmit as Omit<Sale, 'id' | 'createdAt'>);
   };
 
-  const amounts = calculateAmounts();
+  const activeEmployees = employees.filter(emp => emp.isActive);
+  const sellers = activeEmployees.filter(emp => emp.isSeller);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-[100] backdrop-blur-sm modal-overlay">
-      <div className="bg-white rounded-3xl max-w-6xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
+      <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[95vh] overflow-y-auto modern-shadow-xl">
         <div className="p-8">
           <div className="flex justify-between items-center mb-8">
             <div className="flex items-center gap-4">
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-xl">
-                <DollarSign className="w-8 h-8 text-white" />
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 modern-shadow-xl">
+                <ShoppingCart className="w-8 h-8 text-white" />
               </div>
               <div>
                 <h2 className="text-3xl font-bold text-slate-900">
@@ -510,30 +247,15 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
 
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Informações Básicas */}
-            <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
+            <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
               <div className="flex items-center gap-4 mb-6">
-                <div className="p-3 rounded-xl bg-green-600">
-                  <User className="w-6 h-6 text-white" />
+                <div className="p-3 rounded-xl bg-blue-600">
+                  <ShoppingCart className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-green-900">Informações Básicas</h3>
+                <h3 className="text-xl font-bold text-blue-900">Informações da Venda</h3>
               </div>
               
-              {/* Connection Status Indicator */}
-              {!connectionStatus.isOnline && (
-                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <AlertCircle className="w-5 h-5 text-blue-600" />
-                    <div>
-                      <p className="text-blue-800 font-semibold">Modo Offline</p>
-                      <p className="text-blue-700 text-sm">
-                        Venda será salva localmente e sincronizada quando online
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="form-group">
                   <label className="form-label">Data da Venda *</label>
                   <input
@@ -556,15 +278,26 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                 </div>
 
                 <div className="form-group">
+                  <label className="form-label">Cliente *</label>
+                  <input
+                    type="text"
+                    value={formData.client}
+                    onChange={(e) => setFormData(prev => ({ ...prev, client: e.target.value }))}
+                    className="input-field"
+                    placeholder="Nome do cliente"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
                   <label className="form-label">Vendedor</label>
                   <select
-                    value={formData.sellerId || ''}
+                    value={formData.sellerId}
                     onChange={(e) => {
                       const value = e.target.value;
-                      setFormData(prev => ({ 
-                        ...prev, 
-                        sellerId: value === '' ? null : value 
-                      }));
+                      // Enhanced UUID validation on selection
+                      const cleanedValue = cleanUUIDField(value);
+                      setFormData(prev => ({ ...prev, sellerId: cleanedValue || '' }));
                     }}
                     className="input-field"
                   >
@@ -575,21 +308,11 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                       </option>
                     ))}
                   </select>
-                  <p className="text-xs text-green-600 mt-1 font-semibold">
-                    💡 Deixe em branco se a venda não tem vendedor específico
-                  </p>
-                </div>
-
-                <div className="form-group md:col-span-2">
-                  <label className="form-label">Cliente *</label>
-                  <input
-                    type="text"
-                    value={formData.client}
-                    onChange={(e) => setFormData(prev => ({ ...prev, client: e.target.value }))}
-                    className="input-field"
-                    placeholder="Nome do cliente"
-                    required
-                  />
+                  {formData.sellerId && !isValidUUID(formData.sellerId) && (
+                    <p className="text-xs text-red-600 mt-1 font-semibold">
+                      ⚠️ ID do vendedor inválido - será convertido para null
+                    </p>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -605,82 +328,54 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                     required
                   />
                 </div>
+
+                <div className="form-group">
+                  <label className="form-label">Taxa de Comissão (%)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={formData.customCommissionRate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, customCommissionRate: parseFloat(e.target.value) || 5.00 }))}
+                    className="input-field"
+                    placeholder="5,00"
+                  />
+                  <p className="text-xs text-blue-600 mt-1 font-semibold">
+                    💡 Taxa padrão: 5%. Ajuste conforme necessário para esta venda.
+                  </p>
+                </div>
+
+                <div className="form-group md:col-span-2">
+                  <label className="form-label">Produtos/Serviços</label>
+                  <textarea
+                    value={formData.products}
+                    onChange={(e) => setFormData(prev => ({ ...prev, products: e.target.value }))}
+                    className="input-field"
+                    rows={3}
+                    placeholder="Descreva os produtos ou serviços vendidos..."
+                  />
+                </div>
+
+                <div className="form-group md:col-span-2">
+                  <label className="form-label">Observações</label>
+                  <textarea
+                    value={formData.observations}
+                    onChange={(e) => setFormData(prev => ({ ...prev, observations: e.target.value }))}
+                    className="input-field"
+                    rows={2}
+                    placeholder="Observações adicionais sobre a venda..."
+                  />
+                </div>
               </div>
             </div>
-
-            {/* Produtos (Opcional) */}
-            <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="p-3 rounded-xl bg-green-600">
-                  <Package className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-green-900">Produtos Vendidos</h3>
-                  <p className="text-green-700 text-sm">Campo opcional - descreva os produtos vendidos</p>
-                </div>
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Descrição dos Produtos (Opcional)</label>
-                <textarea
-                  value={formData.products}
-                  onChange={(e) => setFormData(prev => ({ ...prev, products: e.target.value }))}
-                  className="input-field"
-                  rows={3}
-                  placeholder="Ex: 2x Produto A, 1x Produto B, Serviço de instalação..."
-                />
-                <p className="text-xs text-green-600 mt-2 font-semibold">
-                  💡 Este campo é opcional. Você pode deixar em branco se preferir.
-                </p>
-              </div>
-            </div>
-
-            {/* Comissão do Vendedor */}
-            {formData.sellerId && (
-              <div className="p-6 bg-gradient-to-r from-purple-50 to-violet-50 rounded-2xl border border-purple-200">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="p-3 rounded-xl bg-purple-600">
-                    <DollarSign className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold text-purple-900">Comissão do Vendedor</h3>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="form-group">
-                    <label className="form-label">Taxa de Comissão (%)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                      value={formData.custom_commission_rate}
-                      onChange={(e) => setFormData(prev => ({ ...prev, custom_commission_rate: parseFloat(e.target.value) || 0 }))}
-                      className="input-field"
-                      placeholder="5.00"
-                    />
-                  </div>
-                  
-                  <div className="p-4 bg-white rounded-xl border border-purple-200">
-                    <div className="flex items-center gap-3">
-                      <Calculator className="w-6 h-6 text-purple-600" />
-                      <div>
-                        <p className="text-purple-600 font-semibold">Valor da Comissão</p>
-                        <p className="text-2xl font-black text-purple-700">
-                          R$ {((formData.totalValue * (formData.custom_commission_rate || 0)) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Métodos de Pagamento */}
             <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-xl bg-green-600">
-                    <CreditCard className="w-6 h-6 text-white" />
+                    <DollarSign className="w-6 h-6 text-white" />
                   </div>
                   <h3 className="text-xl font-bold text-green-900">Métodos de Pagamento</h3>
                 </div>
@@ -698,14 +393,14 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                 {formData.paymentMethods.map((method, index) => (
                   <div key={index} className="p-6 bg-white rounded-2xl border border-green-100 shadow-sm">
                     <div className="flex justify-between items-start mb-6">
-                      <h4 className="text-lg font-bold text-green-900">Método {index + 1}</h4>
+                      <h4 className="font-bold text-green-900 text-lg">Método {index + 1}</h4>
                       {formData.paymentMethods.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removePaymentMethod(index)}
-                          className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-modern"
+                          className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-all"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-5 h-5" />
                         </button>
                       )}
                     </div>
@@ -740,19 +435,15 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                           required
                         />
                       </div>
-                    </div>
 
-                    {/* Parcelamento */}
-                    {['cartao_credito', 'cheque', 'boleto'].includes(method.type) && (
-                      <div className="mt-6 p-4 bg-green-50 rounded-xl border border-green-200">
-                        <h5 className="font-bold text-green-800 mb-4">Configurações de Parcelamento</h5>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {(method.type === 'cartao_credito' || method.type === 'cheque' || method.type === 'boleto') && (
+                        <>
                           <div className="form-group">
                             <label className="form-label">Número de Parcelas</label>
                             <input
                               type="number"
                               min="1"
+                              max="24"
                               value={method.installments || 1}
                               onChange={(e) => {
                                 const installments = parseInt(e.target.value) || 1;
@@ -766,13 +457,11 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                           </div>
 
                           <div className="form-group">
-                            <label className="form-label">Valor por Parcela</label>
+                            <label className="form-label">Valor da Parcela</label>
                             <input
                               type="number"
                               step="0.01"
-                              min="0"
-                              value={method.installmentValue || 0}
-                              onChange={(e) => updatePaymentMethod(index, 'installmentValue', parseFloat(e.target.value) || 0)}
+                              value={method.installmentValue || method.amount}
                               className="input-field bg-gray-50"
                               readOnly
                             />
@@ -790,343 +479,57 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                             />
                           </div>
 
-                          {(method.installments || 1) > 1 && (
-                            <div className="form-group md:col-span-3">
-                              <label className="form-label">Data da Primeira Parcela</label>
-                              <input
-                                type="date"
-                                value={method.firstInstallmentDate || formData.date}
-                                onChange={(e) => updatePaymentMethod(index, 'firstInstallmentDate', e.target.value)}
-                                className="input-field"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Configurações de Cheque */}
-                    {method.type === 'cheque' && (
-                      <div className="mt-6 p-4 bg-yellow-50 rounded-xl border border-yellow-200">
-                        <h5 className="font-bold text-yellow-800 mb-4">Configurações do Cheque</h5>
-                        
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-4">
-                            <label className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={method.isOwnCheck || false}
-                                onChange={(e) => updatePaymentMethod(index, 'isOwnCheck', e.target.checked)}
-                                className="rounded"
-                              />
-                              <span className="form-label mb-0">Cheque Próprio</span>
-                            </label>
-                            
-                            <label className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={method.isThirdPartyCheck || false}
-                                onChange={(e) => {
-                                  updatePaymentMethod(index, 'isThirdPartyCheck', e.target.checked);
-                                  if (e.target.checked && !method.thirdPartyDetails) {
-                                    updatePaymentMethod(index, 'thirdPartyDetails', []);
-                                  }
-                                }}
-                                className="rounded"
-                              />
-                              <span className="form-label mb-0">Cheque de Terceiros</span>
-                            </label>
+                          <div className="form-group">
+                            <label className="form-label">Data da Primeira Parcela</label>
+                            <input
+                              type="date"
+                              value={method.startDate || formData.date}
+                              onChange={(e) => updatePaymentMethod(index, 'startDate', e.target.value)}
+                              className="input-field"
+                            />
                           </div>
-
-                          {/* Detalhes de Cheques de Terceiros */}
-                          {method.isThirdPartyCheck && (
-                            <div className="space-y-4">
-                              <div className="flex justify-between items-center">
-                                <h6 className="font-bold text-yellow-800">Detalhes dos Cheques de Terceiros</h6>
-                                <button
-                                  type="button"
-                                  onClick={() => addThirdPartyCheckDetail(index)}
-                                  className="px-3 py-1 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-bold"
-                                >
-                                  <Plus className="w-3 h-3 mr-1" />
-                                  Adicionar Cheque
-                                </button>
-                              </div>
-                              
-                              {(method.thirdPartyDetails || []).map((detail, detailIndex) => (
-                                <div key={detailIndex} className="p-4 bg-white rounded-xl border border-yellow-100">
-                                  <div className="flex justify-between items-center mb-4">
-                                    <h6 className="font-bold text-yellow-900">Cheque {detailIndex + 1}</h6>
-                                    <button
-                                      type="button"
-                                      onClick={() => removeThirdPartyCheckDetail(index, detailIndex)}
-                                      className="text-red-600 hover:text-red-800 p-1 rounded"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                  
-                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="form-group">
-                                      <label className="form-label">Emissor *</label>
-                                      <input
-                                        type="text"
-                                        value={detail.issuer}
-                                        onChange={(e) => updateThirdPartyCheckDetail(index, detailIndex, 'issuer', e.target.value)}
-                                        className="input-field"
-                                        placeholder="Nome do emissor"
-                                        required
-                                      />
-                                    </div>
-                                    
-                                    <div className="form-group">
-                                      <label className="form-label">CPF/CNPJ *</label>
-                                      <input
-                                        type="text"
-                                        value={detail.cpfCnpj}
-                                        onChange={(e) => updateThirdPartyCheckDetail(index, detailIndex, 'cpfCnpj', e.target.value)}
-                                        className="input-field"
-                                        placeholder="000.000.000-00"
-                                        required
-                                      />
-                                    </div>
-                                    
-                                    <div className="form-group">
-                                      <label className="form-label">Banco *</label>
-                                      <input
-                                        type="text"
-                                        value={detail.bank}
-                                        onChange={(e) => updateThirdPartyCheckDetail(index, detailIndex, 'bank', e.target.value)}
-                                        className="input-field"
-                                        placeholder="Nome do banco"
-                                        required
-                                      />
-                                    </div>
-                                    
-                                    <div className="form-group">
-                                      <label className="form-label">Agência *</label>
-                                      <input
-                                        type="text"
-                                        value={detail.agency}
-                                        onChange={(e) => updateThirdPartyCheckDetail(index, detailIndex, 'agency', e.target.value)}
-                                        className="input-field"
-                                        placeholder="0000"
-                                        required
-                                      />
-                                    </div>
-                                    
-                                    <div className="form-group">
-                                      <label className="form-label">Conta *</label>
-                                      <input
-                                        type="text"
-                                        value={detail.account}
-                                        onChange={(e) => updateThirdPartyCheckDetail(index, detailIndex, 'account', e.target.value)}
-                                        className="input-field"
-                                        placeholder="00000-0"
-                                        required
-                                      />
-                                    </div>
-                                    
-                                    <div className="form-group">
-                                      <label className="form-label">Nº do Cheque *</label>
-                                      <input
-                                        type="text"
-                                        value={detail.checkNumber}
-                                        onChange={(e) => updateThirdPartyCheckDetail(index, detailIndex, 'checkNumber', e.target.value)}
-                                        className="input-field"
-                                        placeholder="000000"
-                                        required
-                                      />
-                                    </div>
-                                    
-                                    <div className="form-group md:col-span-3">
-                                      <label className="form-label">Observações</label>
-                                      <textarea
-                                        value={detail.observations}
-                                        onChange={(e) => updateThirdPartyCheckDetail(index, detailIndex, 'observations', e.target.value || null)}
-                                        className="input-field"
-                                        rows={2}
-                                        placeholder="Observações sobre este cheque..."
-                                      />
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Observações */}
-            <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="p-3 rounded-xl bg-green-600">
-                  <FileText className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-green-900">Observações</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="form-group">
-                  <label className="form-label">Observações da Venda</label>
-                  <textarea
-                    value={formData.observations}
-                    onChange={(e) => setFormData(prev => ({ ...prev, observations: e.target.value }))}
-                    className="input-field"
-                    rows={4}
-                    placeholder="Informações gerais sobre a venda..."
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Observações do Pagamento</label>
-                  <textarea
-                    value={formData.paymentObservations}
-                    onChange={(e) => setFormData(prev => ({ ...prev, paymentObservations: e.target.value }))}
-                    className="input-field"
-                    rows={4}
-                    placeholder="Informações específicas sobre o pagamento..."
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Resumo Financeiro */}
-            <div className="p-8 bg-gradient-to-br from-green-100 via-emerald-100 to-green-100 rounded-3xl border-2 border-green-300 modern-shadow-xl">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-lg">
-                  <Calculator className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-green-900">Resumo Financeiro</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="text-center p-6 bg-white rounded-2xl border border-green-200 modern-shadow-lg">
-                  <div className="p-3 rounded-xl bg-blue-600 w-fit mx-auto mb-4">
-                    <DollarSign className="w-6 h-6 text-white" />
-                  </div>
-                  <h4 className="font-bold text-green-900 mb-2">Valor Total</h4>
-                  <p className="text-3xl font-black text-blue-600">
+            {/* Resumo da Venda */}
+            <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border-2 border-blue-200 modern-shadow-xl">
+              <h3 className="text-xl font-black text-blue-800 mb-4">Resumo da Venda</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <span className="text-blue-600 font-semibold block mb-1">Total:</span>
+                  <p className="text-2xl font-black text-blue-800">
                     R$ {formData.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                
-                <div className="text-center p-6 bg-white rounded-2xl border border-green-200 modern-shadow-lg">
-                  <div className="p-3 rounded-xl bg-green-600 w-fit mx-auto mb-4">
-                    <CheckCircle className="w-6 h-6 text-white" />
-                  </div>
-                  <h4 className="font-bold text-green-900 mb-2">Valor Recebido</h4>
-                  <p className="text-3xl font-black text-green-600">
-                    R$ {amounts.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-sm text-green-600 font-semibold mt-1">
-                    Pagamento imediato
+                <div className="text-center">
+                  <span className="text-blue-600 font-semibold block mb-1">Recebido:</span>
+                  <p className="text-2xl font-black text-green-600">
+                    R$ {calculateAmounts().receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                
-                <div className="text-center p-6 bg-white rounded-2xl border border-green-200 modern-shadow-lg">
-                  <div className="p-3 rounded-xl bg-orange-600 w-fit mx-auto mb-4">
-                    <Calendar className="w-6 h-6 text-white" />
-                  </div>
-                  <h4 className="font-bold text-green-900 mb-2">Valor Pendente</h4>
-                  <p className="text-3xl font-black text-orange-600">
-                    R$ {amounts.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                <div className="text-center">
+                  <span className="text-blue-600 font-semibold block mb-1">Pendente:</span>
+                  <p className="text-2xl font-black text-orange-600">
+                    R$ {calculateAmounts().pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
-                  <p className="text-sm text-orange-600 font-semibold mt-1">
-                    A receber
-                  </p>
-                </div>
-                
-                <div className="text-center p-6 bg-white rounded-2xl border border-green-200 modern-shadow-lg">
-                  <div className="p-3 rounded-xl bg-purple-600 w-fit mx-auto mb-4">
-                    <FileText className="w-6 h-6 text-white" />
-                  </div>
-                  <h4 className="font-bold text-green-900 mb-2">Status</h4>
-                  <span className={`px-4 py-2 rounded-full text-sm font-bold border ${
-                    amounts.status === 'pago' ? 'bg-green-100 text-green-800 border-green-200' :
-                    amounts.status === 'parcial' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                    'bg-yellow-100 text-yellow-800 border-yellow-200'
-                  }`}>
-                    {amounts.status === 'pago' ? 'PAGO' :
-                     amounts.status === 'parcial' ? 'PARCIAL' : 'PENDENTE'}
-                  </span>
                 </div>
               </div>
-              
-              {/* Breakdown dos Pagamentos */}
-              <div className="mt-8 p-6 bg-white rounded-2xl border border-green-200">
-                <h4 className="font-bold text-green-900 mb-4">Breakdown dos Pagamentos</h4>
-                <div className="space-y-3">
-                  {formData.paymentMethods.map((method, index) => (
-                    <div key={index} className="flex justify-between items-center p-3 bg-green-50 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                          method.type === 'dinheiro' ? 'bg-green-100 text-green-800' :
-                          method.type === 'pix' ? 'bg-blue-100 text-blue-800' :
-                          method.type === 'cartao_credito' ? 'bg-purple-100 text-purple-800' :
-                          method.type === 'cartao_debito' ? 'bg-indigo-100 text-indigo-800' :
-                          method.type === 'cheque' ? 'bg-yellow-100 text-yellow-800' :
-                          method.type === 'boleto' ? 'bg-cyan-100 text-cyan-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {method.type.replace('_', ' ').toUpperCase()}
-                        </span>
-                        {method.installments && method.installments > 1 && (
-                          <span className="text-xs text-green-600 font-semibold">
-                            {method.installments}x de R$ {(method.installmentValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-lg font-black text-green-600">
-                        R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  ))}
-                  
-                  <div className="flex justify-between items-center p-4 bg-green-100 rounded-xl border-t-2 border-green-300">
-                    <span className="font-bold text-green-800">TOTAL DOS PAGAMENTOS:</span>
-                    <span className="text-2xl font-black text-green-700">
-                      R$ {amounts.totalPayments.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                </div>
+              <div className="mt-6 text-center">
+                <span className="text-blue-600 font-semibold block mb-2">Status da Venda:</span>
+                <span className={`px-4 py-2 rounded-full text-sm font-bold border ${
+                  calculateAmounts().status === 'pago' ? 'bg-green-100 text-green-800 border-green-200' :
+                  calculateAmounts().status === 'parcial' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                  'bg-red-100 text-red-800 border-red-200'
+                }`}>
+                  {calculateAmounts().status === 'pago' ? 'PAGO' :
+                   calculateAmounts().status === 'parcial' ? 'PARCIAL' : 'PENDENTE'}
+                </span>
               </div>
-              
-              {/* Alertas */}
-              {amounts.totalPayments > formData.totalValue && (
-                <div className="mt-6 p-4 bg-red-50 rounded-xl border border-red-200">
-                  <div className="flex items-center gap-3">
-                    <AlertCircle className="w-6 h-6 text-red-600" />
-                    <div>
-                      <p className="text-red-800 font-bold">Atenção!</p>
-                      <p className="text-red-700 text-sm">
-                        O total dos pagamentos (R$ {amounts.totalPayments.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) 
-                        é maior que o valor da venda (R$ {formData.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {amounts.totalPayments < formData.totalValue && (
-                <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                  <div className="flex items-center gap-3">
-                    <AlertCircle className="w-6 h-6 text-blue-600" />
-                    <div>
-                      <p className="text-blue-800 font-bold">Informação</p>
-                      <p className="text-blue-700 text-sm">
-                        Restam R$ {amounts.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} 
-                        a receber. Esta venda ficará com status "{amounts.status.toUpperCase()}".
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
@@ -1140,7 +543,6 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
               <button
                 type="submit"
                 className="btn-primary group"
-                disabled={amounts.totalPayments > formData.totalValue}
               >
                 {sale ? 'Atualizar Venda' : 'Criar Venda'}
               </button>
@@ -1150,4 +552,29 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       </div>
     </div>
   );
+
+  // Helper functions (defined inside component to access state)
+  function cleanUUIDField(value: any): string | null {
+    if (!value) return null;
+    if (typeof value !== 'string') return null;
+    
+    const trimmed = value.trim();
+    if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
+      return null;
+    }
+    
+    // Check if it's a valid UUID
+    if (!isValidUUID(trimmed)) {
+      console.warn('⚠️ Invalid UUID detected:', trimmed, '- converting to null');
+      return null;
+    }
+    
+    return trimmed;
+  }
+
+  function isValidUUID(value: string): boolean {
+    if (!value || typeof value !== 'string') return false;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(value);
+  }
 }

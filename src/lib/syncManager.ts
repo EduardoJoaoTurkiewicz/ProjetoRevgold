@@ -258,17 +258,35 @@ class SyncManager {
     const cleaned = { ...obj };
     
     Object.keys(cleaned).forEach(key => {
-      if (key.endsWith('_id') || key.endsWith('Id') || key === 'id' || 
-          key === 'customerId' || key === 'paymentMethodId' || key === 'saleId') {
+      // Comprehensive UUID field detection for sync
+      const isUUIDField = key.endsWith('_id') || key.endsWith('Id') || key === 'id' || 
+          ['customerId', 'paymentMethodId', 'saleId', 'customer_id', 'product_id', 
+           'seller_id', 'employee_id', 'sale_id', 'debt_id', 'check_id', 'boleto_id', 
+           'related_id', 'transaction_id', 'reference_id', 'parent_id', 'owner_id',
+           'created_by', 'updated_by', 'assigned_to'].includes(key);
+      
+      if (isUUIDField) {
         const value = cleaned[key];
         if (value === '' || value === 'null' || value === 'undefined' || !value) {
-          cleaned[key] = null;
+          // Handle offline temporary IDs
+          if (typeof value === 'string' && value.startsWith('offline-')) {
+            console.warn(`⚠️ Found offline temporary ID for ${key}:`, value, '- converting to null for sync');
+            cleaned[key] = null;
+          } else {
+            cleaned[key] = null;
+          }
+          console.log(`🔧 Sync: Set ${key} to null`);
         } else if (typeof value === 'string') {
           const trimmed = value.trim();
           if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
             cleaned[key] = null;
+            console.log(`🔧 Sync: Set empty ${key} to null`);
+          } else if (trimmed.startsWith('offline-')) {
+            // Convert offline temporary IDs to null for sync
+            console.warn(`⚠️ Sync: Converting offline temporary ID to null for ${key}:`, trimmed);
+            cleaned[key] = null;
           } else {
-            // For sync, we need to validate UUIDs more carefully
+            // Validate UUID format more carefully for sync
             const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
             if (!uuidRegex.test(trimmed)) {
               console.warn(`⚠️ Invalid UUID for ${key} during sync:`, trimmed, '- converting to null');
@@ -282,6 +300,30 @@ class SyncManager {
         }
       }
     });
+    
+    // Clean UUID fields in nested objects (like payment methods)
+    if (cleaned.paymentMethods && Array.isArray(cleaned.paymentMethods)) {
+      cleaned.paymentMethods = cleaned.paymentMethods.map((method: any) => {
+        const cleanedMethod = { ...method };
+        Object.keys(cleanedMethod).forEach(methodKey => {
+          const isMethodUUIDField = methodKey.endsWith('_id') || methodKey.endsWith('Id') || 
+              ['customer_id', 'product_id', 'payment_method_id', 'reference_id'].includes(methodKey);
+          
+          if (isMethodUUIDField) {
+            const methodValue = cleanedMethod[methodKey];
+            if (methodValue === '' || methodValue === 'null' || methodValue === 'undefined' || 
+                (typeof methodValue === 'string' && methodValue.startsWith('offline-'))) {
+              cleanedMethod[methodKey] = null;
+              console.log(`🔧 Sync: Set payment method ${methodKey} to null`);
+            } else if (typeof methodValue === 'string' && methodValue.trim() && !isValidUUID(methodValue.trim())) {
+              console.warn(`⚠️ Sync: Invalid UUID in payment method for ${methodKey}:`, methodValue, '- converting to null');
+              cleanedMethod[methodKey] = null;
+            }
+          }
+        });
+        return cleanedMethod;
+      });
+    }
     
     return cleaned;
   }
