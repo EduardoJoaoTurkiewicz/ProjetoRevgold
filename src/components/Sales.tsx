@@ -15,8 +15,9 @@ export function Sales() {
   const [showTestPanel, setShowTestPanel] = useState(false);
 
   const handleAddSale = async (sale: Omit<Sale, 'id' | 'createdAt'>) => {
+    console.log('🔄 handleAddSale called with:', sale);
+    
     try {
-      console.log('🔄 Adicionando nova venda:', sale);
       
       // Enhanced UUID validation and cleaning before submission
       const cleanedSale = cleanUUIDFields(sale);
@@ -24,16 +25,19 @@ export function Sales() {
       
       // Validate required fields
       if (!cleanedSale.client || !cleanedSale.client.trim()) {
+        console.error('❌ Validation failed: Missing client');
         alert('Por favor, informe o nome do cliente.');
         return;
       }
       
       if (cleanedSale.totalValue <= 0) {
+        console.error('❌ Validation failed: Invalid total value:', cleanedSale.totalValue);
         alert('O valor total da venda deve ser maior que zero.');
         return;
       }
       
       if (!cleanedSale.paymentMethods || cleanedSale.paymentMethods.length === 0) {
+        console.error('❌ Validation failed: No payment methods');
         alert('Por favor, adicione pelo menos um método de pagamento.');
         return;
       }
@@ -41,21 +45,27 @@ export function Sales() {
       // Validate payment methods structure
       for (const method of cleanedSale.paymentMethods) {
         if (!method.type || typeof method.type !== 'string') {
+          console.error('❌ Validation failed: Invalid payment method type:', method);
           alert('Todos os métodos de pagamento devem ter um tipo válido.');
           return;
         }
         if (typeof method.amount !== 'number' || method.amount <= 0) {
+          console.error('❌ Validation failed: Invalid payment method amount:', method);
           alert('Todos os métodos de pagamento devem ter um valor maior que zero.');
           return;
         }
       }
       
+      console.log('✅ Validation passed, calling createSale...');
       const saleId = await createSale(cleanedSale);
       console.log('✅ Venda adicionada com sucesso, ID:', saleId);
       setIsFormOpen(false);
       
     } catch (error) {
       console.error('❌ Erro ao adicionar venda:', error);
+      console.error('❌ Error stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error('❌ Sale data that failed:', JSON.stringify(sale, null, 2));
+      
       let errorMessage = 'Erro ao criar venda';
       
       if (error instanceof Error) {
@@ -200,6 +210,7 @@ export function Sales() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => setShowDebugPanel(true)}
+            type="button"
             className="btn-warning flex items-center gap-2"
             title="Debug Logs"
           >
@@ -208,6 +219,7 @@ export function Sales() {
           </button>
           <button
             onClick={() => setShowTestPanel(true)}
+            type="button"
             className="btn-info flex items-center gap-2"
             title="Executar Testes"
           >
@@ -215,7 +227,11 @@ export function Sales() {
             Testes
           </button>
           <button
-            onClick={() => setIsFormOpen(true)}
+            type="button"
+            onClick={() => {
+              console.log('🔘 Add Sale button clicked');
+              setIsFormOpen(true);
+            }}
             className="btn-primary flex items-center gap-2 modern-shadow-xl hover:modern-shadow-lg"
           >
             <Plus className="w-5 h-5" />
@@ -296,6 +312,7 @@ export function Sales() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => setViewingSale(sale)}
+                            type="button"
                             className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-modern"
                             title="Visualizar"
                           >
@@ -303,6 +320,7 @@ export function Sales() {
                           </button>
                           <button
                             onClick={() => setEditingSale(sale)}
+                            type="button"
                             className="text-emerald-600 hover:text-emerald-800 p-2 rounded-lg hover:bg-emerald-50 transition-modern"
                             title="Editar"
                           >
@@ -310,6 +328,7 @@ export function Sales() {
                           </button>
                           <button
                             onClick={() => handleDeleteSale(sale.id)}
+                            type="button"
                             className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-modern"
                             title="Excluir"
                           >
@@ -332,6 +351,7 @@ export function Sales() {
             <p className="text-slate-600 mb-8 text-lg">Comece registrando sua primeira venda para controlar as receitas.</p>
             <button
               onClick={() => setIsFormOpen(true)}
+              type="button"
               className="btn-primary modern-shadow-xl"
             >
               Registrar primeira venda
@@ -366,6 +386,7 @@ export function Sales() {
                 </div>
                 <button
                   onClick={() => setViewingSale(null)}
+                  type="button"
                   className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
                 >
                   <X className="w-6 h-6" />
@@ -474,6 +495,7 @@ export function Sales() {
               <div className="flex justify-end">
                 <button
                   onClick={() => setViewingSale(null)}
+                  type="button"
                   className="btn-secondary"
                 >
                   Fechar
