@@ -166,7 +166,7 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
         deliveryDate: formData.deliveryDate || null,
         client: formData.client.trim(),
         sellerId: formData.sellerId || null,
-        products: validProducts.map(p => `${p.name} (${p.quantity}x R$ ${p.price.toFixed(2)})`).join(', '),
+        products: validProducts,
         observations: formData.observations || null,
         totalValue: amounts.totalValue,
         paymentMethods: validPaymentMethods,
