@@ -10,6 +10,7 @@ import {
 import { connectionManager } from './connectionManager';
 import { supabase } from './supabase';
 import { ErrorHandler } from './errorHandler';
+import { checkSupabaseConnection, isValidUUID } from './supabaseServices';
 import toast from 'react-hot-toast';
 
 class SyncManager {
@@ -28,6 +29,13 @@ class SyncManager {
   public async startSync(): Promise<void> {
     if (this.isSyncing) {
       console.log('🔄 Sync already in progress, skipping...');
+      return;
+    }
+
+    // Verify connection before starting sync
+    const isConnected = await checkSupabaseConnection();
+    if (!isConnected) {
+      console.log('❌ Cannot start sync: Supabase not reachable');
       return;
     }
 
@@ -396,12 +404,22 @@ class SyncManager {
   }
 
   public async forcSync(): Promise<void> {
-    if (connectionManager.isConnected()) {
+    const isConnected = await checkSupabaseConnection();
+    if (isConnected) {
+      console.log('🔄 Force sync initiated - connection verified');
       await this.startSync();
     } else {
+      console.log('❌ Force sync failed - no connection to Supabase');
       toast.error('❌ Não é possível sincronizar: sem conexão com o servidor');
     }
   }
+}
+
+// Helper function to validate UUIDs in sync manager
+function isValidUUID(value?: string | null): boolean {
+  if (!value || typeof value !== 'string') return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(value);
 }
 
 // Singleton instance

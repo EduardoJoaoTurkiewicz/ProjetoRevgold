@@ -18,6 +18,8 @@ export function Sales() {
     console.log('🔄 handleAddSale called with:', sale);
     
     try {
+      // Log the connection status at the start
+      console.log('🔗 Checking connection status before creating sale...');
       
       // Enhanced UUID validation and cleaning before submission
       const cleanedSale = cleanUUIDFields(sale);
@@ -57,6 +59,8 @@ export function Sales() {
       }
       
       console.log('✅ Validation passed, calling createSale...');
+      console.log('📦 Final payload being sent:', JSON.stringify(cleanedSale, null, 2));
+      
       const saleId = await createSale(cleanedSale);
       console.log('✅ Venda adicionada com sucesso, ID:', saleId);
       setIsFormOpen(false);
