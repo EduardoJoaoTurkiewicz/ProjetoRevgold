@@ -124,7 +124,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
             <p className="text-green-300 text-xs">Gestão Empresarial Profissional</p>
             <div className="mt-4 flex items-center gap-2">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-green-300 text-xs font-bold">Conectado ao Supabase</span>
+              <span className="text-green-300 text-xs font-bold">Sistema Ativo</span>
             </div>
           </div>
         </div>

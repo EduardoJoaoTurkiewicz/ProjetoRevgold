@@ -5,11 +5,6 @@ import { ErrorHandler } from './errorHandler';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
-// Enhanced logging for debugging
-console.log('🔧 Supabase Configuration Check:');
-console.log('📍 URL:', supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'NOT SET');
-console.log('🔑 Key:', supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'NOT SET');
-
 // Check if Supabase is properly configured
 export function isSupabaseConfigured(): boolean {
   const url = import.meta.env.VITE_SUPABASE_URL;
@@ -26,40 +21,11 @@ export function isSupabaseConfigured(): boolean {
   );
   
   if (!isConfigured) {
-    console.error('❌ SUPABASE CONFIGURATION ERROR:');
-    console.error('📍 Current URL:', url || 'undefined');
-    console.error('🔑 Current Key:', key ? `${key.substring(0, 20)}...` : 'undefined');
-    ErrorHandler.logProjectError('SUPABASE NÃO CONFIGURADO CORRETAMENTE', 'Configuration Check');
-    console.group('📝 Para corrigir este erro:');
-    console.log('1. Abra o arquivo .env na raiz do projeto');
-    console.log('2. Configure VITE_SUPABASE_URL=https://gzazwmgiptnswkaljqhy.supabase.co');
-    console.log('3. Configure VITE_SUPABASE_ANON_KEY com a chave anônima do seu projeto');
-    console.log('4. Reinicie o servidor de desenvolvimento (npm run dev)');
-    console.log('🔗 URL atual:', url || 'não definida');
-    console.log('🔑 Key atual:', key ? `${key.substring(0, 10)}...` : 'não definida');
-    console.groupEnd();
-    
-    // Show user-friendly error in the browser
-    if (typeof window !== 'undefined') {
-      const errorMessage = `
-ERRO DE CONFIGURAÇÃO DO SUPABASE
-
-Para corrigir este erro:
-
-1. Abra o arquivo .env na raiz do projeto
-2. Configure suas credenciais do Supabase:
-   - VITE_SUPABASE_URL=https://seu-projeto-id.supabase.co
-   - VITE_SUPABASE_ANON_KEY=sua-chave-anonima-aqui
-3. Reinicie o servidor (npm run dev)
-
-Encontre suas credenciais em:
-https://supabase.com/dashboard → Seu Projeto → Settings → API
-      `;
-      
-      setTimeout(() => {
-        alert(errorMessage);
-      }, 1000);
-    }
+    console.warn('⚠️ Supabase não configurado - sistema funcionará em modo offline');
+    console.log('📝 Para conectar ao Supabase:');
+    console.log('1. Configure VITE_SUPABASE_URL no arquivo .env');
+    console.log('2. Configure VITE_SUPABASE_ANON_KEY no arquivo .env');
+    console.log('3. Reinicie o servidor de desenvolvimento');
   }
   
   return isConfigured;
@@ -68,12 +34,11 @@ https://supabase.com/dashboard → Seu Projeto → Settings → API
 // Create client with proper error handling
 export const supabase = (() => {
   if (!isSupabaseConfigured()) {
-    console.warn('⚠️ Creating placeholder Supabase client due to configuration issues');
-    ErrorHandler.logProjectError('Criando cliente Supabase com valores placeholder devido à configuração incorreta', 'Client Creation');
+    console.log('📱 Criando cliente Supabase placeholder para modo offline');
     return createClient<Database>('https://placeholder.supabase.co', 'placeholder-key');
   }
   
-  console.log('✅ Supabase configurado corretamente, criando cliente...');
+  console.log('✅ Supabase configurado, criando cliente...');
   return createClient<Database>(supabaseUrl, supabaseAnonKey);
 })();
 

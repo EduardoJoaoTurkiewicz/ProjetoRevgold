@@ -150,86 +150,85 @@ export function AppProvider({ children }: AppProviderProps) {
 
   const loadAllData = async () => {
     try {
-      console.log('🔄 Starting loadAllData with enhanced error logging...');
+      console.log('🔄 Carregando dados do sistema...');
       setIsLoading(true);
 
       // Enhanced connection check with detailed logging
-      console.log('🔍 Checking Supabase connection...');
+      console.log('🔍 Verificando conexão com Supabase...');
       const isConnected = await checkSupabaseConnection();
       
       if (!isConnected) {
-        console.error('❌ Supabase connection failed');
-        console.log('📱 Falling back to offline data...');
+        console.log('📱 Supabase não disponível - carregando dados offline...');
         await loadOfflineDataOnly();
-        setError('Conexão falhou. Usando dados offline.');
+        setError(null); // Don't show error for offline mode
         setConnectionStatus('offline');
         return;
       }
       
-      console.log('🌐 Supabase connection verified, loading data online...');
+      console.log('🌐 Conexão verificada - carregando dados online...');
       setConnectionStatus('online');
       
       // Clear any previous errors
       setError(null);
       
       // Load data with individual error handling for better debugging
-      console.log('📊 Loading individual data sets...');
+      console.log('📊 Carregando conjuntos de dados...');
       
       const results = await Promise.allSettled([
         salesService.getAll().catch(err => { 
-          console.error('❌ Failed to load sales:', err?.message ?? 'Unknown error'); 
+          console.warn('⚠️ Falha ao carregar vendas:', err?.message ?? 'Erro desconhecido'); 
           throw err; 
         }),
         employeesService.getAll().catch(err => { 
-          console.error('❌ Failed to load employees:', err?.message ?? 'Unknown error'); 
+          console.warn('⚠️ Falha ao carregar funcionários:', err?.message ?? 'Erro desconhecido'); 
           throw err; 
         }),
         debtsService.getAll().catch(err => { 
-          console.error('❌ Failed to load debts:', err?.message ?? 'Unknown error'); 
+          console.warn('⚠️ Falha ao carregar dívidas:', err?.message ?? 'Erro desconhecido'); 
           throw err; 
         }),
         checksService.getAll().catch(err => { 
-          console.error('❌ Failed to load checks:', err?.message ?? 'Unknown error'); 
+          console.warn('⚠️ Falha ao carregar cheques:', err?.message ?? 'Erro desconhecido'); 
           throw err; 
         }),
         boletosService.getAll().catch(err => { 
-          console.error('❌ Failed to load boletos:', err?.message ?? 'Unknown error'); 
+          console.warn('⚠️ Falha ao carregar boletos:', err?.message ?? 'Erro desconhecido'); 
           throw err; 
         }),
         cashService.getTransactions().catch(err => { 
-          console.error('❌ Failed to load cash transactions:', err?.message ?? 'Unknown error'); 
+          console.warn('⚠️ Falha ao carregar transações de caixa:', err?.message ?? 'Erro desconhecido'); 
           throw err; 
         }),
         agendaService.getAll().catch(err => { 
-          console.error('❌ Failed to load agenda events:', err?.message ?? 'Unknown error'); 
+          console.warn('⚠️ Falha ao carregar eventos da agenda:', err?.message ?? 'Erro desconhecido'); 
           throw err; 
         }),
         taxesService.getAll().catch(err => { 
-          console.error('❌ Failed to load taxes:', err?.message ?? 'Unknown error'); 
+          console.warn('⚠️ Falha ao carregar impostos:', err?.message ?? 'Erro desconhecido'); 
           throw err; 
         }),
         pixFeesService.getAll().catch(err => { 
-          console.error('❌ Failed to load pix fees:', err?.message ?? 'Unknown error'); 
+          console.warn('⚠️ Falha ao carregar tarifas PIX:', err?.message ?? 'Erro desconhecido'); 
           throw err; 
         }),
         cashService.getBalance().catch(err => { 
-          console.error('❌ Failed to load cash balance:', err?.message ?? 'Unknown error'); 
+          console.warn('⚠️ Falha ao carregar saldo do caixa:', err?.message ?? 'Erro desconhecido'); 
           throw err; 
         }),
         employeePaymentsService?.getAll().catch(err => { 
-          console.error('❌ Failed to load employee payments:', err?.message ?? 'Unknown error'); 
+          console.warn('⚠️ Falha ao carregar pagamentos de funcionários:', err?.message ?? 'Erro desconhecido'); 
           return []; 
         }) || Promise.resolve([]),
         employeeAdvancesService?.getAll().catch(err => { 
-          console.error('❌ Failed to load employee advances:', err?.message ?? 'Unknown error'); 
+          console.warn('⚠️ Falha ao carregar adiantamentos:', err?.message ?? 'Erro desconhecido'); 
           return []; 
         }) || Promise.resolve([]),
         employeeOvertimesService?.getAll().catch(err => { 
-          console.error('❌ Failed to load employee overtimes:', err?.message ?? 'Unknown error'); 
+          console.warn('⚠️ Falha ao carregar horas extras:', err?.message ?? 'Erro desconhecido'); 
           return []; 
         }) || Promise.resolve([]),
         employeeCommissionsService?.getAll().catch(err => { 
-          console.error('❌ Failed to load employee commissions:', err?.message ?? 'Unknown error'); 
+          console.warn('⚠️ Falha ao carregar comissões:', err?.message ?? 'Erro desconhecido'); 
           return []; 
         }) || Promise.resolve([])
       ]);
@@ -248,10 +247,10 @@ export function AppProvider({ children }: AppProviderProps) {
         const dataName = dataNames[index];
         if (result.status === 'fulfilled') {
           successfulLoads.push(dataName);
-          console.log(`✅ ${dataName} loaded successfully:`, Array.isArray(result.value) ? `${result.value.length} records` : 'single record');
+          console.log(`✅ ${dataName} carregado:`, Array.isArray(result.value) ? `${result.value.length} registros` : 'registro único');
         } else {
           failedLoads.push(dataName);
-          console.error(`❌ ${dataName} failed to load:`, result.reason?.message ?? result.reason ?? 'Unknown error');
+          console.warn(`⚠️ ${dataName} falhou:`, result.reason?.message ?? result.reason ?? 'Erro desconhecido');
         }
       });
       
@@ -288,43 +287,32 @@ export function AppProvider({ children }: AppProviderProps) {
       setEmployeeOvertimes(employeeOvertimesData);
       setEmployeeCommissions(employeeCommissionsData);
       
-      console.log('📊 Data loading summary:', {
-        successful: successfulLoads.length,
-        failed: failedLoads.length,
-        successfulLoads,
-        failedLoads
+      console.log('📊 Resumo do carregamento:', {
+        sucesso: successfulLoads.length,
+        falhas: failedLoads.length
       });
       
       if (failedLoads.length > 0) {
-        const errorMessage = `Alguns dados falharam ao carregar: ${failedLoads.join(', ')}`;
-        console.warn('⚠️', errorMessage);
-        setError(errorMessage);
+        console.warn('⚠️ Alguns dados não puderam ser carregados:', failedLoads.join(', '));
+        // Don't set error for partial failures - system can still work
       } else {
-        console.log('✅ All data loaded successfully');
+        console.log('✅ Todos os dados carregados com sucesso');
       }
     } catch (error) {
-      console.error('❌ Critical error in loadAllData:', {
-        message: error?.message ?? 'Unknown error',
-        name: error?.name ?? 'Unknown',
-        stack: error?.stack?.split('\n').slice(0, 5).join('\n') ?? 'No stack trace'
-      });
+      console.warn('⚠️ Erro crítico no carregamento de dados:', error?.message ?? 'Erro desconhecido');
       
       ErrorHandler.logProjectError(error, 'Load All Data');
       
       // Try to load offline data as fallback
-      console.warn('⚠️ Failed to load from Supabase, attempting offline data fallback...');
+      console.log('📱 Tentando carregar dados offline...');
       try {
         await loadOfflineDataOnly();
-        const offlineMessage = 'Sem conexão com servidor. Mostrando dados offline.';
-        console.log('📱', offlineMessage);
-        toast.error(`❌ ${offlineMessage}`);
-        setError(`Erro de conexão: ${error?.message ?? 'Unknown error'}. Usando dados offline.`);
+        console.log('📱 Dados offline carregados com sucesso');
+        setError(null); // Don't show error when offline mode works
         setConnectionStatus('offline');
       } catch (offlineError) {
-        console.error('❌ Offline data fallback also failed:', offlineError ?? 'Unknown error');
-        const errorMessage = `Falha total: ${error?.message ?? 'Unknown error'}. Dados offline também indisponíveis.`;
-        console.error('💥', errorMessage);
-        setError(ErrorHandler.handleSupabaseError(error));
+        console.warn('⚠️ Dados offline também não disponíveis:', offlineError ?? 'Erro desconhecido');
+        setError('Sistema iniciando... Configure o Supabase para funcionalidade completa.');
         setConnectionStatus('offline');
       }
     } finally {
@@ -336,16 +324,10 @@ export function AppProvider({ children }: AppProviderProps) {
   // Load offline data only
   const loadOfflineDataOnly = async () => {
     try {
-      console.log('📱 Loading offline data with detailed logging...');
+      console.log('📱 Carregando dados offline...');
       
       const offlineData = await getOfflineData();
-      console.log('📊 Offline data summary:', {
-        totalRecords: offlineData.length,
-        byTable: offlineData.reduce((acc, item) => {
-          acc[item.table] = (acc[item.table] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>)
-      });
+      console.log('📊 Dados offline encontrados:', offlineData.length, 'registros');
       
       // Group offline data by table
       const salesData = offlineData.filter(d => d.table === 'sales').map(d => d.data);
@@ -372,19 +354,16 @@ export function AppProvider({ children }: AppProviderProps) {
       setEmployeeOvertimes([]);
       setEmployeeCommissions([]);
       
-      console.log('✅ Offline data loaded successfully:', {
-        sales: salesData.length,
-        employees: employeesData.length,
-        debts: debtsData.length,
-        checks: checksData.length,
+      console.log('✅ Dados offline carregados:', {
+        vendas: salesData.length,
+        funcionários: employeesData.length,
+        dívidas: debtsData.length,
+        cheques: checksData.length,
         boletos: boletosData.length
       });
       
     } catch (error) {
-      console.error('❌ Failed to load offline data:', {
-        message: error?.message ?? 'Unknown error',
-        name: error?.name ?? 'Unknown'
-      });
+      console.warn('⚠️ Falha ao carregar dados offline:', error?.message ?? 'Erro desconhecido');
       throw error;
     }
   };

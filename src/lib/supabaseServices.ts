@@ -122,24 +122,22 @@ export function transformToSnakeCase(obj: any): any {
 export async function checkSupabaseConnection(): Promise<boolean> {
   try {
     if (!isSupabaseConfigured()) {
-      console.error('❌ Supabase not configured - check .env file');
-      console.error('📍 Expected: VITE_SUPABASE_URL=https://your-project.supabase.co');
-      console.error('🔑 Expected: VITE_SUPABASE_ANON_KEY=your-anon-key');
+      console.log('📱 Supabase não configurado - modo offline ativo');
       return false;
     }
 
-    console.log('🔍 Testing Supabase connection with detailed logging...');
+    console.log('🔍 Testando conexão com Supabase...');
     
     // Test with timeout and detailed error handling
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
-      console.error('❌ Supabase connection timeout after 8 seconds');
+      console.warn('⚠️ Timeout na conexão com Supabase');
       controller.abort();
     }, 8000);
     
     try {
       // Test multiple tables to identify schema issues
-      console.log('🔍 Testing cash_balances table...');
+      console.log('🔍 Testando tabela cash_balances...');
       const { data: cashData, error: cashError } = await supabase
         .from('cash_balances')
         .select('id, current_balance')
@@ -149,48 +147,34 @@ export async function checkSupabaseConnection(): Promise<boolean> {
       clearTimeout(timeoutId);
       
       if (cashError) {
-        console.warn('⚠️ cash_balances table test failed:', {
-          message: cashError.message,
-          code: cashError.code,
-          details: cashError.details,
-          hint: cashError.hint
-        });
+        console.warn('⚠️ Tabela cash_balances não acessível:', cashError.message);
         
         // Test sales table as fallback
-        console.log('🔄 Testing sales table as fallback...');
+        console.log('🔄 Testando tabela sales como alternativa...');
         const { data: salesData, error: salesError } = await supabase
           .from('sales')
           .select('id')
           .limit(1);
         
         if (salesError) {
-          console.error('❌ sales table test also failed:', {
-            message: salesError.message,
-            code: salesError.code,
-            details: salesError.details,
-            hint: salesError.hint
-          });
+          console.warn('⚠️ Tabela sales também não acessível:', salesError.message);
           
           // Check if it's a network error vs schema error
           if (salesError.message?.includes('Failed to fetch') || 
               salesError.message?.includes('fetch') ||
               salesError.message?.includes('network')) {
-            console.error('🌐 Network connectivity issue detected');
+            console.warn('🌐 Problema de conectividade detectado');
             return false;
           } else {
-            console.error('🗄️ Database schema issue detected');
-            console.error('💡 Suggestion: Check if migrations have been run in Supabase');
+            console.warn('🗄️ Problema de schema detectado');
             return false;
           }
         }
         
-        console.log('✅ sales table accessible - connection verified via fallback');
+        console.log('✅ Tabela sales acessível - conexão verificada');
         return true;
       } else {
-        console.log('✅ cash_balances table accessible:', {
-          recordsFound: cashData?.length || 0,
-          sampleData: cashData?.[0] || 'no records'
-        });
+        console.log('✅ Tabela cash_balances acessível');
         return true;
       }
     } catch (timeoutError) {
@@ -199,22 +183,7 @@ export async function checkSupabaseConnection(): Promise<boolean> {
     }
     
   } catch (err) {
-    console.error('❌ Supabase connection test failed:', {
-      name: err.name,
-      message: err.message,
-      stack: err.stack?.split('\n').slice(0, 3).join('\n') // First 3 lines of stack
-    });
-    
-    // Provide specific guidance based on error type
-    if (err.name === 'AbortError') {
-      console.error('🕐 Connection timeout - check network or Supabase status');
-    } else if (err.message?.includes('Failed to fetch')) {
-      console.error('🌐 Network error - check internet connection');
-    } else if (err.message?.includes('Invalid API key')) {
-      console.error('🔑 Invalid API key - check VITE_SUPABASE_ANON_KEY');
-    } else if (err.message?.includes('relation') && err.message?.includes('does not exist')) {
-      console.error('🗄️ Database table missing - run Supabase migrations');
-    }
+    console.warn('⚠️ Falha na conexão com Supabase:', err.message);
     
     return false;
   }

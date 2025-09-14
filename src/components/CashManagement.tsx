@@ -63,26 +63,21 @@ export function CashManagement() {
 
   // Force reload cash balance on mount
   React.useEffect(() => {
-    console.log('🔄 CashManagement mounted, verifying cash balance with connection check...');
+    console.log('🔄 Gestão de Caixa iniciada...');
     
     // Import testSupabaseConnection for use in CashManagement
     import('../lib/supabaseServices').then(({ testSupabaseConnection }) => {
       testSupabaseConnection().then(result => {
         if (result.success) {
-          console.log('✅ CashManagement connection verified');
+          console.log('✅ Conexão do Caixa verificada');
         } else {
-          console.error('❌ CashManagement connection failed:', result.error ?? 'Unknown error');
-          console.log('📱 Will attempt to load offline data if available');
+          console.log('📱 Caixa funcionando offline');
         }
       });
     });
     
     loadAllData().catch(error => {
-      console.error('❌ CashManagement data load failed:', {
-        message: error?.message ?? 'Unknown error',
-        name: error?.name ?? 'Unknown'
-      });
-      ErrorHandler.logProjectError(error, 'Cash Management Data Load');
+      console.warn('⚠️ Alguns dados do Caixa não puderam ser carregados');
     });
   }, []);
 
