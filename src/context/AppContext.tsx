@@ -408,6 +408,8 @@ export function AppProvider({ children }: AppProviderProps) {
         });
       }
       console.log('🔄 Dashboard mounted, forcing data reload with enhanced logging...');
+    }
+    )
     
     return () => {
       unsubscribe();
