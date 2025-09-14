@@ -395,11 +395,7 @@ export function AppProvider({ children }: AppProviderProps) {
           loadAllData();
         });
       }
-      console.log('🔄 Dashboard mounted, forcing data reload with enhanced logging...');
-      console.log('🔄 Dashboard mounted, forcing data reload with connection verification...');
-      
-  }, []);
-  
+    });
   // Cash methods
   const initializeCashBalance = async (initialAmount: number): Promise<void> => {
     try {
