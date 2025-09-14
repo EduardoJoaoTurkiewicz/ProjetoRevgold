@@ -74,23 +74,19 @@ class ConnectionManager {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-      // Simple health check to Supabase
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/employees?select=id&limit=1`,
-        {
-          method: 'GET',
-          headers: {
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          signal: controller.signal
-        }
-      );
+      // Import supabase client for proper connection testing
+      const { supabase } = await import('./supabase');
+      
+      // Test with a simple query
+      const { error } = await supabase
+        .from('sales')
+        .select('id')
+        .limit(1)
+        .abortSignal(controller.signal);
 
       clearTimeout(timeoutId);
 
-      const isReachable = response.ok;
+      const isReachable = !error;
       this.updateStatus({ 
         isSupabaseReachable: isReachable,
         retryCount: isReachable ? 0 : this.status.retryCount + 1
@@ -99,12 +95,16 @@ class ConnectionManager {
       if (isReachable) {
         console.log('✅ Supabase connection verified');
       } else {
-        console.warn('⚠️ Supabase not reachable, status:', response.status);
+        console.warn('⚠️ Supabase not reachable, error:', error?.message);
       }
 
       return isReachable;
     } catch (error) {
-      console.warn('⚠️ Supabase connection check failed:', error);
+      if (error.name === 'AbortError') {
+        console.warn('⚠️ Supabase connection timeout');
+      } else {
+        console.warn('⚠️ Supabase connection check failed:', error);
+      }
       this.updateStatus({ 
         isSupabaseReachable: false,
         retryCount: this.status.retryCount + 1

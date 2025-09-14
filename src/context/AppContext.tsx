@@ -15,7 +15,8 @@ import {
   cashService, 
   agendaService, 
   taxesService, 
-  pixFeesService 
+  pixFeesService,
+  checkSupabaseConnection
 } from '../lib/supabaseServices';
 import type { 
   Sale, 
@@ -146,27 +147,16 @@ export function AppProvider({ children }: AppProviderProps) {
     try {
       setIsLoading(true);
 
-      // Verificar conexão com Supabase (não falha se offline)
-      const isOnline = await healthCheck();
+      // Check connection with enhanced detection
+      const isConnected = await checkSupabaseConnection();
       
-      if (!isOnline) {
-        console.log('📱 Executando em modo offline - carregando dados locais');
-        // Carregar dados do armazenamento offline se disponível
-        return;
-      }
-      if (!isSupabaseConfigured()) {
-        console.warn('⚠️ Supabase not configured, loading offline data only');
+      if (!isConnected) {
+        console.log('📱 Supabase not reachable, loading offline data...');
         await loadOfflineDataOnly();
         return;
       }
       
-      // Test connection
-      const healthStatus = await healthCheck();
-      if (!healthStatus.connected) {
-        console.warn('⚠️ Supabase not reachable, loading offline data only');
-        await loadOfflineDataOnly();
-        return;
-      }
+      console.log('🌐 Supabase reachable, loading data online...');
       
       const [
         salesData,
@@ -391,6 +381,10 @@ export function AppProvider({ children }: AppProviderProps) {
     try {
       console.log('🔄 AppContext.createSale called with:', saleData);
       
+      // Check connection status first
+      const isConnected = await checkSupabaseConnection();
+      console.log(`🔗 Connection status: ${isConnected ? 'ONLINE' : 'OFFLINE'}`);
+      
       // Enhanced validation before calling service
       if (!saleData.client || (typeof saleData.client === 'string' && !saleData.client.trim())) {
         throw new Error('Cliente é obrigatório e não pode estar vazio');
@@ -452,7 +446,16 @@ export function AppProvider({ children }: AppProviderProps) {
       
       console.log('🧹 Context: Cleaned sale data before service call:', cleanedSaleData);
       
+      // Log whether we're saving online or offline
+      if (isConnected) {
+        console.log('💾 Saving sale ONLINE via Supabase...');
+      } else {
+        console.log('💾 Saving sale OFFLINE for later sync...');
+      }
+      
       const id = await salesService.create(saleData);
+      
+      console.log(`✅ Sale saved successfully with ID: ${id} (${isConnected ? 'ONLINE' : 'OFFLINE'})`);
       await loadAllData();
       return id;
     } catch (error) {

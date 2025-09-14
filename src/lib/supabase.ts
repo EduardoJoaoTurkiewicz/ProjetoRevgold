@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 import { ErrorHandler } from './errorHandler';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://gzazwmgiptnswkaljqhy.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 // Check if Supabase is properly configured
 export function isSupabaseConfigured(): boolean {
@@ -124,44 +124,38 @@ export async function testSupabaseConnection() {
 // Health check function
 export async function healthCheck(): Promise<boolean> {
   try {
-    // Check if environment variables are available
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-      console.warn('⚠️ Variáveis de ambiente do Supabase não encontradas. Executando em modo offline.');
+    if (!isSupabaseConfigured()) {
+      console.warn('⚠️ Supabase not configured properly');
       return false;
     }
 
-    console.log('🔍 Iniciando verificação de saúde do Supabase...');
-    
-    if (!isSupabaseConfigured()) {
-      return {
-        configured: false,
-        connected: false,
-        error: 'Supabase não está configurado. Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env'
-      };
-    }
+    console.log('🔍 Testing Supabase connection...');
 
-    // Test connection with timeout
+    // Test connection with a simple query and timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     
-    const { data, error } = await supabase
-      .from('users')
-      .select('count')
+    const { error } = await supabase
+      .from('sales')
+      .select('id')
       .limit(1)
       .abortSignal(controller.signal);
     
     clearTimeout(timeoutId);
     
     if (error) {
-      if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch')) {
-        throw new Error('Erro de conexão: Não foi possível conectar ao Supabase. Verifique sua conexão com a internet e as credenciais do Supabase.');
-      }
-      throw new Error(`Erro de conexão: ${error.message}`);
+      console.warn('⚠️ Supabase check failed:', error.message);
+      return false;
     }
     
+    console.log('✅ Supabase connection verified');
     return true;
   } catch (error) {
-    console.warn('⚠️ Falha na verificação de saúde do Supabase. Executando em modo offline.', error);
+    if (error.name === 'AbortError') {
+      console.warn('⚠️ Supabase connection timeout');
+    } else {
+      console.warn('⚠️ Supabase connection failed:', error);
+    }
     return false;
   }
 }
