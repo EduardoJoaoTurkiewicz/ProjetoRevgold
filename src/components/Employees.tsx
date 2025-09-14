@@ -60,7 +60,7 @@ export function Employees() {
       console.error('❌ Erro ao adicionar funcionário:', error);
       let errorMessage = 'Erro ao criar funcionário';
       
-      if (error.message) {
+      if (error?.message) {
         if (error.message.includes('duplicate key') || error.message.includes('unique constraint') || error.message.includes('já existe')) {
           errorMessage = 'Este funcionário já existe no sistema. O sistema previne duplicatas automaticamente.';
         } else if (error.message.includes('constraint') || error.message.includes('violates')) {

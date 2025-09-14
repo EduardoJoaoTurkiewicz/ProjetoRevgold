@@ -16,7 +16,11 @@ import {
   agendaService, 
   taxesService, 
   pixFeesService,
-  checkSupabaseConnection
+  checkSupabaseConnection,
+  employeePaymentsService,
+  employeeAdvancesService,
+  employeeOvertimesService,
+  employeeCommissionsService
 } from '../lib/supabaseServices';
 import type { 
   Sale, 
@@ -142,6 +146,7 @@ export function AppProvider({ children }: AppProviderProps) {
   const [employeeAdvances, setEmployeeAdvances] = useState<any[]>([]);
   const [employeeOvertimes, setEmployeeOvertimes] = useState<any[]>([]);
   const [employeeCommissions, setEmployeeCommissions] = useState<any[]>([]);
+  const [connectionStatus, setConnectionStatus] = useState<'online' | 'offline'>('offline');
 
   const loadAllData = async () => {
     try {
@@ -153,15 +158,17 @@ export function AppProvider({ children }: AppProviderProps) {
       const connectionResult = await testSupabaseConnection();
       
       if (!connectionResult.success) {
-        console.error('❌ Supabase connection failed:', connectionResult.error);
-        console.error('📋 Connection details:', connectionResult.details);
+        console.error('❌ Supabase connection failed:', connectionResult.error ?? 'Unknown error');
+        console.error('📋 Connection details:', connectionResult.details ?? 'No details');
         console.log('📱 Falling back to offline data...');
         await loadOfflineDataOnly();
-        setError(`Conexão falhou: ${connectionResult.error}. Usando dados offline.`);
+        setError(`Conexão falhou: ${connectionResult.error ?? 'Unknown error'}. Usando dados offline.`);
+        setConnectionStatus('offline');
         return;
       }
       
       console.log('🌐 Supabase connection verified, loading data online...');
+      setConnectionStatus('online');
       
       // Clear any previous errors
       setError(null);
@@ -171,59 +178,59 @@ export function AppProvider({ children }: AppProviderProps) {
       
       const results = await Promise.allSettled([
         salesService.getAll().catch(err => { 
-          console.error('❌ Failed to load sales:', err.message); 
+          console.error('❌ Failed to load sales:', err?.message ?? 'Unknown error'); 
           throw err; 
         }),
         employeesService.getAll().catch(err => { 
-          console.error('❌ Failed to load employees:', err.message); 
+          console.error('❌ Failed to load employees:', err?.message ?? 'Unknown error'); 
           throw err; 
         }),
         debtsService.getAll().catch(err => { 
-          console.error('❌ Failed to load debts:', err.message); 
+          console.error('❌ Failed to load debts:', err?.message ?? 'Unknown error'); 
           throw err; 
         }),
         checksService.getAll().catch(err => { 
-          console.error('❌ Failed to load checks:', err.message); 
+          console.error('❌ Failed to load checks:', err?.message ?? 'Unknown error'); 
           throw err; 
         }),
         boletosService.getAll().catch(err => { 
-          console.error('❌ Failed to load boletos:', err.message); 
+          console.error('❌ Failed to load boletos:', err?.message ?? 'Unknown error'); 
           throw err; 
         }),
         cashService.getTransactions().catch(err => { 
-          console.error('❌ Failed to load cash transactions:', err.message); 
+          console.error('❌ Failed to load cash transactions:', err?.message ?? 'Unknown error'); 
           throw err; 
         }),
         agendaService.getAll().catch(err => { 
-          console.error('❌ Failed to load agenda events:', err.message); 
+          console.error('❌ Failed to load agenda events:', err?.message ?? 'Unknown error'); 
           throw err; 
         }),
         taxesService.getAll().catch(err => { 
-          console.error('❌ Failed to load taxes:', err.message); 
+          console.error('❌ Failed to load taxes:', err?.message ?? 'Unknown error'); 
           throw err; 
         }),
         pixFeesService.getAll().catch(err => { 
-          console.error('❌ Failed to load pix fees:', err.message); 
+          console.error('❌ Failed to load pix fees:', err?.message ?? 'Unknown error'); 
           throw err; 
         }),
         cashService.getBalance().catch(err => { 
-          console.error('❌ Failed to load cash balance:', err.message); 
+          console.error('❌ Failed to load cash balance:', err?.message ?? 'Unknown error'); 
           throw err; 
         }),
         employeePaymentsService?.getAll().catch(err => { 
-          console.error('❌ Failed to load employee payments:', err.message); 
+          console.error('❌ Failed to load employee payments:', err?.message ?? 'Unknown error'); 
           return []; 
         }) || Promise.resolve([]),
         employeeAdvancesService?.getAll().catch(err => { 
-          console.error('❌ Failed to load employee advances:', err.message); 
+          console.error('❌ Failed to load employee advances:', err?.message ?? 'Unknown error'); 
           return []; 
         }) || Promise.resolve([]),
         employeeOvertimesService?.getAll().catch(err => { 
-          console.error('❌ Failed to load employee overtimes:', err.message); 
+          console.error('❌ Failed to load employee overtimes:', err?.message ?? 'Unknown error'); 
           return []; 
         }) || Promise.resolve([]),
         employeeCommissionsService?.getAll().catch(err => { 
-          console.error('❌ Failed to load employee commissions:', err.message); 
+          console.error('❌ Failed to load employee commissions:', err?.message ?? 'Unknown error'); 
           return []; 
         }) || Promise.resolve([])
       ]);
@@ -245,7 +252,7 @@ export function AppProvider({ children }: AppProviderProps) {
           console.log(`✅ ${dataName} loaded successfully:`, Array.isArray(result.value) ? `${result.value.length} records` : 'single record');
         } else {
           failedLoads.push(dataName);
-          console.error(`❌ ${dataName} failed to load:`, result.reason?.message || result.reason);
+          console.error(`❌ ${dataName} failed to load:`, result.reason?.message ?? result.reason ?? 'Unknown error');
         }
       });
       
@@ -298,9 +305,9 @@ export function AppProvider({ children }: AppProviderProps) {
       }
     } catch (error) {
       console.error('❌ Critical error in loadAllData:', {
-        message: error.message,
-        name: error.name,
-        stack: error.stack?.split('\n').slice(0, 5).join('\n')
+        message: error?.message ?? 'Unknown error',
+        name: error?.name ?? 'Unknown',
+        stack: error?.stack?.split('\n').slice(0, 5).join('\n') ?? 'No stack trace'
       });
       
       ErrorHandler.logProjectError(error, 'Load All Data');
@@ -312,12 +319,14 @@ export function AppProvider({ children }: AppProviderProps) {
         const offlineMessage = 'Sem conexão com servidor. Mostrando dados offline.';
         console.log('📱', offlineMessage);
         toast.error(`❌ ${offlineMessage}`);
-        setError(`Erro de conexão: ${error.message}. Usando dados offline.`);
+        setError(`Erro de conexão: ${error?.message ?? 'Unknown error'}. Usando dados offline.`);
+        setConnectionStatus('offline');
       } catch (offlineError) {
-        console.error('❌ Offline data fallback also failed:', offlineError);
-        const errorMessage = `Falha total: ${error.message}. Dados offline também indisponíveis.`;
+        console.error('❌ Offline data fallback also failed:', offlineError ?? 'Unknown error');
+        const errorMessage = `Falha total: ${error?.message ?? 'Unknown error'}. Dados offline também indisponíveis.`;
         console.error('💥', errorMessage);
         setError(ErrorHandler.handleSupabaseError(error));
+        setConnectionStatus('offline');
       }
     } finally {
       setLoading(false);
@@ -374,8 +383,8 @@ export function AppProvider({ children }: AppProviderProps) {
       
     } catch (error) {
       console.error('❌ Failed to load offline data:', {
-        message: error.message,
-        name: error.name
+        message: error?.message ?? 'Unknown error',
+        name: error?.name ?? 'Unknown'
       });
       throw error;
     }
@@ -387,17 +396,36 @@ export function AppProvider({ children }: AppProviderProps) {
     // Setup connection monitoring and auto-sync
     const unsubscribe = connectionManager.addListener((status) => {
       console.log('🔗 Connection status changed:', status);
+      setConnectionStatus(status.isOnline && status.isSupabaseReachable ? 'online' : 'offline');
       if (status.isOnline && status.isSupabaseReachable) {
         console.log('🌐 Connection restored, starting auto-sync...');
         syncManager.startSync().then(() => {
           // Reload data after successful sync
           console.log('🔄 Auto-sync completed, reloading data...');
           loadAllData();
+        }).catch(error => {
+          console.error('❌ Auto-sync failed:', error ?? 'Unknown error');
         });
       }
-    });
-  }
-  )
+      console.log('🔄 Dashboard mounted, forcing data reload with enhanced logging...');
+    
+    return () => {
+      unsubscribe();
+    };
+      console.log('🔄 Dashboard mounted, forcing data reload with connection verification...');
+      
+  }, []);
+  
+  // Auto-sync when connection is established
+  useEffect(() => {
+    if (connectionStatus === 'online') {
+      console.log('🔄 Auto-sync triggered after connection established');
+      syncManager.startSync().catch(error => {
+        console.error('❌ Auto-sync failed:', error ?? 'Unknown error');
+      });
+    }
+  }, [connectionStatus]);
+  
   // Cash methods
   const initializeCashBalance = async (initialAmount: number): Promise<void> => {
     try {
@@ -563,7 +591,7 @@ export function AppProvider({ children }: AppProviderProps) {
         console.log('💾 Saving sale OFFLINE for later sync...');
       }
       
-      const id = await salesService.create(saleData);
+      const id = await salesService.create(cleanedSaleData);
       
       console.log(`✅ Sale saved successfully with ID: ${id} (${isConnected ? 'ONLINE' : 'OFFLINE'})`);
       await loadAllData();
@@ -573,7 +601,7 @@ export function AppProvider({ children }: AppProviderProps) {
       
       // Enhanced error context logging
       console.group('🚨 AppContext.createSale Error');
-      console.error('Error:', error);
+      console.error('Error:', error ?? 'Unknown error');
       console.log('Sale data:', JSON.stringify(saleData, null, 2));
       console.log('Timestamp:', new Date().toISOString());
       console.groupEnd();

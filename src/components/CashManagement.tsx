@@ -66,36 +66,21 @@ export function CashManagement() {
     console.log('🔄 CashManagement mounted, verifying cash balance with connection check...');
     
     // Import testSupabaseConnection for use in CashManagement
-    import('../lib/supabase').then(({ testSupabaseConnection }) => {
+    import('../lib/supabaseServices').then(({ testSupabaseConnection }) => {
       testSupabaseConnection().then(result => {
         if (result.success) {
           console.log('✅ CashManagement connection verified');
         } else {
-          console.error('❌ CashManagement connection failed:', result.error);
+          console.error('❌ CashManagement connection failed:', result.error ?? 'Unknown error');
           console.log('📱 Will attempt to load offline data if available');
         }
       });
     });
     
-    
-    // Test connection before loading cash data
-    testSupabaseConnection().then(result => {
-      if (result.success) {
-        console.log('✅ CashManagement connection verified');
-      } else {
-        console.error('❌ CashManagement connection failed:', result.error);
-        console.log('📱 Will attempt to load offline data if available');
-      }
-    });
-    
     loadAllData().catch(error => {
       console.error('❌ CashManagement data load failed:', {
-        message: error.message,
-        name: error.name
-      });
-      console.error('❌ CashManagement data load failed:', {
-        message: error.message,
-        name: error.name
+        message: error?.message ?? 'Unknown error',
+        name: error?.name ?? 'Unknown'
       });
       ErrorHandler.logProjectError(error, 'Cash Management Data Load');
     });
@@ -144,7 +129,7 @@ export function CashManagement() {
       await loadAllData();
     } catch (error) {
       ErrorHandler.logProjectError(error, 'Initialize Cash');
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      const errorMessage = error?.message ?? 'Erro desconhecido';
       alert('Erro ao inicializar caixa: ' + ErrorHandler.handleSupabaseError(error));
     } finally {
       setIsInitializing(false);
@@ -167,7 +152,7 @@ export function CashManagement() {
       await loadAllData();
     } catch (error) {
       ErrorHandler.logProjectError(error, 'Recalculate Balance');
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      const errorMessage = error?.message ?? 'Erro desconhecido';
       alert('Erro ao recalcular saldo: ' + ErrorHandler.handleSupabaseError(error));
     } finally {
       setIsRecalculating(false);

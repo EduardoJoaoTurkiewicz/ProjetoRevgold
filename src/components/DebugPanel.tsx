@@ -21,7 +21,7 @@ export function DebugPanel({ isOpen, onClose }: DebugPanelProps) {
       setErrors(recentErrors);
     } catch (error) {
       ErrorHandler.logProjectError(error, 'Load Debug Errors');
-      alert('Erro ao carregar logs: ' + ErrorHandler.handleSupabaseError(error));
+      alert('Erro ao carregar logs: ' + ErrorHandler.handleSupabaseError(error ?? 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -34,7 +34,7 @@ export function DebugPanel({ isOpen, onClose }: DebugPanelProps) {
       loadErrors();
     } catch (error) {
       ErrorHandler.logProjectError(error, 'Cleanup Debug Errors');
-      alert('Erro ao limpar logs: ' + ErrorHandler.handleSupabaseError(error));
+      alert('Erro ao limpar logs: ' + ErrorHandler.handleSupabaseError(error ?? 'Unknown error'));
     }
   };
 

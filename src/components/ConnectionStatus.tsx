@@ -38,7 +38,7 @@ export function ConnectionStatus() {
     try {
       await syncManager.forcSync();
     } catch (error) {
-      toast.error('Erro ao forçar sincronização: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+      toast.error('Erro ao forçar sincronização: ' + (error?.message ?? 'Erro desconhecido'));
     }
   };
 

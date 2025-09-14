@@ -52,7 +52,7 @@ export function OfflineDataViewer({ isOpen, onClose }: OfflineDataViewerProps) {
       await syncManager.forcSync();
       loadData();
     } catch (error) {
-      console.error('Error forcing sync:', error);
+      console.error('Error forcing sync:', error ?? 'Unknown error');
       toast.error('Erro ao forçar sincronização');
     }
   };

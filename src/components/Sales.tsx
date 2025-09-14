@@ -66,13 +66,13 @@ export function Sales() {
       setIsFormOpen(false);
       
     } catch (error) {
-      console.error('❌ Erro ao adicionar venda:', error);
-      console.error('❌ Error stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error('❌ Erro ao adicionar venda:', error ?? 'Unknown error');
+      console.error('❌ Error stack trace:', error?.stack ?? 'No stack trace');
       console.error('❌ Sale data that failed:', JSON.stringify(sale, null, 2));
       
       let errorMessage = 'Erro ao criar venda';
       
-      if (error instanceof Error) {
+      if (error?.message) {
         if (error.message.includes('invalid input syntax for type uuid')) {
           errorMessage = 'Erro de UUID: Campos de identificação inválidos. Verifique se todos os campos estão preenchidos corretamente.';
         } else if (error.message.includes('duplicate key') || error.message.includes('unique constraint') || error.message.includes('já existe')) {
@@ -102,8 +102,8 @@ export function Sales() {
         await updateSale(updatedSale.id, updatedSale);
         setEditingSale(null);
       } catch (error) {
-        console.error('❌ Erro ao atualizar venda:', error);
-        alert('Erro ao atualizar venda: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+        console.error('❌ Erro ao atualizar venda:', error ?? 'Unknown error');
+        alert('Erro ao atualizar venda: ' + (error?.message ?? 'Erro desconhecido'));
       }
     }
   };
@@ -113,8 +113,8 @@ export function Sales() {
       try {
         await deleteSale(id);
       } catch (error) {
-        console.error('❌ Erro ao excluir venda:', error);
-        alert('Erro ao excluir venda: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+        console.error('❌ Erro ao excluir venda:', error ?? 'Unknown error');
+        alert('Erro ao excluir venda: ' + (error?.message ?? 'Erro desconhecido'));
       }
     }
   };

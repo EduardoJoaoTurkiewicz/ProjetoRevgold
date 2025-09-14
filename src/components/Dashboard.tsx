@@ -82,14 +82,14 @@ const Dashboard: React.FC = () => {
         if (result.success) {
           console.log('✅ Dashboard connection verified, loading data...');
         } else {
-          console.error('❌ Dashboard connection failed:', result.error);
+          console.error('❌ Dashboard connection failed:', result.error ?? 'Unknown error');
         }
       });
       
       loadAllData().catch(error => {
         console.error('❌ Dashboard data reload failed:', {
-          message: error.message,
-          name: error.name
+          message: error?.message ?? 'Unknown error',
+          name: error?.name ?? 'Unknown'
         });
         ErrorHandler.logProjectError(error, 'Dashboard Data Reload');
       });

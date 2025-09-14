@@ -85,7 +85,7 @@ export class ErrorHandler {
   static handleSupabaseError(error: any): string {
     if (!error) return 'Erro desconhecido';
     
-    const message = error.message || error.toString();
+    const message = error?.message || error?.toString() || 'Erro desconhecido';
     
     // Erros de configuração
     if (message.includes('não está configurado') || 

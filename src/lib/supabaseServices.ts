@@ -364,16 +364,16 @@ class BaseService<T> {
       return data as T[];
     } catch (error) {
       console.error(`❌ Failed to load ${this.tableName} with details:`, {
-        message: error.message,
-        name: error.name,
+        message: error?.message ?? 'Unknown error',
+        name: error?.name ?? 'Unknown',
         table: this.tableName,
-        isNetworkError: error.message?.includes('fetch') || error.message?.includes('network')
+        isNetworkError: error?.message?.includes('fetch') || error?.message?.includes('network')
       });
       
       ErrorHandler.logProjectError(error, `Load ${this.tableName}`);
       
       // Return empty array but preserve error information
-      if (error.message?.includes('fetch') || error.message?.includes('network')) {
+      if (error?.message?.includes('fetch') || error?.message?.includes('network')) {
         console.warn(`⚠️ Network error loading ${this.tableName}, returning empty array`);
       } else {
         console.warn(`⚠️ Database error loading ${this.tableName}, returning empty array`);
@@ -699,20 +699,20 @@ export const cashService = {
       return data as CashBalance;
     } catch (error) {
       console.error('❌ Failed to load cash balance with details:', {
-        message: error.message,
-        name: error.name,
-        isNetworkError: error.message?.includes('fetch') || error.message?.includes('network')
+        message: error?.message ?? 'Unknown error',
+        name: error?.name ?? 'Unknown',
+        isNetworkError: error?.message?.includes('fetch') || error?.message?.includes('network')
       });
       
       ErrorHandler.logProjectError(error, 'Load Cash Balance');
       
       // Provide specific error message
-      if (error.message?.includes('fetch') || error.message?.includes('network')) {
+      if (error?.message?.includes('fetch') || error?.message?.includes('network')) {
         throw new Error('Erro de rede ao carregar saldo do caixa. Verifique sua conexão.');
-      } else if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+      } else if (error?.message?.includes('relation') && error?.message?.includes('does not exist')) {
         throw new Error('Tabela de saldo do caixa não existe. Execute as migrações do banco.');
       } else {
-        throw new Error(`Erro ao carregar saldo: ${error.message}`);
+        throw new Error(`Erro ao carregar saldo: ${error?.message ?? 'Unknown error'}`);
       }
     }
   },
@@ -758,15 +758,15 @@ export const cashService = {
       return data as CashTransaction[];
     } catch (error) {
       console.error('❌ Failed to load cash transactions with details:', {
-        message: error.message,
-        name: error.name,
-        isNetworkError: error.message?.includes('fetch') || error.message?.includes('network')
+        message: error?.message ?? 'Unknown error',
+        name: error?.name ?? 'Unknown',
+        isNetworkError: error?.message?.includes('fetch') || error?.message?.includes('network')
       });
       
       ErrorHandler.logProjectError(error, 'Load Cash Transactions');
       
       // For transactions, we can return empty array but log the issue
-      if (error.message?.includes('fetch') || error.message?.includes('network')) {
+      if (error?.message?.includes('fetch') || error?.message?.includes('network')) {
         console.warn('⚠️ Network error loading transactions, returning empty array');
         return [];
       } else {
@@ -834,8 +834,8 @@ export const cashService = {
       console.log('✅ Cash balance initialized successfully with amount:', initialAmount);
     } catch (error) {
       console.error('❌ Failed to initialize cash balance:', {
-        message: error.message,
-        name: error.name,
+        message: error?.message ?? 'Unknown error',
+        name: error?.name ?? 'Unknown',
         initialAmount
       });
       ErrorHandler.logProjectError(error, 'Initialize Cash Balance');
@@ -880,8 +880,8 @@ export const cashService = {
       console.log('✅ Cash balance recalculated successfully');
     } catch (error) {
       console.error('❌ Failed to recalculate cash balance:', {
-        message: error.message,
-        name: error.name
+        message: error?.message ?? 'Unknown error',
+        name: error?.name ?? 'Unknown'
       });
       ErrorHandler.logProjectError(error, 'Recalculate Cash Balance');
       throw error;
