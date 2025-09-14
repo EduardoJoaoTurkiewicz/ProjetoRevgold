@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { ErrorHandler } from '../lib/errorHandler';
+import { testSupabaseConnection } from '../lib/supabase';
 import { 
   DollarSign, 
   TrendingUp, 

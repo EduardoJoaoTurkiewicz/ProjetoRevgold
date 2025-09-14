@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
-import { isSupabaseConfigured, healthCheck } from '../lib/supabase';
+import { isSupabaseConfigured, healthCheck, testSupabaseConnection } from '../lib/supabase';
 import { ErrorHandler } from '../lib/errorHandler';
 import { connectionManager } from '../lib/connectionManager';
 import { syncManager } from '../lib/syncManager';
@@ -398,27 +398,6 @@ export function AppProvider({ children }: AppProviderProps) {
       console.log('🔄 Dashboard mounted, forcing data reload with enhanced logging...');
       console.log('🔄 Dashboard mounted, forcing data reload with connection verification...');
       
-      // Import testSupabaseConnection for use in Dashboard
-      import('../lib/supabase').then(({ testSupabaseConnection }) => {
-        testSupabaseConnection().then(result => {
-          if (result.success) {
-            console.log('✅ Dashboard connection verified, loading data...');
-          } else {
-            console.error('❌ Dashboard connection failed:', result.error);
-          }
-        });
-      });
-      
-        console.error('❌ Dashboard data reload failed:', error);
-        console.error('❌ Dashboard data reload failed:', {
-          message: error.message,
-          name: error.name
-        });
-    }
-    )
-    return () => {
-      unsubscribe();
-    };
   }, []);
   
   // Cash methods
