@@ -5,6 +5,11 @@ import { ErrorHandler } from './errorHandler';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
+// Enhanced logging for debugging
+console.log('🔧 Supabase Configuration Check:');
+console.log('📍 URL:', supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'NOT SET');
+console.log('🔑 Key:', supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'NOT SET');
+
 // Check if Supabase is properly configured
 export function isSupabaseConfigured(): boolean {
   const url = import.meta.env.VITE_SUPABASE_URL;
@@ -21,6 +26,9 @@ export function isSupabaseConfigured(): boolean {
   );
   
   if (!isConfigured) {
+    console.error('❌ SUPABASE CONFIGURATION ERROR:');
+    console.error('📍 Current URL:', url || 'undefined');
+    console.error('🔑 Current Key:', key ? `${key.substring(0, 20)}...` : 'undefined');
     ErrorHandler.logProjectError('SUPABASE NÃO CONFIGURADO CORRETAMENTE', 'Configuration Check');
     console.group('📝 Para corrigir este erro:');
     console.log('1. Abra o arquivo .env na raiz do projeto');
@@ -60,6 +68,7 @@ https://supabase.com/dashboard → Seu Projeto → Settings → API
 // Create client with proper error handling
 export const supabase = (() => {
   if (!isSupabaseConfigured()) {
+    console.warn('⚠️ Creating placeholder Supabase client due to configuration issues');
     ErrorHandler.logProjectError('Criando cliente Supabase com valores placeholder devido à configuração incorreta', 'Client Creation');
     return createClient<Database>('https://placeholder.supabase.co', 'placeholder-key');
   }
@@ -69,20 +78,21 @@ export const supabase = (() => {
 })();
 
 // Test connection function
-export async function testSupabaseConnection() {
+export async function testSupabaseConnection(): Promise<{ success: boolean; error?: string; details?: any }> {
   if (!isSupabaseConfigured()) {
-    console.log('❌ Supabase não configurado');
-    return false;
+    const error = 'Supabase não configurado corretamente';
+    console.error('❌', error);
+    return { success: false, error };
   }
   
   try {
-    console.log('🔍 Testando conexão com Supabase...');
+    console.log('🔍 Testing Supabase connection...');
     
     // Test with a simple query and timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
     
-    // Test with cash_balances table first
+    // Test with cash_balances table first (most likely to exist)
     const { data: balanceData, error: balanceError } = await supabase
       .from('cash_balances')
       .select('id')
@@ -92,44 +102,82 @@ export async function testSupabaseConnection() {
     clearTimeout(timeoutId);
     
     if (balanceError) {
+      console.warn('⚠️ cash_balances table test failed:', balanceError.message);
+      
       if (balanceError.message?.includes('Failed to fetch') || balanceError.message?.includes('fetch')) {
-        throw new Error('Erro de conexão: Não foi possível conectar ao Supabase. Verifique sua conexão com a internet.');
+        const error = 'Erro de conexão: Não foi possível conectar ao Supabase. Verifique sua conexão com a internet.';
+        console.error('❌ Network error:', error);
+        return { success: false, error, details: balanceError };
       }
-      console.warn('Tabela cash_balances não encontrada, testando com employees...');
+      
+      console.log('🔄 cash_balances table not found, testing with employees table...');
       
       // Fallback test with employees table
-      const { data, error } = await supabase
+      const { data: empData, error: empError } = await supabase
         .from('employees')
         .select('id')
         .limit(1);
       
-      if (error) {
-        throw new Error(`Erro de conexão: ${error.message}`);
+      if (empError) {
+        console.error('❌ employees table test also failed:', empError.message);
+        
+        // Try one more table - sales
+        console.log('🔄 employees table failed, testing with sales table...');
+        const { data: salesData, error: salesError } = await supabase
+          .from('sales')
+          .select('id')
+          .limit(1);
+        
+        if (salesError) {
+          const error = `Erro de conexão com todas as tabelas testadas: ${salesError.message}`;
+          console.error('❌ All table tests failed:', error);
+          return { 
+            success: false, 
+            error, 
+            details: { 
+              cashBalanceError: balanceError, 
+              employeesError: empError, 
+              salesError 
+            } 
+          };
+        }
+        
+        console.log('✅ sales table accessible, connection verified');
+      } else {
+        console.log('✅ employees table accessible, connection verified');
       }
+    } else {
+      console.log('✅ cash_balances table accessible, connection verified');
     }
     
-    console.log('✅ Conexão com Supabase estabelecida com sucesso');
-    return true;
+    console.log('✅ Supabase connection established successfully');
+    return { success: true };
   } catch (error) {
+    let errorMessage = 'Erro desconhecido na conexão';
+    
     if (error.name === 'AbortError') {
-      console.error('❌ Timeout na conexão com Supabase');
+      errorMessage = 'Timeout na conexão com Supabase (5s)';
+      console.error('❌', errorMessage);
     } else {
-      console.error('❌ Erro na conexão com Supabase:', error);
+      errorMessage = `Erro na conexão com Supabase: ${error.message || error}`;
+      console.error('❌', errorMessage, error);
       ErrorHandler.logProjectError(error, 'Supabase Connection Test');
     }
-    return false;
+    
+    return { success: false, error: errorMessage, details: error };
   }
 }
 
 // Health check function
-export async function healthCheck(): Promise<boolean> {
+export async function healthCheck(): Promise<{ healthy: boolean; error?: string; details?: any }> {
   try {
     if (!isSupabaseConfigured()) {
-      console.warn('⚠️ Supabase not configured properly');
-      return false;
+      const error = 'Supabase not configured properly';
+      console.warn('⚠️', error);
+      return { healthy: false, error };
     }
 
-    console.log('🔍 Testing Supabase connection...');
+    console.log('🔍 Running Supabase health check...');
 
     // Test connection with a simple query and timeout
     const controller = new AbortController();
@@ -144,18 +192,24 @@ export async function healthCheck(): Promise<boolean> {
     clearTimeout(timeoutId);
     
     if (error) {
-      console.warn('⚠️ Supabase check failed:', error.message);
-      return false;
+      const errorMessage = `Supabase health check failed: ${error.message}`;
+      console.warn('⚠️', errorMessage);
+      return { healthy: false, error: errorMessage, details: error };
     }
     
-    console.log('✅ Supabase connection verified');
-    return true;
+    console.log('✅ Supabase health check passed');
+    return { healthy: true };
   } catch (error) {
+    let errorMessage = 'Health check error';
+    
     if (error.name === 'AbortError') {
-      console.warn('⚠️ Supabase connection timeout');
+      errorMessage = 'Supabase health check timeout';
+      console.warn('⚠️', errorMessage);
     } else {
-      console.warn('⚠️ Supabase connection failed:', error);
+      errorMessage = `Supabase health check failed: ${error.message || error}`;
+      console.warn('⚠️', errorMessage, error);
     }
-    return false;
+    
+    return { healthy: false, error: errorMessage, details: error };
   }
 }

@@ -122,23 +122,100 @@ export function transformToSnakeCase(obj: any): any {
 export async function checkSupabaseConnection(): Promise<boolean> {
   try {
     if (!isSupabaseConfigured()) {
-      console.log('❌ Supabase not configured');
+      console.error('❌ Supabase not configured - check .env file');
+      console.error('📍 Expected: VITE_SUPABASE_URL=https://your-project.supabase.co');
+      console.error('🔑 Expected: VITE_SUPABASE_ANON_KEY=your-anon-key');
       return false;
     }
 
-    console.log('🔍 Testing Supabase connection...');
+    console.log('🔍 Testing Supabase connection with detailed logging...');
     
-    const { error } = await supabase.from('sales').select('id').limit(1);
+    // Test with timeout and detailed error handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      console.error('❌ Supabase connection timeout after 8 seconds');
+      controller.abort();
+    }, 8000);
     
-    if (error) {
-      console.warn('⚠️ Supabase check failed:', error.message);
-      return false;
+    try {
+      // Test multiple tables to identify schema issues
+      console.log('🔍 Testing cash_balances table...');
+      const { data: cashData, error: cashError } = await supabase
+        .from('cash_balances')
+        .select('id, current_balance')
+        .limit(1)
+        .abortSignal(controller.signal);
+      
+      clearTimeout(timeoutId);
+      
+      if (cashError) {
+        console.warn('⚠️ cash_balances table test failed:', {
+          message: cashError.message,
+          code: cashError.code,
+          details: cashError.details,
+          hint: cashError.hint
+        });
+        
+        // Test sales table as fallback
+        console.log('🔄 Testing sales table as fallback...');
+        const { data: salesData, error: salesError } = await supabase
+          .from('sales')
+          .select('id')
+          .limit(1);
+        
+        if (salesError) {
+          console.error('❌ sales table test also failed:', {
+            message: salesError.message,
+            code: salesError.code,
+            details: salesError.details,
+            hint: salesError.hint
+          });
+          
+          // Check if it's a network error vs schema error
+          if (salesError.message?.includes('Failed to fetch') || 
+              salesError.message?.includes('fetch') ||
+              salesError.message?.includes('network')) {
+            console.error('🌐 Network connectivity issue detected');
+            return false;
+          } else {
+            console.error('🗄️ Database schema issue detected');
+            console.error('💡 Suggestion: Check if migrations have been run in Supabase');
+            return false;
+          }
+        }
+        
+        console.log('✅ sales table accessible - connection verified via fallback');
+        return true;
+      } else {
+        console.log('✅ cash_balances table accessible:', {
+          recordsFound: cashData?.length || 0,
+          sampleData: cashData?.[0] || 'no records'
+        });
+        return true;
+      }
+    } catch (timeoutError) {
+      clearTimeout(timeoutId);
+      throw timeoutError;
     }
     
-    console.log('✅ Supabase connection verified');
-    return true;
   } catch (err) {
-    console.error('❌ Connection test error:', err);
+    console.error('❌ Supabase connection test failed:', {
+      name: err.name,
+      message: err.message,
+      stack: err.stack?.split('\n').slice(0, 3).join('\n') // First 3 lines of stack
+    });
+    
+    // Provide specific guidance based on error type
+    if (err.name === 'AbortError') {
+      console.error('🕐 Connection timeout - check network or Supabase status');
+    } else if (err.message?.includes('Failed to fetch')) {
+      console.error('🌐 Network error - check internet connection');
+    } else if (err.message?.includes('Invalid API key')) {
+      console.error('🔑 Invalid API key - check VITE_SUPABASE_ANON_KEY');
+    } else if (err.message?.includes('relation') && err.message?.includes('does not exist')) {
+      console.error('🗄️ Database table missing - run Supabase migrations');
+    }
+    
     return false;
   }
 }
@@ -241,35 +318,67 @@ class BaseService<T> {
   }
 
   async getAll(): Promise<T[]> {
-    console.log(`🔄 Loading all ${this.tableName}...`);
+    console.log(`🔄 Loading all ${this.tableName} with enhanced error handling...`);
     
-    // Check connection first
-    const isConnected = await checkSupabaseConnection();
+    // Enhanced connection check
+    const connectionResult = await testSupabaseConnection();
     
-    if (!isConnected) {
-      console.log(`📱 Supabase not reachable, loading ${this.tableName} from offline storage...`);
+    if (!connectionResult.success) {
+      console.error(`❌ Cannot load ${this.tableName} - connection failed:`, connectionResult.error);
+      console.log(`📱 Loading ${this.tableName} from offline storage...`);
       // TODO: Load from offline storage
       return [];
     }
     
-    console.log(`🌐 Supabase reachable, loading ${this.tableName} online...`);
+    console.log(`🌐 Connection verified, loading ${this.tableName} from Supabase...`);
     
     try {
+      console.log(`🔍 Querying ${this.tableName} table...`);
       const { data, error } = await supabase
         .from(this.tableName)
         .select('*')
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error(`❌ Error loading ${this.tableName}:`, error);
+        console.error(`❌ Error loading ${this.tableName}:`, {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+          table: this.tableName
+        });
+        
+        // Provide specific guidance based on error type
+        if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+          console.error(`🗄️ Table ${this.tableName} does not exist - run migrations`);
+          throw new Error(`Tabela ${this.tableName} não existe. Execute as migrações do banco de dados.`);
+        } else if (error.message?.includes('permission denied')) {
+          console.error(`🔒 Permission denied for table ${this.tableName} - check RLS policies`);
+          throw new Error(`Sem permissão para acessar ${this.tableName}. Verifique as políticas RLS.`);
+        }
+        
         throw error;
       }
       
-      console.log(`✅ Loaded ${data.length} ${this.tableName} records`);
+      console.log(`✅ ${this.tableName} loaded successfully: ${data.length} records`);
       return data as T[];
     } catch (error) {
-      console.error(`❌ Failed to load ${this.tableName}:`, error);
+      console.error(`❌ Failed to load ${this.tableName} with details:`, {
+        message: error.message,
+        name: error.name,
+        table: this.tableName,
+        isNetworkError: error.message?.includes('fetch') || error.message?.includes('network')
+      });
+      
       ErrorHandler.logProjectError(error, `Load ${this.tableName}`);
+      
+      // Return empty array but preserve error information
+      if (error.message?.includes('fetch') || error.message?.includes('network')) {
+        console.warn(`⚠️ Network error loading ${this.tableName}, returning empty array`);
+      } else {
+        console.warn(`⚠️ Database error loading ${this.tableName}, returning empty array`);
+      }
+      
       return [];
     }
   }
@@ -535,88 +644,175 @@ export const pixFeesService = new BaseService<PixFee>('pix_fees');
 // Cash service with enhanced connection handling
 export const cashService = {
   async getBalance(): Promise<CashBalance | null> {
-    console.log('🔄 Loading cash balance...');
+    console.log('🔄 Loading cash balance with enhanced error handling...');
     
-    const isConnected = await checkSupabaseConnection();
+    // Test connection first
+    const connectionResult = await testSupabaseConnection();
     
-    if (!isConnected) {
-      console.log('📱 Supabase not reachable, cash balance unavailable offline');
+    if (!connectionResult.success) {
+      console.error('❌ Cannot load cash balance - connection failed:', connectionResult.error);
+      console.log('📱 Cash balance unavailable offline');
       return null;
     }
     
-    console.log('🌐 Supabase reachable, loading cash balance online...');
+    console.log('🌐 Connection verified, loading cash balance from Supabase...');
     
     try {
+      // Enhanced query with better error handling
+      console.log('🔍 Querying cash_balances table...');
       const { data, error } = await supabase
         .from('cash_balances')
-        .select('*')
+        .select('id, current_balance, initial_balance, initial_date, last_updated, created_at, updated_at')
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
       
       if (error) {
         if (error.code === 'PGRST116') {
-          console.log('ℹ️ No cash balance found');
+          console.log('ℹ️ No cash balance found in database - needs initialization');
           return null;
         }
-        console.error('❌ Error loading cash balance:', error);
+        
+        console.error('❌ Error loading cash balance:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        
+        // Check if it's a schema issue
+        if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+          console.error('🗄️ cash_balances table does not exist - run migrations');
+          throw new Error('Tabela cash_balances não existe. Execute as migrações do banco de dados.');
+        }
+        
         throw error;
       }
       
-      console.log('✅ Cash balance loaded:', data);
+      console.log('✅ Cash balance loaded successfully:', {
+        id: data.id,
+        currentBalance: data.current_balance,
+        initialBalance: data.initial_balance,
+        lastUpdated: data.last_updated
+      });
+      
       return data as CashBalance;
     } catch (error) {
-      console.error('❌ Failed to load cash balance:', error);
+      console.error('❌ Failed to load cash balance with details:', {
+        message: error.message,
+        name: error.name,
+        isNetworkError: error.message?.includes('fetch') || error.message?.includes('network')
+      });
+      
       ErrorHandler.logProjectError(error, 'Load Cash Balance');
-      return null;
+      
+      // Provide specific error message
+      if (error.message?.includes('fetch') || error.message?.includes('network')) {
+        throw new Error('Erro de rede ao carregar saldo do caixa. Verifique sua conexão.');
+      } else if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+        throw new Error('Tabela de saldo do caixa não existe. Execute as migrações do banco.');
+      } else {
+        throw new Error(`Erro ao carregar saldo: ${error.message}`);
+      }
     }
   },
 
   async getTransactions(): Promise<CashTransaction[]> {
-    console.log('🔄 Loading cash transactions...');
+    console.log('🔄 Loading cash transactions with enhanced error handling...');
     
-    const isConnected = await checkSupabaseConnection();
+    const connectionResult = await testSupabaseConnection();
     
-    if (!isConnected) {
-      console.log('📱 Supabase not reachable, cash transactions unavailable offline');
+    if (!connectionResult.success) {
+      console.error('❌ Cannot load cash transactions - connection failed:', connectionResult.error);
+      console.log('📱 Cash transactions unavailable offline');
       return [];
     }
     
-    console.log('🌐 Supabase reachable, loading cash transactions online...');
+    console.log('🌐 Connection verified, loading cash transactions from Supabase...');
     
     try {
+      console.log('🔍 Querying cash_transactions table...');
       const { data, error } = await supabase
         .from('cash_transactions')
-        .select('*')
+        .select('id, date, type, amount, description, category, related_id, payment_method, created_at, updated_at')
         .order('date', { ascending: false });
       
       if (error) {
-        console.error('❌ Error loading cash transactions:', error);
+        console.error('❌ Error loading cash transactions:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        
+        // Check if it's a schema issue
+        if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+          console.error('🗄️ cash_transactions table does not exist - run migrations');
+          throw new Error('Tabela cash_transactions não existe. Execute as migrações do banco de dados.');
+        }
+        
         throw error;
       }
       
-      console.log(`✅ Loaded ${data.length} cash transactions`);
+      console.log(`✅ Cash transactions loaded successfully: ${data.length} records`);
       return data as CashTransaction[];
     } catch (error) {
-      console.error('❌ Failed to load cash transactions:', error);
+      console.error('❌ Failed to load cash transactions with details:', {
+        message: error.message,
+        name: error.name,
+        isNetworkError: error.message?.includes('fetch') || error.message?.includes('network')
+      });
+      
       ErrorHandler.logProjectError(error, 'Load Cash Transactions');
-      return [];
+      
+      // For transactions, we can return empty array but log the issue
+      if (error.message?.includes('fetch') || error.message?.includes('network')) {
+        console.warn('⚠️ Network error loading transactions, returning empty array');
+        return [];
+      } else {
+        console.warn('⚠️ Database error loading transactions, returning empty array');
+        return [];
+      }
     }
   },
 
   async initializeBalance(initialAmount: number): Promise<void> {
-    console.log('🔄 Initializing cash balance with amount:', initialAmount);
+    console.log('🔄 Initializing cash balance with enhanced validation...', { initialAmount });
     
-    const isConnected = await checkSupabaseConnection();
-    
-    if (!isConnected) {
-      console.log('📱 Supabase not reachable, cannot initialize cash balance offline');
-      throw new Error('Conexão com servidor necessária para inicializar o caixa');
+    // Validate input
+    if (!initialAmount || initialAmount <= 0) {
+      throw new Error('Valor inicial deve ser maior que zero');
     }
     
-    console.log('🌐 Supabase reachable, initializing cash balance online...');
+    const connectionResult = await testSupabaseConnection();
+    
+    if (!connectionResult.success) {
+      console.error('❌ Cannot initialize cash balance - connection failed:', connectionResult.error);
+      throw new Error(`Conexão com servidor necessária para inicializar o caixa: ${connectionResult.error}`);
+    }
+    
+    console.log('🌐 Connection verified, initializing cash balance...');
     
     try {
+      // Check if balance already exists
+      console.log('🔍 Checking for existing cash balance...');
+      const { data: existing, error: checkError } = await supabase
+        .from('cash_balances')
+        .select('id, current_balance')
+        .limit(1);
+      
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('❌ Error checking existing balance:', checkError);
+        throw checkError;
+      }
+      
+      if (existing && existing.length > 0) {
+        console.warn('⚠️ Cash balance already exists:', existing[0]);
+        throw new Error('Saldo do caixa já foi inicializado. Use a função de recálculo se necessário.');
+      }
+      
+      console.log('✅ No existing balance found, proceeding with initialization...');
+      
       const { error } = await supabase
         .from('cash_balances')
         .insert([{
@@ -626,42 +822,67 @@ export const cashService = {
         }]);
       
       if (error) {
-        console.error('❌ Error initializing cash balance:', error);
+        console.error('❌ Error initializing cash balance:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
         throw error;
       }
       
-      console.log('✅ Cash balance initialized successfully');
+      console.log('✅ Cash balance initialized successfully with amount:', initialAmount);
     } catch (error) {
-      console.error('❌ Failed to initialize cash balance:', error);
+      console.error('❌ Failed to initialize cash balance:', {
+        message: error.message,
+        name: error.name,
+        initialAmount
+      });
       ErrorHandler.logProjectError(error, 'Initialize Cash Balance');
       throw error;
     }
   },
 
   async recalculateBalance(): Promise<void> {
-    console.log('🔄 Recalculating cash balance...');
+    console.log('🔄 Recalculating cash balance with enhanced validation...');
     
-    const isConnected = await checkSupabaseConnection();
+    const connectionResult = await testSupabaseConnection();
     
-    if (!isConnected) {
-      console.log('📱 Supabase not reachable, cannot recalculate cash balance offline');
-      throw new Error('Conexão com servidor necessária para recalcular o saldo');
+    if (!connectionResult.success) {
+      console.error('❌ Cannot recalculate cash balance - connection failed:', connectionResult.error);
+      throw new Error(`Conexão com servidor necessária para recalcular o saldo: ${connectionResult.error}`);
     }
     
-    console.log('🌐 Supabase reachable, recalculating cash balance online...');
+    console.log('🌐 Connection verified, recalculating cash balance...');
     
     try {
-      // Call the recalculate function (if it exists)
+      // Check if recalculate function exists
+      console.log('🔍 Calling recalculate_cash_balance function...');
       const { error } = await supabase.rpc('recalculate_cash_balance');
       
       if (error) {
-        console.error('❌ Error recalculating cash balance:', error);
+        console.error('❌ Error recalculating cash balance:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        
+        // Check if function doesn't exist
+        if (error.message?.includes('function') && error.message?.includes('does not exist')) {
+          console.error('🗄️ recalculate_cash_balance function does not exist - run migrations');
+          throw new Error('Função de recálculo não existe. Execute as migrações do banco de dados.');
+        }
+        
         throw error;
       }
       
       console.log('✅ Cash balance recalculated successfully');
     } catch (error) {
-      console.error('❌ Failed to recalculate cash balance:', error);
+      console.error('❌ Failed to recalculate cash balance:', {
+        message: error.message,
+        name: error.name
+      });
       ErrorHandler.logProjectError(error, 'Recalculate Cash Balance');
       throw error;
     }

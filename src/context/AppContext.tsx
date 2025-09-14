@@ -145,19 +145,111 @@ export function AppProvider({ children }: AppProviderProps) {
 
   const loadAllData = async () => {
     try {
+      console.log('🔄 Starting loadAllData with enhanced error logging...');
       setIsLoading(true);
 
-      // Check connection with enhanced detection
-      const isConnected = await checkSupabaseConnection();
+      // Enhanced connection check with detailed logging
+      console.log('🔍 Checking Supabase connection...');
+      const connectionResult = await testSupabaseConnection();
       
-      if (!isConnected) {
-        console.log('📱 Supabase not reachable, loading offline data...');
+      if (!connectionResult.success) {
+        console.error('❌ Supabase connection failed:', connectionResult.error);
+        console.error('📋 Connection details:', connectionResult.details);
+        console.log('📱 Falling back to offline data...');
         await loadOfflineDataOnly();
+        setError(`Conexão falhou: ${connectionResult.error}. Usando dados offline.`);
         return;
       }
       
-      console.log('🌐 Supabase reachable, loading data online...');
+      console.log('🌐 Supabase connection verified, loading data online...');
       
+      // Clear any previous errors
+      setError(null);
+      
+      // Load data with individual error handling for better debugging
+      console.log('📊 Loading individual data sets...');
+      
+      const results = await Promise.allSettled([
+        salesService.getAll().catch(err => { 
+          console.error('❌ Failed to load sales:', err.message); 
+          throw err; 
+        }),
+        employeesService.getAll().catch(err => { 
+          console.error('❌ Failed to load employees:', err.message); 
+          throw err; 
+        }),
+        debtsService.getAll().catch(err => { 
+          console.error('❌ Failed to load debts:', err.message); 
+          throw err; 
+        }),
+        checksService.getAll().catch(err => { 
+          console.error('❌ Failed to load checks:', err.message); 
+          throw err; 
+        }),
+        boletosService.getAll().catch(err => { 
+          console.error('❌ Failed to load boletos:', err.message); 
+          throw err; 
+        }),
+        cashService.getTransactions().catch(err => { 
+          console.error('❌ Failed to load cash transactions:', err.message); 
+          throw err; 
+        }),
+        agendaService.getAll().catch(err => { 
+          console.error('❌ Failed to load agenda events:', err.message); 
+          throw err; 
+        }),
+        taxesService.getAll().catch(err => { 
+          console.error('❌ Failed to load taxes:', err.message); 
+          throw err; 
+        }),
+        pixFeesService.getAll().catch(err => { 
+          console.error('❌ Failed to load pix fees:', err.message); 
+          throw err; 
+        }),
+        cashService.getBalance().catch(err => { 
+          console.error('❌ Failed to load cash balance:', err.message); 
+          throw err; 
+        }),
+        employeePaymentsService?.getAll().catch(err => { 
+          console.error('❌ Failed to load employee payments:', err.message); 
+          return []; 
+        }) || Promise.resolve([]),
+        employeeAdvancesService?.getAll().catch(err => { 
+          console.error('❌ Failed to load employee advances:', err.message); 
+          return []; 
+        }) || Promise.resolve([]),
+        employeeOvertimesService?.getAll().catch(err => { 
+          console.error('❌ Failed to load employee overtimes:', err.message); 
+          return []; 
+        }) || Promise.resolve([]),
+        employeeCommissionsService?.getAll().catch(err => { 
+          console.error('❌ Failed to load employee commissions:', err.message); 
+          return []; 
+        }) || Promise.resolve([])
+      ]);
+      
+      // Process results and identify which data sets failed
+      const failedLoads: string[] = [];
+      const successfulLoads: string[] = [];
+      
+      const dataNames = [
+        'sales', 'employees', 'debts', 'checks', 'boletos', 
+        'cashTransactions', 'agendaEvents', 'taxes', 'pixFees', 'cashBalance',
+        'employeePayments', 'employeeAdvances', 'employeeOvertimes', 'employeeCommissions'
+      ];
+      
+      results.forEach((result, index) => {
+        const dataName = dataNames[index];
+        if (result.status === 'fulfilled') {
+          successfulLoads.push(dataName);
+          console.log(`✅ ${dataName} loaded successfully:`, Array.isArray(result.value) ? `${result.value.length} records` : 'single record');
+        } else {
+          failedLoads.push(dataName);
+          console.error(`❌ ${dataName} failed to load:`, result.reason?.message || result.reason);
+        }
+      });
+      
+      // Set data from successful loads
       const [
         salesData,
         employeesData,
@@ -173,22 +265,7 @@ export function AppProvider({ children }: AppProviderProps) {
         employeeAdvancesData,
         employeeOvertimesData,
         employeeCommissionsData
-      ] = await Promise.all([
-        salesService.getAll(),
-        employeesService.getAll(),
-        debtsService.getAll(),
-        checksService.getAll(),
-        boletosService.getAll(),
-        cashService.getTransactions(),
-        agendaService.getAll(),
-        taxesService.getAll(),
-        pixFeesService.getAll(),
-        cashService.getBalance(),
-        employeePaymentsService?.getAll() || Promise.resolve([]),
-        employeeAdvancesService?.getAll() || Promise.resolve([]),
-        employeeOvertimesService?.getAll() || Promise.resolve([]),
-        employeeCommissionsService?.getAll() || Promise.resolve([])
-      ]);
+      ] = results.map(result => result.status === 'fulfilled' ? result.value : []);
 
       setSales(salesData);
       setEmployees(employeesData);
@@ -205,17 +282,41 @@ export function AppProvider({ children }: AppProviderProps) {
       setEmployeeOvertimes(employeeOvertimesData);
       setEmployeeCommissions(employeeCommissionsData);
       
-      console.log('✅ All data loaded successfully');
+      console.log('📊 Data loading summary:', {
+        successful: successfulLoads.length,
+        failed: failedLoads.length,
+        successfulLoads,
+        failedLoads
+      });
+      
+      if (failedLoads.length > 0) {
+        const errorMessage = `Alguns dados falharam ao carregar: ${failedLoads.join(', ')}`;
+        console.warn('⚠️', errorMessage);
+        setError(errorMessage);
+      } else {
+        console.log('✅ All data loaded successfully');
+      }
     } catch (error) {
+      console.error('❌ Critical error in loadAllData:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack?.split('\n').slice(0, 5).join('\n')
+      });
+      
       ErrorHandler.logProjectError(error, 'Load All Data');
       
       // Try to load offline data as fallback
-      console.warn('⚠️ Failed to load from Supabase, trying offline data...');
+      console.warn('⚠️ Failed to load from Supabase, attempting offline data fallback...');
       try {
         await loadOfflineDataOnly();
-        toast.error('❌ Sem conexão com servidor. Mostrando dados offline.');
+        const offlineMessage = 'Sem conexão com servidor. Mostrando dados offline.';
+        console.log('📱', offlineMessage);
+        toast.error(`❌ ${offlineMessage}`);
+        setError(`Erro de conexão: ${error.message}. Usando dados offline.`);
       } catch (offlineError) {
-        const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao carregar dados';
+        console.error('❌ Offline data fallback also failed:', offlineError);
+        const errorMessage = `Falha total: ${error.message}. Dados offline também indisponíveis.`;
+        console.error('💥', errorMessage);
         setError(ErrorHandler.handleSupabaseError(error));
       }
     } finally {
@@ -227,9 +328,16 @@ export function AppProvider({ children }: AppProviderProps) {
   // Load offline data only
   const loadOfflineDataOnly = async () => {
     try {
-      console.log('📱 Loading offline data...');
+      console.log('📱 Loading offline data with detailed logging...');
       
       const offlineData = await getOfflineData();
+      console.log('📊 Offline data summary:', {
+        totalRecords: offlineData.length,
+        byTable: offlineData.reduce((acc, item) => {
+          acc[item.table] = (acc[item.table] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>)
+      });
       
       // Group offline data by table
       const salesData = offlineData.filter(d => d.table === 'sales').map(d => d.data);
@@ -256,7 +364,7 @@ export function AppProvider({ children }: AppProviderProps) {
       setEmployeeOvertimes([]);
       setEmployeeCommissions([]);
       
-      console.log('📱 Offline data loaded:', {
+      console.log('✅ Offline data loaded successfully:', {
         sales: salesData.length,
         employees: employeesData.length,
         debts: debtsData.length,
@@ -265,24 +373,47 @@ export function AppProvider({ children }: AppProviderProps) {
       });
       
     } catch (error) {
-      console.error('Error loading offline data:', error);
+      console.error('❌ Failed to load offline data:', {
+        message: error.message,
+        name: error.name
+      });
       throw error;
     }
   };
   useEffect(() => {
+    console.log('🚀 AppContext useEffect triggered - initializing data load...');
     loadAllData();
     
     // Setup connection monitoring and auto-sync
     const unsubscribe = connectionManager.addListener((status) => {
+      console.log('🔗 Connection status changed:', status);
       if (status.isOnline && status.isSupabaseReachable) {
         console.log('🌐 Connection restored, starting auto-sync...');
         syncManager.startSync().then(() => {
           // Reload data after successful sync
+          console.log('🔄 Auto-sync completed, reloading data...');
           loadAllData();
         });
       }
-    });
-    
+      console.log('🔄 Dashboard mounted, forcing data reload with enhanced logging...');
+      console.log('🔄 Dashboard mounted, forcing data reload with connection verification...');
+      
+      // Import testSupabaseConnection for use in Dashboard
+      import('../lib/supabase').then(({ testSupabaseConnection }) => {
+        testSupabaseConnection().then(result => {
+          if (result.success) {
+            console.log('✅ Dashboard connection verified, loading data...');
+          } else {
+            console.error('❌ Dashboard connection failed:', result.error);
+          }
+        });
+      });
+      
+        console.error('❌ Dashboard data reload failed:', error);
+        console.error('❌ Dashboard data reload failed:', {
+          message: error.message,
+          name: error.name
+        });
     return () => {
       unsubscribe();
     };

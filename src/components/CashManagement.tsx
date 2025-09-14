@@ -63,8 +63,40 @@ export function CashManagement() {
 
   // Force reload cash balance on mount
   React.useEffect(() => {
-    console.log('🔄 CashManagement montado, verificando saldo...');
+    console.log('🔄 CashManagement mounted, verifying cash balance with connection check...');
+    
+    // Import testSupabaseConnection for use in CashManagement
+    import('../lib/supabase').then(({ testSupabaseConnection }) => {
+      testSupabaseConnection().then(result => {
+        if (result.success) {
+          console.log('✅ CashManagement connection verified');
+        } else {
+          console.error('❌ CashManagement connection failed:', result.error);
+          console.log('📱 Will attempt to load offline data if available');
+        }
+      });
+    });
+    
+    
+    // Test connection before loading cash data
+    testSupabaseConnection().then(result => {
+      if (result.success) {
+        console.log('✅ CashManagement connection verified');
+      } else {
+        console.error('❌ CashManagement connection failed:', result.error);
+        console.log('📱 Will attempt to load offline data if available');
+      }
+    });
+    
     loadAllData().catch(error => {
+      console.error('❌ CashManagement data load failed:', {
+        message: error.message,
+        name: error.name
+      });
+      console.error('❌ CashManagement data load failed:', {
+        message: error.message,
+        name: error.name
+      });
       ErrorHandler.logProjectError(error, 'Cash Management Data Load');
     });
   }, []);

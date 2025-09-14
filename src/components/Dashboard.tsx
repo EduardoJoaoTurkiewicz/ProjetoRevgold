@@ -74,8 +74,22 @@ const Dashboard: React.FC = () => {
   // Force data reload on mount
   React.useEffect(() => {
     if (!loading && !isLoading) {
-      console.log('🔄 Dashboard montado, forçando reload dos dados...');
+      console.log('🔄 Dashboard mounted, forcing data reload with connection verification...');
+      
+      // Test connection before loading data
+      testSupabaseConnection().then(result => {
+        if (result.success) {
+          console.log('✅ Dashboard connection verified, loading data...');
+        } else {
+          console.error('❌ Dashboard connection failed:', result.error);
+        }
+      });
+      
       loadAllData().catch(error => {
+        console.error('❌ Dashboard data reload failed:', {
+          message: error.message,
+          name: error.name
+        });
         ErrorHandler.logProjectError(error, 'Dashboard Data Reload');
       });
     }
