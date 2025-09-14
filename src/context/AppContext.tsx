@@ -414,6 +414,8 @@ export function AppProvider({ children }: AppProviderProps) {
           message: error.message,
           name: error.name
         });
+    }
+    )
     return () => {
       unsubscribe();
     };
