@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured, healthCheck } from './supabase';
+import { supabase, isSupabaseConfigured, healthCheck, testSupabaseConnection } from './supabase';
 import { connectionManager } from './connectionManager';
 import { saveOffline, addToSyncQueue } from './offlineStorage';
 import { ErrorHandler } from './errorHandler';
