@@ -155,14 +155,13 @@ export function AppProvider({ children }: AppProviderProps) {
 
       // Enhanced connection check with detailed logging
       console.log('🔍 Checking Supabase connection...');
-      const connectionResult = await testSupabaseConnection();
+      const isConnected = await checkSupabaseConnection();
       
-      if (!connectionResult.success) {
-        console.error('❌ Supabase connection failed:', connectionResult.error ?? 'Unknown error');
-        console.error('📋 Connection details:', connectionResult.details ?? 'No details');
+      if (!isConnected) {
+        console.error('❌ Supabase connection failed');
         console.log('📱 Falling back to offline data...');
         await loadOfflineDataOnly();
-        setError(`Conexão falhou: ${connectionResult.error ?? 'Unknown error'}. Usando dados offline.`);
+        setError('Conexão falhou. Usando dados offline.');
         setConnectionStatus('offline');
         return;
       }
