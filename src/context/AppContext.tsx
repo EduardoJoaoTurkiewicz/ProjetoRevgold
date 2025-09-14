@@ -396,6 +396,8 @@ export function AppProvider({ children }: AppProviderProps) {
         });
       }
     });
+  }
+  )
   // Cash methods
   const initializeCashBalance = async (initialAmount: number): Promise<void> => {
     try {
