@@ -523,7 +523,7 @@ export interface Database {
           delivery_date: string | null
           client: string
           seller_id: string | null
-          products: string | null
+          products: Json | null
           observations: string | null
           total_value: number
           payment_methods: Json
@@ -542,7 +542,7 @@ export interface Database {
           delivery_date?: string | null
           client: string
           seller_id?: string | null
-          products?: string | null
+          products?: Json | null
           observations?: string | null
           total_value?: number
           payment_methods?: Json
@@ -561,7 +561,7 @@ export interface Database {
           delivery_date?: string | null
           client?: string
           seller_id?: string | null
-          products?: string | null
+          products?: Json | null
           observations?: string | null
           total_value?: number
           payment_methods?: Json
