@@ -206,8 +206,18 @@ export async function createSaleRPC(payload: any): Promise<string> {
   console.log('🌐 Supabase reachable, saving online...');
   
   // Sanitize and transform payload
-  const sanitizedPayload = sanitizePayload(payload);
+  // Clone payload to avoid modifying the original
+  const clonedPayload = JSON.parse(JSON.stringify(payload));
+  const sanitizedPayload = sanitizePayload(clonedPayload);
   const snakeCasePayload = transformToSnakeCase(sanitizedPayload);
+  
+  // Ensure products and payment_methods are properly formatted as JSON strings for JSONB columns
+  if (snakeCasePayload.products && Array.isArray(snakeCasePayload.products)) {
+    snakeCasePayload.products = JSON.stringify(snakeCasePayload.products);
+  }
+  if (snakeCasePayload.payment_methods && Array.isArray(snakeCasePayload.payment_methods)) {
+    snakeCasePayload.payment_methods = JSON.stringify(snakeCasePayload.payment_methods);
+  }
   
   console.log('📦 Sanitized payload:', sanitizedPayload);
   console.log('🐍 Snake case payload:', snakeCasePayload);
