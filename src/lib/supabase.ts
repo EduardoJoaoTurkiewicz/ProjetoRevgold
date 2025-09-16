@@ -45,7 +45,7 @@ export const supabase = (() => {
 // Test connection function
 export async function testSupabaseConnection(): Promise<{ success: boolean; error?: string; details?: any }> {
   if (!isSupabaseConfigured()) {
-    const error = 'Supabase não configurado corretamente';
+    const error = 'Supabase não configurado. Configure o arquivo .env com suas credenciais do Supabase.';
     console.error('❌', error);
     return { success: false, error };
   }
@@ -55,7 +55,7 @@ export async function testSupabaseConnection(): Promise<{ success: boolean; erro
     
     // Test with a simple query and timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout for better reliability
     
     // Test with cash_balances table first (most likely to exist)
     const { data: balanceData, error: balanceError } = await supabase
@@ -70,7 +70,7 @@ export async function testSupabaseConnection(): Promise<{ success: boolean; erro
       console.warn('⚠️ cash_balances table test failed:', balanceError.message);
       
       if (balanceError.message?.includes('Failed to fetch') || balanceError.message?.includes('fetch')) {
-        const error = 'Erro de conexão: Não foi possível conectar ao Supabase. Verifique sua conexão com a internet.';
+        const error = 'Erro de conexão: Não foi possível conectar ao Supabase. Verifique: 1) Sua conexão com a internet, 2) Se o arquivo .env está configurado corretamente, 3) Se o projeto Supabase está ativo.';
         console.error('❌ Network error:', error);
         return { success: false, error, details: balanceError };
       }
@@ -94,7 +94,7 @@ export async function testSupabaseConnection(): Promise<{ success: boolean; erro
           .limit(1);
         
         if (salesError) {
-          const error = `Erro de conexão com todas as tabelas testadas: ${salesError.message}`;
+          const error = `Erro de conexão com o banco de dados. Verifique se: 1) O arquivo .env está configurado, 2) As credenciais do Supabase estão corretas, 3) O projeto Supabase está ativo. Erro: ${salesError.message}`;
           console.error('❌ All table tests failed:', error);
           return { 
             success: false, 
@@ -118,13 +118,13 @@ export async function testSupabaseConnection(): Promise<{ success: boolean; erro
     console.log('✅ Supabase connection established successfully');
     return { success: true };
   } catch (error) {
-    let errorMessage = 'Erro desconhecido na conexão';
+    let errorMessage = 'Erro na conexão com Supabase';
     
     if (error.name === 'AbortError') {
-      errorMessage = 'Timeout na conexão com Supabase (5s)';
+      errorMessage = 'Timeout na conexão com Supabase (8s). Verifique sua conexão com a internet e se o projeto Supabase está ativo.';
       console.error('❌', errorMessage);
     } else {
-      errorMessage = `Erro na conexão com Supabase: ${error.message || error}`;
+      errorMessage = `Erro na conexão com Supabase: ${error.message || error}. Verifique se o arquivo .env está configurado corretamente.`;
       console.error('❌', errorMessage, error);
       ErrorHandler.logProjectError(error, 'Supabase Connection Test');
     }

@@ -294,7 +294,13 @@ export function AppProvider({ children }: AppProviderProps) {
       
       if (failedLoads.length > 0) {
         console.warn('⚠️ Alguns dados não puderam ser carregados:', failedLoads.join(', '));
-        // Don't set error for partial failures - system can still work
+        // Show specific error message for connection issues
+        if (failedLoads.length === dataNames.length) {
+          setError('Erro de conexão: Configure o arquivo .env com suas credenciais do Supabase para conectar ao banco de dados.');
+        } else {
+          // Don't set error for partial failures - system can still work
+          console.log('📊 Sistema funcionando parcialmente com dados disponíveis');
+        }
       } else {
         console.log('✅ Todos os dados carregados com sucesso');
       }
@@ -302,6 +308,15 @@ export function AppProvider({ children }: AppProviderProps) {
       console.warn('⚠️ Erro crítico no carregamento de dados:', error?.message ?? 'Erro desconhecido');
       
       ErrorHandler.logProjectError(error, 'Load All Data');
+      
+      // Check if it's a configuration issue
+      if (error?.message?.includes('Failed to fetch') || 
+          error?.message?.includes('fetch') ||
+          error?.message?.includes('Network error')) {
+        setError('Erro de conexão: Configure o arquivo .env com suas credenciais do Supabase. Veja o arquivo .env para instruções.');
+        setConnectionStatus('offline');
+        return;
+      }
       
       // Try to load offline data as fallback
       console.log('📱 Tentando carregar dados offline...');
@@ -312,7 +327,7 @@ export function AppProvider({ children }: AppProviderProps) {
         setConnectionStatus('offline');
       } catch (offlineError) {
         console.warn('⚠️ Dados offline também não disponíveis:', offlineError ?? 'Erro desconhecido');
-        setError('Sistema iniciando... Configure o Supabase para funcionalidade completa.');
+        setError('Configure o arquivo .env com suas credenciais do Supabase para usar o sistema. Veja as instruções no arquivo .env.');
         setConnectionStatus('offline');
       }
     } finally {
