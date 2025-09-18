@@ -41,9 +41,11 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   });
 
   const [products, setProducts] = useState<Product[]>(
-    sale?.products && typeof sale.products === 'string' 
-      ? [{ name: sale.products, quantity: 1, price: sale.totalValue, total: sale.totalValue }]
-      : [{ name: '', quantity: 1, price: 0, total: 0 }]
+    sale?.products && Array.isArray(sale.products) && sale.products.length > 0
+      ? sale.products
+      : sale?.products && typeof sale.products === 'string' 
+        ? [{ name: sale.products, quantity: 1, price: sale.totalValue, total: sale.totalValue }]
+        : [{ name: '', quantity: 1, price: 0, total: 0 }]
   );
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(

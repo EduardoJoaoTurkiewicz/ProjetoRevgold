@@ -64,7 +64,7 @@ export function sanitizePayload(payload: any): any {
   // Sanitize products field specifically
   if (sanitized.hasOwnProperty('products')) {
     const products = sanitized.products;
-    if (typeof products === 'string') {
+    if (typeof products === 'string' && products.trim()) {
       try {
         // Try to parse as JSON
         const parsed = JSON.parse(products);
@@ -76,12 +76,22 @@ export function sanitizePayload(payload: any): any {
           console.log('🧹 Sanitized products: invalid JSON → null');
         }
       } catch (error) {
-        sanitized.products = null;
-        console.log('🧹 Sanitized products: unparseable string → null');
+        // If it's a simple string, wrap it in an array as a single product
+        sanitized.products = [{ name: products, quantity: 1, price: 0, total: 0 }];
+        console.log('🧹 Sanitized products: string → single product array');
       }
+    } else if (typeof products === 'string' && !products.trim()) {
+      // Empty string should become empty array
+      sanitized.products = [];
+      console.log('🧹 Sanitized products: empty string → empty array');
     } else if (!Array.isArray(products) && products !== null && products !== undefined) {
-      sanitized.products = null;
-      console.log('🧹 Sanitized products: invalid type → null');
+      // Invalid type should become empty array
+      sanitized.products = [];
+      console.log('🧹 Sanitized products: invalid type → empty array');
+    } else if (products === null || products === undefined) {
+      // Null/undefined should become empty array for JSONB compatibility
+      sanitized.products = [];
+      console.log('🧹 Sanitized products: null/undefined → empty array');
     }
   }
   

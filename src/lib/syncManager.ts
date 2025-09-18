@@ -328,7 +328,7 @@ class SyncManager {
     // Sanitize products field for sync
     if (cleaned.hasOwnProperty('products')) {
       const products = cleaned.products;
-      if (typeof products === 'string') {
+      if (typeof products === 'string' && products.trim()) {
         try {
           // Try to parse as JSON
           const parsed = JSON.parse(products);
@@ -336,16 +336,26 @@ class SyncManager {
             cleaned.products = parsed;
             console.log('🔧 Sync: Sanitized products string → array');
           } else {
-            cleaned.products = null;
-            console.log('🔧 Sync: Sanitized products invalid JSON → null');
+            cleaned.products = [];
+            console.log('🔧 Sync: Sanitized products invalid JSON → empty array');
           }
         } catch (error) {
-          cleaned.products = null;
-          console.log('🔧 Sync: Sanitized products unparseable string → null');
+          // If it's a simple string, wrap it in an array as a single product
+          cleaned.products = [{ name: products, quantity: 1, price: 0, total: 0 }];
+          console.log('🔧 Sync: Sanitized products string → single product array');
         }
+      } else if (typeof products === 'string' && !products.trim()) {
+        // Empty string should become empty array
+        cleaned.products = [];
+        console.log('🔧 Sync: Sanitized products empty string → empty array');
       } else if (!Array.isArray(products) && products !== null && products !== undefined) {
-        cleaned.products = null;
-        console.log('🔧 Sync: Sanitized products invalid type → null');
+        // Invalid type should become empty array
+        cleaned.products = [];
+        console.log('🔧 Sync: Sanitized products invalid type → empty array');
+      } else if (products === null || products === undefined) {
+        // Null/undefined should become empty array for JSONB compatibility
+        cleaned.products = [];
+        console.log('🔧 Sync: Sanitized products null/undefined → empty array');
       }
     }
     
