@@ -61,6 +61,30 @@ export function sanitizePayload(payload: any): any {
     }
   });
   
+  // Sanitize products field specifically
+  if (sanitized.hasOwnProperty('products')) {
+    const products = sanitized.products;
+    if (typeof products === 'string') {
+      try {
+        // Try to parse as JSON
+        const parsed = JSON.parse(products);
+        if (Array.isArray(parsed)) {
+          sanitized.products = parsed;
+          console.log('🧹 Sanitized products: string → array');
+        } else {
+          sanitized.products = null;
+          console.log('🧹 Sanitized products: invalid JSON → null');
+        }
+      } catch (error) {
+        sanitized.products = null;
+        console.log('🧹 Sanitized products: unparseable string → null');
+      }
+    } else if (!Array.isArray(products) && products !== null && products !== undefined) {
+      sanitized.products = null;
+      console.log('🧹 Sanitized products: invalid type → null');
+    }
+  }
+  
   // Sanitize payment methods
   if (sanitized.paymentMethods && Array.isArray(sanitized.paymentMethods)) {
     sanitized.paymentMethods = sanitized.paymentMethods.map((method: any) => {

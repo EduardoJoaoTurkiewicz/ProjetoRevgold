@@ -325,6 +325,30 @@ class SyncManager {
       }
     });
     
+    // Sanitize products field for sync
+    if (cleaned.hasOwnProperty('products')) {
+      const products = cleaned.products;
+      if (typeof products === 'string') {
+        try {
+          // Try to parse as JSON
+          const parsed = JSON.parse(products);
+          if (Array.isArray(parsed)) {
+            cleaned.products = parsed;
+            console.log('🔧 Sync: Sanitized products string → array');
+          } else {
+            cleaned.products = null;
+            console.log('🔧 Sync: Sanitized products invalid JSON → null');
+          }
+        } catch (error) {
+          cleaned.products = null;
+          console.log('🔧 Sync: Sanitized products unparseable string → null');
+        }
+      } else if (!Array.isArray(products) && products !== null && products !== undefined) {
+        cleaned.products = null;
+        console.log('🔧 Sync: Sanitized products invalid type → null');
+      }
+    }
+    
     // Enhanced cleaning for nested objects (payment methods, etc.)
     if (cleaned.paymentMethods && Array.isArray(cleaned.paymentMethods)) {
       cleaned.paymentMethods = cleaned.paymentMethods.map((method: any) => {
