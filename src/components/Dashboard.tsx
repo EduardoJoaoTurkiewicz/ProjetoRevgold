@@ -851,7 +851,7 @@ const Dashboard: React.FC = () => {
           </div>
           
           <div className="space-y-4">
-            {topSellers.map((seller, index) => {
+            {(topSellers || []).map((seller, index) => {
               if (!seller || typeof seller !== 'object' || !seller.name) return null;
               return (
                 <div key={index} className="p-4 bg-yellow-50 rounded-xl border border-yellow-200">
@@ -882,7 +882,7 @@ const Dashboard: React.FC = () => {
                 </div>
               );
             })}
-            {topSellers.length === 0 && (
+            {(topSellers || []).length === 0 && (
               <div className="text-center py-8">
                 <Star className="w-12 h-12 mx-auto mb-3 text-yellow-300" />
                 <p className="text-yellow-600 font-medium">Nenhuma venda com vendedor este mês</p>
