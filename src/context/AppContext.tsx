@@ -425,13 +425,13 @@ export function AppProvider({ children }: AppProviderProps) {
   
   // Auto-sync when connection is established
   useEffect(() => {
-    if (connectionStatus === 'online') {
+    // Only auto-sync if we have pending data and connection was just restored
+    if (connectionStatus === 'online' && !loading && !isLoading) {
       console.log('🔄 Auto-sync triggered after connection established');
       syncManager.startSync().catch(error => {
         console.error('❌ Auto-sync failed:', error ?? 'Unknown error');
       });
     }
-  }, [connectionStatus]);
   
   // Cash methods
   const initializeCashBalance = async (initialAmount: number): Promise<void> => {

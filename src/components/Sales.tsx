@@ -119,7 +119,8 @@ export function Sales() {
   const cleanUUIDFields = (data: any): any => {
     if (!data || typeof data !== 'object') return data;
     
-    const cleaned = { ...data };
+    // Deep clone to avoid modifying original
+    const cleaned = JSON.parse(JSON.stringify(data));
     
     // List of all possible UUID fields in sales
     const uuidFields = [
@@ -150,7 +151,7 @@ export function Sales() {
     // Clean UUID fields in payment methods
     if (cleaned.paymentMethods && Array.isArray(cleaned.paymentMethods)) {
       cleaned.paymentMethods = cleaned.paymentMethods.map((method: any) => {
-        const cleanedMethod = { ...method };
+        const cleanedMethod = JSON.parse(JSON.stringify(method));
         uuidFields.forEach(field => {
           if (cleanedMethod.hasOwnProperty(field)) {
             const value = cleanedMethod[field];

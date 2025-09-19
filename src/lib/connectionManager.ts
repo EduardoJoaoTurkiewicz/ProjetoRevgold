@@ -40,12 +40,12 @@ class ConnectionManager {
   }
 
   private startPeriodicCheck() {
-    // Check connection every 30 seconds
+    // Check connection every 60 seconds (less frequent to reduce load)
     this.checkInterval = setInterval(() => {
       if (this.status.isOnline) {
         this.checkSupabaseConnection();
       }
-    }, 30000);
+    }, 60000);
   }
 
   private updateStatus(updates: Partial<ConnectionStatus>) {
