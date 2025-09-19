@@ -26,7 +26,8 @@ export function isValidUUID(value?: string | null): boolean {
 export function sanitizePayload(payload: any): any {
   if (!payload || typeof payload !== 'object') return payload;
   
-  const sanitized = { ...payload };
+  // Deep clone to avoid modifying original
+  const sanitized = JSON.parse(JSON.stringify(payload));
   
   // List of all possible UUID fields
   const uuidFields = [
@@ -64,34 +65,39 @@ export function sanitizePayload(payload: any): any {
   // Sanitize products field specifically
   if (sanitized.hasOwnProperty('products')) {
     const products = sanitized.products;
-    if (typeof products === 'string' && products.trim()) {
-      try {
-        // Try to parse as JSON
-        const parsed = JSON.parse(products);
-        if (Array.isArray(parsed)) {
-          sanitized.products = parsed;
-          console.log('🧹 Sanitized products: string → array');
-        } else {
-          sanitized.products = null;
-          console.log('🧹 Sanitized products: invalid JSON → null');
+    if (Array.isArray(products)) {
+      // Already an array, keep as is
+      sanitized.products = products;
+    } else if (typeof products === 'string') {
+      if (products.trim()) {
+        try {
+          // Try to parse as JSON
+          const parsed = JSON.parse(products);
+          if (Array.isArray(parsed)) {
+            sanitized.products = parsed;
+            console.log('🧹 Sanitized products: string → array');
+          } else {
+            sanitized.products = [];
+            console.log('🧹 Sanitized products: invalid JSON → empty array');
+          }
+        } catch (error) {
+          // If it's a simple string, wrap it in an array as a single product
+          sanitized.products = [{ name: products, quantity: 1, price: 0, total: 0 }];
+          console.log('🧹 Sanitized products: string → single product array');
         }
-      } catch (error) {
-        // If it's a simple string, wrap it in an array as a single product
-        sanitized.products = [{ name: products, quantity: 1, price: 0, total: 0 }];
-        console.log('🧹 Sanitized products: string → single product array');
+      } else {
+        // Empty string should become empty array
+        sanitized.products = [];
+        console.log('🧹 Sanitized products: empty string → empty array');
       }
-    } else if (typeof products === 'string' && !products.trim()) {
-      // Empty string should become empty array
-      sanitized.products = [];
-      console.log('🧹 Sanitized products: empty string → empty array');
-    } else if (!Array.isArray(products) && products !== null && products !== undefined) {
-      // Invalid type should become empty array
-      sanitized.products = [];
-      console.log('🧹 Sanitized products: invalid type → empty array');
     } else if (products === null || products === undefined) {
       // Null/undefined should become empty array for JSONB compatibility
       sanitized.products = [];
       console.log('🧹 Sanitized products: null/undefined → empty array');
+    } else {
+      // Invalid type should become empty array
+      sanitized.products = [];
+      console.log('🧹 Sanitized products: invalid type → empty array');
     }
   }
   
@@ -240,30 +246,31 @@ export async function createSaleRPC(payload: any): Promise<string> {
   console.log('🌐 Supabase reachable, saving online...');
   
   // Sanitize and transform payload
-  // Clone payload to avoid modifying the original
-  const clonedPayload = JSON.parse(JSON.stringify(payload));
-  const sanitizedPayload = sanitizePayload(clonedPayload);
+  const sanitizedPayload = sanitizePayload(payload);
   const snakeCasePayload = transformToSnakeCase(sanitizedPayload);
   
   console.log('📦 Sanitized payload:', sanitizedPayload);
   console.log('🐍 Snake case payload:', snakeCasePayload);
   
   try {
-    const { data, error } = await supabase.rpc('create_sale', { 
-      payload: snakeCasePayload 
-    });
+    // Use direct insert instead of RPC to avoid function dependency
+    const { data, error } = await supabase
+      .from('sales')
+      .insert([snakeCasePayload])
+      .select('id')
+      .single();
     
     if (error) {
-      console.error('❌ Supabase RPC error:', error);
+      console.error('❌ Supabase insert error:', error);
       console.error('❌ Error details:', JSON.stringify(error, null, 2));
       console.error('❌ Failed payload:', JSON.stringify(snakeCasePayload, null, 2));
       throw error;
     }
     
-    console.log('✅ Sale created successfully via RPC:', data);
-    return data;
+    console.log('✅ Sale created successfully:', data.id);
+    return data.id;
   } catch (error) {
-    console.error('❌ RPC call failed, attempting offline save...');
+    console.error('❌ Insert failed, attempting offline save...');
     ErrorHandler.logProjectError(error, 'Create Sale RPC');
     
     // Fallback to offline storage

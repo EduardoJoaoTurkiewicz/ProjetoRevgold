@@ -384,32 +384,44 @@ export function AppProvider({ children }: AppProviderProps) {
   };
   useEffect(() => {
     console.log('🚀 AppContext useEffect triggered - initializing data load...');
-    loadAllData();
+    
+    // Only load data once on mount, not on every render
+    let mounted = true;
+    
+    const initializeData = async () => {
+      if (mounted) {
+        await loadAllData();
+      }
+    };
+    
+    initializeData();
     
     // Setup connection monitoring and auto-sync
     const unsubscribe = connectionManager.addListener((status) => {
       console.log('🔗 Connection status changed:', status);
       setConnectionStatus(status.isOnline && status.isSupabaseReachable ? 'online' : 'offline');
-      if (status.isOnline && status.isSupabaseReachable) {
+      
+      // Only auto-sync if we were offline and now we're online
+      if (status.isOnline && status.isSupabaseReachable && connectionStatus === 'offline') {
         console.log('🌐 Connection restored, starting auto-sync...');
         syncManager.startSync().then(() => {
           // Reload data after successful sync
           console.log('🔄 Auto-sync completed, reloading data...');
-          loadAllData();
+          if (mounted) {
+            loadAllData();
+          }
         }).catch(error => {
           console.error('❌ Auto-sync failed:', error ?? 'Unknown error');
         });
       }
-      console.log('🔄 Dashboard mounted, forcing data reload with enhanced logging...');
-    }
-    )
+    });
     
     return () => {
+      mounted = false;
       unsubscribe();
     };
-      console.log('🔄 Dashboard mounted, forcing data reload with connection verification...');
       
-  }, []);
+  }, []); // Empty dependency array to run only once
   
   // Auto-sync when connection is established
   useEffect(() => {

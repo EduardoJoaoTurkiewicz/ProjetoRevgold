@@ -65,20 +65,9 @@ export function CashManagement() {
   React.useEffect(() => {
     console.log('🔄 Gestão de Caixa iniciada...');
     
-    // Import testSupabaseConnection for use in CashManagement
-    import('../lib/supabaseServices').then(({ testSupabaseConnection }) => {
-      testSupabaseConnection().then(result => {
-        if (result.success) {
-          console.log('✅ Conexão do Caixa verificada');
-        } else {
-          console.log('📱 Caixa funcionando offline');
-        }
-      });
-    });
-    
-    loadAllData().catch(error => {
-      console.warn('⚠️ Alguns dados do Caixa não puderam ser carregados');
-    });
+    // Remove automatic data reload from CashManagement
+    // Data is already loaded by AppContext
+    console.log('💰 Cash Management mounted - using data from context');
   }, []);
 
   // Calcular transações do período filtrado

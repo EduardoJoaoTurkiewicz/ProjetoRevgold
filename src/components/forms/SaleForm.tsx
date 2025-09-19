@@ -138,8 +138,28 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     try {
       // Validate form data
       if (!formData.client || !formData.client.trim()) {
-        console.error('❌ Validation failed: Missing client');
-        alert('Por favor, informe o nome do cliente.');
+      // Build sale object first
+      const saleToSubmit = {
+        date: formData.date,
+        deliveryDate: formData.deliveryDate || null,
+        client: formData.client.trim(),
+        sellerId: formData.sellerId || null,
+        products: validProducts,
+        observations: formData.observations || null,
+        totalValue: amounts.totalValue,
+        paymentMethods: validPaymentMethods,
+        receivedAmount: amounts.receivedAmount,
+        pendingAmount: amounts.pendingAmount,
+        status: amounts.status,
+        paymentDescription: formData.paymentDescription || null,
+        paymentObservations: formData.paymentObservations || null,
+        updatedAt: null,
+        custom_commission_rate: formData.customCommissionRate
+      };
+      
+      // Clean UUID fields
+      const cleanedSale = cleanUUIDFields(saleToSubmit);
+      console.log('🧹 Cleaned sale data:', cleanedSale);
         return;
       }
       
@@ -189,7 +209,7 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     } catch (error) {
       console.error('❌ Error in handleSubmit:', error);
       console.error('❌ Error stack trace:', error instanceof Error ? error.stack : 'No stack trace');
-      alert('Erro ao processar formulário: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+      console.error('❌ Sale data that failed:', JSON.stringify(cleanedSale, null, 2));
     }
   };
 
@@ -524,39 +544,44 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
             </div>
 
             {/* Resumo da Venda */}
-            <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border-2 border-green-200 modern-shadow-xl">
-              <h3 className="text-xl font-black text-green-800 mb-4">Resumo da Venda</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center">
-                  <span className="text-green-600 font-semibold block mb-1">Total:</span>
-                  <p className="text-3xl font-black text-green-800">
-                    R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
+            {(() => {
+              const amounts = calculateAmounts();
+              return (
+                <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border-2 border-green-200 modern-shadow-xl">
+                  <h3 className="text-xl font-black text-green-800 mb-4">Resumo da Venda</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="text-center">
+                      <span className="text-green-600 font-semibold block mb-1">Total:</span>
+                      <p className="text-3xl font-black text-green-800">
+                        R$ {amounts.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-green-600 font-semibold block mb-1">Recebido:</span>
+                      <p className="text-3xl font-black text-emerald-600">
+                        R$ {amounts.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-green-600 font-semibold block mb-1">Pendente:</span>
+                      <p className="text-3xl font-black text-orange-600">
+                        R$ {amounts.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 text-center">
+                    <span className={`px-4 py-2 rounded-full text-sm font-bold border ${
+                      amounts.status === 'pago' ? 'bg-green-100 text-green-800 border-green-200' :
+                      amounts.status === 'parcial' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                      'bg-red-100 text-red-800 border-red-200'
+                    }`}>
+                      Status: {amounts.status === 'pago' ? 'Pago' :
+                               amounts.status === 'parcial' ? 'Parcial' : 'Pendente'}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <span className="text-green-600 font-semibold block mb-1">Recebido:</span>
-                  <p className="text-3xl font-black text-emerald-600">
-                    R$ {receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <span className="text-green-600 font-semibold block mb-1">Pendente:</span>
-                  <p className="text-3xl font-black text-orange-600">
-                    R$ {pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-4 text-center">
-                <span className={`px-4 py-2 rounded-full text-sm font-bold border ${
-                  calculateAmounts().status === 'pago' ? 'bg-green-100 text-green-800 border-green-200' :
-                  calculateAmounts().status === 'parcial' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                  'bg-red-100 text-red-800 border-red-200'
-                }`}>
-                  Status: {calculateAmounts().status === 'pago' ? 'Pago' :
-                           calculateAmounts().status === 'parcial' ? 'Parcial' : 'Pendente'}
-                </span>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Observações */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
