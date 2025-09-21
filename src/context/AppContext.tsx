@@ -13,7 +13,8 @@ import {
   employeeCommissionsService,
   pixFeesService,
   taxesService,
-  agendaService
+  agendaService,
+  acertosService
 } from '../lib/supabaseServices';
 import { connectionManager } from '../lib/connectionManager';
 import { syncManager } from '../lib/syncManager';
