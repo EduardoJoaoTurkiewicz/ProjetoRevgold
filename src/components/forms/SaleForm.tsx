@@ -108,6 +108,10 @@ export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
           (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
         return sum + method.amount;
       }
+      // Acertos não são recebidos imediatamente
+      if (method.type === 'acerto') {
+        return sum;
+      }
       return sum;
     }, 0);
     

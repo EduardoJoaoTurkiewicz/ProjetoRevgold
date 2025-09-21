@@ -596,10 +596,12 @@ export const cashService = {
         throw error;
       }
       
-      console.log(`✅ Transações carregadas: ${data.length} registros`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`✅ Transações carregadas: ${data.length} registros`);
+      }
       return data as CashTransaction[];
     } catch (error) {
-      console.error('❌ Falha ao carregar transações:', error);
+      // Silenciar erros quando offline
       ErrorHandler.logProjectError(error, 'Load Cash Transactions');
       return [];
     }

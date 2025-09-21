@@ -167,23 +167,25 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 // Interceptar fetch errors para serviços externos
-const originalFetch = window.fetch;
-window.fetch = async (...args) => {
-  try {
-    return await originalFetch(...args);
-  } catch (error) {
-    const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
-    
-    // Silenciar erros de fetch para domínios externos
-    if (ErrorHandler.ignoredDomains.some(domain => url.includes(domain))) {
-      // Retornar uma resposta mock para não quebrar o fluxo
-      return new Response('{}', { 
-        status: 200, 
-        statusText: 'OK',
-        headers: { 'Content-Type': 'application/json' }
-      });
+if (typeof window !== 'undefined') {
+  const originalFetch = window.fetch;
+  window.fetch = async (...args) => {
+    try {
+      return await originalFetch(...args);
+    } catch (error) {
+      const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+      
+      // Silenciar erros de fetch para domínios externos
+      if (ErrorHandler.ignoredDomains.some(domain => url.includes(domain))) {
+        // Retornar uma resposta mock para não quebrar o fluxo
+        return new Response('{}', { 
+          status: 200, 
+          statusText: 'OK',
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      throw error;
     }
-    
-    throw error;
-  }
-};
+  };
+}
