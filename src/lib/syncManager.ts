@@ -10,57 +10,82 @@ import {
 import { connectionManager } from './connectionManager';
 import { supabase } from './supabase';
 import { ErrorHandler } from './errorHandler';
-import { checkSupabaseConnection, isValidUUID } from './supabaseServices';
+import { checkSupabaseConnection, isValidUUID, transformToSnakeCase, sanitizePayload } from './supabaseServices';
 import toast from 'react-hot-toast';
+
+interface OfflineOperation {
+  id: string;
+  type: 'create' | 'update' | 'delete';
+  table: string;
+  data: any;
+  timestamp: number;
+  retryCount: number;
+  maxRetries: number;
+}
+
+interface OfflineData {
+  id: string;
+  table: string;
+  data: any;
+  timestamp: number;
+  synced: boolean;
+}
 
 class SyncManager {
   private isSyncing = false;
   private syncListeners: ((status: { isSyncing: boolean; progress: number; total: number }) => void)[] = [];
 
   constructor() {
-    // Listen for connection changes
+    // Escutar mudanças de conexão
     connectionManager.addListener((status) => {
       if (status.isOnline && status.isSupabaseReachable && !this.isSyncing) {
         this.startSync();
       }
     });
+
+    // Sincronização automática a cada 30 segundos se conectado
+    setInterval(() => {
+      if (connectionManager.isConnected() && !this.isSyncing) {
+        this.startSync();
+      }
+    }, 30000);
   }
 
   public async startSync(): Promise<void> {
     if (this.isSyncing) {
-      console.log('🔄 Sync already in progress, skipping...');
+      console.log('🔄 Sincronização já em andamento...');
       return;
     }
 
-    // Verify connection before starting sync
+    // Verificar conexão antes de iniciar
     const isConnected = await checkSupabaseConnection();
     if (!isConnected) {
-      console.log('❌ Cannot start sync: Supabase not reachable');
+      console.log('❌ Não é possível sincronizar: Supabase não acessível');
       return;
     }
 
     this.isSyncing = true;
-    console.log('🔄 Starting offline data synchronization...');
+    console.log('🔄 Iniciando sincronização de dados offline...');
 
     try {
-      // Get all pending operations
+      // Obter todas as operações pendentes
       const syncQueue = await getSyncQueue();
       const offlineData = await getOfflineData();
       
       const totalOperations = syncQueue.length + offlineData.filter(d => !d.synced).length;
       
       if (totalOperations === 0) {
-        console.log('✅ No offline data to sync');
+        console.log('✅ Nenhum dado offline para sincronizar');
         this.isSyncing = false;
         return;
       }
 
-      console.log(`📊 Found ${totalOperations} operations to sync`);
+      console.log(`📊 Encontradas ${totalOperations} operações para sincronizar`);
       this.notifyListeners({ isSyncing: true, progress: 0, total: totalOperations });
 
       let completed = 0;
 
-      // Process sync queue first (updates/deletes)
+      // Processar fila de sincronização primeiro (updates/deletes)
       for (const operation of syncQueue) {
         try {
           await this.processSyncOperation(operation);
@@ -68,15 +93,15 @@ class SyncManager {
           completed++;
           this.notifyListeners({ isSyncing: true, progress: completed, total: totalOperations });
         } catch (error) {
-          console.error('❌ Failed to sync operation:', operation.id, error);
+          console.error('❌ Falha ao sincronizar operação:', operation.id, error);
           const shouldRetry = await updateSyncRetry(operation.id);
           if (!shouldRetry) {
-            completed++; // Count failed operations as completed to avoid infinite loop
+            completed++; // Contar operações falhadas como completas para evitar loop infinito
           }
         }
       }
 
-      // Process offline data (creates)
+      // Processar dados offline (creates)
       const unsyncedData = offlineData.filter(d => !d.synced);
       for (const data of unsyncedData) {
         try {
@@ -85,8 +110,8 @@ class SyncManager {
           completed++;
           this.notifyListeners({ isSyncing: true, progress: completed, total: totalOperations });
         } catch (error) {
-          console.error('❌ Failed to sync offline data:', data.id, error);
-          // For offline data, we'll retry on next sync
+          console.error('❌ Falha ao sincronizar dados offline:', data.id, error);
+          // Para dados offline, tentaremos novamente na próxima sincronização
         }
       }
 
@@ -96,7 +121,7 @@ class SyncManager {
         toast.success(`✅ ${completed} operação(ões) sincronizada(s) com sucesso!`);
       }
       
-      console.log('✅ Sync completed successfully');
+      console.log('✅ Sincronização concluída com sucesso');
     } catch (error) {
       ErrorHandler.logProjectError(error, 'Sync Manager');
       toast.error('❌ Erro durante sincronização: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
@@ -107,7 +132,7 @@ class SyncManager {
   }
 
   private async processSyncOperation(operation: OfflineOperation): Promise<void> {
-    console.log(`🔄 Processing ${operation.type} operation for ${operation.table}`);
+    console.log(`🔄 Processando operação ${operation.type} para ${operation.table}`);
     
     switch (operation.type) {
       case 'create':
@@ -120,19 +145,18 @@ class SyncManager {
         await this.syncDelete(operation.table, operation.data.id);
         break;
       default:
-        throw new Error(`Unknown operation type: ${operation.type}`);
+        throw new Error(`Tipo de operação desconhecido: ${operation.type}`);
     }
   }
 
   private async syncOfflineData(data: OfflineData): Promise<void> {
-    console.log(`🔄 Syncing offline ${data.table} data:`, data.id);
+    console.log(`🔄 Sincronizando dados offline ${data.table}:`, data.id);
     try {
       await this.syncCreate(data.table, data.data);
-      console.log('✅ Successfully synced offline data:', data.id);
+      console.log('✅ Dados offline sincronizados com sucesso:', data.id);
     } catch (error) {
-      console.error('❌ Failed to sync offline data:', data.id, error);
+      console.error('❌ Falha ao sincronizar dados offline:', data.id, error);
       
-      // Show user-friendly error message
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       toast.error(`Erro ao sincronizar ${data.table}: ${errorMessage}`);
       
@@ -141,84 +165,37 @@ class SyncManager {
   }
 
   private async syncCreate(table: string, data: any): Promise<void> {
-    // Enhanced offline data cleaning for sync
     const { isOffline, ...cleanData } = data;
     
-    // Comprehensive UUID cleaning for sync - handle offline IDs
+    // Limpar UUIDs para sincronização
     const uuidCleanedData = this.cleanUUIDFieldsForSync(cleanData);
     
-    // Generate new UUID for offline data since offline IDs are temporary
-    if (!uuidCleanedData.id || typeof uuidCleanedData.id === 'string' && uuidCleanedData.id.startsWith('offline-')) {
+    // Gerar novo UUID para dados offline
+    if (!uuidCleanedData.id || (typeof uuidCleanedData.id === 'string' && uuidCleanedData.id.startsWith('offline-'))) {
       uuidCleanedData.id = this.generateUUID();
-      console.log(`🆔 Generated new UUID for offline ${table}:`, uuidCleanedData.id);
+      console.log(`🆔 Novo UUID gerado para ${table} offline:`, uuidCleanedData.id);
     }
     
-    console.log(`🔄 Syncing ${table} with cleaned data:`, uuidCleanedData);
+    console.log(`🔄 Sincronizando ${table} com dados limpos:`, uuidCleanedData);
     
     switch (table) {
       case 'sales':
-        // Use the enhanced create_sale function for sync
+        // Usar RPC para vendas
         const { data: saleData, error: saleError } = await supabase.rpc('create_sale', { 
-          payload: this.transformToSnakeCase(uuidCleanedData) 
+          payload: transformToSnakeCase(uuidCleanedData) 
         });
         if (saleError) throw saleError;
-        console.log('✅ Sale synced:', saleData);
-        break;
-        
-      case 'employees':
-        const { error: empError } = await supabase
-          .from('employees')
-          .upsert([this.transformToSnakeCase(uuidCleanedData)], { onConflict: 'id' });
-        if (empError) throw empError;
-        console.log('✅ Employee synced:', cleanData.id);
-        break;
-        
-      case 'debts':
-        const { error: debtError } = await supabase
-          .from('debts')
-          .upsert([this.transformToSnakeCase(uuidCleanedData)], { onConflict: 'id' });
-        if (debtError) throw debtError;
-        console.log('✅ Debt synced:', cleanData.id);
-        break;
-        
-      case 'checks':
-        const { error: checkError } = await supabase
-          .from('checks')
-          .upsert([this.transformToSnakeCase(uuidCleanedData)], { onConflict: 'id' });
-        if (checkError) throw checkError;
-        console.log('✅ Check synced:', cleanData.id);
-        break;
-        
-      case 'boletos':
-        const { error: boletoError } = await supabase
-          .from('boletos')
-          .upsert([this.transformToSnakeCase(uuidCleanedData)], { onConflict: 'id' });
-        if (boletoError) throw boletoError;
-        console.log('✅ Boleto synced:', cleanData.id);
+        console.log('✅ Venda sincronizada:', saleData);
         break;
         
       default:
-        throw new Error(`Unknown table for sync: ${table}`);
-    }
-    
-    // Mark as synced in offline storage
-    try {
-      await this.markAsSynced(data.id);
-    } catch (error) {
-      console.warn('⚠️ Could not mark as synced:', error);
-    }
-  }
-
-  private async markAsSynced(offlineId: string): Promise<void> {
-    try {
-      const offlineData = await offlineDB.getItem<OfflineData>(offlineId);
-      if (offlineData) {
-        offlineData.synced = true;
-        offlineData.isOffline = false;
-        await offlineDB.setItem(offlineId, offlineData);
-      }
-    } catch (error) {
-      console.error('Error marking as synced:', error);
+        // Para outras tabelas, usar insert direto
+        const { error } = await supabase
+          .from(table)
+          .upsert([transformToSnakeCase(uuidCleanedData)], { onConflict: 'id' });
+        if (error) throw error;
+        console.log(`✅ ${table} sincronizado:`, cleanData.id);
+        break;
     }
   }
 
@@ -227,7 +204,7 @@ class SyncManager {
     
     const { error } = await supabase
       .from(table)
-      .update(this.transformToSnakeCase(updateData))
+      .update(transformToSnakeCase(updateData))
       .eq('id', id);
       
     if (error) throw error;
@@ -242,150 +219,61 @@ class SyncManager {
     if (error) throw error;
   }
 
-  private transformToSnakeCase(obj: any): any {
-    if (!obj || typeof obj !== 'object') return obj;
-    
-    if (Array.isArray(obj)) {
-      return obj.map(item => this.transformToSnakeCase(item));
-    }
-    
-    const result: any = {};
-    for (const [key, value] of Object.entries(obj)) {
-      const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-      
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
-        result[snakeKey] = this.transformToSnakeCase(value);
-      } else if (Array.isArray(value)) {
-        result[snakeKey] = value.map(item => 
-          typeof item === 'object' ? this.transformToSnakeCase(item) : item
-        );
-      } else {
-        result[snakeKey] = value;
-      }
-    }
-    
-    return result;
-  }
-
   private cleanUUIDFieldsForSync(obj: any): any {
     if (!obj || typeof obj !== 'object') return obj;
     
     const cleaned = { ...obj };
     
     Object.keys(cleaned).forEach(key => {
-      // Enhanced UUID field detection for sync operations
       const isUUIDField = key.endsWith('_id') || key.endsWith('Id') || key === 'id' || 
           ['customerId', 'paymentMethodId', 'saleId', 'customer_id', 'product_id', 
            'seller_id', 'employee_id', 'sale_id', 'debt_id', 'check_id', 'boleto_id', 
-           'related_id', 'transaction_id', 'reference_id', 'parent_id', 'owner_id',
-           'created_by', 'updated_by', 'assigned_to'].includes(key);
+           'related_id', 'transaction_id', 'reference_id', 'parent_id'].includes(key);
       
       if (isUUIDField) {
         const value = cleaned[key];
         if (value === '' || value === 'null' || value === 'undefined' || !value) {
           cleaned[key] = null;
-          console.log(`🔧 Sync: Set ${key} to null`);
         } else if (typeof value === 'string') {
           const trimmed = value.trim();
           if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
             cleaned[key] = null;
-            console.log(`🔧 Sync: Set empty ${key} to null`);
           } else if (trimmed.startsWith('offline-')) {
-            // Convert offline temporary IDs to null for sync (except for primary key)
-            console.warn(`⚠️ Sync: Converting offline temporary ID to null for ${key}:`, trimmed);
             if (key === 'id') {
-              // Generate new UUID for primary key
               cleaned[key] = this.generateUUID();
-              console.log(`🆔 Sync: Generated new UUID for offline ${key}:`, cleaned[key]);
             } else {
               cleaned[key] = null;
             }
-          } else if (trimmed.startsWith('temp-') || trimmed.includes('local-')) {
-            // Handle other temporary ID patterns
-            console.warn(`⚠️ Sync: Converting temporary ID to null for ${key}:`, trimmed);
-            if (key === 'id') {
-              cleaned[key] = this.generateUUID();
-              console.log(`🆔 Sync: Generated new UUID for temp ${key}:`, cleaned[key]);
-            } else {
-              cleaned[key] = null;
-            }
+          } else if (!isValidUUID(trimmed)) {
+            console.warn(`⚠️ UUID inválido para ${key} durante sincronização:`, trimmed);
+            cleaned[key] = null;
           } else {
-            // Validate UUID format more carefully for sync
-            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-            if (!uuidRegex.test(trimmed)) {
-              console.warn(`⚠️ Invalid UUID for ${key} during sync:`, trimmed, '- converting to null');
-              cleaned[key] = null;
-            } else {
-              cleaned[key] = trimmed;
-            }
+            cleaned[key] = trimmed;
           }
-        } else {
-          cleaned[key] = value;
         }
       }
     });
     
-    // Sanitize products field for sync
-    if (cleaned.hasOwnProperty('products')) {
-      const products = cleaned.products;
-      if (typeof products === 'string' && products.trim()) {
-        try {
-          // Try to parse as JSON
-          const parsed = JSON.parse(products);
-          if (Array.isArray(parsed)) {
-            cleaned.products = parsed;
-            console.log('🔧 Sync: Sanitized products string → array');
-          } else {
-            cleaned.products = [];
-            console.log('🔧 Sync: Sanitized products invalid JSON → empty array');
-          }
-        } catch (error) {
-          // If it's a simple string, wrap it in an array as a single product
-          cleaned.products = [{ name: products, quantity: 1, price: 0, total: 0 }];
-          console.log('🔧 Sync: Sanitized products string → single product array');
-        }
-      } else if (typeof products === 'string' && !products.trim()) {
-        // Empty string should become empty array
-        cleaned.products = [];
-        console.log('🔧 Sync: Sanitized products empty string → empty array');
-      } else if (!Array.isArray(products) && products !== null && products !== undefined) {
-        // Invalid type should become empty array
-        cleaned.products = [];
-        console.log('🔧 Sync: Sanitized products invalid type → empty array');
-      } else if (products === null || products === undefined) {
-        // Null/undefined should become empty array for JSONB compatibility
-        cleaned.products = [];
-        console.log('🔧 Sync: Sanitized products null/undefined → empty array');
-      }
-    }
-    
-    // Enhanced cleaning for nested objects (payment methods, etc.)
+    // Sanitizar payment methods
     if (cleaned.paymentMethods && Array.isArray(cleaned.paymentMethods)) {
       cleaned.paymentMethods = cleaned.paymentMethods.map((method: any) => {
         const cleanedMethod = { ...method };
         Object.keys(cleanedMethod).forEach(methodKey => {
-          const isMethodUUIDField = methodKey.endsWith('_id') || methodKey.endsWith('Id') || 
-              ['customer_id', 'product_id', 'payment_method_id', 'reference_id', 'transaction_id'].includes(methodKey);
+          const isMethodUUIDField = methodKey.endsWith('_id') || methodKey.endsWith('Id');
           
           if (isMethodUUIDField) {
             const methodValue = cleanedMethod[methodKey];
             if (methodValue === '' || methodValue === 'null' || methodValue === 'undefined') {
               cleanedMethod[methodKey] = null;
-              console.log(`🔧 Sync: Set payment method ${methodKey} to null`);
             } else if (typeof methodValue === 'string') {
               const trimmed = methodValue.trim();
-              if (trimmed.startsWith('offline-') || trimmed.startsWith('temp-') || trimmed.includes('local-')) {
-                console.warn(`⚠️ Sync: Converting temporary payment method ID to null for ${methodKey}:`, trimmed);
+              if (trimmed.startsWith('offline-') || trimmed.startsWith('temp-')) {
                 cleanedMethod[methodKey] = null;
               } else if (trimmed && !isValidUUID(trimmed)) {
-                console.warn(`⚠️ Sync: Invalid UUID in payment method for ${methodKey}:`, trimmed, '- converting to null');
                 cleanedMethod[methodKey] = null;
               } else {
                 cleanedMethod[methodKey] = trimmed || null;
               }
-            } else if (typeof methodValue === 'string' && methodValue.trim() && !isValidUUID(methodValue.trim())) {
-              console.warn(`⚠️ Sync: Invalid UUID in payment method for ${methodKey}:`, methodValue, '- converting to null');
-              cleanedMethod[methodKey] = null;
             }
           }
         });
@@ -396,12 +284,11 @@ class SyncManager {
     return cleaned;
   }
   
-  // Helper method to generate UUIDs
   private generateUUID(): string {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
       return crypto.randomUUID();
     }
-    // Fallback for older browsers
+    // Fallback para navegadores mais antigos
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
       const r = Math.random() * 16 | 0;
       const v = c === 'x' ? r : (r & 0x3 | 0x8);
@@ -425,7 +312,7 @@ class SyncManager {
       try {
         listener(status);
       } catch (error) {
-        console.error('Error in sync listener:', error);
+        console.error('Erro no listener de sincronização:', error);
       }
     });
   }
@@ -437,24 +324,17 @@ class SyncManager {
     };
   }
 
-  public async forcSync(): Promise<void> {
+  public async forceSync(): Promise<void> {
     const isConnected = await checkSupabaseConnection();
     if (isConnected) {
-      console.log('🔄 Force sync initiated - connection verified');
+      console.log('🔄 Sincronização forçada iniciada');
       await this.startSync();
     } else {
-      console.log('❌ Force sync failed - no connection to Supabase');
+      console.log('❌ Sincronização forçada falhou - sem conexão');
       toast.error('❌ Não é possível sincronizar: sem conexão com o servidor');
     }
   }
 }
 
-// Helper function to validate UUIDs in sync manager
-function isValidUUID(value?: string | null): boolean {
-  if (!value || typeof value !== 'string') return false;
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(value);
-}
-
-// Singleton instance
+// Instância singleton
 export const syncManager = new SyncManager();

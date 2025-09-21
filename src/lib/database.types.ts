@@ -9,14 +9,59 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      agenda_events: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          date: string
+          time: string | null
+          type: string
+          priority: string
+          status: string
+          reminder_date: string | null
+          observations: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          date?: string
+          time?: string | null
+          type?: string
+          priority?: string
+          status?: string
+          reminder_date?: string | null
+          observations?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string | null
+          date?: string
+          time?: string | null
+          type?: string
+          priority?: string
+          status?: string
+          reminder_date?: string | null
+          observations?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       boletos: {
         Row: {
           id: string
           sale_id: string | null
+          debt_id: string | null
           client: string
           value: number
           due_date: string
-          status: 'pendente' | 'compensado' | 'vencido' | 'cancelado' | 'nao_pago'
+          status: string
           installment_number: number
           total_installments: number
           boleto_file: string | null
@@ -27,16 +72,21 @@ export interface Database {
           notary_costs: number | null
           final_amount: number | null
           overdue_notes: string | null
+          is_company_payable: boolean | null
+          company_name: string | null
+          payment_date: string | null
+          interest_paid: number | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
           sale_id?: string | null
+          debt_id?: string | null
           client: string
           value?: number
           due_date: string
-          status?: 'pendente' | 'compensado' | 'vencido' | 'cancelado' | 'nao_pago'
+          status?: string
           installment_number?: number
           total_installments?: number
           boleto_file?: string | null
@@ -47,16 +97,21 @@ export interface Database {
           notary_costs?: number | null
           final_amount?: number | null
           overdue_notes?: string | null
+          is_company_payable?: boolean | null
+          company_name?: string | null
+          payment_date?: string | null
+          interest_paid?: number | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
           sale_id?: string | null
+          debt_id?: string | null
           client?: string
           value?: number
           due_date?: string
-          status?: 'pendente' | 'compensado' | 'vencido' | 'cancelado' | 'nao_pago'
+          status?: string
           installment_number?: number
           total_installments?: number
           boleto_file?: string | null
@@ -67,6 +122,10 @@ export interface Database {
           notary_costs?: number | null
           final_amount?: number | null
           overdue_notes?: string | null
+          is_company_payable?: boolean | null
+          company_name?: string | null
+          payment_date?: string | null
+          interest_paid?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -104,10 +163,10 @@ export interface Database {
         Row: {
           id: string
           date: string
-          type: 'entrada' | 'saida'
+          type: string
           amount: number
           description: string
-          category: 'venda' | 'divida' | 'adiantamento' | 'salario' | 'comissao' | 'cheque' | 'boleto' | 'outro'
+          category: string
           related_id: string | null
           payment_method: string | null
           created_at: string
@@ -116,10 +175,10 @@ export interface Database {
         Insert: {
           id?: string
           date?: string
-          type: 'entrada' | 'saida'
-          amount?: number
+          type: string
+          amount: number
           description: string
-          category: 'venda' | 'divida' | 'adiantamento' | 'salario' | 'comissao' | 'cheque' | 'boleto' | 'outro'
+          category: string
           related_id?: string | null
           payment_method?: string | null
           created_at?: string
@@ -128,10 +187,10 @@ export interface Database {
         Update: {
           id?: string
           date?: string
-          type?: 'entrada' | 'saida'
+          type?: string
           amount?: number
           description?: string
-          category?: 'venda' | 'divida' | 'adiantamento' | 'salario' | 'comissao' | 'cheque' | 'boleto' | 'outro'
+          category?: string
           related_id?: string | null
           payment_method?: string | null
           created_at?: string
@@ -146,8 +205,11 @@ export interface Database {
           client: string
           value: number
           due_date: string
-          status: 'pendente' | 'compensado' | 'devolvido' | 'reapresentado'
+          status: string
           is_own_check: boolean
+          is_company_payable: boolean | null
+          company_name: string | null
+          payment_date: string | null
           observations: string | null
           used_for: string | null
           installment_number: number | null
@@ -167,8 +229,11 @@ export interface Database {
           client: string
           value?: number
           due_date: string
-          status?: 'pendente' | 'compensado' | 'devolvido' | 'reapresentado'
+          status?: string
           is_own_check?: boolean
+          is_company_payable?: boolean | null
+          company_name?: string | null
+          payment_date?: string | null
           observations?: string | null
           used_for?: string | null
           installment_number?: number | null
@@ -188,8 +253,11 @@ export interface Database {
           client?: string
           value?: number
           due_date?: string
-          status?: 'pendente' | 'compensado' | 'devolvido' | 'reapresentado'
+          status?: string
           is_own_check?: boolean
+          is_company_payable?: boolean | null
+          company_name?: string | null
+          payment_date?: string | null
           observations?: string | null
           used_for?: string | null
           installment_number?: number | null
@@ -201,6 +269,26 @@ export interface Database {
           discount_date?: string | null
           created_at?: string
           updated_at?: string
+        }
+      }
+      create_sale_errors: {
+        Row: {
+          id: string
+          payload: Json | null
+          error_message: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          payload?: Json | null
+          error_message?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          payload?: Json | null
+          error_message?: string | null
+          created_at?: string
         }
       }
       debts: {
@@ -222,7 +310,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          date: string
+          date?: string
           description: string
           company: string
           total_value?: number
@@ -260,8 +348,8 @@ export interface Database {
           amount: number
           date: string
           description: string | null
-          payment_method: 'dinheiro' | 'pix' | 'transferencia' | 'desconto_folha'
-          status: 'pendente' | 'descontado'
+          payment_method: string
+          status: string
           created_at: string
           updated_at: string
         }
@@ -269,10 +357,10 @@ export interface Database {
           id?: string
           employee_id: string
           amount?: number
-          date: string
+          date?: string
           description?: string | null
-          payment_method?: 'dinheiro' | 'pix' | 'transferencia' | 'desconto_folha'
-          status?: 'pendente' | 'descontado'
+          payment_method?: string
+          status?: string
           created_at?: string
           updated_at?: string
         }
@@ -282,8 +370,8 @@ export interface Database {
           amount?: number
           date?: string
           description?: string | null
-          payment_method?: 'dinheiro' | 'pix' | 'transferencia' | 'desconto_folha'
-          status?: 'pendente' | 'descontado'
+          payment_method?: string
+          status?: string
           created_at?: string
           updated_at?: string
         }
@@ -297,7 +385,7 @@ export interface Database {
           commission_rate: number
           commission_amount: number
           date: string
-          status: 'pendente' | 'pago'
+          status: string
           created_at: string
           updated_at: string
         }
@@ -308,8 +396,8 @@ export interface Database {
           sale_value?: number
           commission_rate?: number
           commission_amount?: number
-          date: string
-          status?: 'pendente' | 'pago'
+          date?: string
+          status?: string
           created_at?: string
           updated_at?: string
         }
@@ -321,7 +409,7 @@ export interface Database {
           commission_rate?: number
           commission_amount?: number
           date?: string
-          status?: 'pendente' | 'pago'
+          status?: string
           created_at?: string
           updated_at?: string
         }
@@ -335,7 +423,7 @@ export interface Database {
           total_amount: number
           date: string
           description: string
-          status: 'pendente' | 'pago'
+          status: string
           created_at: string
           updated_at: string
         }
@@ -345,9 +433,9 @@ export interface Database {
           hours?: number
           hourly_rate?: number
           total_amount?: number
-          date: string
+          date?: string
           description: string
-          status?: 'pendente' | 'pago'
+          status?: string
           created_at?: string
           updated_at?: string
         }
@@ -359,7 +447,7 @@ export interface Database {
           total_amount?: number
           date?: string
           description?: string
-          status?: 'pendente' | 'pago'
+          status?: string
           created_at?: string
           updated_at?: string
         }
@@ -380,7 +468,7 @@ export interface Database {
           id?: string
           employee_id: string
           amount?: number
-          payment_date: string
+          payment_date?: string
           is_paid?: boolean
           receipt?: string | null
           observations?: string | null
@@ -423,7 +511,7 @@ export interface Database {
           payment_day?: number
           next_payment_date?: string | null
           is_active?: boolean
-          hire_date: string
+          hire_date?: string
           observations?: string | null
           created_at?: string
           updated_at?: string
@@ -443,44 +531,6 @@ export interface Database {
           updated_at?: string
         }
       }
-      installments: {
-        Row: {
-          id: string
-          sale_id: string | null
-          debt_id: string | null
-          amount: number
-          due_date: string
-          is_paid: boolean
-          type: 'venda' | 'divida'
-          description: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          sale_id?: string | null
-          debt_id?: string | null
-          amount?: number
-          due_date: string
-          is_paid?: boolean
-          type: 'venda' | 'divida'
-          description: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          sale_id?: string | null
-          debt_id?: string | null
-          amount?: number
-          due_date?: string
-          is_paid?: boolean
-          type?: 'venda' | 'divida'
-          description?: string
-          created_at?: string
-          updated_at?: string
-        }
-      }
       pix_fees: {
         Row: {
           id: string
@@ -488,18 +538,18 @@ export interface Database {
           amount: number
           description: string
           bank: string
-          transaction_type: 'pix_out' | 'pix_in' | 'ted' | 'doc' | 'other'
+          transaction_type: string
           related_transaction_id: string | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
-          date: string
+          date?: string
           amount?: number
           description: string
           bank: string
-          transaction_type?: 'pix_out' | 'pix_in' | 'ted' | 'doc' | 'other'
+          transaction_type?: string
           related_transaction_id?: string | null
           created_at?: string
           updated_at?: string
@@ -510,7 +560,7 @@ export interface Database {
           amount?: number
           description?: string
           bank?: string
-          transaction_type?: 'pix_out' | 'pix_in' | 'ted' | 'doc' | 'other'
+          transaction_type?: string
           related_transaction_id?: string | null
           created_at?: string
           updated_at?: string
@@ -529,16 +579,16 @@ export interface Database {
           payment_methods: Json
           received_amount: number
           pending_amount: number
-          status: 'pago' | 'pendente' | 'parcial'
+          status: string
           payment_description: string | null
           payment_observations: string | null
-          custom_commission_rate: number
+          custom_commission_rate: number | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
-          date: string
+          date?: string
           delivery_date?: string | null
           client: string
           seller_id?: string | null
@@ -548,10 +598,10 @@ export interface Database {
           payment_methods?: Json
           received_amount?: number
           pending_amount?: number
-          status?: 'pago' | 'pendente' | 'parcial'
+          status?: string
           payment_description?: string | null
           payment_observations?: string | null
-          custom_commission_rate?: number
+          custom_commission_rate?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -567,51 +617,57 @@ export interface Database {
           payment_methods?: Json
           received_amount?: number
           pending_amount?: number
-          status?: 'pago' | 'pendente' | 'parcial'
+          status?: string
           payment_description?: string | null
           payment_observations?: string | null
-          custom_commission_rate?: number
+          custom_commission_rate?: number | null
           created_at?: string
           updated_at?: string
         }
       }
-      third_party_check_details: {
+      taxes: {
         Row: {
           id: string
-          check_id: string
-          bank: string
-          agency: string
-          account: string
-          check_number: string
-          issuer: string
-          cpf_cnpj: string
+          date: string
+          tax_type: string
+          description: string
+          amount: number
+          due_date: string | null
+          payment_method: string
+          reference_period: string | null
+          document_number: string | null
           observations: string | null
+          receipt_file: string | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
-          check_id: string
-          bank: string
-          agency: string
-          account: string
-          check_number: string
-          issuer: string
-          cpf_cnpj: string
+          date?: string
+          tax_type: string
+          description: string
+          amount?: number
+          due_date?: string | null
+          payment_method?: string
+          reference_period?: string | null
+          document_number?: string | null
           observations?: string | null
+          receipt_file?: string | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
-          check_id?: string
-          bank?: string
-          agency?: string
-          account?: string
-          check_number?: string
-          issuer?: string
-          cpf_cnpj?: string
+          date?: string
+          tax_type?: string
+          description?: string
+          amount?: number
+          due_date?: string | null
+          payment_method?: string
+          reference_period?: string | null
+          document_number?: string | null
           observations?: string | null
+          receipt_file?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -644,7 +700,32 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_sale: {
+        Args: {
+          payload: Json
+        }
+        Returns: string
+      }
+      get_current_cash_balance: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          current_balance: number
+          initial_balance: number
+          initial_date: string
+          last_updated: string
+        }[]
+      }
+      initialize_cash_balance: {
+        Args: {
+          initial_amount: number
+        }
+        Returns: string
+      }
+      recalculate_cash_balance: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

@@ -404,18 +404,34 @@ const Dashboard: React.FC = () => {
             >
               Tentar Novamente
             </button>
-            <div className="text-sm text-slate-600">
-              <p className="mb-2">Para resolver este problema:</p>
-              <ul className="text-left space-y-1">
-                <li>• Verifique sua conexão com a internet</li>
-                <li>• <strong>Configure o arquivo .env</strong> com suas credenciais do Supabase:</li>
-                <li className="ml-4 font-mono text-xs bg-gray-100 p-2 rounded">
-                  VITE_SUPABASE_URL=https://seu-projeto-id.supabase.co<br/>
-                  VITE_SUPABASE_ANON_KEY=sua-chave-anon-aqui
+            <div className="p-6 bg-blue-50 border border-blue-200 rounded-xl">
+              <h3 className="font-bold text-blue-900 mb-4">Como Configurar o Supabase:</h3>
+              <ol className="text-left space-y-2 text-blue-800">
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">1.</span>
+                  <span>Crie um novo projeto em <a href="https://supabase.com/dashboard" target="_blank" className="text-blue-600 underline">supabase.com/dashboard</a></span>
                 </li>
-                <li>• Verifique se o projeto Supabase está ativo e acessível</li>
-                <li>• Reinicie o servidor de desenvolvimento após configurar o .env</li>
-              </ul>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">2.</span>
+                  <span>Vá em Settings → API no seu projeto</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">3.</span>
+                  <span>Configure o arquivo <code className="bg-blue-100 px-2 py-1 rounded">.env</code>:</span>
+                </li>
+                <li className="ml-6 bg-blue-100 p-3 rounded-lg font-mono text-sm">
+                  VITE_SUPABASE_URL=https://seu-projeto-id.supabase.co<br/>
+                  VITE_SUPABASE_ANON_KEY=sua-chave-anonima-aqui
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">4.</span>
+                  <span>Execute as migrações: <code className="bg-blue-100 px-2 py-1 rounded">supabase db push</code></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">5.</span>
+                  <span>Reinicie o servidor: <code className="bg-blue-100 px-2 py-1 rounded">npm run dev</code></span>
+                </li>
+              </ol>
             </div>
           </div>
         </div>

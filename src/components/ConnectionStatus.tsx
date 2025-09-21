@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Wifi, WifiOff, Cloud, CloudOff, Loader2, RefreshCw, Database } from 'lucide-react';
+import { Wifi, WifiOff, Cloud, CloudOff, Loader2, RefreshCw, Database, CheckCircle, AlertTriangle } from 'lucide-react';
 import { connectionManager, ConnectionStatus as ConnStatus } from '../lib/connectionManager';
 import { syncManager } from '../lib/syncManager';
 import { getOfflineStats } from '../lib/offlineStorage';
+import { isSupabaseConfigured } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 export function ConnectionStatus() {
@@ -12,13 +13,13 @@ export function ConnectionStatus() {
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
-    // Listen for connection changes
+    // Escutar mudanças de conexão
     const unsubscribeConnection = connectionManager.addListener(setStatus);
     
-    // Listen for sync changes
+    // Escutar mudanças de sincronização
     const unsubscribeSync = syncManager.addSyncListener(setSyncStatus);
     
-    // Update offline stats periodically
+    // Atualizar estatísticas offline periodicamente
     const updateStats = async () => {
       const stats = await getOfflineStats();
       setOfflineStats(stats);
@@ -46,7 +47,11 @@ export function ConnectionStatus() {
     await connectionManager.forceCheck();
   };
 
+  // Verificar se Supabase está configurado
+  const supabaseConfigured = isSupabaseConfigured();
+
   const getStatusColor = () => {
+    if (!supabaseConfigured) return 'bg-yellow-500';
     if (!status.isOnline) return 'bg-gray-500';
     if (!status.isSupabaseReachable) return 'bg-red-500';
     if (syncStatus.isSyncing) return 'bg-yellow-500';
@@ -55,6 +60,7 @@ export function ConnectionStatus() {
   };
 
   const getStatusText = () => {
+    if (!supabaseConfigured) return 'Supabase não configurado';
     if (!status.isOnline) return 'Offline';
     if (!status.isSupabaseReachable) return 'Sem conexão com servidor';
     if (syncStatus.isSyncing) return `Sincronizando... (${syncStatus.progress}/${syncStatus.total})`;
@@ -63,6 +69,7 @@ export function ConnectionStatus() {
   };
 
   const getStatusIcon = () => {
+    if (!supabaseConfigured) return AlertTriangle;
     if (!status.isOnline) return WifiOff;
     if (!status.isSupabaseReachable) return CloudOff;
     if (syncStatus.isSyncing) return Loader2;
@@ -102,6 +109,33 @@ export function ConnectionStatus() {
         {/* Expanded Details */}
         {isExpanded && (
           <div className="border-t border-gray-200 p-4 space-y-4">
+            {/* Supabase Configuration */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Supabase:</span>
+                <div className="flex items-center gap-2">
+                  {supabaseConfigured ? (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                  )}
+                  <span className={`text-sm font-semibold ${
+                    supabaseConfigured ? 'text-green-600' : 'text-yellow-600'
+                  }`}>
+                    {supabaseConfigured ? 'Configurado' : 'Não Configurado'}
+                  </span>
+                </div>
+              </div>
+              
+              {!supabaseConfigured && (
+                <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <p className="text-xs text-yellow-800 font-semibold">
+                    Configure o arquivo .env com suas credenciais do Supabase
+                  </p>
+                </div>
+              )}
+            </div>
+
             {/* Connection Details */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -190,7 +224,7 @@ export function ConnectionStatus() {
                 Verificar
               </button>
               
-              {(offlineStats.offlineCount > 0 || offlineStats.syncQueueCount > 0) && (
+              {supabaseConfigured && (offlineStats.offlineCount > 0 || offlineStats.syncQueueCount > 0) && (
                 <button
                   onClick={handleForceSync}
                   className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold flex items-center justify-center gap-2"

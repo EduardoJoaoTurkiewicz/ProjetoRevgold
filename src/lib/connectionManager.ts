@@ -1,3 +1,4 @@
+import { testSupabaseConnection, isSupabaseConfigured } from './supabase';
 import { ErrorHandler } from './errorHandler';
 
 export interface ConnectionStatus {
@@ -21,17 +22,18 @@ class ConnectionManager {
   constructor() {
     this.setupEventListeners();
     this.startPeriodicCheck();
+    this.initialCheck();
   }
 
   private setupEventListeners() {
     window.addEventListener('online', () => {
-      console.log('🌐 Browser is online');
+      console.log('🌐 Navegador online');
       this.updateStatus({ isOnline: true });
       this.checkSupabaseConnection();
     });
 
     window.addEventListener('offline', () => {
-      console.log('📴 Browser is offline');
+      console.log('📴 Navegador offline');
       this.updateStatus({ 
         isOnline: false, 
         isSupabaseReachable: false 
@@ -39,13 +41,19 @@ class ConnectionManager {
     });
   }
 
+  private async initialCheck() {
+    if (this.status.isOnline) {
+      await this.checkSupabaseConnection();
+    }
+  }
+
   private startPeriodicCheck() {
-    // Check connection every 60 seconds (less frequent to reduce load)
+    // Verificar conexão a cada 30 segundos
     this.checkInterval = setInterval(() => {
       if (this.status.isOnline) {
         this.checkSupabaseConnection();
       }
-    }, 60000);
+    }, 30000);
   }
 
   private updateStatus(updates: Partial<ConnectionStatus>) {
@@ -55,12 +63,12 @@ class ConnectionManager {
       lastCheck: Date.now()
     };
 
-    // Notify all listeners
+    // Notificar todos os listeners
     this.listeners.forEach(listener => {
       try {
         listener(this.status);
       } catch (error) {
-        console.error('Error in connection status listener:', error);
+        console.error('Erro no listener de status de conexão:', error);
       }
     });
   }
@@ -70,41 +78,31 @@ class ConnectionManager {
       return false;
     }
 
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-      // Import supabase client for proper connection testing
-      const { supabase } = await import('./supabase');
-      
-      // Test with a simple query
-      const { error } = await supabase
-        .from('sales')
-        .select('id')
-        .limit(1)
-        .abortSignal(controller.signal);
-
-      clearTimeout(timeoutId);
-
-      const isReachable = !error;
+    if (!isSupabaseConfigured()) {
       this.updateStatus({ 
-        isSupabaseReachable: isReachable,
-        retryCount: isReachable ? 0 : this.status.retryCount + 1
+        isSupabaseReachable: false,
+        retryCount: 0
+      });
+      return false;
+    }
+
+    try {
+      const { success } = await testSupabaseConnection();
+      
+      this.updateStatus({ 
+        isSupabaseReachable: success,
+        retryCount: success ? 0 : this.status.retryCount + 1
       });
 
-      if (isReachable) {
-        console.log('✅ Supabase connection verified');
+      if (success) {
+        console.log('✅ Conexão com Supabase verificada');
       } else {
-        console.warn('⚠️ Supabase not reachable, error:', error?.message);
+        console.warn('⚠️ Supabase não acessível');
       }
 
-      return isReachable;
+      return success;
     } catch (error) {
-      if (error.name === 'AbortError') {
-        console.warn('⚠️ Supabase connection timeout');
-      } else {
-        console.warn('⚠️ Supabase connection check failed:', error);
-      }
+      console.warn('⚠️ Falha na verificação de conexão:', error);
       this.updateStatus({ 
         isSupabaseReachable: false,
         retryCount: this.status.retryCount + 1
@@ -124,7 +122,7 @@ class ConnectionManager {
   public addListener(listener: (status: ConnectionStatus) => void): () => void {
     this.listeners.push(listener);
     
-    // Return unsubscribe function
+    // Retornar função para cancelar inscrição
     return () => {
       const index = this.listeners.indexOf(listener);
       if (index > -1) {
@@ -149,10 +147,10 @@ class ConnectionManager {
   }
 }
 
-// Singleton instance
+// Instância singleton
 export const connectionManager = new ConnectionManager();
 
-// Utility function to check if an error is network-related
+// Função utilitária para verificar se um erro é relacionado à rede
 export function isNetworkError(error: any): boolean {
   if (!error) return false;
   
@@ -171,29 +169,26 @@ export function isNetworkError(error: any): boolean {
   );
 }
 
-// Safe wrapper for Supabase calls
+// Wrapper seguro para chamadas do Supabase
 export async function safeSupabaseCall<T>(
   fn: () => Promise<T>,
   fallbackValue?: T
 ): Promise<{ data?: T; error?: any; offline?: boolean }> {
   try {
-    // Check if we're online first
+    // Verificar se estamos online
     if (!navigator.onLine) {
       return { offline: true };
     }
 
-    // Check if Supabase is configured
-    const url = import.meta.env.VITE_SUPABASE_URL;
-    const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    
-    if (!url || !key || url === 'https://your-project-id.supabase.co' || key === 'your-anon-key-here') {
-      console.warn('⚠️ Supabase not configured, working offline');
+    // Verificar se o Supabase está configurado
+    if (!isSupabaseConfigured()) {
+      console.warn('⚠️ Supabase não configurado, trabalhando offline');
       return { offline: true };
     }
 
     const data = await fn();
     
-    // Update connection status on success
+    // Atualizar status de conexão em caso de sucesso
     connectionManager.updateStatus({ 
       isSupabaseReachable: true,
       retryCount: 0
@@ -203,14 +198,14 @@ export async function safeSupabaseCall<T>(
   } catch (error) {
     ErrorHandler.logProjectError(error, 'Safe Supabase Call');
     
-    // Check if it's a network error
+    // Verificar se é erro de rede
     if (isNetworkError(error)) {
-      console.warn('⚠️ Network error detected, working offline:', error.message);
+      console.warn('⚠️ Erro de rede detectado, trabalhando offline:', error.message);
       connectionManager.updateStatus({ isSupabaseReachable: false });
       return { offline: true, error };
     }
     
-    // For non-network errors, still throw them
+    // Para erros não relacionados à rede, ainda lançá-los
     return { error };
   }
 }
