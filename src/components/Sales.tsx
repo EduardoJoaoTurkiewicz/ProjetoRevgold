@@ -291,13 +291,13 @@ export function Sales() {
                         )}
                       </td>
                       <td className="py-4 px-6 text-sm font-black text-blue-600">
-                        R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {(sale.totalValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-4 px-6 text-sm font-black text-green-600">
-                        R$ {sale.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {(sale.receivedAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-4 px-6 text-sm font-black text-orange-600">
-                        R$ {sale.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {(sale.pendingAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-4 px-6 text-sm">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
