@@ -17,13 +17,17 @@ export function isSupabaseConfigured(): boolean {
   );
   
   if (!isConfigured) {
-    console.warn('⚠️ Supabase não configurado - sistema funcionará em modo offline');
-    console.log('📝 Para conectar ao Supabase:');
-    console.log('1. Crie um novo projeto em https://supabase.com/dashboard');
-    console.log('2. Configure VITE_SUPABASE_URL no arquivo .env');
-    console.log('3. Configure VITE_SUPABASE_ANON_KEY no arquivo .env');
-    console.log('4. Execute as migrações: npx supabase db push');
-    console.log('5. Reinicie o servidor de desenvolvimento');
+    // Apenas mostrar instruções uma vez
+    if (!window.supabaseWarningShown) {
+      console.warn('⚠️ Supabase não configurado - sistema funcionará em modo offline');
+      console.log('📝 Para conectar ao Supabase:');
+      console.log('1. Crie um novo projeto em https://supabase.com/dashboard');
+      console.log('2. Configure VITE_SUPABASE_URL no arquivo .env');
+      console.log('3. Configure VITE_SUPABASE_ANON_KEY no arquivo .env');
+      console.log('4. Execute as migrações: npx supabase db push');
+      console.log('5. Reinicie o servidor de desenvolvimento');
+      window.supabaseWarningShown = true;
+    }
   }
   
   return isConfigured;
@@ -45,7 +49,10 @@ export async function testSupabaseConnection(): Promise<{ success: boolean; erro
   }
   
   try {
-    console.log('🔍 Testando conexão com Supabase...');
+    // Apenas log detalhado em desenvolvimento
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Testando conexão com Supabase...');
+    }
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -59,29 +66,31 @@ export async function testSupabaseConnection(): Promise<{ success: boolean; erro
     clearTimeout(timeoutId);
     
     if (error) {
-      console.error('❌ Erro na conexão:', error.message);
+      // Silenciar erros repetitivos de conexão
       return { 
         success: false, 
-        error: `Erro de conexão: ${error.message}. Verifique suas credenciais do Supabase.` 
+        error: `Conexão indisponível. Tentando reconectar...` 
       };
     }
     
-    console.log('✅ Conexão com Supabase estabelecida');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ Conexão com Supabase estabelecida');
+    }
     return { success: true };
     
   } catch (error) {
-    console.error('❌ Falha na conexão:', error);
+    // Silenciar erros de timeout e conexão
     
     if (error.name === 'AbortError') {
       return { 
         success: false, 
-        error: 'Timeout na conexão. Verifique sua internet e se o projeto Supabase está ativo.' 
+        error: 'Timeout na conexão. Tentando reconectar...' 
       };
     }
     
     return { 
       success: false, 
-      error: `Erro de conexão: ${error.message || error}` 
+      error: `Reconectando...` 
     };
   }
 }

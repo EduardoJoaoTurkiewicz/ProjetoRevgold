@@ -38,8 +38,14 @@ class SyncManager {
   constructor() {
     // Escutar mudanças de conexão
     connectionManager.addListener((status) => {
+      // Sincronizar automaticamente quando conexão for restabelecida
       if (status.isOnline && status.isSupabaseReachable && !this.isSyncing) {
-        this.startSync();
+        // Pequeno delay para evitar múltiplas sincronizações simultâneas
+        setTimeout(() => {
+          if (!this.isSyncing) {
+            this.startSync();
+          }
+        }, 1000);
       }
     });
 
@@ -60,7 +66,7 @@ class SyncManager {
     // Verificar conexão antes de iniciar
     const isConnected = await checkSupabaseConnection();
     if (!isConnected) {
-      console.log('❌ Não é possível sincronizar: Supabase não acessível');
+      // Silenciar logs repetitivos de sincronização
       return;
     }
 
@@ -75,7 +81,7 @@ class SyncManager {
       const totalOperations = syncQueue.length + offlineData.filter(d => !d.synced).length;
       
       if (totalOperations === 0) {
-        console.log('✅ Nenhum dado offline para sincronizar');
+        // Silenciar quando não há dados para sincronizar
         this.isSyncing = false;
         return;
       }
@@ -118,10 +124,15 @@ class SyncManager {
       await updateLastSyncTimestamp();
       
       if (completed > 0) {
-        toast.success(`✅ ${completed} operação(ões) sincronizada(s) com sucesso!`);
+        // Apenas mostrar toast para sincronizações manuais ou com muitos itens
+        if (completed >= 5) {
+          toast.success(`✅ ${completed} operação(ões) sincronizada(s) com sucesso!`);
+        }
       }
       
-      console.log('✅ Sincronização concluída com sucesso');
+      if (process.env.NODE_ENV === 'development' && completed > 0) {
+        console.log(`✅ Sincronização concluída: ${completed} operação(ões)`);
+      }
     } catch (error) {
       ErrorHandler.logProjectError(error, 'Sync Manager');
       toast.error('❌ Erro durante sincronização: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));

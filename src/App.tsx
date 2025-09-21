@@ -16,6 +16,7 @@ import { CashManagement } from './components/CashManagement';
 import { Agenda } from './components/Agenda';
 import { Employees } from './components/Employees';
 import { Taxes } from './components/Taxes';
+import { Acertos } from './components/Acertos';
 import { PrintReportPage } from './components/reports/PrintReportPage';
 
 function App() {
@@ -94,6 +95,8 @@ function renderPage(currentPage: string) {
       return <Reports />;
     case 'agenda':
       return <Agenda />;
+    case 'acertos':
+      return <Acertos />;
     default:
       return <Dashboard />;
   }

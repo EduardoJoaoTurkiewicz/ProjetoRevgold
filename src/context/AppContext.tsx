@@ -31,7 +31,8 @@ import {
   EmployeeCommission,
   PixFee,
   Tax,
-  AgendaEvent
+  AgendaEvent,
+  Acerto
 } from '../types/index';
 
 interface AppContextType {
@@ -57,6 +58,7 @@ interface AppContextType {
   pixFees: PixFee[];
   taxes: Tax[];
   agendaEvents: AgendaEvent[];
+  acertos: Acerto[];
   
   // Métodos de autenticação
   signIn: (email: string, password: string) => Promise<void>;
@@ -121,6 +123,11 @@ interface AppContextType {
   createAgendaEvent: (event: Omit<AgendaEvent, 'id' | 'createdAt'>) => Promise<string>;
   updateAgendaEvent: (event: AgendaEvent) => Promise<void>;
   deleteAgendaEvent: (id: string) => Promise<void>;
+  
+  // Métodos de acertos
+  createAcerto: (acerto: Omit<Acerto, 'id' | 'createdAt'>) => Promise<string>;
+  updateAcerto: (acerto: Acerto) => Promise<void>;
+  deleteAcerto: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -152,6 +159,7 @@ export function AppProvider({ children }: AppProviderProps) {
   const [pixFees, setPixFees] = useState<PixFee[]>([]);
   const [taxes, setTaxes] = useState<Tax[]>([]);
   const [agendaEvents, setAgendaEvents] = useState<AgendaEvent[]>([]);
+  const [acertos, setAcertos] = useState<Acerto[]>([]);
 
   // Inicialização
   useEffect(() => {
@@ -159,18 +167,31 @@ export function AppProvider({ children }: AppProviderProps) {
     
     // Simular usuário autenticado para desenvolvimento
     setUser({ id: 'dev-user', email: 'dev@revgold.com' } as User);
-    setLoading(false);
     
-    // Carregar dados iniciais
-    loadAllData();
+    // Inicializar conexão automática
+    const initializeSystem = async () => {
+      try {
+        // Carregar dados iniciais
+        await loadAllData();
+      } catch (error) {
+        console.error('❌ Erro na inicialização:', error);
+        setError('Erro na inicialização do sistema');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    initializeSystem();
     
     // Escutar mudanças de conexão
     const unsubscribeConnection = connectionManager.addListener((status) => {
       setIsOnline(status.isOnline && status.isSupabaseReachable);
       
-      // Recarregar dados quando conexão for restabelecida
-      if (status.isOnline && status.isSupabaseReachable) {
-        loadAllData();
+      // Recarregar dados silenciosamente quando conexão for restabelecida
+      if (status.isOnline && status.isSupabaseReachable && !isLoading) {
+        loadAllData().catch(error => {
+          console.error('❌ Erro ao recarregar dados após reconexão:', error);
+        });
       }
     });
 
@@ -195,6 +216,7 @@ export function AppProvider({ children }: AppProviderProps) {
     setPixFees([]);
     setTaxes([]);
     setAgendaEvents([]);
+    setAcertos([]);
     setError(null);
   };
 
@@ -220,7 +242,8 @@ export function AppProvider({ children }: AppProviderProps) {
         employeeCommissionsData,
         pixFeesData,
         taxesData,
-        agendaEventsData
+        agendaEventsData,
+        acertosData
       ] = await Promise.all([
         salesService.getAll(),
         employeesService.getAll(),
@@ -235,7 +258,8 @@ export function AppProvider({ children }: AppProviderProps) {
         employeeCommissionsService.getAll(),
         pixFeesService.getAll(),
         taxesService.getAll(),
-        agendaService.getAll()
+        agendaService.getAll(),
+        acertosService.getAll()
       ]);
 
       // Atualizar estado com dados carregados
@@ -253,6 +277,7 @@ export function AppProvider({ children }: AppProviderProps) {
       setPixFees(pixFeesData || []);
       setTaxes(taxesData || []);
       setAgendaEvents(agendaEventsData || []);
+      setAcertos(acertosData || []);
 
       console.log('✅ Todos os dados carregados com sucesso');
     } catch (err) {
@@ -653,6 +678,38 @@ export function AppProvider({ children }: AppProviderProps) {
     }
   };
 
+  // Métodos de acertos
+  const createAcerto = async (acerto: Omit<Acerto, 'id' | 'createdAt'>): Promise<string> => {
+    try {
+      const acertoId = await acertosService.create(acerto);
+      await loadAllData();
+      return acertoId;
+    } catch (error) {
+      console.error('❌ Erro ao criar acerto:', error);
+      throw error;
+    }
+  };
+
+  const updateAcerto = async (acerto: Acerto): Promise<void> => {
+    try {
+      await acertosService.update(acerto.id!, acerto);
+      await loadAllData();
+    } catch (error) {
+      console.error('❌ Erro ao atualizar acerto:', error);
+      throw error;
+    }
+  };
+
+  const deleteAcerto = async (id: string): Promise<void> => {
+    try {
+      await acertosService.delete(id);
+      await loadAllData();
+    } catch (error) {
+      console.error('❌ Erro ao excluir acerto:', error);
+      throw error;
+    }
+  };
+
   const value: AppContextType = {
     // Estado
     user,
@@ -676,6 +733,7 @@ export function AppProvider({ children }: AppProviderProps) {
     pixFees,
     taxes,
     agendaEvents,
+    acertos,
     
     // Métodos de autenticação
     signIn,
@@ -739,7 +797,12 @@ export function AppProvider({ children }: AppProviderProps) {
     // Métodos de agenda
     createAgendaEvent,
     updateAgendaEvent,
-    deleteAgendaEvent
+    deleteAgendaEvent,
+    
+    // Métodos de acertos
+    createAcerto,
+    updateAcerto,
+    deleteAcerto
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -48,11 +48,9 @@ class ConnectionManager {
   }
 
   private startPeriodicCheck() {
-    // Verificar conexão a cada 30 segundos
+    // Verificar conexão a cada 30 segundos automaticamente
     this.checkInterval = setInterval(() => {
-      if (this.status.isOnline) {
-        this.checkSupabaseConnection();
-      }
+      this.checkSupabaseConnection();
     }, 30000);
   }
 
@@ -74,9 +72,17 @@ class ConnectionManager {
   }
 
   public async checkSupabaseConnection(): Promise<boolean> {
-    if (!this.status.isOnline) {
+    // Verificar conexão de internet primeiro
+    if (!navigator.onLine) {
+      this.updateStatus({ 
+        isOnline: false,
+        isSupabaseReachable: false,
+        retryCount: 0
+      });
       return false;
     }
+    
+    this.updateStatus({ isOnline: true });
 
     if (!isSupabaseConfigured()) {
       this.updateStatus({ 
@@ -95,14 +101,23 @@ class ConnectionManager {
       });
 
       if (success) {
-        console.log('✅ Conexão com Supabase verificada');
+        // Apenas log em debug mode, não no console normal
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ Conexão com Supabase verificada');
+        }
       } else {
-        console.warn('⚠️ Supabase não acessível');
+        // Silenciar avisos repetitivos
+        if (this.status.retryCount === 0) {
+          console.log('🔄 Tentando reconectar ao Supabase...');
+        }
       }
 
       return success;
     } catch (error) {
-      console.warn('⚠️ Falha na verificação de conexão:', error);
+      // Silenciar erros de conexão repetitivos
+      if (this.status.retryCount === 0) {
+        console.log('🔄 Reconectando em background...');
+      }
       this.updateStatus({ 
         isSupabaseReachable: false,
         retryCount: this.status.retryCount + 1

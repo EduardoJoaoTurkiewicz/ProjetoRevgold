@@ -37,7 +37,7 @@ export function ConnectionStatus() {
 
   const handleForceSync = async () => {
     try {
-      await syncManager.forcSync();
+      await syncManager.forceSync();
     } catch (error) {
       toast.error('Erro ao forçar sincronização: ' + (error?.message ?? 'Erro desconhecido'));
     }

@@ -65,8 +65,7 @@ export function CashManagement() {
   React.useEffect(() => {
     console.log('🔄 Gestão de Caixa iniciada...');
     
-    // Remove automatic data reload from CashManagement
-    // Data is already loaded by AppContext
+    // Dados já carregados pelo AppContext - não recarregar aqui
     console.log('💰 Cash Management mounted - using data from context');
   }, []);
 

@@ -73,8 +73,7 @@ const Dashboard: React.FC = () => {
   
   // Force data reload on mount
   React.useEffect(() => {
-    // Remove automatic data reload from Dashboard
-    // Data is already loaded by AppContext
+    // Dados já carregados pelo AppContext - não recarregar aqui
     console.log('📊 Dashboard mounted - using data from context');
   }, []);
 
@@ -398,7 +397,12 @@ const Dashboard: React.FC = () => {
             <button
               onClick={() => {
                 setError(null);
-                loadAllData();
+                // Não recarregar página, apenas tentar reconectar
+                connectionManager.forceCheck().then(() => {
+                  if (connectionManager.isConnected()) {
+                    loadAllData();
+                  }
+                });
               }}
               className="btn-primary"
             >

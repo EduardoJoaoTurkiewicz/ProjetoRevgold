@@ -72,7 +72,7 @@ export function OfflineIndicator() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                syncManager.forcSync();
+                syncManager.forceSync();
               }}
               className="p-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
               title="Sincronizar agora"

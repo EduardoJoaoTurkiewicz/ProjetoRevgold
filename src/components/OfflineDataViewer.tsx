@@ -49,7 +49,7 @@ export function OfflineDataViewer({ isOpen, onClose }: OfflineDataViewerProps) {
 
   const handleForceSync = async () => {
     try {
-      await syncManager.forcSync();
+      await syncManager.forceSync();
       loadData();
     } catch (error) {
       console.error('Error forcing sync:', error ?? 'Unknown error');

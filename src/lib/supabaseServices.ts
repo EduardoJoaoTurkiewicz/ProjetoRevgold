@@ -299,6 +299,71 @@ class BaseService<T> {
 // SERVIÇO DE VENDAS COM RPC
 // ========================================
 
+// Função para criar acerto automaticamente quando venda tem pagamento "acerto"
+async function createAcertoFromSale(saleData: any): Promise<void> {
+  const hasAcertoPayment = saleData.paymentMethods?.some((method: any) => method.type === 'acerto');
+  
+  if (!hasAcertoPayment) return;
+  
+  try {
+    // Verificar se já existe acerto para este cliente
+    const { data: existingAcertos, error: searchError } = await supabase
+      .from('acertos')
+      .select('*')
+      .eq('client_name', saleData.client);
+    
+    if (searchError) {
+      console.error('❌ Erro ao buscar acertos existentes:', searchError);
+      return;
+    }
+    
+    const acertoAmount = saleData.paymentMethods
+      .filter((method: any) => method.type === 'acerto')
+      .reduce((sum: number, method: any) => sum + method.amount, 0);
+    
+    if (existingAcertos && existingAcertos.length > 0) {
+      // Atualizar acerto existente
+      const existingAcerto = existingAcertos[0];
+      const newTotalAmount = existingAcerto.total_amount + acertoAmount;
+      const newPendingAmount = newTotalAmount - existingAcerto.paid_amount;
+      
+      const { error: updateError } = await supabase
+        .from('acertos')
+        .update({
+          total_amount: newTotalAmount,
+          pending_amount: newPendingAmount,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingAcerto.id);
+      
+      if (updateError) {
+        console.error('❌ Erro ao atualizar acerto:', updateError);
+      } else {
+        console.log('✅ Acerto atualizado para cliente:', saleData.client);
+      }
+    } else {
+      // Criar novo acerto
+      const { error: createError } = await supabase
+        .from('acertos')
+        .insert([{
+          client_name: saleData.client,
+          total_amount: acertoAmount,
+          paid_amount: 0,
+          pending_amount: acertoAmount,
+          status: 'pendente'
+        }]);
+      
+      if (createError) {
+        console.error('❌ Erro ao criar acerto:', createError);
+      } else {
+        console.log('✅ Novo acerto criado para cliente:', saleData.client);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Erro no processamento de acerto:', error);
+  }
+}
+
 export const salesService = {
   async create(saleData: Partial<Sale>): Promise<string> {
     console.log('🔄 Criando venda via RPC:', saleData);
@@ -737,6 +802,7 @@ export const boletosService = new BaseService<Boleto>('boletos');
 export const agendaService = new BaseService<AgendaEvent>('agenda_events');
 export const taxesService = new BaseService<Tax>('taxes');
 export const pixFeesService = new BaseService<PixFee>('pix_fees');
+export const acertosService = new BaseService<any>('acertos');
 
 // ========================================
 // SERVIÇOS DE FUNCIONÁRIOS
