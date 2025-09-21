@@ -243,8 +243,7 @@ export function AppProvider({ children }: AppProviderProps) {
         pixFeesData,
         taxesData,
         agendaEventsData,
-        agendaService,
-        acertosService
+        acertosData
       ] = await Promise.all([
         salesService.getAll(),
         employeesService.getAll(),
