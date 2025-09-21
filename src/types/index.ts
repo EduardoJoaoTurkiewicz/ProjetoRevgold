@@ -277,6 +277,24 @@ export interface AgendaEvent {
   updatedAt?: string;
 }
 
+// Acerto interface
+export interface Acerto {
+  id?: string;
+  clientName: string;
+  totalAmount: number;
+  paidAmount: number;
+  pendingAmount: number;
+  status: 'pendente' | 'pago' | 'parcial';
+  paymentDate?: string;
+  paymentMethod?: 'dinheiro' | 'pix' | 'cartao_credito' | 'cartao_debito' | 'cheque' | 'boleto' | 'transferencia';
+  paymentInstallments?: number;
+  paymentInstallmentValue?: number;
+  paymentInterval?: number;
+  observations?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // Sale Boleto interface (A Receber)
 export interface SaleBoleto {
   id: string;

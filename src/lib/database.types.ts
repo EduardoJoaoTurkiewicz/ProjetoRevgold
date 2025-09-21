@@ -734,4 +734,54 @@ export interface Database {
       [_ in never]: never
     }
   }
+  acertos: {
+    Row: {
+      id: string
+      client_name: string
+      total_amount: number
+      paid_amount: number
+      pending_amount: number
+      status: string
+      payment_date: string | null
+      payment_method: string | null
+      payment_installments: number | null
+      payment_installment_value: number | null
+      payment_interval: number | null
+      observations: string | null
+      created_at: string
+      updated_at: string
+    }
+    Insert: {
+      id?: string
+      client_name: string
+      total_amount?: number
+      paid_amount?: number
+      pending_amount?: number
+      status?: string
+      payment_date?: string | null
+      payment_method?: string | null
+      payment_installments?: number | null
+      payment_installment_value?: number | null
+      payment_interval?: number | null
+      observations?: string | null
+      created_at?: string
+      updated_at?: string
+    }
+    Update: {
+      id?: string
+      client_name?: string
+      total_amount?: number
+      paid_amount?: number
+      pending_amount?: number
+      status?: string
+      payment_date?: string | null
+      payment_method?: string | null
+      payment_installments?: number | null
+      payment_installment_value?: number | null
+      payment_interval?: number | null
+      observations?: string | null
+      created_at?: string
+      updated_at?: string
+    }
+  }
 }
