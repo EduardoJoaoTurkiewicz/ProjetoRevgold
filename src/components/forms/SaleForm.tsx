@@ -24,7 +24,7 @@ const PAYMENT_TYPES = [
   { value: 'cheque', label: 'Cheque' },
   { value: 'boleto', label: 'Boleto' },
   { value: 'transferencia', label: 'Transferência' }
-   { value: 'acerto', label: 'Acerto (Pagamento Mensal)' }
+  { value: 'acerto', label: 'Acerto (Pagamento Mensal)' }
 ];
 
 export default function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
