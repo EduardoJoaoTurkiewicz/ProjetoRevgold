@@ -246,21 +246,21 @@ export function AppProvider({ children }: AppProviderProps) {
         agendaEventsData,
         acertosData
       ] = await Promise.all([
-        salesService.getAll(),
-        employeeService.getAll(),
+        salesService.getSales(),
+        employeeService.getEmployees(),
         cashService.getCurrentBalance(),
         cashService.getTransactions(),
-        debtsService.getAll(),
-        checksService.getAll(),
-        boletosService.getAll(),
-        employeePaymentsService.getAll(),
-        employeeAdvancesService.getAll(),
-        employeeOvertimesService.getAll(),
-        employeeCommissionsService.getAll(),
-        pixFeesService.getAll(),
-        taxesService.getAll(),
-        agendaService.getAll(),
-        acertosService.getAll()
+        debtsService.getDebts(),
+        checksService.getChecks(),
+        boletosService.getBoletos(),
+        employeePaymentsService.getPayments(),
+        employeeAdvancesService.getAdvances(),
+        employeeOvertimesService.getOvertimes(),
+        employeeCommissionsService.getCommissions(),
+        pixFeesService.getPixFees(),
+        taxesService.getTaxes(),
+        agendaService.getEvents(),
+        acertosService.getAcertos()
       ]);
 
       // Atualizar estado com dados carregados
