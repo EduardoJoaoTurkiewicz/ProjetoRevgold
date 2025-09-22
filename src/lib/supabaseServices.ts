@@ -10,6 +10,97 @@ export class SupabaseService {
 }
 
 export class CashService extends SupabaseService {
+  async getCurrentBalance() {
+    try {
+      const { data, error } = await this.supabase
+        .rpc('get_current_cash_balance');
+      
+      if (error) throw error;
+      return data && data.length > 0 ? data[0] : null;
+    } catch (error) {
+      this.handleError(error, 'getCurrentBalance');
+    }
+  }
+
+  async getTransactions() {
+    try {
+      const { data, error } = await this.supabase
+        .from('cash_transactions')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'getTransactions');
+    }
+  }
+
+  async initializeCashBalance(amount: number) {
+    try {
+      const { data, error } = await this.supabase
+        .rpc('initialize_cash_balance', { initial_amount: amount });
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'initializeCashBalance');
+    }
+  }
+
+  async recalculateBalance() {
+    try {
+      const { error } = await this.supabase
+        .rpc('recalculate_cash_balance');
+      
+      if (error) throw error;
+    } catch (error) {
+      this.handleError(error, 'recalculateBalance');
+    }
+  }
+
+  async createTransaction(transaction: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('cash_transactions')
+        .insert([transaction])
+        .select();
+      
+      if (error) throw error;
+      return data && data.length > 0 ? data[0].id : null;
+    } catch (error) {
+      this.handleError(error, 'createTransaction');
+    }
+  }
+
+  async updateTransaction(id: string, transaction: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('cash_transactions')
+        .update(transaction)
+        .eq('id', id)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'updateTransaction');
+    }
+  }
+
+  async deleteTransaction(id: string) {
+    try {
+      const { error } = await this.supabase
+        .from('cash_transactions')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    } catch (error) {
+      this.handleError(error, 'deleteTransaction');
+    }
+  }
+
   async getAll() {
     try {
       const { data, error } = await this.supabase
@@ -68,6 +159,34 @@ export class CashService extends SupabaseService {
 }
 
 export class DebtsService extends SupabaseService {
+  async getDebts() {
+    try {
+      const { data, error } = await this.supabase
+        .from('debts')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'getDebts');
+    }
+  }
+
+  async create(debt: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('debts')
+        .insert([debt])
+        .select();
+      
+      if (error) throw error;
+      return data && data.length > 0 ? data[0].id : null;
+    } catch (error) {
+      this.handleError(error, 'create');
+    }
+  }
+
   async getAll() {
     try {
       const { data, error } = await this.supabase
@@ -126,6 +245,34 @@ export class DebtsService extends SupabaseService {
 }
 
 export class ChecksService extends SupabaseService {
+  async getChecks() {
+    try {
+      const { data, error } = await this.supabase
+        .from('checks')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'getChecks');
+    }
+  }
+
+  async create(check: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('checks')
+        .insert([check])
+        .select();
+      
+      if (error) throw error;
+      return data && data.length > 0 ? data[0].id : null;
+    } catch (error) {
+      this.handleError(error, 'create');
+    }
+  }
+
   async getAll() {
     try {
       const { data, error } = await this.supabase
@@ -184,6 +331,34 @@ export class ChecksService extends SupabaseService {
 }
 
 export class BoletosService extends SupabaseService {
+  async getBoletos() {
+    try {
+      const { data, error } = await this.supabase
+        .from('boletos')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'getBoletos');
+    }
+  }
+
+  async create(boleto: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('boletos')
+        .insert([boleto])
+        .select();
+      
+      if (error) throw error;
+      return data && data.length > 0 ? data[0].id : null;
+    } catch (error) {
+      this.handleError(error, 'create');
+    }
+  }
+
   async getAll() {
     try {
       const { data, error } = await this.supabase
@@ -242,6 +417,34 @@ export class BoletosService extends SupabaseService {
 }
 
 export class EmployeePaymentsService extends SupabaseService {
+  async getPayments() {
+    try {
+      const { data, error } = await this.supabase
+        .from('employee_payments')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'getPayments');
+    }
+  }
+
+  async create(payment: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('employee_payments')
+        .insert([payment])
+        .select();
+      
+      if (error) throw error;
+      return data && data.length > 0 ? data[0].id : null;
+    } catch (error) {
+      this.handleError(error, 'create');
+    }
+  }
+
   async getAll() {
     try {
       const { data, error } = await this.supabase
@@ -272,6 +475,49 @@ export class EmployeePaymentsService extends SupabaseService {
 }
 
 export class EmployeeAdvancesService extends SupabaseService {
+  async getAdvances() {
+    try {
+      const { data, error } = await this.supabase
+        .from('employee_advances')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'getAdvances');
+    }
+  }
+
+  async create(advance: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('employee_advances')
+        .insert([advance])
+        .select();
+      
+      if (error) throw error;
+      return data && data.length > 0 ? data[0].id : null;
+    } catch (error) {
+      this.handleError(error, 'create');
+    }
+  }
+
+  async update(id: string, advance: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('employee_advances')
+        .update(advance)
+        .eq('id', id)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'update');
+    }
+  }
+
   async getAll() {
     try {
       const { data, error } = await this.supabase
@@ -302,6 +548,49 @@ export class EmployeeAdvancesService extends SupabaseService {
 }
 
 export class EmployeeOvertimesService extends SupabaseService {
+  async getOvertimes() {
+    try {
+      const { data, error } = await this.supabase
+        .from('employee_overtimes')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'getOvertimes');
+    }
+  }
+
+  async create(overtime: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('employee_overtimes')
+        .insert([overtime])
+        .select();
+      
+      if (error) throw error;
+      return data && data.length > 0 ? data[0].id : null;
+    } catch (error) {
+      this.handleError(error, 'create');
+    }
+  }
+
+  async update(id: string, overtime: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('employee_overtimes')
+        .update(overtime)
+        .eq('id', id)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'update');
+    }
+  }
+
   async getAll() {
     try {
       const { data, error } = await this.supabase
@@ -332,6 +621,49 @@ export class EmployeeOvertimesService extends SupabaseService {
 }
 
 export class EmployeeCommissionsService extends SupabaseService {
+  async getCommissions() {
+    try {
+      const { data, error } = await this.supabase
+        .from('employee_commissions')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'getCommissions');
+    }
+  }
+
+  async create(commission: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('employee_commissions')
+        .insert([commission])
+        .select();
+      
+      if (error) throw error;
+      return data && data.length > 0 ? data[0].id : null;
+    } catch (error) {
+      this.handleError(error, 'create');
+    }
+  }
+
+  async update(id: string, commission: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('employee_commissions')
+        .update(commission)
+        .eq('id', id)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'update');
+    }
+  }
+
   async getAll() {
     try {
       const { data, error } = await this.supabase
@@ -362,6 +694,34 @@ export class EmployeeCommissionsService extends SupabaseService {
 }
 
 export class PixFeesService extends SupabaseService {
+  async getPixFees() {
+    try {
+      const { data, error } = await this.supabase
+        .from('pix_fees')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'getPixFees');
+    }
+  }
+
+  async create(fee: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('pix_fees')
+        .insert([fee])
+        .select();
+      
+      if (error) throw error;
+      return data && data.length > 0 ? data[0].id : null;
+    } catch (error) {
+      this.handleError(error, 'create');
+    }
+  }
+
   async getAll() {
     try {
       const { data, error } = await this.supabase
@@ -420,6 +780,34 @@ export class PixFeesService extends SupabaseService {
 }
 
 export class TaxesService extends SupabaseService {
+  async getTaxes() {
+    try {
+      const { data, error } = await this.supabase
+        .from('taxes')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'getTaxes');
+    }
+  }
+
+  async create(tax: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('taxes')
+        .insert([tax])
+        .select();
+      
+      if (error) throw error;
+      return data && data.length > 0 ? data[0].id : null;
+    } catch (error) {
+      this.handleError(error, 'create');
+    }
+  }
+
   async getAll() {
     try {
       const { data, error } = await this.supabase
@@ -553,6 +941,46 @@ export async function getCheckImageUrl(filePath: string): Promise<string> {
 }
 
 export class SalesService extends SupabaseService {
+  async create(sale: any) {
+    try {
+      const { data, error } = await this.supabase
+        .rpc('create_sale', { payload: sale });
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'create');
+    }
+  }
+
+  async update(id: string, sale: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('sales')
+        .update(sale)
+        .eq('id', id)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'update');
+    }
+  }
+
+  async delete(id: string) {
+    try {
+      const { error } = await this.supabase
+        .from('sales')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    } catch (error) {
+      this.handleError(error, 'delete');
+    }
+  }
+
   async getSales() {
     try {
       const { data, error } = await this.supabase
@@ -611,6 +1039,48 @@ export class SalesService extends SupabaseService {
 }
 
 export class EmployeeService extends SupabaseService {
+  async create(employee: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('employees')
+        .insert([employee])
+        .select();
+      
+      if (error) throw error;
+      return data && data.length > 0 ? data[0].id : null;
+    } catch (error) {
+      this.handleError(error, 'create');
+    }
+  }
+
+  async update(id: string, employee: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('employees')
+        .update(employee)
+        .eq('id', id)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'update');
+    }
+  }
+
+  async delete(id: string) {
+    try {
+      const { error } = await this.supabase
+        .from('employees')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    } catch (error) {
+      this.handleError(error, 'delete');
+    }
+  }
+
   async getEmployees() {
     try {
       const { data, error } = await this.supabase
@@ -627,6 +1097,20 @@ export class EmployeeService extends SupabaseService {
 }
 
 export class AcertosService extends SupabaseService {
+  async getAcertos() {
+    try {
+      const { data, error } = await this.supabase
+        .from('acertos')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'getAcertos');
+    }
+  }
+
   async getAll() {
     try {
       const { data, error } = await this.supabase
@@ -685,6 +1169,20 @@ export class AcertosService extends SupabaseService {
 }
 
 export class AgendaService extends SupabaseService {
+  async getEvents() {
+    try {
+      const { data, error } = await this.supabase
+        .from('agenda_events')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'getEvents');
+    }
+  }
+
   async getAll() {
     try {
       const { data, error } = await this.supabase
