@@ -310,7 +310,8 @@ async function createAcertoFromSale(saleData: any): Promise<void> {
     const { data: existingAcertos, error: searchError } = await supabase
       .from('acertos')
       .select('*')
-      .eq('client_name', saleData.client);
+      .eq('client_name', saleData.client)
+      .eq('type', 'cliente');
     
     if (searchError) {
       console.error('❌ Erro ao buscar acertos existentes:', searchError);
@@ -347,6 +348,7 @@ async function createAcertoFromSale(saleData: any): Promise<void> {
         .from('acertos')
         .insert([{
           client_name: saleData.client,
+          type: 'cliente',
           total_amount: acertoAmount,
           paid_amount: 0,
           pending_amount: acertoAmount,
@@ -364,6 +366,73 @@ async function createAcertoFromSale(saleData: any): Promise<void> {
   }
 }
 
+// Função para criar acerto automaticamente quando dívida tem pagamento "acerto"
+async function createAcertoFromDebt(debtData: any): Promise<void> {
+  const hasAcertoPayment = debtData.paymentMethods?.some((method: any) => method.type === 'acerto');
+  
+  if (!hasAcertoPayment) return;
+  
+  try {
+    // Verificar se já existe acerto para esta empresa
+    const { data: existingAcertos, error: searchError } = await supabase
+      .from('acertos')
+      .select('*')
+      .eq('client_name', debtData.company)
+      .eq('type', 'empresa');
+    
+    if (searchError) {
+      console.error('❌ Erro ao buscar acertos de empresa existentes:', searchError);
+      return;
+    }
+    
+    const acertoAmount = debtData.paymentMethods
+      .filter((method: any) => method.type === 'acerto')
+      .reduce((sum: number, method: any) => sum + method.amount, 0);
+    
+    if (existingAcertos && existingAcertos.length > 0) {
+      // Atualizar acerto existente
+      const existingAcerto = existingAcertos[0];
+      const newTotalAmount = existingAcerto.total_amount + acertoAmount;
+      const newPendingAmount = newTotalAmount - existingAcerto.paid_amount;
+      
+      const { error: updateError } = await supabase
+        .from('acertos')
+        .update({
+          total_amount: newTotalAmount,
+          pending_amount: newPendingAmount,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingAcerto.id);
+      
+      if (updateError) {
+        console.error('❌ Erro ao atualizar acerto de empresa:', updateError);
+      } else {
+        console.log('✅ Acerto de empresa atualizado:', debtData.company);
+      }
+    } else {
+      // Criar novo acerto
+      const { error: createError } = await supabase
+        .from('acertos')
+        .insert([{
+          client_name: debtData.company,
+          company_name: debtData.company,
+          type: 'empresa',
+          total_amount: acertoAmount,
+          paid_amount: 0,
+          pending_amount: acertoAmount,
+          status: 'pendente'
+        }]);
+      
+      if (createError) {
+        console.error('❌ Erro ao criar acerto de empresa:', createError);
+      } else {
+        console.log('✅ Novo acerto de empresa criado:', debtData.company);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Erro no processamento de acerto de empresa:', error);
+  }
+}
 export const salesService = {
   async create(saleData: Partial<Sale>): Promise<string> {
     console.log('🔄 Criando venda via RPC:', saleData);
@@ -406,6 +475,10 @@ export const salesService = {
       }
       
       console.log('✅ Venda criada via RPC:', saleId);
+      
+      // Criar acerto se necessário
+      await createAcertoFromSale(sanitizedData);
+      
       return saleId;
     } catch (error) {
       console.error('❌ Falha no RPC, salvando offline...');
@@ -798,7 +871,185 @@ export const cashService = {
 // ========================================
 
 export const employeesService = new BaseService<Employee>('employees');
-export const debtsService = new BaseService<Debt>('debts');
+  async create(debtData: Partial<Debt>): Promise<string> {
+    console.log('🔄 Criando dívida:', debtData);
+    
+    // Validação básica
+    if (!debtData.company || (typeof debtData.company === 'string' && !debtData.company.trim())) {
+      throw new Error('Empresa é obrigatória e não pode estar vazia');
+    }
+    
+    if (!debtData.description || (typeof debtData.description === 'string' && !debtData.description.trim())) {
+      throw new Error('Descrição é obrigatória e não pode estar vazia');
+    }
+    
+    if (!debtData.totalValue || debtData.totalValue <= 0) {
+      throw new Error('Valor total deve ser maior que zero');
+    }
+    
+    const isConnected = await checkSupabaseConnection();
+    
+    if (!isConnected) {
+      console.log('📱 Salvando dívida offline...');
+      const offlineId = await saveOffline('debts', debtData);
+      return offlineId;
+    }
+    
+    try {
+      // Sanitizar dados antes de enviar
+      const sanitizedData = sanitizePayload(debtData);
+      const snakeCaseData = transformToSnakeCase(sanitizedData);
+      
+      console.log('📦 Debt payload sanitizado:', snakeCaseData);
+      
+      const { data: result, error } = await supabase
+        .from('debts')
+        .insert([snakeCaseData])
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('❌ Erro ao criar dívida:', error);
+        throw error;
+      }
+      
+      console.log('✅ Dívida criada:', result.id);
+      
+      // Criar acerto se necessário
+      await createAcertoFromDebt(sanitizedData);
+      
+      return result.id;
+    } catch (error) {
+      console.error('❌ Falha ao criar dívida, salvando offline...');
+      ErrorHandler.logProjectError(error, 'Create Debt');
+      
+      const offlineId = await saveOffline('debts', debtData);
+      return offlineId;
+    }
+  },
+
+  async getAll(): Promise<Debt[]> {
+    console.log('🔄 Carregando dívidas...');
+    
+    const isConnected = await checkSupabaseConnection();
+    
+    if (!isConnected) {
+      console.log('📱 Dívidas indisponíveis offline');
+      return [];
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('debts')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Erro ao carregar dívidas:', error);
+        throw error;
+      }
+      
+      console.log(`✅ Dívidas carregadas: ${data.length} registros`);
+      return data as Debt[];
+    } catch (error) {
+      console.error('❌ Falha ao carregar dívidas:', error);
+      ErrorHandler.logProjectError(error, 'Load Debts');
+      return [];
+    }
+  },
+
+  async update(id: string, debtData: Partial<Debt>): Promise<Debt> {
+    console.log(`🔄 Atualizando dívida ${id}:`, debtData);
+    
+    const isConnected = await checkSupabaseConnection();
+    
+    if (!isConnected) {
+      console.log('📱 Enfileirando atualização de dívida...');
+      await addToSyncQueue({
+        type: 'update',
+        table: 'debts',
+        data: { id, ...debtData },
+        maxRetries: 3
+      });
+      return { id, ...debtData } as Debt;
+    }
+    
+    try {
+      const sanitizedData = sanitizePayload(debtData);
+      const snakeCaseData = transformToSnakeCase(sanitizedData);
+      
+      const { data: result, error } = await supabase
+        .from('debts')
+        .update(snakeCaseData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('❌ Erro ao atualizar dívida:', error);
+        throw error;
+      }
+      
+      console.log('✅ Dívida atualizada com sucesso');
+      return result as Debt;
+    } catch (error) {
+      console.error('❌ Falha ao atualizar dívida, enfileirando...');
+      ErrorHandler.logProjectError(error, 'Update Debt');
+      
+      await addToSyncQueue({
+        type: 'update',
+        table: 'debts',
+        data: { id, ...debtData },
+        maxRetries: 3
+      });
+      
+      return { id, ...debtData } as Debt;
+    }
+  },
+
+  async delete(id: string): Promise<void> {
+    console.log(`🔄 Excluindo dívida ${id}`);
+    
+    const isConnected = await checkSupabaseConnection();
+    
+    if (!isConnected) {
+      console.log('📱 Enfileirando exclusão de dívida...');
+      await addToSyncQueue({
+        type: 'delete',
+        table: 'debts',
+        data: { id },
+        maxRetries: 3
+      });
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('debts')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        console.error('❌ Erro ao excluir dívida:', error);
+        throw error;
+      }
+      
+      console.log('✅ Dívida excluída com sucesso');
+    } catch (error) {
+      console.error('❌ Falha ao excluir dívida, enfileirando...');
+      ErrorHandler.logProjectError(error, 'Delete Debt');
+      
+      await addToSyncQueue({
+        type: 'delete',
+        table: 'debts',
+        data: { id },
+        maxRetries: 3
+      });
+    }
+  }
+};
+
+// Remover a instância BaseService para debts
 export const checksService = new BaseService<Check>('checks');
 export const boletosService = new BaseService<Boleto>('boletos');
 export const agendaService = new BaseService<AgendaEvent>('agenda_events');

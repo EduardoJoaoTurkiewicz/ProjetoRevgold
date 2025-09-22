@@ -11,6 +11,8 @@ interface AcertoFormProps {
 export function AcertoForm({ acerto, onSubmit, onCancel }: AcertoFormProps) {
   const [formData, setFormData] = useState({
     clientName: acerto?.clientName || '',
+    companyName: acerto?.companyName || '',
+    type: acerto?.type || 'cliente' as const,
     totalAmount: acerto?.totalAmount || 0,
     paidAmount: acerto?.paidAmount || 0,
     pendingAmount: acerto?.pendingAmount || 0,
@@ -34,8 +36,9 @@ export function AcertoForm({ acerto, onSubmit, onCancel }: AcertoFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.clientName || !formData.clientName.trim()) {
-      alert('Por favor, informe o nome do cliente.');
+    const nameField = formData.type === 'empresa' ? formData.companyName : formData.clientName;
+    if (!nameField || !nameField.trim()) {
+      alert(`Por favor, informe o nome ${formData.type === 'empresa' ? 'da empresa' : 'do cliente'}.`);
       return;
     }
     
@@ -57,7 +60,8 @@ export function AcertoForm({ acerto, onSubmit, onCancel }: AcertoFormProps) {
     // Clean data
     const cleanedData = {
       ...formData,
-      clientName: formData.clientName.trim(),
+      clientName: formData.type === 'cliente' ? formData.clientName.trim() : formData.companyName?.trim() || '',
+      companyName: formData.type === 'empresa' ? formData.companyName?.trim() : undefined,
       observations: !formData.observations || formData.observations.trim() === '' ? null : formData.observations.trim()
     };
     
@@ -81,21 +85,91 @@ export function AcertoForm({ acerto, onSubmit, onCancel }: AcertoFormProps) {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="form-group md:col-span-2">
-                <label className="form-label">Nome do Cliente *</label>
-                <input
-                  type="text"
-                  value={formData.clientName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))}
-                  className="input-field"
-                  placeholder="Nome do cliente"
-                  required
-                />
-                <p className="text-xs text-indigo-600 mt-1 font-semibold">
-                  💡 Este nome deve ser exatamente igual ao usado nas vendas
-                </p>
+                <label className="form-label">Tipo de Acerto *</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className={`
+                    flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-300
+                    ${formData.type === 'cliente' 
+                      ? 'border-indigo-300 bg-indigo-50' 
+                      : 'border-slate-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/50'
+                    }
+                  `}>
+                    <input
+                      type="radio"
+                      name="type"
+                      value="cliente"
+                      checked={formData.type === 'cliente'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'cliente' | 'empresa' }))}
+                      className="sr-only"
+                    />
+                    <div className="p-2 rounded-lg bg-indigo-600">
+                      <HandCoins className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-indigo-800">Cliente</p>
+                      <p className="text-sm text-indigo-600">Acerto de vendas</p>
+                    </div>
+                  </label>
+                  
+                  <label className={`
+                    flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-300
+                    ${formData.type === 'empresa' 
+                      ? 'border-red-300 bg-red-50' 
+                      : 'border-slate-200 bg-white hover:border-red-200 hover:bg-red-50/50'
+                    }
+                  `}>
+                    <input
+                      type="radio"
+                      name="type"
+                      value="empresa"
+                      checked={formData.type === 'empresa'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'cliente' | 'empresa' }))}
+                      className="sr-only"
+                    />
+                    <div className="p-2 rounded-lg bg-red-600">
+                      <CreditCard className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-red-800">Empresa</p>
+                      <p className="text-sm text-red-600">Acerto de dívidas</p>
+                    </div>
+                  </label>
+                </div>
               </div>
 
-              <div className="form-group">
+              {formData.type === 'cliente' ? (
+                <div className="form-group md:col-span-2">
+                  <label className="form-label">Nome do Cliente *</label>
+                  <input
+                    type="text"
+                    value={formData.clientName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))}
+                    className="input-field"
+                    placeholder="Nome do cliente"
+                    required
+                  />
+                  <p className="text-xs text-indigo-600 mt-1 font-semibold">
+                    💡 Este nome deve ser exatamente igual ao usado nas vendas
+                  </p>
+                </div>
+              ) : (
+                <div className="form-group md:col-span-2">
+                  <label className="form-label">Nome da Empresa *</label>
+                  <input
+                    type="text"
+                    value={formData.companyName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
+                    className="input-field"
+                    placeholder="Nome da empresa"
+                    required
+                  />
+                  <p className="text-xs text-red-600 mt-1 font-semibold">
+                    💡 Este nome deve ser exatamente igual ao usado nas dívidas
+                  </p>
+                </div>
+              )}
+
+              <div className="form-group md:col-span-2">
                 <label className="form-label">Valor Total do Acerto *</label>
                 <input
                   type="number"

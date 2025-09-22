@@ -14,6 +14,9 @@ export function Debts() {
   const handleAddDebt = (debt: Omit<Debt, 'id' | 'createdAt'>) => {
     console.log('🔄 Adicionando nova dívida:', debt);
     
+    // Verificar se há método de pagamento "acerto"
+    const hasAcertoPayment = debt.paymentMethods?.some(method => method.type === 'acerto');
+    
     // Validate debt data before submitting
     if (!debt.company || !debt.company.trim()) {
       alert('Por favor, informe o nome da empresa/fornecedor.');
@@ -46,6 +49,12 @@ export function Debts() {
     
     createDebt(debt).then(() => {
       console.log('✅ Dívida adicionada com sucesso');
+      
+      // Se há pagamento por acerto, criar acerto automaticamente
+      if (hasAcertoPayment) {
+        createAcertoFromDebt(debt);
+      }
+      
       setIsFormOpen(false);
     }).catch(error => {
       console.error('❌ Erro ao adicionar dívida:', error);
@@ -69,6 +78,33 @@ export function Debts() {
     });
   };
 
+  // Função para criar acerto automaticamente a partir de dívida
+  const createAcertoFromDebt = async (debt: Omit<Debt, 'id' | 'createdAt'>) => {
+    try {
+      const acertoAmount = debt.paymentMethods
+        ?.filter(method => method.type === 'acerto')
+        .reduce((sum, method) => sum + method.amount, 0) || 0;
+      
+      if (acertoAmount > 0) {
+        const newAcerto = {
+          clientName: debt.company, // Usar nome da empresa como cliente
+          companyName: debt.company,
+          type: 'empresa' as const,
+          totalAmount: acertoAmount,
+          paidAmount: 0,
+          pendingAmount: acertoAmount,
+          status: 'pendente' as const,
+          observations: `Acerto criado automaticamente para dívida: ${debt.description}`,
+          relatedDebts: [] // Será preenchido após criação da dívida
+        };
+        
+        await createAcerto(newAcerto);
+        console.log('✅ Acerto criado automaticamente para empresa:', debt.company);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao criar acerto automático:', error);
+    }
+  };
   const handleEditDebt = (debt: Omit<Debt, 'id' | 'createdAt'>) => {
     if (editingDebt) {
       const updatedDebt: Debt = {

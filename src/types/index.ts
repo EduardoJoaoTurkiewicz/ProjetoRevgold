@@ -281,6 +281,8 @@ export interface AgendaEvent {
 export interface Acerto {
   id?: string;
   clientName: string;
+  companyName?: string; // Para dívidas de empresas
+  type: 'cliente' | 'empresa'; // Distinguir entre acertos de clientes e empresas
   totalAmount: number;
   paidAmount: number;
   pendingAmount: number;
@@ -291,6 +293,8 @@ export interface Acerto {
   paymentInstallmentValue?: number;
   paymentInterval?: number;
   observations?: string;
+  relatedDebts?: string[]; // IDs das dívidas relacionadas
+  availableChecks?: string[]; // IDs dos cheques disponíveis para pagamento
   createdAt?: string;
   updatedAt?: string;
 }

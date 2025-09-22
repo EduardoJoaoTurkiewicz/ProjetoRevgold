@@ -15,7 +15,8 @@ const PAYMENT_TYPES = [
   { value: 'cartao_debito', label: 'Cartão de Débito' },
   { value: 'cheque', label: 'Cheque' },
   { value: 'boleto', label: 'Boleto' },
-  { value: 'transferencia', label: 'Transferência' }
+  { value: 'transferencia', label: 'Transferência' },
+  { value: 'acerto', label: 'Acerto (Pagamento Mensal)' }
 ];
 
 export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
