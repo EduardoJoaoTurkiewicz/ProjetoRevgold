@@ -44,3 +44,16 @@ export const formatPercent = (n: number) =>
     minimumFractionDigits: 1,
     maximumFractionDigits: 1 
   }).format(n / 100);
+
+export const transformToSnakeCase = (obj: any): any => {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(transformToSnakeCase);
+  
+  const result: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    result[snakeKey] = transformToSnakeCase(value);
+  }
+  return result;
+};

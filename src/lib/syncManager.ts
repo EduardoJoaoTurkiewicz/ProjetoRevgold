@@ -10,7 +10,9 @@ import {
 import { connectionManager } from './connectionManager';
 import { supabase } from './supabase';
 import { ErrorHandler } from './errorHandler';
-import { checkSupabaseConnection, isValidUUID, transformToSnakeCase, sanitizePayload } from './supabaseServices';
+import { checkSupabaseConnection } from './supabaseServices';
+import { isValidUUID } from './debugUtils';
+import { transformToSnakeCase } from '../utils/format';
 import toast from 'react-hot-toast';
 
 interface OfflineOperation {
