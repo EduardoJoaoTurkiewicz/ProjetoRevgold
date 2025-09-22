@@ -10,7 +10,8 @@ import {
 import { connectionManager } from './connectionManager';
 import { supabase } from './supabase';
 import { ErrorHandler } from './errorHandler';
-import { checkSupabaseConnection, isValidUUID, transformToSnakeCase, sanitizePayload } from './supabaseServices';
+import { testSupabaseConnection } from './supabase';
+import { isValidUUID, transformToSnakeCase, sanitizePayload } from './supabaseServices';
 import toast from 'react-hot-toast';
 
 interface OfflineOperation {
@@ -64,7 +65,7 @@ class SyncManager {
     }
 
     // Verificar conexão antes de iniciar
-    const isConnected = await checkSupabaseConnection();
+    const isConnected = await testSupabaseConnection();
     if (!isConnected) {
       // Silenciar logs repetitivos de sincronização
       return;
@@ -336,7 +337,7 @@ class SyncManager {
   }
 
   public async forceSync(): Promise<void> {
-    const isConnected = await checkSupabaseConnection();
+    const isConnected = await testSupabaseConnection();
     if (isConnected) {
       console.log('🔄 Sincronização forçada iniciada');
       await this.startSync();
