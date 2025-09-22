@@ -83,6 +83,63 @@ export class EmployeeService extends SupabaseService {
   }
 }
 
+export class AcertosService extends SupabaseService {
+  async getAll() {
+    try {
+      const { data, error } = await this.supabase
+        .from('acertos')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'getAll');
+    }
+  }
+
+  async create(acerto: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('acertos')
+        .insert([acerto])
+        .select();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'create');
+    }
+  }
+
+  async update(id: string, acerto: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('acertos')
+        .update(acerto)
+        .eq('id', id)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'update');
+    }
+  }
+
+  async delete(id: string) {
+    try {
+      const { error } = await this.supabase
+        .from('acertos')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    } catch (error) {
+      this.handleError(error, 'delete');
+    }
+  }
+}
+
 // Export service instances
 export const salesService = new SalesService();
-export const employeeService = new EmployeeService();
