@@ -18,6 +18,7 @@ import {
 } from '../lib/supabaseServices';
 import { connectionManager } from '../lib/connectionManager';
 import { syncManager } from '../lib/syncManager';
+import { isSupabaseConfigured } from '../lib/supabase';
 import {
   Sale,
   Employee,
@@ -227,6 +228,13 @@ export function AppProvider({ children }: AppProviderProps) {
     setIsLoading(true);
     setError(null);
     
+    // Verificar se o Supabase está configurado
+    if (!isSupabaseConfigured()) {
+      console.log('⚠️ Supabase não configurado - funcionando em modo offline');
+      setIsLoading(false);
+      return;
+    }
+    
     try {
       // Carregar todos os dados em paralelo
       const [
@@ -283,8 +291,15 @@ export function AppProvider({ children }: AppProviderProps) {
       console.log('✅ Todos os dados carregados com sucesso');
     } catch (err) {
       console.error('❌ Erro ao carregar dados:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar dados';
-      setError(errorMessage);
+      
+      // Verificar se é erro de configuração do Supabase
+      if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+        console.log('⚠️ Erro de conexão - funcionando em modo offline');
+        setError('Sistema funcionando em modo offline. Configure o Supabase para sincronização online.');
+      } else {
+        const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar dados';
+        setError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -310,6 +325,9 @@ export function AppProvider({ children }: AppProviderProps) {
   // Métodos de vendas
   const createSale = async (sale: Omit<Sale, 'id' | 'createdAt'>): Promise<string> => {
     try {
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase não configurado. Configure o arquivo .env para usar esta funcionalidade.');
+      }
       const saleId = await salesService.create(sale);
       await loadAllData(); // Recarregar dados após criação
       return saleId;
@@ -321,6 +339,9 @@ export function AppProvider({ children }: AppProviderProps) {
 
   const updateSale = async (id: string, sale: Partial<Sale>): Promise<void> => {
     try {
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase não configurado. Configure o arquivo .env para usar esta funcionalidade.');
+      }
       await salesService.update(id, sale);
       await loadAllData(); // Recarregar dados após atualização
     } catch (error) {
@@ -331,6 +352,9 @@ export function AppProvider({ children }: AppProviderProps) {
 
   const deleteSale = async (id: string): Promise<void> => {
     try {
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase não configurado. Configure o arquivo .env para usar esta funcionalidade.');
+      }
       await salesService.delete(id);
       await loadAllData(); // Recarregar dados após exclusão
     } catch (error) {
@@ -342,6 +366,9 @@ export function AppProvider({ children }: AppProviderProps) {
   // Métodos de funcionários
   const createEmployee = async (employee: Omit<Employee, 'id' | 'createdAt'>): Promise<string> => {
     try {
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase não configurado. Configure o arquivo .env para usar esta funcionalidade.');
+      }
       const employeeId = await employeeService.create(employee);
       await loadAllData();
       return employeeId;
@@ -353,6 +380,9 @@ export function AppProvider({ children }: AppProviderProps) {
 
   const updateEmployee = async (employee: Employee): Promise<void> => {
     try {
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase não configurado. Configure o arquivo .env para usar esta funcionalidade.');
+      }
       await employeeService.update(employee.id, employee);
       await loadAllData();
     } catch (error) {
@@ -363,6 +393,9 @@ export function AppProvider({ children }: AppProviderProps) {
 
   const deleteEmployee = async (id: string): Promise<void> => {
     try {
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase não configurado. Configure o arquivo .env para usar esta funcionalidade.');
+      }
       await employeeService.delete(id);
       await loadAllData();
     } catch (error) {
@@ -374,6 +407,9 @@ export function AppProvider({ children }: AppProviderProps) {
   // Métodos de caixa
   const initializeCashBalance = async (amount: number): Promise<void> => {
     try {
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase não configurado. Configure o arquivo .env para usar esta funcionalidade.');
+      }
       await cashService.initializeCashBalance(amount);
       await loadAllData();
     } catch (error) {
@@ -384,6 +420,9 @@ export function AppProvider({ children }: AppProviderProps) {
 
   const recalculateCashBalance = async (): Promise<void> => {
     try {
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase não configurado. Configure o arquivo .env para usar esta funcionalidade.');
+      }
       await cashService.recalculateBalance();
       await loadAllData();
     } catch (error) {
