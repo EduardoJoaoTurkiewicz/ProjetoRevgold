@@ -141,7 +141,66 @@ export class AcertosService extends SupabaseService {
   }
 }
 
+export class AgendaService extends SupabaseService {
+  async getAll() {
+    try {
+      const { data, error } = await this.supabase
+        .from('agenda_events')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'getAll');
+    }
+  }
+
+  async create(agendaEvent: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('agenda_events')
+        .insert([agendaEvent])
+        .select();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'create');
+    }
+  }
+
+  async update(id: string, agendaEvent: any) {
+    try {
+      const { data, error } = await this.supabase
+        .from('agenda_events')
+        .update(agendaEvent)
+        .eq('id', id)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'update');
+    }
+  }
+
+  async delete(id: string) {
+    try {
+      const { error } = await this.supabase
+        .from('agenda_events')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    } catch (error) {
+      this.handleError(error, 'delete');
+    }
+  }
+}
+
 // Export service instances
 export const salesService = new SalesService();
 export const employeeService = new EmployeeService();
 export const acertosService = new AcertosService();
+export const agendaService = new AgendaService();
