@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User } from '@supabase/supabase-js';
 import {
   salesService,
-  employeesService,
+  employeeService,
   cashService,
   debtsService,
   checksService,
@@ -231,7 +231,7 @@ export function AppProvider({ children }: AppProviderProps) {
       // Carregar todos os dados em paralelo
       const [
         salesData,
-        employeesData,
+        employeeData,
         cashBalanceData,
         cashTransactionsData,
         debtsData,
@@ -247,7 +247,7 @@ export function AppProvider({ children }: AppProviderProps) {
         acertosData
       ] = await Promise.all([
         salesService.getAll(),
-        employeesService.getAll(),
+        employeeService.getAll(),
         cashService.getCurrentBalance(),
         cashService.getTransactions(),
         debtsService.getAll(),
@@ -265,7 +265,7 @@ export function AppProvider({ children }: AppProviderProps) {
 
       // Atualizar estado com dados carregados
       setSales(salesData || []);
-      setEmployees(employeesData || []);
+      setEmployees(employeeData || []);
       setCashBalance(cashBalanceData);
       setCashTransactions(cashTransactionsData || []);
       setDebts(debtsData || []);
@@ -342,7 +342,7 @@ export function AppProvider({ children }: AppProviderProps) {
   // Métodos de funcionários
   const createEmployee = async (employee: Omit<Employee, 'id' | 'createdAt'>): Promise<string> => {
     try {
-      const employeeId = await employeesService.create(employee);
+      const employeeId = await employeeService.create(employee);
       await loadAllData();
       return employeeId;
     } catch (error) {
@@ -353,7 +353,7 @@ export function AppProvider({ children }: AppProviderProps) {
 
   const updateEmployee = async (employee: Employee): Promise<void> => {
     try {
-      await employeesService.update(employee.id, employee);
+      await employeeService.update(employee.id, employee);
       await loadAllData();
     } catch (error) {
       console.error('❌ Erro ao atualizar funcionário:', error);
@@ -363,7 +363,7 @@ export function AppProvider({ children }: AppProviderProps) {
 
   const deleteEmployee = async (id: string): Promise<void> => {
     try {
-      await employeesService.delete(id);
+      await employeeService.delete(id);
       await loadAllData();
     } catch (error) {
       console.error('❌ Erro ao excluir funcionário:', error);
