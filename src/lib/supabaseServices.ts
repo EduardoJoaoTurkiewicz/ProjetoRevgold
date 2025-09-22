@@ -143,3 +143,5 @@ export class AcertosService extends SupabaseService {
 
 // Export service instances
 export const salesService = new SalesService();
+export const employeeService = new EmployeeService();
+export const acertosService = new AcertosService();
