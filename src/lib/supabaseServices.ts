@@ -1,29 +1,53 @@
 import { supabase } from './supabase';
+import { isSupabaseConfigured } from './supabase';
+import { ErrorHandler } from './errorHandler';
 
 export class SupabaseService {
   protected supabase = supabase;
 
   protected handleError(error: any, operation: string) {
-    console.error(`Error in ${operation}:`, error);
+    // Only log project-related errors, suppress external service errors
+    if (ErrorHandler.isProjectError(error)) {
+      console.error(`Error in ${operation}:`, error);
+    }
     throw error;
+  }
+
+  protected async safeOperation<T>(operation: () => Promise<T>, fallback: T): Promise<T> {
+    try {
+      // Check if Supabase is configured
+      if (!isSupabaseConfigured()) {
+        console.warn('⚠️ Supabase not configured, returning fallback data');
+        return fallback;
+      }
+
+      return await operation();
+    } catch (error) {
+      // Check if it's a network error
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        console.warn('⚠️ Network error detected, returning fallback data');
+        return fallback;
+      }
+      
+      // For other errors, still throw them
+      throw error;
+    }
   }
 }
 
 export class CashService extends SupabaseService {
   async getCurrentBalance() {
-    try {
+    return this.safeOperation(async () => {
       const { data, error } = await this.supabase
         .rpc('get_current_cash_balance');
       
       if (error) throw error;
       return data && data.length > 0 ? data[0] : null;
-    } catch (error) {
-      this.handleError(error, 'getCurrentBalance');
-    }
+    }, null);
   }
 
   async getTransactions() {
-    try {
+    return this.safeOperation(async () => {
       const { data, error } = await this.supabase
         .from('cash_transactions')
         .select('*')
@@ -31,36 +55,31 @@ export class CashService extends SupabaseService {
       
       if (error) throw error;
       return data;
-    } catch (error) {
-      this.handleError(error, 'getTransactions');
-    }
+    }, []);
   }
 
   async initializeCashBalance(amount: number) {
-    try {
+    return this.safeOperation(async () => {
       const { data, error } = await this.supabase
         .rpc('initialize_cash_balance', { initial_amount: amount });
       
       if (error) throw error;
       return data;
-    } catch (error) {
-      this.handleError(error, 'initializeCashBalance');
-    }
+    }, null);
   }
 
   async recalculateBalance() {
-    try {
+    return this.safeOperation(async () => {
       const { error } = await this.supabase
         .rpc('recalculate_cash_balance');
       
       if (error) throw error;
-    } catch (error) {
-      this.handleError(error, 'recalculateBalance');
-    }
+      return true;
+    }, false);
   }
 
   async createTransaction(transaction: any) {
-    try {
+    return this.safeOperation(async () => {
       const { data, error } = await this.supabase
         .from('cash_transactions')
         .insert([transaction])
@@ -68,13 +87,11 @@ export class CashService extends SupabaseService {
       
       if (error) throw error;
       return data && data.length > 0 ? data[0].id : null;
-    } catch (error) {
-      this.handleError(error, 'createTransaction');
-    }
+    }, null);
   }
 
   async updateTransaction(id: string, transaction: any) {
-    try {
+    return this.safeOperation(async () => {
       const { data, error } = await this.supabase
         .from('cash_transactions')
         .update(transaction)
@@ -83,26 +100,23 @@ export class CashService extends SupabaseService {
       
       if (error) throw error;
       return data;
-    } catch (error) {
-      this.handleError(error, 'updateTransaction');
-    }
+    }, []);
   }
 
   async deleteTransaction(id: string) {
-    try {
+    return this.safeOperation(async () => {
       const { error } = await this.supabase
         .from('cash_transactions')
         .delete()
         .eq('id', id);
       
       if (error) throw error;
-    } catch (error) {
-      this.handleError(error, 'deleteTransaction');
-    }
+      return true;
+    }, false);
   }
 
   async getAll() {
-    try {
+    return this.safeOperation(async () => {
       const { data, error } = await this.supabase
         .from('cash_transactions')
         .select('*')
@@ -110,13 +124,11 @@ export class CashService extends SupabaseService {
       
       if (error) throw error;
       return data;
-    } catch (error) {
-      this.handleError(error, 'getAll');
-    }
+    }, []);
   }
 
   async create(transaction: any) {
-    try {
+    return this.safeOperation(async () => {
       const { data, error } = await this.supabase
         .from('cash_transactions')
         .insert([transaction])
@@ -124,13 +136,11 @@ export class CashService extends SupabaseService {
       
       if (error) throw error;
       return data;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
+    }, []);
   }
 
   async update(id: string, transaction: any) {
-    try {
+    return this.safeOperation(async () => {
       const { data, error } = await this.supabase
         .from('cash_transactions')
         .update(transaction)
@@ -139,22 +149,19 @@ export class CashService extends SupabaseService {
       
       if (error) throw error;
       return data;
-    } catch (error) {
-      this.handleError(error, 'update');
-    }
+    }, []);
   }
 
   async delete(id: string) {
-    try {
+    return this.safeOperation(async () => {
       const { error } = await this.supabase
         .from('cash_transactions')
         .delete()
         .eq('id', id);
       
       if (error) throw error;
-    } catch (error) {
-      this.handleError(error, 'delete');
-    }
+      return true;
+    }, false);
   }
 }
 
