@@ -362,7 +362,7 @@ export function CashManagement() {
             <div>
               <h3 className="font-bold text-green-900 text-lg">Saldo Atual</h3>
               <p className={`text-3xl font-black ${cashBalance.currentBalance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                R$ {cashBalance.currentBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {(cashBalance.currentBalance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
               <p className="text-sm text-green-600 font-semibold">
                 Atualizado automaticamente
@@ -413,7 +413,7 @@ export function CashManagement() {
             <div>
               <h3 className="font-bold text-blue-900 text-lg">Saldo Inicial</h3>
               <p className="text-3xl font-black text-blue-700">
-                R$ {cashBalance.initialBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {(cashBalance.initialBalance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
               <p className="text-sm text-blue-600 font-semibold">
                 {cashBalance.initialDate && new Date(cashBalance.initialDate).toLocaleDateString('pt-BR')}
