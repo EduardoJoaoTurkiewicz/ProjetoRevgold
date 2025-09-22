@@ -758,3 +758,24 @@ export const salesService = new SalesService();
 export const employeeService = new EmployeeService();
 export const acertosService = new AcertosService();
 export const agendaService = new AgendaService();
+
+// Função para verificar conexão com Supabase
+export async function checkSupabaseConnection(): Promise<{ success: boolean; message?: string }> {
+  try {
+    const { data, error } = await supabase
+      .from('sales')
+      .select('id')
+      .limit(1);
+    
+    if (error) {
+      return { success: false, message: error.message };
+    }
+    
+    return { success: true };
+  } catch (error) {
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : 'Erro desconhecido' 
+    };
+  }
+}
