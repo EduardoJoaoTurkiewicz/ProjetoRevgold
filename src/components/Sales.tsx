@@ -26,6 +26,9 @@ export function Sales() {
     try {
       console.log('🔄 Submetendo venda:', saleData);
       
+      // Verificar se há método de pagamento "acerto"
+      const hasAcertoPayment = saleData.paymentMethods?.some(method => method.type === 'acerto');
+      
       // Validate total value before submission
       if (!saleData.totalValue || saleData.totalValue <= 0) {
         throw new Error('Valor total deve ser maior que zero');
@@ -39,6 +42,11 @@ export function Sales() {
         console.log('🔄 Criando nova venda');
         console.log('🔄 Sales.handleSaleSubmit - Sale data being sent:', saleData);
         await createSale(saleData);
+        
+        // Se há pagamento por acerto, criar acerto automaticamente
+        if (hasAcertoPayment) {
+          await createAcertoFromSale(saleData);
+        }
       }
 
       console.log('✅ Venda processada com sucesso');
@@ -51,6 +59,51 @@ export function Sales() {
     }
   };
 
+  // Função para criar acerto automaticamente a partir de venda
+  const createAcertoFromSale = async (sale: Partial<Sale>) => {
+    try {
+      const acertoAmount = sale.paymentMethods
+        ?.filter(method => method.type === 'acerto')
+        .reduce((sum, method) => sum + method.amount, 0) || 0;
+      
+      if (acertoAmount > 0 && sale.client) {
+        // Verificar se já existe acerto para este cliente
+        const existingAcerto = acertos.find(a => 
+          a.type === 'cliente' && 
+          a.clientName.toLowerCase() === sale.client.toLowerCase()
+        );
+        
+        if (existingAcerto) {
+          // Atualizar acerto existente
+          const updatedAcerto = {
+            ...existingAcerto,
+            totalAmount: existingAcerto.totalAmount + acertoAmount,
+            pendingAmount: existingAcerto.pendingAmount + acertoAmount,
+            observations: existingAcerto.observations 
+              ? `${existingAcerto.observations}\n\nVenda adicionada: ${sale.observations || 'Venda sem observações'}`
+              : `Venda adicionada: ${sale.observations || 'Venda sem observações'}`
+          };
+          await updateAcerto(updatedAcerto);
+        } else {
+          // Criar novo acerto
+          const newAcerto = {
+            clientName: sale.client,
+            type: 'cliente' as const,
+            totalAmount: acertoAmount,
+            paidAmount: 0,
+            pendingAmount: acertoAmount,
+            status: 'pendente' as const,
+            observations: `Acerto criado automaticamente para venda: ${sale.observations || 'Venda sem observações'}`
+          };
+          await createAcerto(newAcerto);
+        }
+        
+        console.log('✅ Acerto criado/atualizado automaticamente para cliente:', sale.client);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao criar acerto automático:', error);
+    }
+  };
   const handleEdit = (sale: Sale) => {
     setEditingSale(sale);
     setShowForm(true);

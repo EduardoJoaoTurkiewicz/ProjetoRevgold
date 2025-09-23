@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Users, Building2 } from 'lucide-react';
 import { Acerto } from '../../types';
 
 interface AcertoFormProps {
@@ -103,7 +103,7 @@ export function AcertoForm({ acerto, onSubmit, onCancel }: AcertoFormProps) {
                       className="sr-only"
                     />
                     <div className="p-2 rounded-lg bg-indigo-600">
-                      <HandCoins className="w-5 h-5 text-white" />
+                      <Users className="w-5 h-5 text-white" />
                     </div>
                     <div>
                       <p className="font-bold text-indigo-800">Cliente</p>
@@ -127,7 +127,7 @@ export function AcertoForm({ acerto, onSubmit, onCancel }: AcertoFormProps) {
                       className="sr-only"
                     />
                     <div className="p-2 rounded-lg bg-red-600">
-                      <CreditCard className="w-5 h-5 text-white" />
+                      <Building2 className="w-5 h-5 text-white" />
                     </div>
                     <div>
                       <p className="font-bold text-red-800">Empresa</p>
@@ -279,6 +279,14 @@ export function AcertoForm({ acerto, onSubmit, onCancel }: AcertoFormProps) {
       </div>
     </div>
   );
+}
+
+function getStatusColor(status: Acerto['status']) {
+  switch (status) {
+    case 'pago': return 'bg-green-100 text-green-800 border-green-200';
+    case 'parcial': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    default: return 'bg-red-100 text-red-800 border-red-200';
+  }
 }
 
 function getStatusLabel(status: Acerto['status']) {
