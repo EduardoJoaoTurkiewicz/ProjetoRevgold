@@ -8,7 +8,7 @@ export function Dashboard() {
     sales, 
     debts, 
     employees, 
-    cashBalances,
+    cashBalance,
     checks,
     boletos,
     employeeCommissions,
@@ -21,7 +21,7 @@ export function Dashboard() {
   const totalDebts = debts.reduce((sum, debt) => sum + safeNumber(debt.totalValue, 0), 0);
   const pendingDebts = debts.filter(debt => !debt.isPaid).length;
   const activeEmployees = employees.filter(emp => emp.isActive).length;
-  const currentBalance = cashBalances[0]?.currentBalance || 0;
+  const currentBalance = cashBalance?.currentBalance || 0;
   const pendingChecks = checks.filter(check => check.status === 'pendente').length;
   const pendingBoletos = boletos.filter(boleto => boleto.status === 'pendente').length;
   const pendingCommissions = employeeCommissions.filter(comm => comm.status === 'pendente').length;
