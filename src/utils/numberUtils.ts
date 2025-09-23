@@ -1,17 +1,20 @@
 // Number utilities to prevent NaN values throughout the system
 
 export function safeNumber(value: any, defaultValue: number = 0): number {
+  // Handle null, undefined, empty string
   if (value === null || value === undefined || value === '') {
     return defaultValue;
   }
   
+  // If already a number, check if it's NaN
   if (typeof value === 'number') {
     return isNaN(value) ? defaultValue : value;
   }
   
+  // Handle string values
   if (typeof value === 'string') {
     const trimmed = value.trim();
-    if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
+    if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined' || trimmed === 'NaN') {
       return defaultValue;
     }
     
@@ -21,6 +24,7 @@ export function safeNumber(value: any, defaultValue: number = 0): number {
     return isNaN(parsed) ? defaultValue : parsed;
   }
   
+  // Try to convert other types
   const converted = Number(value);
   return isNaN(converted) ? defaultValue : converted;
 }

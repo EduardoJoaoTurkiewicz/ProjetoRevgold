@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { ErrorHandler } from '../lib/errorHandler';
+import { safeNumber, safeCurrency, safeAdd, logMonetaryValues } from '../utils/numberUtils';
+import { connectionManager } from '../lib/connectionManager';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -338,7 +340,7 @@ const Dashboard: React.FC = () => {
               totalCommissions: 0
             };
           }
-          sellerStats[sale.sellerId].totalSales += sale.totalValue;
+          sellerStats[sale.sellerId].totalSales += safeNumber(sale.totalValue, 0);
           sellerStats[sale.sellerId].salesCount += 1;
         }
       }
@@ -349,8 +351,8 @@ const Dashboard: React.FC = () => {
       if (commission && commission.employeeId && commission.date) {
         const commissionDate = new Date(commission.date);
         if (commissionDate.getMonth() === currentMonth && commissionDate.getFullYear() === currentYear) {
-            sellerStats[sale.sellerId].totalSales += safeNumber(sale.totalValue, 0);
-            sellerStats[commission.employeeId].totalCommissions += commission.commissionAmount;
+          if (sellerStats[commission.employeeId]) {
+            sellerStats[commission.employeeId].totalCommissions += safeNumber(commission.commissionAmount, 0);
           }
         }
       }
@@ -362,7 +364,8 @@ const Dashboard: React.FC = () => {
       .slice(0, 5);
   }, [sales, employees, employeeCommissions, currentMonth, currentYear]);
 
-            sellerStats[commission.employeeId].totalCommissions += safeNumber(commission.commissionAmount, 0);
+  // Show loading state
+  if (loading || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -474,7 +477,7 @@ const Dashboard: React.FC = () => {
             <div>
               <h3 className="font-bold text-green-900 text-lg">Vendas Hoje</h3>
               <p className="text-3xl font-black text-green-700">
-                R$ {dailyMetrics.totalSalesToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {safeCurrency(dailyMetrics.totalSalesToday)}
               </p>
               <p className="text-sm text-green-600 font-semibold">
                 {dailyMetrics.todaySales} venda(s)
@@ -492,7 +495,7 @@ const Dashboard: React.FC = () => {
             <div>
               <h3 className="font-bold text-emerald-900 text-lg">Recebido Hoje</h3>
               <p className="text-3xl font-black text-emerald-700">
-                R$ {dailyMetrics.totalReceivedToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {safeCurrency(dailyMetrics.totalReceivedToday)}
               </p>
               <p className="text-sm text-emerald-600 font-semibold">
                 Entradas efetivas
@@ -510,7 +513,7 @@ const Dashboard: React.FC = () => {
             <div>
               <h3 className="font-bold text-red-900 text-lg">Dívidas Hoje</h3>
               <p className="text-3xl font-black text-red-700">
-                R$ {dailyMetrics.totalDebtsToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {safeCurrency(dailyMetrics.totalDebtsToday)}
               </p>
               <p className="text-sm text-red-600 font-semibold">
                 {dailyMetrics.todayDebts} dívida(s)
@@ -528,7 +531,7 @@ const Dashboard: React.FC = () => {
             <div>
               <h3 className="font-bold text-orange-900 text-lg">Pago Hoje</h3>
               <p className="text-3xl font-black text-orange-700">
-                R$ {dailyMetrics.totalPaidToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {safeCurrency(dailyMetrics.totalPaidToday)}
               </p>
               <p className="text-sm text-orange-600 font-semibold">
                 Saídas efetivas
@@ -546,7 +549,7 @@ const Dashboard: React.FC = () => {
             <div>
               <h3 className="font-bold text-blue-900 text-lg">Saldo Caixa</h3>
               <p className="text-3xl font-black text-blue-700">
-                R$ {(cashBalance?.currentBalance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {safeCurrency(cashBalance?.currentBalance)}
               </p>
               <div className="flex items-center gap-2 mt-2">
                 <p className="text-sm text-blue-600 font-semibold">
@@ -588,7 +591,7 @@ const Dashboard: React.FC = () => {
               <p className={`text-3xl font-black ${
                 dailyMetrics.netProfitToday >= 0 ? 'text-green-700' : 'text-red-700'
               }`}>
-                {dailyMetrics.netProfitToday >= 0 ? '+' : ''}R$ {dailyMetrics.netProfitToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {dailyMetrics.netProfitToday >= 0 ? '+' : ''}{safeCurrency(Math.abs(dailyMetrics.netProfitToday))}
               </p>
               <p className="text-sm text-purple-600 font-semibold">
                 Recebido - Pago
@@ -624,7 +627,7 @@ const Dashboard: React.FC = () => {
             <div>
               <h3 className="font-bold text-yellow-900 text-lg">Comissões</h3>
               <p className="text-3xl font-black text-yellow-700">
-                R$ {monthlyMetrics.totalCommissionsMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {safeCurrency(monthlyMetrics.totalCommissionsMonth)}
               </p>
               <p className="text-sm text-yellow-600 font-semibold">
                 Mês atual
@@ -642,7 +645,7 @@ const Dashboard: React.FC = () => {
             <div>
               <h3 className="font-bold text-cyan-900 text-lg">Folha Mensal</h3>
               <p className="text-3xl font-black text-cyan-700">
-                R$ {monthlyMetrics.monthlyPayroll.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {safeCurrency(monthlyMetrics.monthlyPayroll)}
               </p>
               <p className="text-sm text-cyan-600 font-semibold">
                 Salários base
@@ -702,7 +705,7 @@ const Dashboard: React.FC = () => {
             <div>
               <h3 className="text-xl font-bold text-red-900">Dívidas para Pagar</h3>
               <p className="text-red-700 font-semibold">
-                Total: R$ {debtsToPay.reduce((sum, debt) => sum + debt.pendingAmount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                Total: {safeCurrency(debtsToPay.reduce((sum, debt) => sum + safeNumber(debt.pendingAmount, 0), 0))}
               </p>
             </div>
           </div>
@@ -720,7 +723,7 @@ const Dashboard: React.FC = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-black text-red-600">
-                      R$ {debt.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      {safeCurrency(debt.pendingAmount)}
                     </p>
                     <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-bold">
                       Pendente
@@ -747,7 +750,7 @@ const Dashboard: React.FC = () => {
             <div>
               <h3 className="text-xl font-bold text-green-900">Valores a Receber</h3>
               <p className="text-green-700 font-semibold">
-                Total: R$ {valuesToReceive.reduce((sum, item) => sum + item.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                Total: {safeCurrency(valuesToReceive.reduce((sum, item) => sum + safeNumber(item.amount, 0), 0))}
               </p>
             </div>
           </div>
@@ -774,7 +777,7 @@ const Dashboard: React.FC = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-black text-green-600">
-                      R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      {safeCurrency(item.amount)}
                     </p>
                     <span className={`text-xs px-2 py-1 rounded-full font-bold ${
                       new Date(item.dueDate) < new Date() ? 'bg-red-100 text-red-800' :
@@ -889,13 +892,13 @@ const Dashboard: React.FC = () => {
                     <div>
                       <p className="text-yellow-700">Vendas: {seller.salesCount || 0}</p>
                       <p className="font-bold text-yellow-800">
-                        R$ {Number(seller.totalSales || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        {safeCurrency(seller.totalSales)}
                       </p>
                     </div>
                     <div>
                       <p className="text-yellow-700">Comissão:</p>
                       <p className="font-bold text-green-600">
-                        R$ {Number(seller.totalCommissions || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        {safeCurrency(seller.totalCommissions)}
                       </p>
                     </div>
                   </div>
@@ -947,10 +950,9 @@ const Dashboard: React.FC = () => {
                   <span className="text-2xl font-black">{item.count}</span>
                 </div>
                 <div className="text-sm mt-1">
-                  Total: R$ {sales
+                  Total: {safeCurrency(sales
                     .filter(s => s.status === item.status)
-                    .reduce((sum, s) => sum + s.totalValue, 0)
-                    .toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    .reduce((sum, s) => sum + safeNumber(s.totalValue, 0), 0))}
                 </div>
               </div>
             ))}
@@ -972,14 +974,14 @@ const Dashboard: React.FC = () => {
                 status: true, 
                 label: 'Pagas', 
                 count: (debts || []).filter(d => d.isPaid).length,
-                total: (debts || []).filter(d => d.isPaid).reduce((sum, d) => sum + d.totalValue, 0),
+                total: (debts || []).filter(d => d.isPaid).reduce((sum, d) => sum + safeNumber(d.totalValue, 0), 0),
                 color: 'bg-green-50 border-green-200 text-green-800'
               },
               { 
                 status: false, 
                 label: 'Pendentes', 
                 count: (debts || []).filter(d => !d.isPaid).length,
-                total: (debts || []).filter(d => !d.isPaid).reduce((sum, d) => sum + d.pendingAmount, 0),
+                total: (debts || []).filter(d => !d.isPaid).reduce((sum, d) => sum + safeNumber(d.pendingAmount, 0), 0),
                 color: 'bg-red-50 border-red-200 text-red-800'
               }
             ].map(item => (
@@ -989,7 +991,7 @@ const Dashboard: React.FC = () => {
                   <span className="text-2xl font-black">{item.count}</span>
                 </div>
                 <div className="text-sm mt-1">
-                  Total: R$ {item.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  Total: {safeCurrency(item.total)}
                 </div>
               </div>
             ))}
@@ -1013,10 +1015,9 @@ const Dashboard: React.FC = () => {
               {(checks || []).filter(c => c.status === 'pendente' && !c.isOwnCheck).length}
             </p>
             <p className="text-sm text-green-600 font-semibold">
-              R$ {(checks || [])
+              {safeCurrency((checks || [])
                 .filter(c => c.status === 'pendente' && !c.isOwnCheck)
-                .reduce((sum, c) => sum + c.value, 0)
-                .toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                .reduce((sum, c) => sum + safeNumber(c.value, 0), 0))}
             </p>
           </div>
           
@@ -1026,10 +1027,9 @@ const Dashboard: React.FC = () => {
               {(boletos || []).filter(b => b.status === 'pendente').length}
             </p>
             <p className="text-sm text-blue-600 font-semibold">
-              R$ {(boletos || [])
+              {safeCurrency((boletos || [])
                 .filter(b => b.status === 'pendente')
-                .reduce((sum, b) => sum + b.value, 0)
-                .toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                .reduce((sum, b) => sum + safeNumber(b.value, 0), 0))}
             </p>
           </div>
           
@@ -1039,10 +1039,9 @@ const Dashboard: React.FC = () => {
               {(sales || []).filter(s => s.status === 'pendente').length}
             </p>
             <p className="text-sm text-purple-600 font-semibold">
-              R$ {(sales || [])
+              {safeCurrency((sales || [])
                 .filter(s => s.status === 'pendente')
-                .reduce((sum, s) => sum + s.pendingAmount, 0)
-                .toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                .reduce((sum, s) => sum + safeNumber(s.pendingAmount, 0), 0))}
             </p>
           </div>
         </div>
@@ -1068,7 +1067,7 @@ const Dashboard: React.FC = () => {
             </div>
             <h4 className="font-bold text-blue-900 mb-2">Faturamento</h4>
             <p className="text-3xl font-black text-green-600">
-              R$ {monthlyMetrics.totalSalesMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              {safeCurrency(monthlyMetrics.totalSalesMonth)}
             </p>
           </div>
           
@@ -1088,7 +1087,7 @@ const Dashboard: React.FC = () => {
             </div>
             <h4 className="font-bold text-blue-900 mb-2">Comissões</h4>
             <p className="text-3xl font-black text-yellow-600">
-              R$ {monthlyMetrics.totalCommissionsMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              {safeCurrency(monthlyMetrics.totalCommissionsMonth)}
             </p>
           </div>
           
@@ -1100,7 +1099,7 @@ const Dashboard: React.FC = () => {
             <p className={`text-3xl font-black ${
               monthlyMetrics.monthlyProfit >= 0 ? 'text-green-600' : 'text-red-600'
             }`}>
-              {monthlyMetrics.monthlyProfit >= 0 ? '+' : ''}R$ {monthlyMetrics.monthlyProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              {monthlyMetrics.monthlyProfit >= 0 ? '+' : ''}{safeCurrency(Math.abs(monthlyMetrics.monthlyProfit))}
             </p>
           </div>
         </div>

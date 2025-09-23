@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Calendar, DollarSign, User, Package, FileText, Eye, Edit, Trash2, X, CreditCard, Receipt, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 import { SaleForm } from './forms/SaleForm';
 import { useAppContext } from '../context/AppContext';
-import { safeNumber, safeCurrency } from '../utils/numberUtils';
+import { safeNumber, safeCurrency, logMonetaryValues } from '../utils/numberUtils';
 import type { Sale } from '../types';
 
 export function Sales() {
@@ -26,12 +26,14 @@ export function Sales() {
   const handleSaleSubmit = async (saleData: Partial<Sale>) => {
     try {
       console.log('🔄 Submetendo venda:', saleData);
+      logMonetaryValues(saleData, 'Sale Submit');
       
       // Verificar se há método de pagamento "acerto"
       const hasAcertoPayment = saleData.paymentMethods?.some(method => method.type === 'acerto');
       
       // Validate total value before submission
-      if (!saleData.totalValue || saleData.totalValue <= 0) {
+      const totalValue = safeNumber(saleData.totalValue, 0);
+      if (totalValue <= 0) {
         throw new Error('Valor total deve ser maior que zero');
       }
       
@@ -78,8 +80,8 @@ export function Sales() {
           // Atualizar acerto existente
           const updatedAcerto = {
             ...existingAcerto,
-            totalAmount: existingAcerto.totalAmount + acertoAmount,
-            pendingAmount: existingAcerto.pendingAmount + acertoAmount,
+            totalAmount: safeNumber(existingAcerto.totalAmount, 0) + safeNumber(acertoAmount, 0),
+            pendingAmount: safeNumber(existingAcerto.pendingAmount, 0) + safeNumber(acertoAmount, 0),
             observations: existingAcerto.observations 
               ? `${existingAcerto.observations}\n\nVenda adicionada: ${sale.observations || 'Venda sem observações'}`
               : `Venda adicionada: ${sale.observations || 'Venda sem observações'}`
@@ -90,9 +92,9 @@ export function Sales() {
           const newAcerto = {
             clientName: sale.client,
             type: 'cliente' as const,
-            totalAmount: acertoAmount,
+            totalAmount: safeNumber(acertoAmount, 0),
             paidAmount: 0,
-            pendingAmount: acertoAmount,
+            pendingAmount: safeNumber(acertoAmount, 0),
             status: 'pendente' as const,
             observations: `Acerto criado automaticamente para venda: ${sale.observations || 'Venda sem observações'}`
           };
@@ -146,7 +148,7 @@ export function Sales() {
   };
 
   const formatCurrency = (value: number) => {
-    return safeCurrency(value);
+    return safeCurrency(safeNumber(value, 0));
   };
 
   const formatDate = (date: string) => {
@@ -308,7 +310,7 @@ export function Sales() {
                             {method.type.replace('_', ' ').toUpperCase()}
                           </span>
                           <span className="text-xl font-black text-green-600">
-                            {safeCurrency(method.amount)}
+                            {safeCurrency(safeNumber(method.amount, 0))}
                           </span>
                         </div>
                         
@@ -317,13 +319,13 @@ export function Sales() {
                             <div className="flex justify-between">
                               <span className="text-green-700">Parcelas:</span>
                               <span className="font-bold text-green-800">
-                                {method.installments}x de {safeCurrency(method.installmentValue || 0)}
+                                {safeNumber(method.installments, 1)}x de {safeCurrency(safeNumber(method.installmentValue, 0))}
                               </span>
                             </div>
                             {method.installmentInterval && (
                               <div className="flex justify-between">
                                 <span className="text-green-700">Intervalo:</span>
-                                <span className="font-bold text-green-800">{method.installmentInterval} dias</span>
+                                <span className="font-bold text-green-800">{safeNumber(method.installmentInterval, 30)} dias</span>
                               </div>
                             )}
                             {method.firstInstallmentDate && (
@@ -398,7 +400,7 @@ export function Sales() {
                               </p>
                             </div>
                             <span className="text-lg font-black text-yellow-600">
-                              {safeCurrency(check.value)}
+                              {safeCurrency(safeNumber(check.value, 0))}
                             </span>
                           </div>
                           
@@ -464,7 +466,7 @@ export function Sales() {
                               </p>
                             </div>
                             <span className="text-lg font-black text-cyan-600">
-                              {safeCurrency(boleto.value)}
+                              {safeCurrency(safeNumber(boleto.value, 0))}
                             </span>
                           </div>
                           
@@ -493,7 +495,7 @@ export function Sales() {
                               <div className="flex justify-between">
                                 <span className="text-cyan-700">Valor Final:</span>
                                 <span className="font-bold text-green-600">
-                                  {safeCurrency(boleto.finalAmount)}
+                                  {safeCurrency(safeNumber(boleto.finalAmount, 0))}
                                 </span>
                               </div>
                             )}
@@ -525,19 +527,19 @@ export function Sales() {
                     <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-200">
                       <p className="text-blue-600 font-semibold">Total</p>
                       <p className="text-2xl font-black text-blue-700">
-                        {safeCurrency(sale.totalValue)}
+                        {safeCurrency(safeNumber(sale.totalValue, 0))}
                       </p>
                     </div>
                     <div className="text-center p-4 bg-green-50 rounded-xl border border-green-200">
                       <p className="text-green-600 font-semibold">Recebido</p>
                       <p className="text-2xl font-black text-green-700">
-                        {safeCurrency(sale.receivedAmount)}
+                        {safeCurrency(safeNumber(sale.receivedAmount, 0))}
                       </p>
                     </div>
                     <div className="text-center p-4 bg-orange-50 rounded-xl border border-orange-200">
                       <p className="text-orange-600 font-semibold">Pendente</p>
                       <p className="text-2xl font-black text-orange-700">
-                        {safeCurrency(sale.pendingAmount)}
+                        {safeCurrency(safeNumber(sale.pendingAmount, 0))}
                       </p>
                     </div>
                   </div>
@@ -553,7 +555,7 @@ export function Sales() {
                           Comissão ({sale.customCommissionRate}%):
                         </span>
                         <span className="text-xl font-black text-purple-600">
-                          {formatCurrency((sale.totalValue * (sale.customCommissionRate || 0)) / 100)}
+                          {formatCurrency((safeNumber(sale.totalValue, 0) * safeNumber(sale.customCommissionRate, 0)) / 100)}
                         </span>
                       </div>
                     </div>

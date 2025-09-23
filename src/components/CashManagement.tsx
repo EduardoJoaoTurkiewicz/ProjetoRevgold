@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ErrorHandler } from '../lib/errorHandler';
-import { safeNumber, validateFormNumber, safeCurrency } from '../utils/numberUtils';
+import { safeNumber, validateFormNumber, safeCurrency, logMonetaryValues } from '../utils/numberUtils';
+import { connectionManager } from '../lib/connectionManager';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -97,7 +98,7 @@ export function CashManagement() {
   const handleInitializeCash = async (e) => {
     e.preventDefault();
     
-    const validAmount = validateFormNumber(initialAmount, 'Valor Inicial');
+    const validAmount = safeNumber(initialAmount, 0);
     if (validAmount <= 0) {
       alert('O valor inicial deve ser maior que zero.');
       return;
@@ -107,6 +108,7 @@ export function CashManagement() {
     
     try {
       console.log('🔄 Inicializando caixa com valor:', validAmount);
+      logMonetaryValues({ initialAmount: validAmount }, 'Initialize Cash');
       await initializeCashBalance(validAmount);
       console.log('✅ Caixa inicializado com sucesso');
       
@@ -599,7 +601,7 @@ export function CashManagement() {
                       </td>
                       <td className="py-4 px-6 text-sm font-black text-right">
                         <span className={transaction.type === 'entrada' ? 'text-green-600' : 'text-red-600'}>
-                          {transaction.type === 'entrada' ? '+' : '-'}{safeCurrency(transaction.amount)}
+                          {transaction.type === 'entrada' ? '+' : '-'}{safeCurrency(safeNumber(transaction.amount, 0))}
                         </span>
                       </td>
                       <td className="py-4 px-6 text-sm">

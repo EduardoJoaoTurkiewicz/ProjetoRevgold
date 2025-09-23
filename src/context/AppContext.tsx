@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '@supabase/supabase-js';
+import { sanitizeSupabaseData, logMonetaryValues, safeNumber } from '../utils/numberUtils';
 import {
   salesService,
   employeeService,
@@ -271,11 +272,28 @@ export function AppProvider({ children }: AppProviderProps) {
         acertosService.getAcertos()
       ]);
 
+      // Sanitize all loaded data to ensure no NaN values
+      const sanitizedSalesData = (salesData || []).map(sale => {
+        const sanitized = sanitizeSupabaseData(sale);
+        logMonetaryValues(sanitized, `Sale ${sanitized.id}`);
+        return sanitized;
+      });
+      
+      const sanitizedCashBalance = cashBalanceData ? sanitizeSupabaseData(cashBalanceData) : null;
+      if (sanitizedCashBalance) {
+        logMonetaryValues(sanitizedCashBalance, 'Cash Balance');
+      }
+      
+      const sanitizedCashTransactions = (cashTransactionsData || []).map(transaction => {
+        const sanitized = sanitizeSupabaseData(transaction);
+        logMonetaryValues(sanitized, `Transaction ${sanitized.id}`);
+        return sanitized;
+      });
       // Atualizar estado com dados carregados
-      setSales(salesData || []);
+      setSales(sanitizedSalesData);
       setEmployees(employeeData || []);
-      setCashBalance(cashBalanceData);
-      setCashTransactions(cashTransactionsData || []);
+      setCashBalance(sanitizedCashBalance);
+      setCashTransactions(sanitizedCashTransactions);
       setDebts(debtsData || []);
       setChecks(checksData || []);
       setBoletos(boletosData || []);
@@ -327,12 +345,30 @@ export function AppProvider({ children }: AppProviderProps) {
     try {
       console.log('🔄 AppContext.createSale - Input sale data:', sale);
       
+      // Sanitize monetary values before processing
+      const sanitizedSale = {
+        ...sale,
+        totalValue: safeNumber(sale.totalValue, 0),
+        receivedAmount: safeNumber(sale.receivedAmount, 0),
+        pendingAmount: safeNumber(sale.pendingAmount, 0),
+        customCommissionRate: safeNumber(sale.customCommissionRate, 5),
+        paymentMethods: (sale.paymentMethods || []).map(method => ({
+          ...method,
+          amount: safeNumber(method.amount, 0),
+          installmentValue: safeNumber(method.installmentValue, 0),
+          installments: safeNumber(method.installments, 1),
+          installmentInterval: safeNumber(method.installmentInterval, 30)
+        }))
+      };
+      
+      logMonetaryValues(sanitizedSale, 'Create Sale - AppContext');
+      
       if (!isSupabaseConfigured()) {
         throw new Error('Supabase não configurado. Configure o arquivo .env para usar esta funcionalidade.');
       }
       
       console.log('🔄 AppContext.createSale - Calling salesService.create...');
-      const saleId = await salesService.create(sale);
+      const saleId = await salesService.create(sanitizedSale);
       console.log('✅ AppContext.createSale - Sale created with ID:', saleId);
       
       await loadAllData(); // Recarregar dados após criação
@@ -413,10 +449,13 @@ export function AppProvider({ children }: AppProviderProps) {
   // Métodos de caixa
   const initializeCashBalance = async (amount: number): Promise<void> => {
     try {
+      const safeAmount = safeNumber(amount, 0);
+      logMonetaryValues({ amount: safeAmount }, 'Initialize Cash Balance - AppContext');
+      
       if (!isSupabaseConfigured()) {
         throw new Error('Supabase não configurado. Configure o arquivo .env para usar esta funcionalidade.');
       }
-      await cashService.initializeCashBalance(amount);
+      await cashService.initializeCashBalance(safeAmount);
       await loadAllData();
     } catch (error) {
       console.error('❌ Erro ao inicializar caixa:', error);
@@ -439,7 +478,13 @@ export function AppProvider({ children }: AppProviderProps) {
 
   const createCashTransaction = async (transaction: Omit<CashTransaction, 'id' | 'createdAt'>): Promise<string> => {
     try {
-      const transactionId = await cashService.createTransaction(transaction);
+      const sanitizedTransaction = {
+        ...transaction,
+        amount: safeNumber(transaction.amount, 0)
+      };
+      
+      logMonetaryValues(sanitizedTransaction, 'Create Cash Transaction - AppContext');
+      const transactionId = await cashService.createTransaction(sanitizedTransaction);
       await loadAllData();
       return transactionId;
     } catch (error) {
@@ -471,7 +516,20 @@ export function AppProvider({ children }: AppProviderProps) {
   // Métodos de dívidas
   const createDebt = async (debt: Omit<Debt, 'id' | 'createdAt'>): Promise<string> => {
     try {
-      const debtId = await debtsService.create(debt);
+      const sanitizedDebt = {
+        ...debt,
+        totalValue: safeNumber(debt.totalValue, 0),
+        paidAmount: safeNumber(debt.paidAmount, 0),
+        pendingAmount: safeNumber(debt.pendingAmount, 0),
+        paymentMethods: (debt.paymentMethods || []).map(method => ({
+          ...method,
+          amount: safeNumber(method.amount, 0),
+          installmentValue: safeNumber(method.installmentValue, 0)
+        }))
+      };
+      
+      logMonetaryValues(sanitizedDebt, 'Create Debt - AppContext');
+      const debtId = await debtsService.create(sanitizedDebt);
       await loadAllData();
       return debtId;
     } catch (error) {
@@ -503,7 +561,15 @@ export function AppProvider({ children }: AppProviderProps) {
   // Métodos de cheques
   const createCheck = async (check: Omit<Check, 'id' | 'createdAt'>): Promise<string> => {
     try {
-      const checkId = await checksService.create(check);
+      const sanitizedCheck = {
+        ...check,
+        value: safeNumber(check.value, 0),
+        installmentNumber: safeNumber(check.installmentNumber, 1),
+        totalInstallments: safeNumber(check.totalInstallments, 1)
+      };
+      
+      logMonetaryValues(sanitizedCheck, 'Create Check - AppContext');
+      const checkId = await checksService.create(sanitizedCheck);
       await loadAllData();
       return checkId;
     } catch (error) {
@@ -535,7 +601,20 @@ export function AppProvider({ children }: AppProviderProps) {
   // Métodos de boletos
   const createBoleto = async (boleto: Omit<Boleto, 'id' | 'createdAt'>): Promise<string> => {
     try {
-      const boletoId = await boletosService.create(boleto);
+      const sanitizedBoleto = {
+        ...boleto,
+        value: safeNumber(boleto.value, 0),
+        installmentNumber: safeNumber(boleto.installmentNumber, 1),
+        totalInstallments: safeNumber(boleto.totalInstallments, 1),
+        interestAmount: safeNumber(boleto.interestAmount, 0),
+        penaltyAmount: safeNumber(boleto.penaltyAmount, 0),
+        notaryCosts: safeNumber(boleto.notaryCosts, 0),
+        finalAmount: safeNumber(boleto.finalAmount, safeNumber(boleto.value, 0)),
+        interestPaid: safeNumber(boleto.interestPaid, 0)
+      };
+      
+      logMonetaryValues(sanitizedBoleto, 'Create Boleto - AppContext');
+      const boletoId = await boletosService.create(sanitizedBoleto);
       await loadAllData();
       return boletoId;
     } catch (error) {
@@ -567,7 +646,13 @@ export function AppProvider({ children }: AppProviderProps) {
   // Métodos de funcionários
   const createEmployeePayment = async (payment: Omit<EmployeePayment, 'id' | 'createdAt'>): Promise<string> => {
     try {
-      const paymentId = await employeePaymentsService.create(payment);
+      const sanitizedPayment = {
+        ...payment,
+        amount: safeNumber(payment.amount, 0)
+      };
+      
+      logMonetaryValues(sanitizedPayment, 'Create Employee Payment - AppContext');
+      const paymentId = await employeePaymentsService.create(sanitizedPayment);
       await loadAllData();
       return paymentId;
     } catch (error) {
@@ -578,7 +663,13 @@ export function AppProvider({ children }: AppProviderProps) {
 
   const createEmployeeAdvance = async (advance: Omit<EmployeeAdvance, 'id' | 'createdAt'>): Promise<string> => {
     try {
-      const advanceId = await employeeAdvancesService.create(advance);
+      const sanitizedAdvance = {
+        ...advance,
+        amount: safeNumber(advance.amount, 0)
+      };
+      
+      logMonetaryValues(sanitizedAdvance, 'Create Employee Advance - AppContext');
+      const advanceId = await employeeAdvancesService.create(sanitizedAdvance);
       await loadAllData();
       return advanceId;
     } catch (error) {
@@ -599,7 +690,15 @@ export function AppProvider({ children }: AppProviderProps) {
 
   const createEmployeeOvertime = async (overtime: Omit<EmployeeOvertime, 'id' | 'createdAt'>): Promise<string> => {
     try {
-      const overtimeId = await employeeOvertimesService.create(overtime);
+      const sanitizedOvertime = {
+        ...overtime,
+        hours: safeNumber(overtime.hours, 0),
+        hourlyRate: safeNumber(overtime.hourlyRate, 0),
+        totalAmount: safeNumber(overtime.totalAmount, 0)
+      };
+      
+      logMonetaryValues(sanitizedOvertime, 'Create Employee Overtime - AppContext');
+      const overtimeId = await employeeOvertimesService.create(sanitizedOvertime);
       await loadAllData();
       return overtimeId;
     } catch (error) {
@@ -631,7 +730,13 @@ export function AppProvider({ children }: AppProviderProps) {
   // Métodos de tarifas PIX
   const createPixFee = async (pixFee: Omit<PixFee, 'id' | 'createdAt'>): Promise<string> => {
     try {
-      const pixFeeId = await pixFeesService.create(pixFee);
+      const sanitizedPixFee = {
+        ...pixFee,
+        amount: safeNumber(pixFee.amount, 0)
+      };
+      
+      logMonetaryValues(sanitizedPixFee, 'Create PIX Fee - AppContext');
+      const pixFeeId = await pixFeesService.create(sanitizedPixFee);
       await loadAllData();
       return pixFeeId;
     } catch (error) {
@@ -663,7 +768,13 @@ export function AppProvider({ children }: AppProviderProps) {
   // Métodos de impostos
   const createTax = async (tax: Omit<Tax, 'id' | 'createdAt'>): Promise<string> => {
     try {
-      const taxId = await taxesService.create(tax);
+      const sanitizedTax = {
+        ...tax,
+        amount: safeNumber(tax.amount, 0)
+      };
+      
+      logMonetaryValues(sanitizedTax, 'Create Tax - AppContext');
+      const taxId = await taxesService.create(sanitizedTax);
       await loadAllData();
       return taxId;
     } catch (error) {
@@ -727,7 +838,18 @@ export function AppProvider({ children }: AppProviderProps) {
   // Métodos de acertos
   const createAcerto = async (acerto: Omit<Acerto, 'id' | 'createdAt'>): Promise<string> => {
     try {
-      const acertoId = await acertosService.create(acerto);
+      const sanitizedAcerto = {
+        ...acerto,
+        totalAmount: safeNumber(acerto.totalAmount, 0),
+        paidAmount: safeNumber(acerto.paidAmount, 0),
+        pendingAmount: safeNumber(acerto.pendingAmount, 0),
+        paymentInstallments: safeNumber(acerto.paymentInstallments, 1),
+        paymentInstallmentValue: safeNumber(acerto.paymentInstallmentValue, 0),
+        paymentInterval: safeNumber(acerto.paymentInterval, 30)
+      };
+      
+      logMonetaryValues(sanitizedAcerto, 'Create Acerto - AppContext');
+      const acertoId = await acertosService.create(sanitizedAcerto);
       await loadAllData();
       return acertoId;
     } catch (error) {

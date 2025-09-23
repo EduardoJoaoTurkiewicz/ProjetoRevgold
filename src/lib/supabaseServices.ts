@@ -1,621 +1,1341 @@
-import React, { useMemo, useState } from 'react';
-import { useAppContext } from '../context/AppContext';
-import { ErrorHandler } from '../lib/errorHandler';
-import { 
-  DollarSign, 
-  TrendingUp, 
-  TrendingDown, 
-  Users, 
-  CreditCard, 
-  Calendar,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  Wallet,
-  Star,
-  FileText,
-  Receipt,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  Activity,
-  Target,
-  Award,
-  Building2,
-  PieChart,
-  BarChart3
-} from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
-  AreaChart,
-  Area
-} from 'recharts';
+import { supabase, isSupabaseConfigured } from './supabase';
+import { transformToSnakeCase, transformFromSnakeCase } from '../utils/format';
+import { sanitizeSupabaseData, safeNumber, logMonetaryValues } from '../utils/numberUtils';
+import { ErrorHandler } from './errorHandler';
+import { saveOffline, addToSyncQueue } from './offlineStorage';
+import { connectionManager } from './connectionManager';
+import type { 
+  Sale, 
+  Employee, 
+  CashBalance, 
+  CashTransaction, 
+  Debt, 
+  Check, 
+  Boleto,
+  EmployeePayment,
+  EmployeeAdvance,
+  EmployeeOvertime,
+  EmployeeCommission,
+  PixFee,
+  Tax,
+  AgendaEvent,
+  Acerto
+} from '../types';
 
-const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#84cc16', '#f97316'];
+// Helper function to safely execute Supabase operations
+async function safeSupabaseOperation<T>(
+  operation: () => Promise<{ data: T | null; error: any }>,
+  fallbackValue: T | null = null,
+  context: string = 'Unknown'
+): Promise<T | null> {
+  if (!isSupabaseConfigured()) {
+    console.warn(`⚠️ Supabase not configured for ${context} - working offline`);
+    return fallbackValue;
+  }
 
-const Dashboard: React.FC = () => {
-  const { 
-    sales, 
-    employees, 
-    debts, 
-    checks, 
-    boletos, 
-    employeeCommissions,
-    employeePayments,
-    employeeAdvances,
-    employeeOvertimes,
-    pixFees,
-    cashBalance,
-    recalculateCashBalance,
-    loading, 
-    isLoading,
-    error,
-    setError,
-    loadAllData
-  } = useAppContext();
-  
-  const [isRecalculating, setIsRecalculating] = useState(false);
-
-  const today = new Date().toISOString().split('T')[0];
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  
-  // Force data reload on mount
-  React.useEffect(() => {
-    // Dados já carregados pelo AppContext - não recarregar aqui
-    console.log('📊 Dashboard mounted - using data from context');
-  }, []);
-
-  // Calcular métricas do dia
-  const dailyMetrics = useMemo(() => {
-    // 1. Total de Vendas do dia
-    const todaySales = (sales || []).filter(sale => sale.date === today);
-    const totalSalesToday = todaySales.reduce((sum, sale) => sum + sale.totalValue, 0);
-
-    // 2. Valor Recebido do dia (vendas instantâneas + cheques compensados + boletos pagos)
-    let totalReceivedToday = 0;
+  try {
+    const { data, error } = await operation();
     
-    // Vendas com pagamento instantâneo
-    todaySales.forEach(sale => {
-      if (sale && sale.paymentMethods && Array.isArray(sale.paymentMethods)) {
-        sale.paymentMethods.forEach(method => {
-          if (method && method.type && method.amount) {
-            if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
-                (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
-              totalReceivedToday += method.amount;
-            }
-          }
-        });
-      }
-    });
-    
-    // Cheques compensados hoje
-    (checks || []).forEach(check => {
-      if (check && check.dueDate === today && check.status === 'compensado') {
-        totalReceivedToday += check.value;
-      }
-    });
-    
-    // Boletos pagos hoje
-    (boletos || []).forEach(boleto => {
-      if (boleto && boleto.dueDate === today && boleto.status === 'compensado') {
-        const finalAmount = boleto.finalAmount || boleto.value;
-        const notaryCosts = boleto.notaryCosts || 0;
-        totalReceivedToday += (finalAmount - notaryCosts);
-      }
-    });
-
-    // 3. Total de Dívidas do dia
-    const todayDebts = (debts || []).filter(debt => debt && debt.date === today);
-    const totalDebtsToday = todayDebts.reduce((sum, debt) => sum + (debt ? debt.totalValue : 0), 0);
-
-    // 4. Total Pago hoje
-    let totalPaidToday = 0;
-    
-    // Dívidas pagas hoje
-    todayDebts.forEach(debt => {
-      if (debt && debt.isPaid && debt.paymentMethods && Array.isArray(debt.paymentMethods)) {
-        debt.paymentMethods.forEach(method => {
-          if (method && method.type && method.amount && ['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(method.type)) {
-            totalPaidToday += method.amount;
-          }
-        });
-      }
-    });
-    
-    // Pagamentos de funcionários hoje
-    (employeePayments || []).forEach(payment => {
-      if (payment && payment.paymentDate === today) {
-        totalPaidToday += payment.amount;
-      }
-    });
-    
-    // Tarifas PIX hoje
-    (pixFees || []).forEach(fee => {
-      if (fee && fee.date === today) {
-        totalPaidToday += fee.amount;
-      }
-    });
-
-    // 5. Lucro Líquido do dia
-    const netProfitToday = totalReceivedToday - totalPaidToday;
-
-    return {
-      totalSalesToday,
-      totalReceivedToday,
-      totalDebtsToday,
-      totalPaidToday,
-      netProfitToday,
-      todaySales: todaySales.length,
-      todayDebts: todayDebts.length
-    };
-  }, [sales, debts, checks, boletos, employeePayments, pixFees, today]);
-
-  // Calcular métricas do mês
-  const monthlyMetrics = useMemo(() => {
-    // Comissões do mês
-    const monthlyCommissions = (employeeCommissions || []).filter(commission => {
-      if (!commission || !commission.date) return false;
-      const commissionDate = new Date(commission.date);
-      return commissionDate.getMonth() === currentMonth && 
-             commissionDate.getFullYear() === currentYear;
-    });
-    const totalCommissionsMonth = monthlyCommissions.reduce((sum, c) => sum + (c ? c.commissionAmount : 0), 0);
-
-    // Folha de pagamento do mês
-    const monthlyPayroll = (employees || [])
-      .filter(emp => emp && emp.isActive)
-      .reduce((sum, emp) => sum + (emp ? emp.salary : 0), 0);
-
-    // Vendas do mês
-    const monthlySales = (sales || []).filter(sale => {
-      if (!sale || !sale.date) return false;
-      const saleDate = new Date(sale.date);
-      return saleDate.getMonth() === currentMonth && 
-             saleDate.getFullYear() === currentYear;
-    });
-    const totalSalesMonth = monthlySales.reduce((sum, sale) => sum + (sale ? sale.totalValue : 0), 0);
-
-    // Lucro do mês (simplificado)
-    const monthlyProfit = totalSalesMonth - monthlyPayroll - totalCommissionsMonth;
-
-    return {
-      totalCommissionsMonth,
-      monthlyPayroll,
-      totalSalesMonth,
-      monthlyProfit,
-      monthlySalesCount: monthlySales.length
-    };
-  }, [employeeCommissions, employees, sales, currentMonth, currentYear]);
-
-  // Boletos vencidos
-  const overdueBoletos = useMemo(() => {
-    return (boletos || []).filter(boleto => 
-      boleto && boleto.dueDate && boleto.dueDate < today && boleto.status === 'pendente'
-    );
-  }, [boletos, today]);
-
-  // Dívidas para pagar
-  const debtsToPay = useMemo(() => {
-    return (debts || []).filter(debt => debt && !debt.isPaid);
-  }, [debts]);
-
-  // Valores a receber
-  const valuesToReceive = useMemo(() => {
-    const toReceive = [];
-    
-    // Cheques pendentes
-    (checks || []).forEach(check => {
-      if (check && check.status === 'pendente' && !check.isOwnCheck) {
-        toReceive.push({
-          id: check.id,
-          type: 'Cheque',
-          client: check.client,
-          amount: check.value,
-          dueDate: check.dueDate,
-          description: `Cheque - Parcela ${check.installmentNumber}/${check.totalInstallments}`,
-          status: check.status
-        });
-      }
-    });
-    
-    // Boletos pendentes
-    (boletos || []).forEach(boleto => {
-      if (boleto && boleto.status === 'pendente') {
-        toReceive.push({
-          id: boleto.id,
-          type: 'Boleto',
-          client: boleto.client,
-          amount: boleto.value,
-          dueDate: boleto.dueDate,
-          description: `Boleto - Parcela ${boleto.installmentNumber}/${boleto.totalInstallments}`,
-          status: boleto.status
-        });
-      }
-    });
-    
-    // Vendas com valores pendentes
-    (sales || []).forEach(sale => {
-      if (sale && sale.pendingAmount > 0) {
-        toReceive.push({
-          id: sale.id,
-          type: 'Venda',
-          client: sale.client,
-          amount: sale.pendingAmount,
-          dueDate: sale.date,
-          description: `Venda pendente`,
-          status: sale.status
-        });
-      }
-    });
-    
-    return toReceive.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-  }, [checks, boletos, sales]);
-
-  // Dados para gráfico de fluxo financeiro (30 dias)
-  const flowChartData = useMemo(() => {
-    const last30Days = [];
-    const today = new Date();
-    
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      
-      // Vendas do dia
-      const daySales = (sales || []).filter(sale => sale && sale.date === dateStr);
-      const salesValue = daySales.reduce((sum, sale) => sum + (sale ? sale.totalValue : 0), 0);
-      
-      // Dívidas do dia
-      const dayDebts = (debts || []).filter(debt => debt && debt.date === dateStr);
-      const debtsValue = dayDebts.reduce((sum, debt) => sum + (debt ? debt.totalValue : 0), 0);
-      
-      // Lucro do dia (vendas - dívidas)
-      const profit = salesValue - debtsValue;
-      
-      last30Days.push({
-        date: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-        vendas: salesValue,
-        dividas: debtsValue,
-        lucro: profit
-      });
+    if (error) {
+      console.error(`❌ Supabase error in ${context}:`, error);
+      throw error;
     }
     
-    return last30Days;
-  }, [sales, debts]);
+    // Sanitize monetary values in the response
+    const sanitizedData = sanitizeSupabaseData(data);
+    logMonetaryValues(sanitizedData, context);
+    
+    return sanitizedData;
+  } catch (error) {
+    ErrorHandler.logProjectError(error, context);
+    
+    if (error?.message?.includes('Failed to fetch') || error?.message?.includes('Network error')) {
+      console.warn(`⚠️ Network error in ${context} - working offline`);
+      return fallbackValue;
+    }
+    
+    throw error;
+  }
+}
 
-  // Dados para gráfico de métodos de pagamento
-  const paymentMethodsData = useMemo(() => {
-    const methods = {};
-    
-    (sales || []).forEach(sale => {
-      if (sale && sale.paymentMethods && Array.isArray(sale.paymentMethods)) {
-        sale.paymentMethods.forEach(method => {
-          if (method && method.type && method.amount) {
-            const methodName = method.type.replace('_', ' ').toUpperCase();
-            if (!methods[methodName]) {
-              methods[methodName] = 0;
-            }
-            methods[methodName] += method.amount;
-          }
-        });
-      }
-    });
-    
-    return Object.entries(methods).map(([name, value]) => ({
-      name,
-      value,
-      percentage: ((value / Object.values(methods).reduce((a, b) => a + b, 0)) * 100).toFixed(1)
-    }));
-  }, [sales]);
-
-  // Top vendedores do mês
-  const topSellers = useMemo(() => {
-    const sellerStats = {};
-    
-    // Vendas do mês por vendedor
-    (sales || []).forEach(sale => {
-      if (sale && sale.sellerId && sale.date) {
-        const saleDate = new Date(sale.date);
-        if (saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear) {
-          if (!sellerStats[sale.sellerId]) {
-            const employee = (employees || []).find(emp => emp.id === sale.sellerId);
-            sellerStats[sale.sellerId] = {
-              name: employee ? employee.name : 'Vendedor não encontrado',
-              totalSales: 0,
-              salesCount: 0,
-              totalCommissions: 0
-            };
-          }
-          sellerStats[sale.sellerId].totalSales += sale.totalValue;
-          sellerStats[sale.sellerId].salesCount += 1;
-        }
-      }
-    });
-    
-    // Adicionar comissões
-    (employeeCommissions || []).forEach(commission => {
-      if (commission && commission.employeeId && commission.date) {
-        const commissionDate = new Date(commission.date);
-        if (commissionDate.getMonth() === currentMonth && commissionDate.getFullYear() === currentYear) {
-          if (sellerStats[commission.employeeId]) {
-            sellerStats[commission.employeeId].totalCommissions += commission.commissionAmount;
-          }
-        }
-      }
-    });
-    
-    return Object.values(sellerStats)
-      .filter(seller => seller && typeof seller === 'object')
-      .sort((a, b) => b.totalSales - a.totalSales)
-      .slice(0, 5);
-  }, [sales, employees, employeeCommissions, currentMonth, currentYear]);
-
-  if (loading || isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="w-24 h-24 bg-gradient-to-br from-green-600 to-emerald-700 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
-            <Activity className="w-12 h-12 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">Carregando Dashboard...</h2>
-          <p className="text-slate-600">Preparando seus dados financeiros</p>
-          {error && (
-            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl max-w-md mx-auto">
-              <p className="text-red-700 text-sm font-medium">{error}</p>
-            </div>
-          )}
-        </div>
-      </div>
+// Sales Service
+export const salesService = {
+  async getSales(): Promise<Sale[]> {
+    const data = await safeSupabaseOperation(
+      () => supabase.from('sales').select('*').order('created_at', { ascending: false }),
+      [],
+      'Get Sales'
     );
+    
+    if (!data) return [];
+    
+    return data.map(sale => {
+      const sanitized = sanitizeSupabaseData(transformFromSnakeCase(sale));
+      
+      // Ensure all monetary fields are numbers
+      sanitized.totalValue = safeNumber(sanitized.totalValue, 0);
+      sanitized.receivedAmount = safeNumber(sanitized.receivedAmount, 0);
+      sanitized.pendingAmount = safeNumber(sanitized.pendingAmount, 0);
+      sanitized.customCommissionRate = safeNumber(sanitized.customCommissionRate, 5);
+      
+      // Sanitize payment methods
+      if (sanitized.paymentMethods && Array.isArray(sanitized.paymentMethods)) {
+        sanitized.paymentMethods = sanitized.paymentMethods.map(method => ({
+          ...method,
+          amount: safeNumber(method.amount, 0),
+          installmentValue: safeNumber(method.installmentValue, 0),
+          installments: safeNumber(method.installments, 1),
+          installmentInterval: safeNumber(method.installmentInterval, 30)
+        }));
+      }
+      
+      return sanitized;
+    });
+  },
+
+  async create(sale: Omit<Sale, 'id' | 'createdAt'>): Promise<string> {
+    console.log('🔄 salesService.create - Input sale:', sale);
+    
+    // Sanitize all monetary values before sending
+    const sanitizedSale = {
+      ...sale,
+      totalValue: safeNumber(sale.totalValue, 0),
+      receivedAmount: safeNumber(sale.receivedAmount, 0),
+      pendingAmount: safeNumber(sale.pendingAmount, 0),
+      customCommissionRate: safeNumber(sale.customCommissionRate, 5),
+      paymentMethods: (sale.paymentMethods || []).map(method => ({
+        ...method,
+        amount: safeNumber(method.amount, 0),
+        installmentValue: safeNumber(method.installmentValue, 0),
+        installments: safeNumber(method.installments, 1),
+        installmentInterval: safeNumber(method.installmentInterval, 30)
+      }))
+    };
+    
+    logMonetaryValues(sanitizedSale, 'Create Sale Input');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      console.log('💾 Saving sale offline');
+      return await saveOffline('sales', sanitizedSale);
+    }
+
+    try {
+      console.log('🔄 salesService.create - Calling Supabase RPC...');
+      const { data, error } = await supabase.rpc('create_sale', { 
+        payload: transformToSnakeCase(sanitizedSale) 
+      });
+      
+      if (error) {
+        console.error('❌ Supabase RPC error:', error);
+        throw error;
+      }
+      
+      console.log('✅ salesService.create - Sale created with ID:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Error creating sale:', error);
+      
+      // Save offline if network error
+      if (error?.message?.includes('Failed to fetch') || error?.message?.includes('Network error')) {
+        console.log('💾 Saving sale offline due to network error');
+        return await saveOffline('sales', sanitizedSale);
+      }
+      
+      throw error;
+    }
+  },
+
+  async update(id: string, sale: Partial<Sale>): Promise<void> {
+    // Sanitize monetary values
+    const sanitizedSale = sanitizeSupabaseData(sale);
+    logMonetaryValues(sanitizedSale, 'Update Sale');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'update',
+        table: 'sales',
+        data: { id, ...sanitizedSale },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('sales')
+      .update(transformToSnakeCase(sanitizedSale))
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'delete',
+        table: 'sales',
+        data: { id },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('sales')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Employee Service
+export const employeeService = {
+  async getEmployees(): Promise<Employee[]> {
+    const data = await safeSupabaseOperation(
+      () => supabase.from('employees').select('*').order('created_at', { ascending: false }),
+      [],
+      'Get Employees'
+    );
+    
+    if (!data) return [];
+    
+    return data.map(employee => {
+      const sanitized = sanitizeSupabaseData(transformFromSnakeCase(employee));
+      sanitized.salary = safeNumber(sanitized.salary, 0);
+      sanitized.paymentDay = safeNumber(sanitized.paymentDay, 5);
+      return sanitized;
+    });
+  },
+
+  async create(employee: Omit<Employee, 'id' | 'createdAt'>): Promise<string> {
+    const sanitizedEmployee = {
+      ...employee,
+      salary: safeNumber(employee.salary, 0),
+      paymentDay: safeNumber(employee.paymentDay, 5)
+    };
+    
+    logMonetaryValues(sanitizedEmployee, 'Create Employee');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      return await saveOffline('employees', sanitizedEmployee);
+    }
+
+    const { data, error } = await supabase
+      .from('employees')
+      .insert([transformToSnakeCase(sanitizedEmployee)])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data.id;
+  },
+
+  async update(id: string, employee: Partial<Employee>): Promise<void> {
+    const sanitizedEmployee = sanitizeSupabaseData(employee);
+    logMonetaryValues(sanitizedEmployee, 'Update Employee');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'update',
+        table: 'employees',
+        data: { id, ...sanitizedEmployee },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('employees')
+      .update(transformToSnakeCase(sanitizedEmployee))
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'delete',
+        table: 'employees',
+        data: { id },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('employees')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Cash Service
+export const cashService = {
+  async getCurrentBalance(): Promise<CashBalance | null> {
+    const data = await safeSupabaseOperation(
+      () => supabase.rpc('get_current_cash_balance'),
+      null,
+      'Get Cash Balance'
+    );
+    
+    if (!data || !Array.isArray(data) || data.length === 0) return null;
+    
+    const balance = transformFromSnakeCase(data[0]);
+    const sanitized = sanitizeSupabaseData(balance);
+    
+    // Ensure all balance fields are numbers
+    sanitized.currentBalance = safeNumber(sanitized.currentBalance, 0);
+    sanitized.initialBalance = safeNumber(sanitized.initialBalance, 0);
+    
+    logMonetaryValues(sanitized, 'Cash Balance');
+    return sanitized;
+  },
+
+  async getTransactions(): Promise<CashTransaction[]> {
+    const data = await safeSupabaseOperation(
+      () => supabase.from('cash_transactions').select('*').order('date', { ascending: false }),
+      [],
+      'Get Cash Transactions'
+    );
+    
+    if (!data) return [];
+    
+    return data.map(transaction => {
+      const sanitized = sanitizeSupabaseData(transformFromSnakeCase(transaction));
+      sanitized.amount = safeNumber(sanitized.amount, 0);
+      return sanitized;
+    });
+  },
+
+  async initializeCashBalance(amount: number): Promise<string> {
+    const safeAmount = safeNumber(amount, 0);
+    logMonetaryValues({ amount: safeAmount }, 'Initialize Cash Balance');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      throw new Error('Supabase não configurado ou sem conexão');
+    }
+
+    const { data, error } = await supabase.rpc('initialize_cash_balance', { 
+      initial_amount: safeAmount 
+    });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async recalculateBalance(): Promise<void> {
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      throw new Error('Supabase não configurado ou sem conexão');
+    }
+
+    const { error } = await supabase.rpc('recalculate_cash_balance');
+    if (error) throw error;
+  },
+
+  async createTransaction(transaction: Omit<CashTransaction, 'id' | 'createdAt'>): Promise<string> {
+    const sanitizedTransaction = {
+      ...transaction,
+      amount: safeNumber(transaction.amount, 0)
+    };
+    
+    logMonetaryValues(sanitizedTransaction, 'Create Cash Transaction');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      return await saveOffline('cash_transactions', sanitizedTransaction);
+    }
+
+    const { data, error } = await supabase
+      .from('cash_transactions')
+      .insert([transformToSnakeCase(sanitizedTransaction)])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data.id;
+  },
+
+  async updateTransaction(id: string, transaction: Partial<CashTransaction>): Promise<void> {
+    const sanitizedTransaction = sanitizeSupabaseData(transaction);
+    logMonetaryValues(sanitizedTransaction, 'Update Cash Transaction');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'update',
+        table: 'cash_transactions',
+        data: { id, ...sanitizedTransaction },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('cash_transactions')
+      .update(transformToSnakeCase(sanitizedTransaction))
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async deleteTransaction(id: string): Promise<void> {
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'delete',
+        table: 'cash_transactions',
+        data: { id },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('cash_transactions')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Debts Service
+export const debtsService = {
+  async getDebts(): Promise<Debt[]> {
+    const data = await safeSupabaseOperation(
+      () => supabase.from('debts').select('*').order('created_at', { ascending: false }),
+      [],
+      'Get Debts'
+    );
+    
+    if (!data) return [];
+    
+    return data.map(debt => {
+      const sanitized = sanitizeSupabaseData(transformFromSnakeCase(debt));
+      
+      // Ensure all monetary fields are numbers
+      sanitized.totalValue = safeNumber(sanitized.totalValue, 0);
+      sanitized.paidAmount = safeNumber(sanitized.paidAmount, 0);
+      sanitized.pendingAmount = safeNumber(sanitized.pendingAmount, 0);
+      
+      // Sanitize payment methods
+      if (sanitized.paymentMethods && Array.isArray(sanitized.paymentMethods)) {
+        sanitized.paymentMethods = sanitized.paymentMethods.map(method => ({
+          ...method,
+          amount: safeNumber(method.amount, 0),
+          installmentValue: safeNumber(method.installmentValue, 0)
+        }));
+      }
+      
+      return sanitized;
+    });
+  },
+
+  async create(debt: Omit<Debt, 'id' | 'createdAt'>): Promise<string> {
+    const sanitizedDebt = {
+      ...debt,
+      totalValue: safeNumber(debt.totalValue, 0),
+      paidAmount: safeNumber(debt.paidAmount, 0),
+      pendingAmount: safeNumber(debt.pendingAmount, 0),
+      paymentMethods: (debt.paymentMethods || []).map(method => ({
+        ...method,
+        amount: safeNumber(method.amount, 0),
+        installmentValue: safeNumber(method.installmentValue, 0)
+      }))
+    };
+    
+    logMonetaryValues(sanitizedDebt, 'Create Debt');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      return await saveOffline('debts', sanitizedDebt);
+    }
+
+    const { data, error } = await supabase
+      .from('debts')
+      .insert([transformToSnakeCase(sanitizedDebt)])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data.id;
+  },
+
+  async update(id: string, debt: Partial<Debt>): Promise<void> {
+    const sanitizedDebt = sanitizeSupabaseData(debt);
+    logMonetaryValues(sanitizedDebt, 'Update Debt');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'update',
+        table: 'debts',
+        data: { id, ...sanitizedDebt },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('debts')
+      .update(transformToSnakeCase(sanitizedDebt))
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'delete',
+        table: 'debts',
+        data: { id },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('debts')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Checks Service
+export const checksService = {
+  async getChecks(): Promise<Check[]> {
+    const data = await safeSupabaseOperation(
+      () => supabase.from('checks').select('*').order('created_at', { ascending: false }),
+      [],
+      'Get Checks'
+    );
+    
+    if (!data) return [];
+    
+    return data.map(check => {
+      const sanitized = sanitizeSupabaseData(transformFromSnakeCase(check));
+      sanitized.value = safeNumber(sanitized.value, 0);
+      sanitized.installmentNumber = safeNumber(sanitized.installmentNumber, 1);
+      sanitized.totalInstallments = safeNumber(sanitized.totalInstallments, 1);
+      return sanitized;
+    });
+  },
+
+  async create(check: Omit<Check, 'id' | 'createdAt'>): Promise<string> {
+    const sanitizedCheck = {
+      ...check,
+      value: safeNumber(check.value, 0),
+      installmentNumber: safeNumber(check.installmentNumber, 1),
+      totalInstallments: safeNumber(check.totalInstallments, 1)
+    };
+    
+    logMonetaryValues(sanitizedCheck, 'Create Check');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      return await saveOffline('checks', sanitizedCheck);
+    }
+
+    const { data, error } = await supabase
+      .from('checks')
+      .insert([transformToSnakeCase(sanitizedCheck)])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data.id;
+  },
+
+  async update(id: string, check: Partial<Check>): Promise<void> {
+    const sanitizedCheck = sanitizeSupabaseData(check);
+    logMonetaryValues(sanitizedCheck, 'Update Check');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'update',
+        table: 'checks',
+        data: { id, ...sanitizedCheck },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('checks')
+      .update(transformToSnakeCase(sanitizedCheck))
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'delete',
+        table: 'checks',
+        data: { id },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('checks')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Boletos Service
+export const boletosService = {
+  async getBoletos(): Promise<Boleto[]> {
+    const data = await safeSupabaseOperation(
+      () => supabase.from('boletos').select('*').order('created_at', { ascending: false }),
+      [],
+      'Get Boletos'
+    );
+    
+    if (!data) return [];
+    
+    return data.map(boleto => {
+      const sanitized = sanitizeSupabaseData(transformFromSnakeCase(boleto));
+      
+      // Ensure all monetary fields are numbers
+      sanitized.value = safeNumber(sanitized.value, 0);
+      sanitized.installmentNumber = safeNumber(sanitized.installmentNumber, 1);
+      sanitized.totalInstallments = safeNumber(sanitized.totalInstallments, 1);
+      sanitized.interestAmount = safeNumber(sanitized.interestAmount, 0);
+      sanitized.penaltyAmount = safeNumber(sanitized.penaltyAmount, 0);
+      sanitized.notaryCosts = safeNumber(sanitized.notaryCosts, 0);
+      sanitized.finalAmount = safeNumber(sanitized.finalAmount, sanitized.value);
+      sanitized.interestPaid = safeNumber(sanitized.interestPaid, 0);
+      
+      return sanitized;
+    });
+  },
+
+  async create(boleto: Omit<Boleto, 'id' | 'createdAt'>): Promise<string> {
+    const sanitizedBoleto = {
+      ...boleto,
+      value: safeNumber(boleto.value, 0),
+      installmentNumber: safeNumber(boleto.installmentNumber, 1),
+      totalInstallments: safeNumber(boleto.totalInstallments, 1),
+      interestAmount: safeNumber(boleto.interestAmount, 0),
+      penaltyAmount: safeNumber(boleto.penaltyAmount, 0),
+      notaryCosts: safeNumber(boleto.notaryCosts, 0),
+      finalAmount: safeNumber(boleto.finalAmount, safeNumber(boleto.value, 0)),
+      interestPaid: safeNumber(boleto.interestPaid, 0)
+    };
+    
+    logMonetaryValues(sanitizedBoleto, 'Create Boleto');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      return await saveOffline('boletos', sanitizedBoleto);
+    }
+
+    const { data, error } = await supabase
+      .from('boletos')
+      .insert([transformToSnakeCase(sanitizedBoleto)])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data.id;
+  },
+
+  async update(id: string, boleto: Partial<Boleto>): Promise<void> {
+    const sanitizedBoleto = sanitizeSupabaseData(boleto);
+    logMonetaryValues(sanitizedBoleto, 'Update Boleto');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'update',
+        table: 'boletos',
+        data: { id, ...sanitizedBoleto },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('boletos')
+      .update(transformToSnakeCase(sanitizedBoleto))
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'delete',
+        table: 'boletos',
+        data: { id },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('boletos')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Employee Payments Service
+export const employeePaymentsService = {
+  async getPayments(): Promise<EmployeePayment[]> {
+    const data = await safeSupabaseOperation(
+      () => supabase.from('employee_payments').select('*').order('payment_date', { ascending: false }),
+      [],
+      'Get Employee Payments'
+    );
+    
+    if (!data) return [];
+    
+    return data.map(payment => {
+      const sanitized = sanitizeSupabaseData(transformFromSnakeCase(payment));
+      sanitized.amount = safeNumber(sanitized.amount, 0);
+      return sanitized;
+    });
+  },
+
+  async create(payment: Omit<EmployeePayment, 'id' | 'createdAt'>): Promise<string> {
+    const sanitizedPayment = {
+      ...payment,
+      amount: safeNumber(payment.amount, 0)
+    };
+    
+    logMonetaryValues(sanitizedPayment, 'Create Employee Payment');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      return await saveOffline('employee_payments', sanitizedPayment);
+    }
+
+    const { data, error } = await supabase
+      .from('employee_payments')
+      .insert([transformToSnakeCase(sanitizedPayment)])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data.id;
+  }
+};
+
+// Employee Advances Service
+export const employeeAdvancesService = {
+  async getAdvances(): Promise<EmployeeAdvance[]> {
+    const data = await safeSupabaseOperation(
+      () => supabase.from('employee_advances').select('*').order('date', { ascending: false }),
+      [],
+      'Get Employee Advances'
+    );
+    
+    if (!data) return [];
+    
+    return data.map(advance => {
+      const sanitized = sanitizeSupabaseData(transformFromSnakeCase(advance));
+      sanitized.amount = safeNumber(sanitized.amount, 0);
+      return sanitized;
+    });
+  },
+
+  async create(advance: Omit<EmployeeAdvance, 'id' | 'createdAt'>): Promise<string> {
+    const sanitizedAdvance = {
+      ...advance,
+      amount: safeNumber(advance.amount, 0)
+    };
+    
+    logMonetaryValues(sanitizedAdvance, 'Create Employee Advance');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      return await saveOffline('employee_advances', sanitizedAdvance);
+    }
+
+    const { data, error } = await supabase
+      .from('employee_advances')
+      .insert([transformToSnakeCase(sanitizedAdvance)])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data.id;
+  },
+
+  async update(id: string, advance: Partial<EmployeeAdvance>): Promise<void> {
+    const sanitizedAdvance = sanitizeSupabaseData(advance);
+    logMonetaryValues(sanitizedAdvance, 'Update Employee Advance');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'update',
+        table: 'employee_advances',
+        data: { id, ...sanitizedAdvance },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('employee_advances')
+      .update(transformToSnakeCase(sanitizedAdvance))
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Employee Overtimes Service
+export const employeeOvertimesService = {
+  async getOvertimes(): Promise<EmployeeOvertime[]> {
+    const data = await safeSupabaseOperation(
+      () => supabase.from('employee_overtimes').select('*').order('date', { ascending: false }),
+      [],
+      'Get Employee Overtimes'
+    );
+    
+    if (!data) return [];
+    
+    return data.map(overtime => {
+      const sanitized = sanitizeSupabaseData(transformFromSnakeCase(overtime));
+      sanitized.hours = safeNumber(sanitized.hours, 0);
+      sanitized.hourlyRate = safeNumber(sanitized.hourlyRate, 0);
+      sanitized.totalAmount = safeNumber(sanitized.totalAmount, 0);
+      return sanitized;
+    });
+  },
+
+  async create(overtime: Omit<EmployeeOvertime, 'id' | 'createdAt'>): Promise<string> {
+    const sanitizedOvertime = {
+      ...overtime,
+      hours: safeNumber(overtime.hours, 0),
+      hourlyRate: safeNumber(overtime.hourlyRate, 0),
+      totalAmount: safeNumber(overtime.totalAmount, 0)
+    };
+    
+    logMonetaryValues(sanitizedOvertime, 'Create Employee Overtime');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      return await saveOffline('employee_overtimes', sanitizedOvertime);
+    }
+
+    const { data, error } = await supabase
+      .from('employee_overtimes')
+      .insert([transformToSnakeCase(sanitizedOvertime)])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data.id;
+  },
+
+  async update(id: string, overtime: Partial<EmployeeOvertime>): Promise<void> {
+    const sanitizedOvertime = sanitizeSupabaseData(overtime);
+    logMonetaryValues(sanitizedOvertime, 'Update Employee Overtime');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'update',
+        table: 'employee_overtimes',
+        data: { id, ...sanitizedOvertime },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('employee_overtimes')
+      .update(transformToSnakeCase(sanitizedOvertime))
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Employee Commissions Service
+export const employeeCommissionsService = {
+  async getCommissions(): Promise<EmployeeCommission[]> {
+    const data = await safeSupabaseOperation(
+      () => supabase.from('employee_commissions').select('*').order('date', { ascending: false }),
+      [],
+      'Get Employee Commissions'
+    );
+    
+    if (!data) return [];
+    
+    return data.map(commission => {
+      const sanitized = sanitizeSupabaseData(transformFromSnakeCase(commission));
+      sanitized.saleValue = safeNumber(sanitized.saleValue, 0);
+      sanitized.commissionRate = safeNumber(sanitized.commissionRate, 5);
+      sanitized.commissionAmount = safeNumber(sanitized.commissionAmount, 0);
+      return sanitized;
+    });
+  },
+
+  async update(id: string, commission: Partial<EmployeeCommission>): Promise<void> {
+    const sanitizedCommission = sanitizeSupabaseData(commission);
+    logMonetaryValues(sanitizedCommission, 'Update Employee Commission');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'update',
+        table: 'employee_commissions',
+        data: { id, ...sanitizedCommission },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('employee_commissions')
+      .update(transformToSnakeCase(sanitizedCommission))
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// PIX Fees Service
+export const pixFeesService = {
+  async getPixFees(): Promise<PixFee[]> {
+    const data = await safeSupabaseOperation(
+      () => supabase.from('pix_fees').select('*').order('date', { ascending: false }),
+      [],
+      'Get PIX Fees'
+    );
+    
+    if (!data) return [];
+    
+    return data.map(fee => {
+      const sanitized = sanitizeSupabaseData(transformFromSnakeCase(fee));
+      sanitized.amount = safeNumber(sanitized.amount, 0);
+      return sanitized;
+    });
+  },
+
+  async create(pixFee: Omit<PixFee, 'id' | 'createdAt'>): Promise<string> {
+    const sanitizedPixFee = {
+      ...pixFee,
+      amount: safeNumber(pixFee.amount, 0)
+    };
+    
+    logMonetaryValues(sanitizedPixFee, 'Create PIX Fee');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      return await saveOffline('pix_fees', sanitizedPixFee);
+    }
+
+    const { data, error } = await supabase
+      .from('pix_fees')
+      .insert([transformToSnakeCase(sanitizedPixFee)])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data.id;
+  },
+
+  async update(id: string, pixFee: Partial<PixFee>): Promise<void> {
+    const sanitizedPixFee = sanitizeSupabaseData(pixFee);
+    logMonetaryValues(sanitizedPixFee, 'Update PIX Fee');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'update',
+        table: 'pix_fees',
+        data: { id, ...sanitizedPixFee },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('pix_fees')
+      .update(transformToSnakeCase(sanitizedPixFee))
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'delete',
+        table: 'pix_fees',
+        data: { id },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('pix_fees')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Taxes Service
+export const taxesService = {
+  async getTaxes(): Promise<Tax[]> {
+    const data = await safeSupabaseOperation(
+      () => supabase.from('taxes').select('*').order('date', { ascending: false }),
+      [],
+      'Get Taxes'
+    );
+    
+    if (!data) return [];
+    
+    return data.map(tax => {
+      const sanitized = sanitizeSupabaseData(transformFromSnakeCase(tax));
+      sanitized.amount = safeNumber(sanitized.amount, 0);
+      return sanitized;
+    });
+  },
+
+  async create(tax: Omit<Tax, 'id' | 'createdAt'>): Promise<string> {
+    const sanitizedTax = {
+      ...tax,
+      amount: safeNumber(tax.amount, 0)
+    };
+    
+    logMonetaryValues(sanitizedTax, 'Create Tax');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      return await saveOffline('taxes', sanitizedTax);
+    }
+
+    const { data, error } = await supabase
+      .from('taxes')
+      .insert([transformToSnakeCase(sanitizedTax)])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data.id;
+  },
+
+  async update(id: string, tax: Partial<Tax>): Promise<void> {
+    const sanitizedTax = sanitizeSupabaseData(tax);
+    logMonetaryValues(sanitizedTax, 'Update Tax');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'update',
+        table: 'taxes',
+        data: { id, ...sanitizedTax },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('taxes')
+      .update(transformToSnakeCase(sanitizedTax))
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'delete',
+        table: 'taxes',
+        data: { id },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('taxes')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Agenda Service
+export const agendaService = {
+  async getEvents(): Promise<AgendaEvent[]> {
+    const data = await safeSupabaseOperation(
+      () => supabase.from('agenda_events').select('*').order('date', { ascending: false }),
+      [],
+      'Get Agenda Events'
+    );
+    
+    if (!data) return [];
+    
+    return data.map(event => transformFromSnakeCase(event));
+  },
+
+  async create(event: Omit<AgendaEvent, 'id' | 'createdAt'>): Promise<string> {
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      return await saveOffline('agenda_events', event);
+    }
+
+    const { data, error } = await supabase
+      .from('agenda_events')
+      .insert([transformToSnakeCase(event)])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data.id;
+  },
+
+  async update(id: string, event: Partial<AgendaEvent>): Promise<void> {
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'update',
+        table: 'agenda_events',
+        data: { id, ...event },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('agenda_events')
+      .update(transformToSnakeCase(event))
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'delete',
+        table: 'agenda_events',
+        data: { id },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('agenda_events')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Acertos Service
+export const acertosService = {
+  async getAcertos(): Promise<Acerto[]> {
+    const data = await safeSupabaseOperation(
+      () => supabase.from('acertos').select('*').order('created_at', { ascending: false }),
+      [],
+      'Get Acertos'
+    );
+    
+    if (!data) return [];
+    
+    return data.map(acerto => {
+      const sanitized = sanitizeSupabaseData(transformFromSnakeCase(acerto));
+      
+      // Ensure all monetary fields are numbers
+      sanitized.totalAmount = safeNumber(sanitized.totalAmount, 0);
+      sanitized.paidAmount = safeNumber(sanitized.paidAmount, 0);
+      sanitized.pendingAmount = safeNumber(sanitized.pendingAmount, 0);
+      sanitized.paymentInstallments = safeNumber(sanitized.paymentInstallments, 1);
+      sanitized.paymentInstallmentValue = safeNumber(sanitized.paymentInstallmentValue, 0);
+      sanitized.paymentInterval = safeNumber(sanitized.paymentInterval, 30);
+      
+      return sanitized;
+    });
+  },
+
+  async create(acerto: Omit<Acerto, 'id' | 'createdAt'>): Promise<string> {
+    const sanitizedAcerto = {
+      ...acerto,
+      totalAmount: safeNumber(acerto.totalAmount, 0),
+      paidAmount: safeNumber(acerto.paidAmount, 0),
+      pendingAmount: safeNumber(acerto.pendingAmount, 0),
+      paymentInstallments: safeNumber(acerto.paymentInstallments, 1),
+      paymentInstallmentValue: safeNumber(acerto.paymentInstallmentValue, 0),
+      paymentInterval: safeNumber(acerto.paymentInterval, 30)
+    };
+    
+    logMonetaryValues(sanitizedAcerto, 'Create Acerto');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      return await saveOffline('acertos', sanitizedAcerto);
+    }
+
+    const { data, error } = await supabase
+      .from('acertos')
+      .insert([transformToSnakeCase(sanitizedAcerto)])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data.id;
+  },
+
+  async update(id: string, acerto: Partial<Acerto>): Promise<void> {
+    const sanitizedAcerto = sanitizeSupabaseData(acerto);
+    logMonetaryValues(sanitizedAcerto, 'Update Acerto');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'update',
+        table: 'acertos',
+        data: { id, ...sanitizedAcerto },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('acertos')
+      .update(transformToSnakeCase(sanitizedAcerto))
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'delete',
+        table: 'acertos',
+        data: { id },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('acertos')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
+// Debug Service
+export const debugService = {
+  async getRecentSaleErrors(limit: number = 50): Promise<any[]> {
+    const data = await safeSupabaseOperation(
+      () => supabase
+        .from('create_sale_errors')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit),
+      [],
+      'Get Sale Errors'
+    );
+    
+    return data || [];
+  },
+
+  async cleanupOldErrors(daysOld: number = 7): Promise<number> {
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      return 0;
+    }
+
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+    
+    const { data, error } = await supabase
+      .from('create_sale_errors')
+      .delete()
+      .lt('created_at', cutoffDate.toISOString())
+      .select('id');
+    
+    if (error) throw error;
+    return data?.length || 0;
+  }
+};
+
+// Image upload service
+export async function uploadCheckImage(file: File, checkId: string, imageType: 'front' | 'back'): Promise<string> {
+  if (!isSupabaseConfigured()) {
+    throw new Error('Supabase não configurado');
   }
 
-  // Show error state if there's an error but not loading
-  if (error && !loading && !isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center max-w-2xl mx-auto p-8">
-          <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <AlertTriangle className="w-12 h-12 text-red-600" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">Erro de Conexão</h2>
-          <div className="p-6 bg-red-50 border border-red-200 rounded-xl mb-6">
-            <p className="text-red-700 font-medium">{error}</p>
-          </div>
-          <div className="space-y-4">
-            <button
-              onClick={() => {
-                setError(null);
-                // Não recarregar página, apenas tentar reconectar
-                connectionManager.forceCheck().then(() => {
-                  if (connectionManager.isConnected()) {
-                    loadAllData();
-                  }
-                });
-              }}
-              className="btn-primary"
-            >
-              Tentar Novamente
-            </button>
-            <div className="p-6 bg-blue-50 border border-blue-200 rounded-xl">
-              <h3 className="font-bold text-blue-900 mb-4">Como Configurar o Supabase:</h3>
-              <ol className="text-left space-y-2 text-blue-800">
-                <li className="flex items-start gap-2">
-                  <span className="font-bold">1.</span>
-                  <span>Crie um novo projeto em <a href="https://supabase.com/dashboard" target="_blank" className="text-blue-600 underline">supabase.com/dashboard</a></span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="font-bold">2.</span>
-                  <span>Vá em Settings → API no seu projeto</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="font-bold">3.</span>
-                  <span>Configure o arquivo <code className="bg-blue-100 px-2 py-1 rounded">.env</code>:</span>
-                </li>
-                <li className="ml-6 bg-blue-100 p-3 rounded-lg font-mono text-sm">
-                  VITE_SUPABASE_URL=https://seu-projeto-id.supabase.co<br/>
-                  VITE_SUPABASE_ANON_KEY=sua-chave-anonima-aqui
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="font-bold">4.</span>
-                  <span>Execute as migrações: <code className="bg-blue-100 px-2 py-1 rounded">supabase db push</code></span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="font-bold">5.</span>
-                  <span>Reinicie o servidor: <code className="bg-blue-100 px-2 py-1 rounded">npm run dev</code></span>
-                </li>
-              </ol>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${checkId}_${imageType}.${fileExt}`;
+  const filePath = `checks/${fileName}`;
+
+  const { data, error } = await supabase.storage
+    .from('check-images')
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: true
+    });
+
+  if (error) throw error;
+  return data.path;
+}
+
+export async function deleteCheckImage(imagePath: string): Promise<void> {
+  if (!isSupabaseConfigured()) {
+    throw new Error('Supabase não configurado');
   }
 
-  return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center gap-6">
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-xl">
-          <Activity className="w-8 h-8 text-white" />
-        </div>
-        <div>
-          <h1 className="text-4xl font-black text-slate-900">Dashboard RevGold</h1>
-          <p className="text-slate-600 text-lg font-semibold">
-            Visão geral completa do seu negócio - {new Date().toLocaleDateString('pt-BR', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
-          </p>
-        </div>
-      </div>
+  const { error } = await supabase.storage
+    .from('check-images')
+    .remove([imagePath]);
 
-      {/* Widgets Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-        {/* Total de Vendas Hoje */}
-        <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
-          <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-lg">
-              <DollarSign className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-green-900 text-lg">Vendas Hoje</h3>
-              <p className="text-3xl font-black text-green-700">
-                R$ {dailyMetrics.totalSalesToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-green-600 font-semibold">
-                {dailyMetrics.todaySales} venda(s)
-              </p>
-            </div>
-          </div>
-        </div>
+  if (error) throw error;
+}
 
-        {/* Valor Recebido Hoje */}
-        <div className="card bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
-          <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-600 to-green-700 modern-shadow-lg">
-              <ArrowUpCircle className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-emerald-900 text-lg">Recebido Hoje</h3>
-              <p className="text-3xl font-black text-emerald-700">
-                R$ {dailyMetrics.totalReceivedToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-emerald-600 font-semibold">
-                Entradas efetivas
-              </p>
-            </div>
-          </div>
-        </div>
+export function getCheckImageUrl(imagePath: string): string {
+  if (!isSupabaseConfigured()) {
+    return '';
+  }
 
-        {/* Total de Dívidas Hoje */}
-        <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
-          <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 modern-shadow-lg">
-              <CreditCard className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-red-900 text-lg">Dívidas Hoje</h3>
-              <p className="text-3xl font-black text-red-700">
-                R$ {dailyMetrics.totalDebtsToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-red-600 font-semibold">
-                {dailyMetrics.todayDebts} dívida(s)
-              </p>
-            </div>
-          </div>
-        </div>
+  const { data } = supabase.storage
+    .from('check-images')
+    .getPublicUrl(imagePath);
 
-        {/* Total Pago Hoje */}
-        <div className="card bg-gradient-to-br from-orange-50 to-red-50 border-orange-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
-          <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-600 to-red-600 modern-shadow-lg">
-              <ArrowDownCircle className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-orange-900 text-lg">Pago Hoje</h3>
-              <p className="text-3xl font-black text-orange-700">
-                R$ {dailyMetrics.totalPaidToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-orange-600 font-semibold">
-                Saídas efetivas
-              </p>
-            </div>
-          </div>
-        </div>
+  return data.publicUrl;
+}
 
-        {/* Saldo em Caixa */}
-        <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
-          <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 modern-shadow-lg">
-              <Wallet className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-blue-900 text-lg">Saldo Caixa</h3>
-              <p className="text-3xl font-black text-blue-700">
-                R$ {(cashBalance?.currentBalance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <div className="flex items-center gap-2 mt-2">
-                <p className="text-sm text-blue-600 font-semibold">
-                  Disponível agora
-                </p>
-                <button
-                  onClick={async () => {
-                    setIsRecalculating(true);
-                    try {
-                      await recalculateCashBalance();
-                    } catch (error) {
-                      console.error('Erro ao recalcular:', error);
-                    } finally {
-                      setIsRecalculating(false);
-                    }
-                  }}
-                  disabled={isRecalculating}
-                  className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors disabled:opacity-50"
-                  title="Recalcular saldo"
-                >
-                  {isRecalculating ? '...' : '↻'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Segunda linha de widgets */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Lucro Líquido Hoje */}
-        <div className="card bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
-          <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-600 to-violet-700 modern-shadow-lg">
-              <TrendingUp className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-purple-900 text-lg">Lucro Hoje</h3>
-              <p className={`text-3xl font-black ${
-                dailyMetrics.netProfitToday >= 0 ? 'text-green-700' : 'text-red-700'
-              }`}>
-                {dailyMetrics.netProfitToday >= 0 ? '+' : ''}R$ {dailyMetrics.netProfitToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-purple-600 font-semibold">
-                Recebido - Pago
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Funcionários */}
-        <div className="card bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
-          <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-700 modern-shadow-lg">
-              <Users className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-indigo-900 text-lg">Funcionários</h3>
-              <p className="text-3xl font-black text-indigo-700">
-                {(employees || []).filter(emp => emp.isActive).length}
-              </p>
-              <p className="text-sm text-indigo-600 font-semibold">
-                {(employees || []).filter(emp => emp.isActive && emp.isSeller).length} vendedor(es)
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Comissões do Mês */}
-        <div className="card bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
-          <div className="flex items-center gap-4">
-            <div className="p-
+// Connection test
+export async function checkSupabaseConnection(): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) {
+    return { 
+      success: false, 
+      error: 'Supabase não configurado. Configure o arquivo .env com suas credenciais.' 
+    };
+  }
+  
+  try {
+    const { data, error } = await supabase
+      .from('employees')
+      .select('id')
+      .limit(1);
+    
+    if (error) {
+      return { 
+        success: false, 
+        error: `Erro de conexão: ${error.message}` 
+      };
+    }
+    
+    return { success: true };
+    
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erro desconhecido' 
+    };
+  }
+}
