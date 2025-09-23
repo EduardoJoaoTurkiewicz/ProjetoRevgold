@@ -5,6 +5,7 @@ import { Employee, EmployeePayment, EmployeeAdvance, EmployeeOvertime, EmployeeC
 import { EmployeeForm } from './forms/EmployeeForm';
 import { EmployeeAdvanceForm } from './forms/EmployeeAdvanceForm';
 import { EmployeeOvertimeForm } from './forms/EmployeeOvertimeForm';
+import { safeNumber, safeCurrency, logMonetaryValues } from '../utils/numberUtils';
 
 export function Employees() {
   const { 
@@ -36,6 +37,7 @@ export function Employees() {
 
   const handleAddEmployee = (employee: Omit<Employee, 'id' | 'createdAt'>) => {
     console.log('🔄 Adicionando novo funcionário:', employee);
+    logMonetaryValues(employee, 'Add Employee');
     
     // Validate employee data before submitting
     if (!employee.name || !employee.name.trim()) {
@@ -48,12 +50,19 @@ export function Employees() {
       return;
     }
     
-    if (employee.salary <= 0) {
+    const salary = safeNumber(employee.salary, 0);
+    if (salary <= 0) {
       alert('O salário deve ser maior que zero.');
       return;
     }
     
-    createEmployee(employee).then(() => {
+    const sanitizedEmployee = {
+      ...employee,
+      salary: salary,
+      paymentDay: safeNumber(employee.paymentDay, 5)
+    };
+    
+    createEmployee(sanitizedEmployee).then(() => {
       console.log('✅ Funcionário adicionado com sucesso');
       setIsFormOpen(false);
     }).catch(error => {
@@ -103,12 +112,20 @@ export function Employees() {
 
   const handleAddAdvance = (advance: Omit<EmployeeAdvance, 'id' | 'createdAt'>) => {
     // Validate advance data
-    if (advance.amount <= 0) {
+    const amount = safeNumber(advance.amount, 0);
+    if (amount <= 0) {
       alert('O valor do adiantamento deve ser maior que zero.');
       return;
     }
     
-    createEmployeeAdvance(advance).then(() => {
+    const sanitizedAdvance = {
+      ...advance,
+      amount: amount
+    };
+    
+    logMonetaryValues(sanitizedAdvance, 'Add Employee Advance');
+    
+    createEmployeeAdvance(sanitizedAdvance).then(() => {
       // Cash transaction is handled automatically by database trigger
       console.log('✅ Adiantamento criado, transação de caixa será criada automaticamente');
       setAdvanceEmployee(null);
@@ -118,7 +135,16 @@ export function Employees() {
   };
 
   const handleAddOvertime = (overtime: Omit<EmployeeOvertime, 'id' | 'createdAt'>) => {
-    createEmployeeOvertime(overtime).then(() => {
+    const sanitizedOvertime = {
+      ...overtime,
+      hours: safeNumber(overtime.hours, 0),
+      hourlyRate: safeNumber(overtime.hourlyRate, 0),
+      totalAmount: safeNumber(overtime.totalAmount, 0)
+    };
+    
+    logMonetaryValues(sanitizedOvertime, 'Add Employee Overtime');
+    
+    createEmployeeOvertime(sanitizedOvertime).then(() => {
       setOvertimeEmployee(null);
     }).catch(error => {
       alert('Erro ao criar hora extra: ' + error.message);
@@ -126,14 +152,18 @@ export function Employees() {
   };
   const handlePayment = (payment: { amount: number; observations: string; receipt?: string }) => {
     if (paymentEmployee) {
+      const amount = safeNumber(payment.amount, 0);
+      
       const newPayment: EmployeePayment = {
         employeeId: paymentEmployee.id,
-        amount: payment.amount,
+        amount: amount,
         paymentDate: new Date().toLocaleDateString('en-CA'), // Format: YYYY-MM-DD
         isPaid: true,
         receipt: payment.receipt,
         observations: payment.observations
       };
+      
+      logMonetaryValues(newPayment, 'Employee Payment');
       
       createEmployeePayment(newPayment).then(() => {
         // Cash transaction will be handled automatically by database trigger
@@ -203,22 +233,22 @@ export function Employees() {
              commissionDate.getFullYear() === currentYear &&
              c.status === 'pendente';
     });
-    const totalCommissions = monthlyCommissions.reduce((sum, c) => sum + c.commissionAmount, 0);
+    const totalCommissions = monthlyCommissions.reduce((sum, c) => sum + safeNumber(c.commissionAmount, 0), 0);
     
     // Comissões totais acumuladas (todas as pendentes, não só do mês)
     const allPendingCommissions = getEmployeeCommissions(employeeId).filter(c => c.status === 'pendente');
-    const totalPendingCommissions = allPendingCommissions.reduce((sum, c) => sum + c.commissionAmount, 0);
+    const totalPendingCommissions = allPendingCommissions.reduce((sum, c) => sum + safeNumber(c.commissionAmount, 0), 0);
 
     // Horas extras pendentes
     const pendingOvertimes = getEmployeeOvertimes(employeeId).filter(o => o.status === 'pendente');
-    const totalOvertimes = pendingOvertimes.reduce((sum, o) => sum + o.totalAmount, 0);
+    const totalOvertimes = pendingOvertimes.reduce((sum, o) => sum + safeNumber(o.totalAmount, 0), 0);
 
     // Adiantamentos pendentes
     const pendingAdvances = getEmployeeAdvances(employeeId).filter(a => a.status === 'pendente');
-    const totalAdvances = pendingAdvances.reduce((sum, a) => sum + a.amount, 0);
+    const totalAdvances = pendingAdvances.reduce((sum, a) => sum + safeNumber(a.amount, 0), 0);
 
     // Total a pagar
-    const totalToPay = baseSalary + totalCommissions + totalOvertimes - totalAdvances;
+    const totalToPay = safeNumber(baseSalary, 0) + totalCommissions + totalOvertimes - totalAdvances;
 
     return {
       baseSalary,
@@ -308,10 +338,9 @@ export function Employees() {
             <div>
               <h3 className="font-medium text-green-900">Folha de Pagamento</h3>
               <p className="text-green-700">
-                R$ {employees
+                {safeCurrency(employees
                   .filter(e => e.isActive)
-                  .reduce((sum, e) => sum + e.salary, 0)
-                  .toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  .reduce((sum, e) => sum + safeNumber(e.salary, 0), 0))}
               </p>
             </div>
           </div>
@@ -378,10 +407,10 @@ export function Employees() {
                       </td>
                       <td className="py-3 px-4 text-sm">
                         <div>
-                          <span className="font-medium">R$ {employee.salary.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          <span className="font-medium">{safeCurrency(employee.salary)}</span>
                           {payroll && payroll.totalToPay !== payroll.baseSalary && (
                             <div className="text-xs text-green-600 font-bold">
-                              Total: R$ {payroll.totalToPay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              Total: {safeCurrency(payroll.totalToPay)}
                             </div>
                           )}
                         </div>
@@ -544,7 +573,7 @@ export function Employees() {
                 <div>
                   <label className="form-label">Salário</label>
                   <p className="text-sm text-gray-900">
-                    R$ {viewingEmployee.salary.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    {safeCurrency(viewingEmployee.salary)}
                   </p>
                 </div>
                 <div>
@@ -599,7 +628,7 @@ export function Employees() {
                           <div className="flex justify-between items-start">
                             <div>
                               <p className="font-medium">
-                                R$ {payment.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                {safeCurrency(payment.amount)}
                               </p>
                               <p className="text-sm text-gray-600">
                                 {new Date(payment.paymentDate).toLocaleDateString('pt-BR')}
@@ -670,13 +699,13 @@ export function Employees() {
                       <div className="text-center p-6 bg-green-50 rounded-2xl border border-green-200">
                         <h4 className="font-bold text-green-900 mb-2">Salário Base</h4>
                         <p className="text-2xl font-black text-green-700">
-                          R$ {payroll.baseSalary.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          {safeCurrency(payroll.baseSalary)}
                         </p>
                       </div>
                       <div className="text-center p-6 bg-blue-50 rounded-2xl border border-blue-200">
                         <h4 className="font-bold text-blue-900 mb-2">Comissões</h4>
                         <p className="text-2xl font-black text-blue-700">
-                          R$ {payroll.totalPendingCommissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          {safeCurrency(payroll.totalPendingCommissions)}
                         </p>
                         <p className="text-xs text-blue-600 mt-1">
                           {payroll.allPendingCommissions.length} comissão(ões) pendente(s)
@@ -685,13 +714,13 @@ export function Employees() {
                       <div className="text-center p-6 bg-purple-50 rounded-2xl border border-purple-200">
                         <h4 className="font-bold text-purple-900 mb-2">Horas Extras</h4>
                         <p className="text-2xl font-black text-purple-700">
-                          R$ {payroll.totalOvertimes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          {safeCurrency(payroll.totalOvertimes)}
                         </p>
                       </div>
                       <div className="text-center p-6 bg-red-50 rounded-2xl border border-red-200">
                         <h4 className="font-bold text-red-900 mb-2">Adiantamentos</h4>
                         <p className="text-2xl font-black text-red-700">
-                          - R$ {payroll.totalAdvances.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          - {safeCurrency(payroll.totalAdvances)}
                         </p>
                       </div>
                     </div>
@@ -700,7 +729,7 @@ export function Employees() {
                     <div className="p-8 bg-gradient-to-r from-green-100 to-emerald-100 rounded-3xl border-2 border-green-300 text-center">
                       <h3 className="text-2xl font-bold text-green-900 mb-4">Total a Pagar</h3>
                       <p className="text-5xl font-black text-green-700">
-                        R$ {(payroll.baseSalary + payroll.totalPendingCommissions + payroll.totalOvertimes - payroll.totalAdvances).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        {safeCurrency(safeNumber(payroll.baseSalary, 0) + safeNumber(payroll.totalPendingCommissions, 0) + safeNumber(payroll.totalOvertimes, 0) - safeNumber(payroll.totalAdvances, 0))}
                       </p>
                       <p className="text-sm text-green-600 font-bold mt-2">
                         Inclui TODAS as comissões pendentes acumuladas
@@ -722,10 +751,10 @@ export function Employees() {
                                     {sale ? sale.client : 'Venda não encontrada'}
                                   </p>
                                   <p className="text-sm text-blue-700">
-                                    Venda: R$ {commission.saleValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    Venda: {safeCurrency(commission.saleValue)}
                                   </p>
                                   <p className="text-sm font-bold text-blue-800">
-                                    Comissão: R$ {commission.commissionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({commission.commissionRate}%)
+                                    Comissão: {safeCurrency(commission.commissionAmount)} ({safeNumber(commission.commissionRate, 5)}%)
                                   </p>
                                   <p className="text-xs text-blue-600">
                                     {new Date(commission.date).toLocaleDateString('pt-BR')}
@@ -746,10 +775,10 @@ export function Employees() {
                               <div key={overtime.id} className="p-3 bg-purple-50 rounded-xl">
                                 <p className="font-semibold text-purple-900">{overtime.description}</p>
                                 <p className="text-sm text-purple-700">
-                                  {overtime.hours}h × R$ {overtime.hourlyRate.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  {safeNumber(overtime.hours, 0)}h × {safeCurrency(overtime.hourlyRate)}
                                 </p>
                                 <p className="text-sm font-bold text-purple-800">
-                                  Total: R$ {overtime.totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  Total: {safeCurrency(overtime.totalAmount)}
                                 </p>
                                 <p className="text-xs text-purple-600">
                                   {new Date(overtime.date).toLocaleDateString('pt-BR')}
@@ -772,7 +801,7 @@ export function Employees() {
                                   Método: {advance.paymentMethod.replace('_', ' ')}
                                 </p>
                                 <p className="text-sm font-bold text-red-800">
-                                  Valor: R$ {advance.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  Valor: {safeCurrency(advance.amount)}
                                 </p>
                                 <p className="text-xs text-red-600">
                                   {new Date(advance.date).toLocaleDateString('pt-BR')}
@@ -810,9 +839,9 @@ export function Employees() {
                 e.preventDefault();
                 const formData = new FormData(e.target as HTMLFormElement);
                 const payroll = calculateEmployeePayroll(paymentEmployee.id);
-                const suggestedAmount = payroll ? payroll.totalToPay : paymentEmployee.salary;
+                const suggestedAmount = payroll ? safeNumber(payroll.totalToPay, 0) : safeNumber(paymentEmployee.salary, 0);
                 handlePayment({
-                  amount: parseFloat(formData.get('amount') as string) || suggestedAmount,
+                  amount: safeNumber(formData.get('amount') as string, suggestedAmount),
                   observations: formData.get('observations') as string || '',
                   receipt: formData.get('receipt') ? 'receipt-uploaded' : undefined
                 });
@@ -838,29 +867,29 @@ export function Employees() {
                           <div className="text-sm space-y-1">
                             <div className="flex justify-between">
                               <span>Salário Base:</span>
-                              <span className="font-bold">R$ {payroll.baseSalary.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                              <span className="font-bold">{safeCurrency(payroll.baseSalary)}</span>
                             </div>
                             {payroll.totalCommissions > 0 && (
                               <div className="flex justify-between text-green-700">
                                 <span>+ Comissões:</span>
-                                <span className="font-bold">R$ {payroll.totalPendingCommissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                <span className="font-bold">{safeCurrency(payroll.totalPendingCommissions)}</span>
                               </div>
                             )}
                             {payroll.totalOvertimes > 0 && (
                               <div className="flex justify-between text-purple-700">
                                 <span>+ Horas Extras:</span>
-                                <span className="font-bold">R$ {payroll.totalOvertimes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                <span className="font-bold">{safeCurrency(payroll.totalOvertimes)}</span>
                               </div>
                             )}
                             {payroll.totalAdvances > 0 && (
                               <div className="flex justify-between text-red-700">
                                 <span>- Adiantamentos:</span>
-                                <span className="font-bold">R$ {payroll.totalAdvances.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                <span className="font-bold">{safeCurrency(payroll.totalAdvances)}</span>
                               </div>
                             )}
                             <div className="flex justify-between border-t pt-2 text-lg font-black text-green-700">
                               <span>Total:</span>
-                              <span>R$ {(payroll.baseSalary + payroll.totalPendingCommissions + payroll.totalOvertimes - payroll.totalAdvances).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                              <span>{safeCurrency(safeNumber(payroll.baseSalary, 0) + safeNumber(payroll.totalPendingCommissions, 0) + safeNumber(payroll.totalOvertimes, 0) - safeNumber(payroll.totalAdvances, 0))}</span>
                             </div>
                           </div>
                         </div>
@@ -870,10 +899,14 @@ export function Employees() {
                       type="number"
                       step="0.01"
                       name="amount"
-                      defaultValue={(() => {
+                      value={(() => {
                         const payroll = calculateEmployeePayroll(paymentEmployee.id);
-                        return payroll ? payroll.totalToPay : paymentEmployee.salary;
+                        return payroll ? safeNumber(payroll.totalToPay, 0) : safeNumber(paymentEmployee.salary, 0);
                       })()}
+                      onChange={(e) => {
+                        // Update the input value safely
+                        e.target.value = safeNumber(e.target.value, 0).toString();
+                      }}
                       className="input-field"
                       required
                     />
