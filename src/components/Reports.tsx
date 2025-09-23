@@ -56,6 +56,27 @@ export default function Reports() {
     status: 'all'
   });
 
+  // Dados para gráfico de métodos de pagamento
+  const paymentMethodsData = useMemo(() => {
+    const methods = {};
+    
+    sales.forEach(sale => {
+      (sale.paymentMethods || []).forEach(method => {
+        const methodName = method.type.replace('_', ' ');
+        if (!methods[methodName]) {
+          methods[methodName] = 0;
+        }
+        methods[methodName] += method.amount;
+      });
+    });
+    
+    return Object.entries(methods).map(([name, value]) => ({
+      name,
+      value,
+      percentage: ((value / Object.values(methods).reduce((a, b) => a + b, 0)) * 100).toFixed(1)
+    })).filter(item => item.value > 0);
+  }, [sales]);
+
   // Calculate report data based on filters
   const reportData = useMemo(() => {
     // Filter sales by period
@@ -513,67 +534,4 @@ export default function Reports() {
                       {new Date(item.date).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
-                  <span className="text-lg font-black text-green-600">
-                    R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              </div>
-            ))}
-            {reportData.receivedValues.length === 0 && (
-              <div className="text-center py-8">
-                <TrendingUp className="w-12 h-12 mx-auto mb-3 text-green-300" />
-                <p className="text-green-600 font-medium">Nenhum valor recebido no período</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Paid Values */}
-        <div className="card modern-shadow-xl">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-red-600">
-              <TrendingDown className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900">Valores Pagos</h3>
-          </div>
-          
-          <div className="space-y-3 max-h-80 overflow-y-auto modern-scrollbar">
-            {reportData.paidValues.slice(0, 10).map(item => (
-              <div key={item.id} className="p-4 bg-red-50 rounded-xl border border-red-200">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                        item.type === 'Dívida' ? 'bg-red-100 text-red-800' :
-                        item.type === 'Salário' ? 'bg-purple-100 text-purple-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
-                        {item.type}
-                      </span>
-                    </div>
-                    <h4 className="font-bold text-red-900">
-                      {item.details.company || item.details.employeeName || 'N/A'}
-                    </h4>
-                    <p className="text-sm text-red-700">{item.description}</p>
-                    <p className="text-xs text-red-600">
-                      {new Date(item.date).toLocaleDateString('pt-BR')}
-                    </p>
-                  </div>
-                  <span className="text-lg font-black text-red-600">
-                    R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              </div>
-            ))}
-            {reportData.paidValues.length === 0 && (
-              <div className="text-center py-8">
-                <TrendingDown className="w-12 h-12 mx-auto mb-3 text-red-300" />
-                <p className="text-red-600 font-medium">Nenhum valor pago no período</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+                  <span
