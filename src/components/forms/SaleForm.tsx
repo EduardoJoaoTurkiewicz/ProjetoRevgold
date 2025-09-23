@@ -179,7 +179,9 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       return;
     }
     
-    if (!formData.totalValue || formData.totalValue <= 0) {
+    // Garantir que totalValue seja um número válido e maior que zero
+    const totalValue = Number(formData.totalValue);
+    if (!totalValue || isNaN(totalValue) || totalValue <= 0) {
       alert('O valor total da venda deve ser maior que zero.');
       return;
     }
@@ -319,6 +321,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     
     const saleToSubmit = {
       ...formData,
+      totalValue: totalValue, // Usar o valor validado
       sellerId: sellerId,
       deliveryDate: deliveryDate,
       paymentMethods: cleanedPaymentMethods,
