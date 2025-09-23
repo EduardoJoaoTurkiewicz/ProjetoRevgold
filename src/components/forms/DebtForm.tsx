@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { Debt, PaymentMethod } from '../../types';
+import { safeNumber, logMonetaryValues } from '../../utils/numberUtils';
 
 interface DebtFormProps {
   debt?: Debt | null;
@@ -24,8 +25,14 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
     date: debt?.date || new Date().toISOString().split('T')[0],
     description: debt?.description || '',
     company: debt?.company || '',
-    totalValue: debt?.totalValue || 0,
-    paymentMethods: debt?.paymentMethods || [{ type: 'dinheiro' as const, amount: 0 }],
+    totalValue: safeNumber(debt?.totalValue, 0),
+    paymentMethods: (debt?.paymentMethods || [{ type: 'dinheiro' as const, amount: 0 }]).map(method => ({
+      ...method,
+      amount: safeNumber(method.amount, 0),
+      installmentValue: safeNumber(method.installmentValue, 0),
+      installments: safeNumber(method.installments, 1),
+      installmentInterval: safeNumber(method.installmentInterval, 30)
+    })),
     paymentDescription: debt?.paymentDescription || '',
     debtPaymentDescription: debt?.debtPaymentDescription || ''
   });
@@ -48,28 +55,35 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
     setFormData(prev => ({
       ...prev,
       paymentMethods: prev.paymentMethods.map((method, i) => 
-        i === index ? { ...method, [field]: value } : method
+        i === index ? { 
+          ...method, 
+          [field]: ['amount', 'installmentValue'].includes(field) ? safeNumber(value, 0) : 
+                   ['installments', 'installmentInterval'].includes(field) ? safeNumber(value, field === 'installments' ? 1 : 30) : 
+                   value 
+        } : method
       )
     }));
   };
 
   const calculateAmounts = () => {
     const totalPaid = formData.paymentMethods.reduce((sum, method) => {
-      if (method.type === 'dinheiro' || method.type === 'pix' || method.type === 'cartao_debito') {
-        return sum + method.amount;
+      const methodAmount = safeNumber(method.amount, 0);
+      if (['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(method.type)) {
+        return sum + methodAmount;
       }
-      if (method.type === 'cartao_credito' && (!method.installments || method.installments === 1)) {
-        return sum + method.amount;
+      if (method.type === 'cartao_credito' && safeNumber(method.installments, 1) === 1) {
+        return sum + methodAmount;
       }
       return sum;
     }, 0);
     
-    const pending = formData.totalValue - totalPaid;
+    const totalValue = safeNumber(formData.totalValue, 0);
+    const pending = totalValue - totalPaid;
     
     return {
       paidAmount: totalPaid,
       pendingAmount: Math.max(0, pending),
-      isPaid: pending <= 0
+      isPaid: pending <= 0.01
     };
   };
 
@@ -86,7 +100,8 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
       return;
     }
     
-    if (!formData.totalValue || formData.totalValue <= 0) {
+    const totalValue = safeNumber(formData.totalValue, 0);
+    if (totalValue <= 0) {
       alert('O valor total da dívida deve ser maior que zero.');
       return;
     }
@@ -96,13 +111,13 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
       return;
     }
     
-    const totalPaymentAmount = formData.paymentMethods.reduce((sum, method) => sum + method.amount, 0);
+    const totalPaymentAmount = formData.paymentMethods.reduce((sum, method) => sum + safeNumber(method.amount, 0), 0);
     if (totalPaymentAmount === 0) {
       alert('Por favor, informe pelo menos um método de pagamento com valor maior que zero.');
       return;
     }
     
-    if (totalPaymentAmount > formData.totalValue) {
+    if (totalPaymentAmount > totalValue) {
       alert('O total dos métodos de pagamento não pode ser maior que o valor total da dívida.');
       return;
     }
@@ -113,7 +128,8 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
         alert('Todos os métodos de pagamento devem ter um tipo válido.');
         return;
       }
-      if (typeof method.amount !== 'number' || method.amount < 0) {
+      const methodAmount = safeNumber(method.amount, 0);
+      if (methodAmount < 0) {
         alert('Todos os métodos de pagamento devem ter um valor válido.');
         return;
       }
@@ -125,7 +141,12 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
       
       // Garantir campos obrigatórios
       if (!cleaned.type) cleaned.type = 'dinheiro';
-      if (typeof cleaned.amount !== 'number') cleaned.amount = 0;
+      cleaned.amount = safeNumber(cleaned.amount, 0);
+      
+      // Sanitize numeric fields
+      if (cleaned.installments) cleaned.installments = safeNumber(cleaned.installments, 1);
+      if (cleaned.installmentValue) cleaned.installmentValue = safeNumber(cleaned.installmentValue, 0);
+      if (cleaned.installmentInterval) cleaned.installmentInterval = safeNumber(cleaned.installmentInterval, 30);
       
       // Limpar campos opcionais vazios
       if (cleaned.installments === 1) {
@@ -165,11 +186,14 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
     
     const debtToSubmit = {
       ...formData,
+      totalValue: safeNumber(formData.totalValue, 0),
       paymentMethods: cleanedPaymentMethods,
       paymentDescription,
       debtPaymentDescription,
       ...amounts
     };
+    
+    logMonetaryValues(debtToSubmit, 'Debt Form Submit');
     
     console.log('📝 Enviando dívida:', debtToSubmit);
     onSubmit(debtToSubmit as Omit<Debt, 'id' | 'createdAt'>);
@@ -231,8 +255,8 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.totalValue}
-                  onChange={(e) => setFormData(prev => ({ ...prev, totalValue: parseFloat(e.target.value) || 0 }))}
+                  value={safeNumber(formData.totalValue, 0)}
+                  onChange={(e) => setFormData(prev => ({ ...prev, totalValue: safeNumber(e.target.value, 0) }))}
                   className="input-field"
                   placeholder="0,00"
                   required
@@ -303,8 +327,8 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
                           type="number"
                           step="0.01"
                           min="0"
-                          value={method.amount}
-                          onChange={(e) => updatePaymentMethod(index, 'amount', parseFloat(e.target.value) || 0)}
+                         value={safeNumber(method.amount, 0)}
+                         onChange={(e) => updatePaymentMethod(index, 'amount', safeNumber(e.target.value, 0))}
                           className="input-field"
                           placeholder="0,00"
                         />
@@ -324,19 +348,19 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
                 <div className="text-center">
                   <span className="text-red-600 font-semibold block mb-1">Total:</span>
                   <p className="text-2xl font-black text-red-800">
-                    R$ {formData.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {safeNumber(formData.totalValue, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div className="text-center">
                   <span className="text-red-600 font-semibold block mb-1">Pago:</span>
                   <p className="text-2xl font-black text-green-600">
-                    R$ {calculateAmounts().paidAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {safeNumber(calculateAmounts().paidAmount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div className="text-center">
                   <span className="text-red-600 font-semibold block mb-1">Pendente:</span>
                   <p className="text-2xl font-black text-orange-600">
-                    R$ {calculateAmounts().pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {safeNumber(calculateAmounts().pendingAmount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>

@@ -3,6 +3,7 @@ import { X, Plus, Trash2, Info } from 'lucide-react';
 import { Sale, PaymentMethod } from '../../types';
 import { ThirdPartyCheckDetails } from '../../types';
 import { useAppContext } from '../../context/AppContext';
+import { safeNumber, validateFormNumber, logMonetaryValues } from '../../utils/numberUtils';
 
 interface SaleFormProps {
   sale?: Sale | null;
@@ -30,11 +31,17 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     deliveryDate: sale?.deliveryDate || '',
     client: sale?.client || '',
     sellerId: sale?.sellerId || '',
-    customCommissionRate: sale?.customCommissionRate || 5,
+    customCommissionRate: safeNumber(sale?.customCommissionRate, 5),
     products: sale?.products || 'Produtos vendidos', // Simplified to string
     observations: sale?.observations || '',
-    totalValue: sale?.totalValue || 0,
-    paymentMethods: sale?.paymentMethods || [{ type: 'dinheiro' as const, amount: 0 }],
+    totalValue: safeNumber(sale?.totalValue, 0),
+    paymentMethods: (sale?.paymentMethods || [{ type: 'dinheiro' as const, amount: 0 }]).map(method => ({
+      ...method,
+      amount: safeNumber(method.amount, 0),
+      installmentValue: safeNumber(method.installmentValue, 0),
+      installments: safeNumber(method.installments, 1),
+      installmentInterval: safeNumber(method.installmentInterval, 30)
+    })),
     paymentDescription: sale?.paymentDescription || '',
     paymentObservations: sale?.paymentObservations || ''
   });
@@ -63,12 +70,23 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
         if (i === index) {
           const updatedMethod = { ...method, [field]: value };
           
+          // Sanitize numeric values
+          if (field === 'amount') {
+            updatedMethod.amount = safeNumber(value, 0);
+          }
+          if (field === 'installments') {
+            updatedMethod.installments = safeNumber(value, 1);
+          }
+          if (field === 'installmentInterval') {
+            updatedMethod.installmentInterval = safeNumber(value, 30);
+          }
+          
           // Calculate installment value when installments change
-          if (field === 'installments' && value > 1) {
-            updatedMethod.installmentValue = method.amount / value;
-          } else if (field === 'amount' && method.installments && method.installments > 1) {
+          if (field === 'installments' && safeNumber(value, 1) > 1) {
+            updatedMethod.installmentValue = safeNumber(method.amount, 0) / safeNumber(value, 1);
+          } else if (field === 'amount' && safeNumber(method.installments, 1) > 1) {
             // Recalculate installment value when amount changes
-            updatedMethod.installmentValue = value / method.installments;
+            updatedMethod.installmentValue = safeNumber(value, 0) / safeNumber(method.installments, 1);
           }
           
           // Reset installment fields if payment type doesn't support installments
@@ -149,24 +167,26 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   const calculateAmounts = () => {
     // Calcular valores recebidos corretamente
     const totalPaid = formData.paymentMethods.reduce((sum, method) => {
+      const methodAmount = safeNumber(method.amount, 0);
       // Apenas pagamentos instantâneos são considerados recebidos
       if (method.type === 'dinheiro' || method.type === 'pix' || method.type === 'cartao_debito') {
-        return sum + method.amount;
+        return sum + methodAmount;
       }
       // Cartão de crédito à vista é considerado recebido
-      if (method.type === 'cartao_credito' && (!method.installments || method.installments === 1)) {
-        return sum + method.amount;
+      if (method.type === 'cartao_credito' && safeNumber(method.installments, 1) === 1) {
+        return sum + methodAmount;
       }
       // Cheques, boletos e cartão parcelado são sempre pendentes até serem compensados
       return sum;
     }, 0);
     
-    const pending = formData.totalValue - totalPaid;
+    const totalValue = safeNumber(formData.totalValue, 0);
+    const pending = totalValue - totalPaid;
     
     return {
       receivedAmount: totalPaid,
       pendingAmount: Math.max(0, pending),
-      status: pending <= 0 ? 'pago' : (totalPaid > 0 ? 'parcial' : 'pendente')
+      status: pending <= 0.01 ? 'pago' : (totalPaid > 0 ? 'parcial' : 'pendente')
     };
   };
 
@@ -180,8 +200,8 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     }
     
     // Garantir que totalValue seja um número válido e maior que zero
-    const totalValue = Number(formData.totalValue);
-    if (!totalValue || isNaN(totalValue) || totalValue <= 0) {
+    const totalValue = safeNumber(formData.totalValue, 0);
+    if (totalValue <= 0) {
       alert('O valor total da venda deve ser maior que zero.');
       return;
     }
@@ -192,14 +212,14 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     }
     
     // Validar se há pelo menos um método de pagamento com valor
-    const totalPaymentAmount = formData.paymentMethods.reduce((sum, method) => sum + method.amount, 0);
+    const totalPaymentAmount = formData.paymentMethods.reduce((sum, method) => sum + safeNumber(method.amount, 0), 0);
     if (totalPaymentAmount === 0) {
       alert('Por favor, informe pelo menos um método de pagamento com valor maior que zero.');
       return;
     }
     
     // Validar se o total dos métodos de pagamento não excede o valor total da venda
-    if (totalPaymentAmount > formData.totalValue) {
+    if (totalPaymentAmount > totalValue) {
       alert('O total dos métodos de pagamento não pode ser maior que o valor total da venda.');
       return;
     }
@@ -210,27 +230,29 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
         alert('Todos os métodos de pagamento devem ter um tipo válido.');
         return;
       }
-      if (typeof method.amount !== 'number' || method.amount < 0) {
+      const methodAmount = safeNumber(method.amount, 0);
+      if (methodAmount < 0) {
         alert('Todos os métodos de pagamento devem ter um valor válido.');
         return;
       }
       
       // Validar parcelas para métodos que suportam
-      if (INSTALLMENT_TYPES.includes(method.type) && method.installments && method.installments > 1) {
-        if (!method.installmentValue || method.installmentValue <= 0) {
+      if (INSTALLMENT_TYPES.includes(method.type) && safeNumber(method.installments, 1) > 1) {
+        if (safeNumber(method.installmentValue, 0) <= 0) {
           alert(`Valor da parcela deve ser maior que zero para ${method.type}.`);
           return;
         }
-        if (!method.installmentInterval || method.installmentInterval <= 0) {
+        if (safeNumber(method.installmentInterval, 0) <= 0) {
           alert(`Intervalo entre parcelas deve ser maior que zero para ${method.type}.`);
           return;
         }
       }
       
       // Validar cheques de terceiros
-      if (method.type === 'cheque' && method.isThirdPartyCheck && method.installments && method.installments > 1) {
-        if (!method.thirdPartyDetails || method.thirdPartyDetails.length < method.installments) {
-          alert(`Você deve adicionar ${method.installments} cheque(s) de terceiros para este método de pagamento.`);
+      if (method.type === 'cheque' && method.isThirdPartyCheck && safeNumber(method.installments, 1) > 1) {
+        const requiredChecks = safeNumber(method.installments, 1);
+        if (!method.thirdPartyDetails || method.thirdPartyDetails.length < requiredChecks) {
+          alert(`Você deve adicionar ${requiredChecks} cheque(s) de terceiros para este método de pagamento.`);
           return;
         }
         
@@ -269,10 +291,15 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       
       // Garantir campos obrigatórios
       if (!cleaned.type) cleaned.type = 'dinheiro';
-      if (typeof cleaned.amount !== 'number') cleaned.amount = 0;
+      cleaned.amount = safeNumber(cleaned.amount, 0);
+      
+      // Sanitize numeric fields
+      if (cleaned.installments) cleaned.installments = safeNumber(cleaned.installments, 1);
+      if (cleaned.installmentValue) cleaned.installmentValue = safeNumber(cleaned.installmentValue, 0);
+      if (cleaned.installmentInterval) cleaned.installmentInterval = safeNumber(cleaned.installmentInterval, 30);
       
       // Limpar campos opcionais vazios
-      if (cleaned.installments === 1) {
+      if (safeNumber(cleaned.installments, 1) === 1) {
         delete cleaned.installments;
         delete cleaned.installmentValue;
         delete cleaned.installmentInterval;
@@ -321,7 +348,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     
     const saleToSubmit = {
       ...formData,
-      totalValue: totalValue, // Usar o valor validado
+      totalValue: safeNumber(formData.totalValue, 0),
       sellerId: sellerId,
       deliveryDate: deliveryDate,
       paymentMethods: cleanedPaymentMethods,
@@ -332,8 +359,10 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       ...amounts
     };
     
+    logMonetaryValues(saleToSubmit, 'Sale Form Submit');
+    
     // Validação final antes do envio
-    if (!saleToSubmit.client || !saleToSubmit.totalValue || !saleToSubmit.paymentMethods) {
+    if (!saleToSubmit.client || safeNumber(saleToSubmit.totalValue, 0) <= 0 || !saleToSubmit.paymentMethods) {
       alert('Dados da venda incompletos. Verifique todos os campos obrigatórios.');
       return;
     }
@@ -344,12 +373,12 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
 
   // Auto-update payment method amount when total value changes
   useEffect(() => {
-    if (formData.paymentMethods.length === 1 && formData.paymentMethods[0].amount === 0) {
+    if (formData.paymentMethods.length === 1 && safeNumber(formData.paymentMethods[0].amount, 0) === 0) {
       setFormData(prev => ({
         ...prev,
         paymentMethods: [{
           ...prev.paymentMethods[0],
-          amount: prev.totalValue
+          amount: safeNumber(prev.totalValue, 0)
         }]
       }));
     }
@@ -458,8 +487,8 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.totalValue}
-                  onChange={(e) => setFormData(prev => ({ ...prev, totalValue: parseFloat(e.target.value) || 0 }))}
+                  value={safeNumber(formData.totalValue, 0)}
+                  onChange={(e) => setFormData(prev => ({ ...prev, totalValue: safeNumber(e.target.value, 0) }))}
                   className="input-field"
                   placeholder="0,00"
                   required
@@ -544,8 +573,8 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                           type="number"
                           step="0.01"
                           min="0"
-                          value={method.amount}
-                          onChange={(e) => updatePaymentMethod(index, 'amount', parseFloat(e.target.value) || 0)}
+                          value={safeNumber(method.amount, 0)}
+                          onChange={(e) => updatePaymentMethod(index, 'amount', safeNumber(e.target.value, 0))}
                           className="input-field"
                           placeholder="0,00"
                         />
@@ -558,13 +587,13 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                             <input
                               type="number"
                               min="1"
-                              value={method.installments || 1}
-                              onChange={(e) => updatePaymentMethod(index, 'installments', parseInt(e.target.value) || 1)}
+                              value={safeNumber(method.installments, 1)}
+                              onChange={(e) => updatePaymentMethod(index, 'installments', safeNumber(e.target.value, 1))}
                               className="input-field"
                             />
                           </div>
 
-                          {method.installments && method.installments > 1 && (
+                          {safeNumber(method.installments, 1) > 1 && (
                             <>
                               <div>
                                 <label className="form-label">Valor por Parcela</label>
@@ -572,14 +601,14 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                   type="number"
                                   step="0.01"
                                   min="0"
-                                  value={method.installmentValue || 0}
-                                  onChange={(e) => updatePaymentMethod(index, 'installmentValue', parseFloat(e.target.value) || 0)}
+                                  value={safeNumber(method.installmentValue, 0)}
+                                  onChange={(e) => updatePaymentMethod(index, 'installmentValue', safeNumber(e.target.value, 0))}
                                   className="input-field"
                                   placeholder="0,00"
                                   readOnly
                                 />
                                 <p className="text-xs text-blue-600 mt-1 font-bold">
-                                  ✓ Calculado automaticamente: R$ {method.amount && method.installments ? (method.amount / method.installments).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'} por parcela
+                                  ✓ Calculado automaticamente: R$ {safeNumber(method.amount, 0) && safeNumber(method.installments, 1) ? (safeNumber(method.amount, 0) / safeNumber(method.installments, 1)).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'} por parcela
                                 </p>
                               </div>
 
@@ -588,8 +617,8 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                 <input
                                   type="number"
                                   min="1"
-                                  value={method.installmentInterval || 30}
-                                  onChange={(e) => updatePaymentMethod(index, 'installmentInterval', parseInt(e.target.value) || 30)}
+                                  value={safeNumber(method.installmentInterval, 30)}
+                                  onChange={(e) => updatePaymentMethod(index, 'installmentInterval', safeNumber(e.target.value, 30))}
                                   className="input-field"
                                   placeholder="30"
                                 />
@@ -608,7 +637,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                           )}
 
                           {/* Campo para data de pagamento único para cheque e boleto */}
-                          {(method.type === 'cheque' || method.type === 'boleto') && (!method.installments || method.installments === 1) && (
+                          {(method.type === 'cheque' || method.type === 'boleto') && safeNumber(method.installments, 1) === 1 && (
                             <div>
                               <label className="form-label">Data de Vencimento/Pagamento *</label>
                               <input
@@ -649,7 +678,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                 <div className="flex items-center gap-2 mb-4">
                                   <Info className="w-5 h-5 text-blue-600" />
                                   <h4 className="font-bold text-blue-900">
-                                    Dados dos Cheques de Terceiros ({method.installments} cheques)
+                                    Dados dos Cheques de Terceiros ({safeNumber(method.installments, 1)} cheques)
                                   </h4>
                                   <button
                                     type="button"
@@ -663,7 +692,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                 {(!method.thirdPartyDetails || method.thirdPartyDetails.length < (method.installments || 1)) && (
                                   <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                                     <p className="text-sm text-yellow-700 font-medium">
-                                      ⚠️ Você precisa adicionar {(method.installments || 1) - (method.thirdPartyDetails?.length || 0)} cheque(s) de terceiros
+                                      ⚠️ Você precisa adicionar {safeNumber(method.installments, 1) - (method.thirdPartyDetails?.length || 0)} cheque(s) de terceiros
                                     </p>
                                   </div>
                                 )}
@@ -797,19 +826,19 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                   <div className="text-center">
                     <span className="text-green-600 font-semibold block mb-1">Total:</span>
                     <p className="text-2xl font-black text-green-800">
-                      R$ {formData.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {safeNumber(formData.totalValue, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div className="text-center">
                     <span className="text-green-600 font-semibold block mb-1">Recebido:</span>
                     <p className="text-2xl font-black text-green-600">
-                      R$ {calculateAmounts().receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {safeNumber(calculateAmounts().receivedAmount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div className="text-center">
                     <span className="text-green-600 font-semibold block mb-1">Pendente:</span>
                     <p className="text-2xl font-black text-orange-600">
-                      R$ {calculateAmounts().pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {safeNumber(calculateAmounts().pendingAmount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
