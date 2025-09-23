@@ -1,1547 +1,621 @@
-import { supabase } from './supabase';
-import { isSupabaseConfigured } from './supabase';
-import { ErrorHandler } from './errorHandler';
-import { sanitizeSupabaseData, safeNumber, logMonetaryValues } from '../utils/numberUtils';
-
-export class SupabaseService {
-  protected supabase = supabase;
-
-  protected handleError(error: any, operation: string) {
-    // Only log project-related errors, suppress external service errors
-    if (ErrorHandler.isProjectError(error)) {
-      console.error(`Error in ${operation}:`, error);
-    }
-    throw error;
-  }
-
-  protected async safeOperation<T>(operation: () => Promise<T>, fallback: T): Promise<T> {
-    try {
-      // Check if Supabase is configured
-      if (!isSupabaseConfigured()) {
-        console.warn('⚠️ Supabase not configured, returning fallback data');
-        return fallback;
-      }
-
-      return await operation();
-    } catch (error) {
-      // Check if it's a network error
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        console.warn('⚠️ Network error detected, returning fallback data');
-        return fallback;
-      }
-      
-      // For other errors, still throw them
-      throw error;
-    }
-  }
-}
-
-export class CashService extends SupabaseService {
-  async getCurrentBalance() {
-    return this.safeOperation(async () => {
-      const { data, error } = await this.supabase
-        .rpc('get_current_cash_balance');
-      
-      if (error) throw error;
-      
-      const result = data && data.length > 0 ? sanitizeSupabaseData(data[0]) : null;
-      if (result) {
-        logMonetaryValues(result, 'Cash Balance');
-      }
-      return result;
-    }, null);
-  }
-
-  async getTransactions() {
-    return this.safeOperation(async () => {
-      const { data, error } = await this.supabase
-        .from('cash_transactions')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
-      console.log(`💰 Loaded ${sanitized.length} cash transactions`);
-      return sanitized;
-    }, []);
-  }
-
-  async initializeCashBalance(amount: number) {
-    return this.safeOperation(async () => {
-      const safeAmount = safeNumber(amount, 0);
-      if (safeAmount <= 0) {
-        throw new Error('Initial amount must be greater than zero');
-      }
-      
-      const { data, error } = await this.supabase
-        .rpc('initialize_cash_balance', { initial_amount: safeAmount });
-      
-      if (error) throw error;
-      return data;
-    }, null);
-  }
-
-  async recalculateBalance() {
-    return this.safeOperation(async () => {
-      const { error } = await this.supabase
-        .rpc('recalculate_cash_balance');
-      
-      if (error) throw error;
-      return true;
-    }, false);
-  }
-
-  async createTransaction(transaction: any) {
-    return this.safeOperation(async () => {
-      // Sanitize monetary values before saving
-      const sanitizedTransaction = {
-        ...transaction,
-        amount: safeNumber(transaction.amount, 0)
-      };
-      
-      if (sanitizedTransaction.amount <= 0) {
-        throw new Error('Transaction amount must be greater than zero');
-      }
-      
-      const { data, error } = await this.supabase
-        .from('cash_transactions')
-        .insert([sanitizedTransaction])
-        .select();
-      
-      if (error) throw error;
-      return data && data.length > 0 ? data[0].id : null;
-    }, null);
-  }
-
-  async updateTransaction(id: string, transaction: any) {
-    return this.safeOperation(async () => {
-      // Sanitize monetary values before updating
-      const sanitizedTransaction = {
-        ...transaction,
-        amount: safeNumber(transaction.amount, 0)
-      };
-      
-      const { data, error } = await this.supabase
-        .from('cash_transactions')
-        .update(sanitizedTransaction)
-        .eq('id', id)
-        .select();
-      
-      if (error) throw error;
-      return data;
-    }, []);
-  }
-
-  async deleteTransaction(id: string) {
-    return this.safeOperation(async () => {
-      const { error } = await this.supabase
-        .from('cash_transactions')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      return true;
-    }, false);
-  }
-
-  async getAll() {
-    return this.safeOperation(async () => {
-      const { data, error } = await this.supabase
-        .from('cash_transactions')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    }, []);
-  }
-
-  async create(transaction: any) {
-    return this.safeOperation(async () => {
-      const { data, error } = await this.supabase
-        .from('cash_transactions')
-        .insert([transaction])
-        .select();
-      
-      if (error) throw error;
-      return data;
-    }, []);
-  }
-
-  async update(id: string, transaction: any) {
-    return this.safeOperation(async () => {
-      const { data, error } = await this.supabase
-        .from('cash_transactions')
-        .update(transaction)
-        .eq('id', id)
-        .select();
-      
-      if (error) throw error;
-      return data;
-    }, []);
-  }
-
-  async delete(id: string) {
-    return this.safeOperation(async () => {
-      const { error } = await this.supabase
-        .from('cash_transactions')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      return true;
-    }, false);
-  }
-}
-
-export class DebtsService extends SupabaseService {
-  async getDebts() {
-    try {
-      const { data, error } = await this.supabase
-        .from('debts')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
-      console.log(`💰 Loaded ${sanitized.length} debts`);
-      return sanitized;
-    } catch (error) {
-      this.handleError(error, 'getDebts');
-    }
-  }
-
-  async create(debt: any) {
-    try {
-      // Sanitize monetary values before saving
-      const sanitizedDebt = sanitizeSupabaseData({
-        ...debt,
-        totalValue: safeNumber(debt.totalValue, 0),
-        paidAmount: safeNumber(debt.paidAmount, 0),
-        pendingAmount: safeNumber(debt.pendingAmount, 0)
-      });
-      
-      if (sanitizedDebt.totalValue <= 0) {
-        throw new Error('Debt total value must be greater than zero');
-      }
-      
-      const { data, error } = await this.supabase
-        .from('debts')
-        .insert([sanitizedDebt])
-        .select();
-      
-      if (error) throw error;
-      return data && data.length > 0 ? data[0].id : null;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-
-  async getAll() {
-    try {
-      const { data, error } = await this.supabase
-        .from('debts')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'getAll');
-    }
-  }
-
-  async create(debt: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('debts')
-        .insert([debt])
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-
-  async update(id: string, debt: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('debts')
-        .update(debt)
-        .eq('id', id)
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'update');
-    }
-  }
-
-  async delete(id: string) {
-    try {
-      const { error } = await this.supabase
-        .from('debts')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    } catch (error) {
-      this.handleError(error, 'delete');
-    }
-  }
-}
-
-export class ChecksService extends SupabaseService {
-  async getChecks() {
-    try {
-      const { data, error } = await this.supabase
-        .from('checks')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
-      console.log(`💰 Loaded ${sanitized.length} checks`);
-      return sanitized;
-    } catch (error) {
-      this.handleError(error, 'getChecks');
-    }
-  }
-
-  async create(check: any) {
-    try {
-      // Sanitize monetary values before saving
-      const sanitizedCheck = sanitizeSupabaseData({
-        ...check,
-        value: safeNumber(check.value, 0)
-      });
-      
-      if (sanitizedCheck.value <= 0) {
-        throw new Error('Check value must be greater than zero');
-      }
-      
-      const { data, error } = await this.supabase
-        .from('checks')
-        .insert([sanitizedCheck])
-        .select();
-      
-      if (error) throw error;
-      return data && data.length > 0 ? data[0].id : null;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-
-  async getAll() {
-    try {
-      const { data, error } = await this.supabase
-        .from('checks')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'getAll');
-    }
-  }
-
-  async create(check: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('checks')
-        .insert([check])
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-
-  async update(id: string, check: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('checks')
-        .update(check)
-        .eq('id', id)
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'update');
-    }
-  }
-
-  async delete(id: string) {
-    try {
-      const { error } = await this.supabase
-        .from('checks')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    } catch (error) {
-      this.handleError(error, 'delete');
-    }
-  }
-}
-
-export class BoletosService extends SupabaseService {
-  async getBoletos() {
-    try {
-      const { data, error } = await this.supabase
-        .from('boletos')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
-      console.log(`💰 Loaded ${sanitized.length} boletos`);
-      return sanitized;
-    } catch (error) {
-      this.handleError(error, 'getBoletos');
-    }
-  }
-
-  async create(boleto: any) {
-    try {
-      // Sanitize monetary values before saving
-      const sanitizedBoleto = sanitizeSupabaseData({
-        ...boleto,
-        value: safeNumber(boleto.value, 0),
-        finalAmount: safeNumber(boleto.finalAmount, boleto.value),
-        interestAmount: safeNumber(boleto.interestAmount, 0),
-        penaltyAmount: safeNumber(boleto.penaltyAmount, 0),
-        notaryCosts: safeNumber(boleto.notaryCosts, 0),
-        interestPaid: safeNumber(boleto.interestPaid, 0)
-      });
-      
-      if (sanitizedBoleto.value <= 0) {
-        throw new Error('Boleto value must be greater than zero');
-      }
-      
-      const { data, error } = await this.supabase
-        .from('boletos')
-        .insert([sanitizedBoleto])
-        .select();
-      
-      if (error) throw error;
-      return data && data.length > 0 ? data[0].id : null;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-
-  async getAll() {
-    try {
-      const { data, error } = await this.supabase
-        .from('boletos')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'getAll');
-    }
-  }
-
-  async create(boleto: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('boletos')
-        .insert([boleto])
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-
-  async update(id: string, boleto: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('boletos')
-        .update(boleto)
-        .eq('id', id)
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'update');
-    }
-  }
-
-  async delete(id: string) {
-    try {
-      const { error } = await this.supabase
-        .from('boletos')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    } catch (error) {
-      this.handleError(error, 'delete');
-    }
-  }
-}
-
-export class EmployeePaymentsService extends SupabaseService {
-  async getPayments() {
-    try {
-      const { data, error } = await this.supabase
-        .from('employee_payments')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
-      console.log(`💰 Loaded ${sanitized.length} employee payments`);
-      return sanitized;
-    } catch (error) {
-      this.handleError(error, 'getPayments');
-    }
-  }
-
-  async create(payment: any) {
-    try {
-      // Sanitize monetary values before saving
-      const sanitizedPayment = sanitizeSupabaseData({
-        ...payment,
-        amount: safeNumber(payment.amount, 0)
-      });
-      
-      if (sanitizedPayment.amount <= 0) {
-        throw new Error('Payment amount must be greater than zero');
-      }
-      
-      const { data, error } = await this.supabase
-        .from('employee_payments')
-        .insert([sanitizedPayment])
-        .select();
-      
-      if (error) throw error;
-      return data && data.length > 0 ? data[0].id : null;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-
-  async getAll() {
-    try {
-      const { data, error } = await this.supabase
-        .from('employee_payments')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'getAll');
-    }
-  }
-
-  async create(payment: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('employee_payments')
-        .insert([payment])
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-}
-
-export class EmployeeAdvancesService extends SupabaseService {
-  async getAdvances() {
-    try {
-      const { data, error } = await this.supabase
-        .from('employee_advances')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
-      console.log(`💰 Loaded ${sanitized.length} employee advances`);
-      return sanitized;
-    } catch (error) {
-      this.handleError(error, 'getAdvances');
-    }
-  }
-
-  async create(advance: any) {
-    try {
-      // Sanitize monetary values before saving
-      const sanitizedAdvance = sanitizeSupabaseData({
-        ...advance,
-        amount: safeNumber(advance.amount, 0)
-      });
-      
-      if (sanitizedAdvance.amount <= 0) {
-        throw new Error('Advance amount must be greater than zero');
-      }
-      
-      const { data, error } = await this.supabase
-        .from('employee_advances')
-        .insert([sanitizedAdvance])
-        .select();
-      
-      if (error) throw error;
-      return data && data.length > 0 ? data[0].id : null;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-
-  async update(id: string, advance: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('employee_advances')
-        .update(advance)
-        .eq('id', id)
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'update');
-    }
-  }
-
-  async getAll() {
-    try {
-      const { data, error } = await this.supabase
-        .from('employee_advances')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'getAll');
-    }
-  }
-
-  async create(advance: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('employee_advances')
-        .insert([advance])
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-}
-
-export class EmployeeOvertimesService extends SupabaseService {
-  async getOvertimes() {
-    try {
-      const { data, error } = await this.supabase
-        .from('employee_overtimes')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
-      console.log(`💰 Loaded ${sanitized.length} employee overtimes`);
-      return sanitized;
-    } catch (error) {
-      this.handleError(error, 'getOvertimes');
-    }
-  }
-
-  async create(overtime: any) {
-    try {
-      // Sanitize monetary values before saving
-      const sanitizedOvertime = sanitizeSupabaseData({
-        ...overtime,
-        hours: safeNumber(overtime.hours, 0),
-        hourlyRate: safeNumber(overtime.hourlyRate, 0),
-        totalAmount: safeNumber(overtime.totalAmount, 0)
-      });
-      
-      if (sanitizedOvertime.hours <= 0 || sanitizedOvertime.hourlyRate <= 0) {
-        throw new Error('Hours and hourly rate must be greater than zero');
-      }
-      
-      const { data, error } = await this.supabase
-        .from('employee_overtimes')
-        .insert([sanitizedOvertime])
-        .select();
-      
-      if (error) throw error;
-      return data && data.length > 0 ? data[0].id : null;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-
-  async update(id: string, overtime: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('employee_overtimes')
-        .update(overtime)
-        .eq('id', id)
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'update');
-    }
-  }
-
-  async getAll() {
-    try {
-      const { data, error } = await this.supabase
-        .from('employee_overtimes')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'getAll');
-    }
-  }
-
-  async create(overtime: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('employee_overtimes')
-        .insert([overtime])
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-}
-
-export class EmployeeCommissionsService extends SupabaseService {
-  async getCommissions() {
-    try {
-      const { data, error } = await this.supabase
-        .from('employee_commissions')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
-      console.log(`💰 Loaded ${sanitized.length} employee commissions`);
-      return sanitized;
-    } catch (error) {
-      this.handleError(error, 'getCommissions');
-    }
-  }
-
-  async create(commission: any) {
-    try {
-      // Sanitize monetary values before saving
-      const sanitizedCommission = sanitizeSupabaseData({
-        ...commission,
-        saleValue: safeNumber(commission.saleValue, 0),
-        commissionRate: safeNumber(commission.commissionRate, 5),
-        commissionAmount: safeNumber(commission.commissionAmount, 0)
-      });
-      
-      if (sanitizedCommission.saleValue <= 0 || sanitizedCommission.commissionAmount <= 0) {
-        throw new Error('Sale value and commission amount must be greater than zero');
-      }
-      
-      const { data, error } = await this.supabase
-        .from('employee_commissions')
-        .insert([sanitizedCommission])
-        .select();
-      
-      if (error) throw error;
-      return data && data.length > 0 ? data[0].id : null;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-
-  async update(id: string, commission: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('employee_commissions')
-        .update(commission)
-        .eq('id', id)
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'update');
-    }
-  }
-
-  async getAll() {
-    try {
-      const { data, error } = await this.supabase
-        .from('employee_commissions')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'getAll');
-    }
-  }
-
-  async create(commission: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('employee_commissions')
-        .insert([commission])
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-}
-
-export class PixFeesService extends SupabaseService {
-  async getPixFees() {
-    try {
-      const { data, error } = await this.supabase
-        .from('pix_fees')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
-      console.log(`💰 Loaded ${sanitized.length} PIX fees`);
-      return sanitized;
-    } catch (error) {
-      this.handleError(error, 'getPixFees');
-    }
-  }
-
-  async create(fee: any) {
-    try {
-      // Sanitize monetary values before saving
-      const sanitizedFee = sanitizeSupabaseData({
-        ...fee,
-        amount: safeNumber(fee.amount, 0)
-      });
-      
-      if (sanitizedFee.amount <= 0) {
-        throw new Error('PIX fee amount must be greater than zero');
-      }
-      
-      const { data, error } = await this.supabase
-        .from('pix_fees')
-        .insert([sanitizedFee])
-        .select();
-      
-      if (error) throw error;
-      return data && data.length > 0 ? data[0].id : null;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-
-  async getAll() {
-    try {
-      const { data, error } = await this.supabase
-        .from('pix_fees')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'getAll');
-    }
-  }
-
-  async create(fee: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('pix_fees')
-        .insert([fee])
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-
-  async update(id: string, fee: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('pix_fees')
-        .update(fee)
-        .eq('id', id)
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'update');
-    }
-  }
-
-  async delete(id: string) {
-    try {
-      const { error } = await this.supabase
-        .from('pix_fees')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    } catch (error) {
-      this.handleError(error, 'delete');
-    }
-  }
-}
-
-export class TaxesService extends SupabaseService {
-  async getTaxes() {
-    try {
-      const { data, error } = await this.supabase
-        .from('taxes')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
-      console.log(`💰 Loaded ${sanitized.length} taxes`);
-      return sanitized;
-    } catch (error) {
-      this.handleError(error, 'getTaxes');
-    }
-  }
-
-  async create(tax: any) {
-    try {
-      // Sanitize monetary values before saving
-      const sanitizedTax = sanitizeSupabaseData({
-        ...tax,
-        amount: safeNumber(tax.amount, 0)
-      });
-      
-      if (sanitizedTax.amount <= 0) {
-        throw new Error('Tax amount must be greater than zero');
-      }
-      
-      const { data, error } = await this.supabase
-        .from('taxes')
-        .insert([sanitizedTax])
-        .select();
-      
-      if (error) throw error;
-      return data && data.length > 0 ? data[0].id : null;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-
-  async getAll() {
-    try {
-      const { data, error } = await this.supabase
-        .from('taxes')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'getAll');
-    }
-  }
-
-  async create(tax: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('taxes')
-        .insert([tax])
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-
-  async update(id: string, tax: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('taxes')
-        .update(tax)
-        .eq('id', id)
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'update');
-    }
-  }
-
-  async delete(id: string) {
-    try {
-      const { error } = await this.supabase
-        .from('taxes')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    } catch (error) {
-      this.handleError(error, 'delete');
-    }
-  }
-}
-
-export class DebugService extends SupabaseService {
-  async getSystemInfo() {
-    try {
-      // Return basic system information for debugging
-      return {
-        timestamp: new Date().toISOString(),
-        supabaseConnected: !!this.supabase,
-        environment: 'development'
-      };
-    } catch (error) {
-      this.handleError(error, 'getSystemInfo');
-    }
-  }
-
-  async testConnection() {
-    try {
-      const { data, error } = await this.supabase
-        .from('sales')
-        .select('count')
-        .limit(1);
-      
-      if (error) throw error;
-      return { connected: true, data };
-    } catch (error) {
-      this.handleError(error, 'testConnection');
-    }
-  }
-}
-
-// Image upload utility functions
-export async function uploadCheckImage(file: File, checkId: string): Promise<string> {
-  try {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${checkId}-${Date.now()}.${fileExt}`;
-    const filePath = `checks/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('check-images')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-
-    return filePath;
-  } catch (error) {
-    console.error('Error uploading check image:', error);
-    throw error;
-  }
-}
-
-export async function deleteCheckImage(filePath: string): Promise<void> {
-  try {
-    const { error } = await supabase.storage
-      .from('check-images')
-      .remove([filePath]);
-
-    if (error) throw error;
-  } catch (error) {
-    console.error('Error deleting check image:', error);
-    throw error;
-  }
-}
-
-export async function getCheckImageUrl(filePath: string): Promise<string> {
-  try {
-    const { data } = await supabase.storage
-      .from('check-images')
-      .getPublicUrl(filePath);
-
-    return data.publicUrl;
-  } catch (error) {
-    console.error('Error getting check image URL:', error);
-    throw error;
-  }
-}
-
-export class SalesService extends SupabaseService {
-  // Transform camelCase keys to snake_case for Supabase
-  private transformSaleForSupabase(sale: any) {
-    const transformed: any = {};
+import React, { useMemo, useState } from 'react';
+import { useAppContext } from '../context/AppContext';
+import { ErrorHandler } from '../lib/errorHandler';
+import { 
+  DollarSign, 
+  TrendingUp, 
+  TrendingDown, 
+  Users, 
+  CreditCard, 
+  Calendar,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Wallet,
+  Star,
+  FileText,
+  Receipt,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Activity,
+  Target,
+  Award,
+  Building2,
+  PieChart,
+  BarChart3
+} from 'lucide-react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  AreaChart,
+  Area
+} from 'recharts';
+
+const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#84cc16', '#f97316'];
+
+const Dashboard: React.FC = () => {
+  const { 
+    sales, 
+    employees, 
+    debts, 
+    checks, 
+    boletos, 
+    employeeCommissions,
+    employeePayments,
+    employeeAdvances,
+    employeeOvertimes,
+    pixFees,
+    cashBalance,
+    recalculateCashBalance,
+    loading, 
+    isLoading,
+    error,
+    setError,
+    loadAllData
+  } = useAppContext();
+  
+  const [isRecalculating, setIsRecalculating] = useState(false);
+
+  const today = new Date().toISOString().split('T')[0];
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  
+  // Force data reload on mount
+  React.useEffect(() => {
+    // Dados já carregados pelo AppContext - não recarregar aqui
+    console.log('📊 Dashboard mounted - using data from context');
+  }, []);
+
+  // Calcular métricas do dia
+  const dailyMetrics = useMemo(() => {
+    // 1. Total de Vendas do dia
+    const todaySales = (sales || []).filter(sale => sale.date === today);
+    const totalSalesToday = todaySales.reduce((sum, sale) => sum + sale.totalValue, 0);
+
+    // 2. Valor Recebido do dia (vendas instantâneas + cheques compensados + boletos pagos)
+    let totalReceivedToday = 0;
     
-    // Map camelCase to snake_case
-    const keyMapping: { [key: string]: string } = {
-      totalValue: 'total_value',
-      receivedAmount: 'received_amount',
-      pendingAmount: 'pending_amount',
-      sellerId: 'seller_id',
-      deliveryDate: 'delivery_date',
-      paymentMethods: 'payment_methods',
-      paymentDescription: 'payment_description',
-      paymentObservations: 'payment_observations',
-      customCommissionRate: 'custom_commission_rate',
-      createdAt: 'created_at',
-      updatedAt: 'updated_at'
-    };
-    
-    // Transform keys
-    Object.keys(sale).forEach(key => {
-      const snakeKey = keyMapping[key] || key;
-      transformed[snakeKey] = sale[key];
+    // Vendas com pagamento instantâneo
+    todaySales.forEach(sale => {
+      if (sale && sale.paymentMethods && Array.isArray(sale.paymentMethods)) {
+        sale.paymentMethods.forEach(method => {
+          if (method && method.type && method.amount) {
+            if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
+                (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
+              totalReceivedToday += method.amount;
+            }
+          }
+        });
+      }
     });
     
-    // Remove empty id field if present
-    if (transformed.id === '' || transformed.id === null || transformed.id === undefined) {
-      delete transformed.id;
-    }
-    
-    // Sanitize all monetary fields using safe number conversion
-    transformed.total_value = safeNumber(transformed.total_value, 0);
-    transformed.received_amount = safeNumber(transformed.received_amount, 0);
-    transformed.pending_amount = safeNumber(transformed.pending_amount, 0);
-    transformed.custom_commission_rate = safeNumber(transformed.custom_commission_rate, 5);
-    
-    // Validate that total value is greater than zero
-    if (transformed.total_value <= 0) {
-      throw new Error('Sale total value must be greater than zero');
-    }
-    
-    // Sanitize payment methods
-    if (transformed.payment_methods && Array.isArray(transformed.payment_methods)) {
-      transformed.payment_methods = transformed.payment_methods.map((method: any) => ({
-        ...method,
-        amount: safeNumber(method.amount, 0),
-        installmentValue: safeNumber(method.installmentValue, 0),
-        installments: safeNumber(method.installments, 1),
-        installmentInterval: safeNumber(method.installmentInterval, 30)
-      }));
-    }
-    
-    logMonetaryValues(transformed, 'Sale Transform');
-    
-    return transformed;
-  }
-
-  async create(sale: any) {
-    try {
-      console.log('🔄 SalesService.create - Original sale data:', sale);
-      
-      const transformedSale = this.transformSaleForSupabase(sale);
-      console.log('🔄 SalesService.create - Transformed sale data:', transformedSale);
-      
-      const { data, error } = await this.supabase
-        .rpc('create_sale', { payload: transformedSale });
-      
-      if (error) {
-        console.error('❌ SalesService.create - Supabase error:', error);
-        throw error;
+    // Cheques compensados hoje
+    (checks || []).forEach(check => {
+      if (check && check.dueDate === today && check.status === 'compensado') {
+        totalReceivedToday += check.value;
       }
-      
-      console.log('✅ SalesService.create - Success:', data);
-      return data;
-    } catch (error) {
-      console.error('❌ SalesService.create - Exception:', error);
-      this.handleError(error, 'create');
-    }
-  }
-
-  async update(id: string, sale: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('sales')
-        .update(sale)
-        .eq('id', id)
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'update');
-    }
-  }
-
-  async delete(id: string) {
-    try {
-      const { error } = await this.supabase
-        .from('sales')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    } catch (error) {
-      this.handleError(error, 'delete');
-    }
-  }
-
-  async getSales() {
-    try {
-      const { data, error } = await this.supabase
-        .from('sales')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
-      console.log(`💰 Loaded ${sanitized.length} sales`);
-      return sanitized;
-    } catch (error) {
-      this.handleError(error, 'getSales');
-    }
-  }
-
-  async createSale(sale: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('sales')
-        .insert([sale])
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'createSale');
-    }
-  }
-
-  async updateSale(id: string, sale: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('sales')
-        .update(sale)
-        .eq('id', id)
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'updateSale');
-    }
-  }
-
-  async deleteSale(id: string) {
-    try {
-      const { error } = await this.supabase
-        .from('sales')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    } catch (error) {
-      this.handleError(error, 'deleteSale');
-    }
-  }
-}
-
-export class EmployeeService extends SupabaseService {
-  async create(employee: any) {
-    try {
-      // Sanitize monetary values before saving
-      const sanitizedEmployee = sanitizeSupabaseData({
-        ...employee,
-        salary: safeNumber(employee.salary, 0)
-      });
-      
-      if (sanitizedEmployee.salary < 0) {
-        throw new Error('Employee salary cannot be negative');
-      }
-      
-      const { data, error } = await this.supabase
-        .from('employees')
-        .insert([sanitizedEmployee])
-        .select();
-      
-      if (error) throw error;
-      return data && data.length > 0 ? data[0].id : null;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-
-  async update(id: string, employee: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('employees')
-        .update(employee)
-        .eq('id', id)
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'update');
-    }
-  }
-
-  async delete(id: string) {
-    try {
-      const { error } = await this.supabase
-        .from('employees')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    } catch (error) {
-      this.handleError(error, 'delete');
-    }
-  }
-
-  async getEmployees() {
-    try {
-      const { data, error } = await this.supabase
-        .from('employees')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      
-      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
-      console.log(`👥 Loaded ${sanitized.length} employees`);
-      return sanitized;
-    } catch (error) {
-      this.handleError(error, 'getEmployees');
-    }
-  }
-}
-
-export class AcertosService extends SupabaseService {
-  async getAcertos() {
-    try {
-      const { data, error } = await this.supabase
-        .from('acertos')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
-      console.log(`💰 Loaded ${sanitized.length} acertos`);
-      return sanitized;
-    } catch (error) {
-      this.handleError(error, 'getAcertos');
-    }
-  }
-
-  async getAll() {
-    try {
-      const { data, error } = await this.supabase
-        .from('acertos')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'getAll');
-    }
-  }
-
-  async create(acerto: any) {
-    try {
-      // Sanitize monetary values before saving
-      const sanitizedAcerto = sanitizeSupabaseData({
-        ...acerto,
-        totalAmount: safeNumber(acerto.totalAmount, 0),
-        paidAmount: safeNumber(acerto.paidAmount, 0),
-        pendingAmount: safeNumber(acerto.pendingAmount, 0),
-        paymentInstallmentValue: safeNumber(acerto.paymentInstallmentValue, 0)
-      });
-      
-      if (sanitizedAcerto.totalAmount <= 0) {
-        throw new Error('Acerto total amount must be greater than zero');
-      }
-      
-      const { data, error } = await this.supabase
-        .from('acertos')
-        .insert([sanitizedAcerto])
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-
-  async update(id: string, acerto: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('acertos')
-        .update(acerto)
-        .eq('id', id)
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'update');
-    }
-  }
-
-  async delete(id: string) {
-    try {
-      const { error } = await this.supabase
-        .from('acertos')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    } catch (error) {
-      this.handleError(error, 'delete');
-    }
-  }
-}
-
-export class AgendaService extends SupabaseService {
-  async getEvents() {
-    try {
-      const { data, error } = await this.supabase
-        .from('agenda_events')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
-      console.log(`📅 Loaded ${sanitized.length} agenda events`);
-      return sanitized;
-    } catch (error) {
-      this.handleError(error, 'getEvents');
-    }
-  }
-
-  async getAll() {
-    try {
-      const { data, error } = await this.supabase
-        .from('agenda_events')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'getAll');
-    }
-  }
-
-  async create(agendaEvent: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('agenda_events')
-        .insert([agendaEvent])
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'create');
-    }
-  }
-
-  async update(id: string, agendaEvent: any) {
-    try {
-      const { data, error } = await this.supabase
-        .from('agenda_events')
-        .update(agendaEvent)
-        .eq('id', id)
-        .select();
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      this.handleError(error, 'update');
-    }
-  }
-
-  async delete(id: string) {
-    try {
-      const { error } = await this.supabase
-        .from('agenda_events')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    } catch (error) {
-      this.handleError(error, 'delete');
-    }
-  }
-}
-
-// Export service instances
-export const cashService = new CashService();
-export const debtsService = new DebtsService();
-export const checksService = new ChecksService();
-export const boletosService = new BoletosService();
-export const employeePaymentsService = new EmployeePaymentsService();
-export const employeeAdvancesService = new EmployeeAdvancesService();
-export const employeeOvertimesService = new EmployeeOvertimesService();
-export const employeeCommissionsService = new EmployeeCommissionsService();
-export const pixFeesService = new PixFeesService();
-export const taxesService = new TaxesService();
-export const debugService = new DebugService();
-export const salesService = new SalesService();
-export const employeeService = new EmployeeService();
-export const acertosService = new AcertosService();
-export const agendaService = new AgendaService();
-
-// Função para verificar conexão com Supabase
-export async function checkSupabaseConnection(): Promise<{ success: boolean; message?: string }> {
-  try {
-    const { data, error } = await supabase
-      .from('sales')
-      .select('id')
-      .limit(1);
+    });
     
-    if (error) {
-      return { success: false, message: error.message };
-    }
+    // Boletos pagos hoje
+    (boletos || []).forEach(boleto => {
+      if (boleto && boleto.dueDate === today && boleto.status === 'compensado') {
+        const finalAmount = boleto.finalAmount || boleto.value;
+        const notaryCosts = boleto.notaryCosts || 0;
+        totalReceivedToday += (finalAmount - notaryCosts);
+      }
+    });
+
+    // 3. Total de Dívidas do dia
+    const todayDebts = (debts || []).filter(debt => debt && debt.date === today);
+    const totalDebtsToday = todayDebts.reduce((sum, debt) => sum + (debt ? debt.totalValue : 0), 0);
+
+    // 4. Total Pago hoje
+    let totalPaidToday = 0;
     
-    return { success: true };
-  } catch (error) {
-    return { 
-      success: false, 
-      message: error instanceof Error ? error.message : 'Erro desconhecido' 
+    // Dívidas pagas hoje
+    todayDebts.forEach(debt => {
+      if (debt && debt.isPaid && debt.paymentMethods && Array.isArray(debt.paymentMethods)) {
+        debt.paymentMethods.forEach(method => {
+          if (method && method.type && method.amount && ['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(method.type)) {
+            totalPaidToday += method.amount;
+          }
+        });
+      }
+    });
+    
+    // Pagamentos de funcionários hoje
+    (employeePayments || []).forEach(payment => {
+      if (payment && payment.paymentDate === today) {
+        totalPaidToday += payment.amount;
+      }
+    });
+    
+    // Tarifas PIX hoje
+    (pixFees || []).forEach(fee => {
+      if (fee && fee.date === today) {
+        totalPaidToday += fee.amount;
+      }
+    });
+
+    // 5. Lucro Líquido do dia
+    const netProfitToday = totalReceivedToday - totalPaidToday;
+
+    return {
+      totalSalesToday,
+      totalReceivedToday,
+      totalDebtsToday,
+      totalPaidToday,
+      netProfitToday,
+      todaySales: todaySales.length,
+      todayDebts: todayDebts.length
     };
+  }, [sales, debts, checks, boletos, employeePayments, pixFees, today]);
+
+  // Calcular métricas do mês
+  const monthlyMetrics = useMemo(() => {
+    // Comissões do mês
+    const monthlyCommissions = (employeeCommissions || []).filter(commission => {
+      if (!commission || !commission.date) return false;
+      const commissionDate = new Date(commission.date);
+      return commissionDate.getMonth() === currentMonth && 
+             commissionDate.getFullYear() === currentYear;
+    });
+    const totalCommissionsMonth = monthlyCommissions.reduce((sum, c) => sum + (c ? c.commissionAmount : 0), 0);
+
+    // Folha de pagamento do mês
+    const monthlyPayroll = (employees || [])
+      .filter(emp => emp && emp.isActive)
+      .reduce((sum, emp) => sum + (emp ? emp.salary : 0), 0);
+
+    // Vendas do mês
+    const monthlySales = (sales || []).filter(sale => {
+      if (!sale || !sale.date) return false;
+      const saleDate = new Date(sale.date);
+      return saleDate.getMonth() === currentMonth && 
+             saleDate.getFullYear() === currentYear;
+    });
+    const totalSalesMonth = monthlySales.reduce((sum, sale) => sum + (sale ? sale.totalValue : 0), 0);
+
+    // Lucro do mês (simplificado)
+    const monthlyProfit = totalSalesMonth - monthlyPayroll - totalCommissionsMonth;
+
+    return {
+      totalCommissionsMonth,
+      monthlyPayroll,
+      totalSalesMonth,
+      monthlyProfit,
+      monthlySalesCount: monthlySales.length
+    };
+  }, [employeeCommissions, employees, sales, currentMonth, currentYear]);
+
+  // Boletos vencidos
+  const overdueBoletos = useMemo(() => {
+    return (boletos || []).filter(boleto => 
+      boleto && boleto.dueDate && boleto.dueDate < today && boleto.status === 'pendente'
+    );
+  }, [boletos, today]);
+
+  // Dívidas para pagar
+  const debtsToPay = useMemo(() => {
+    return (debts || []).filter(debt => debt && !debt.isPaid);
+  }, [debts]);
+
+  // Valores a receber
+  const valuesToReceive = useMemo(() => {
+    const toReceive = [];
+    
+    // Cheques pendentes
+    (checks || []).forEach(check => {
+      if (check && check.status === 'pendente' && !check.isOwnCheck) {
+        toReceive.push({
+          id: check.id,
+          type: 'Cheque',
+          client: check.client,
+          amount: check.value,
+          dueDate: check.dueDate,
+          description: `Cheque - Parcela ${check.installmentNumber}/${check.totalInstallments}`,
+          status: check.status
+        });
+      }
+    });
+    
+    // Boletos pendentes
+    (boletos || []).forEach(boleto => {
+      if (boleto && boleto.status === 'pendente') {
+        toReceive.push({
+          id: boleto.id,
+          type: 'Boleto',
+          client: boleto.client,
+          amount: boleto.value,
+          dueDate: boleto.dueDate,
+          description: `Boleto - Parcela ${boleto.installmentNumber}/${boleto.totalInstallments}`,
+          status: boleto.status
+        });
+      }
+    });
+    
+    // Vendas com valores pendentes
+    (sales || []).forEach(sale => {
+      if (sale && sale.pendingAmount > 0) {
+        toReceive.push({
+          id: sale.id,
+          type: 'Venda',
+          client: sale.client,
+          amount: sale.pendingAmount,
+          dueDate: sale.date,
+          description: `Venda pendente`,
+          status: sale.status
+        });
+      }
+    });
+    
+    return toReceive.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  }, [checks, boletos, sales]);
+
+  // Dados para gráfico de fluxo financeiro (30 dias)
+  const flowChartData = useMemo(() => {
+    const last30Days = [];
+    const today = new Date();
+    
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      // Vendas do dia
+      const daySales = (sales || []).filter(sale => sale && sale.date === dateStr);
+      const salesValue = daySales.reduce((sum, sale) => sum + (sale ? sale.totalValue : 0), 0);
+      
+      // Dívidas do dia
+      const dayDebts = (debts || []).filter(debt => debt && debt.date === dateStr);
+      const debtsValue = dayDebts.reduce((sum, debt) => sum + (debt ? debt.totalValue : 0), 0);
+      
+      // Lucro do dia (vendas - dívidas)
+      const profit = salesValue - debtsValue;
+      
+      last30Days.push({
+        date: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+        vendas: salesValue,
+        dividas: debtsValue,
+        lucro: profit
+      });
+    }
+    
+    return last30Days;
+  }, [sales, debts]);
+
+  // Dados para gráfico de métodos de pagamento
+  const paymentMethodsData = useMemo(() => {
+    const methods = {};
+    
+    (sales || []).forEach(sale => {
+      if (sale && sale.paymentMethods && Array.isArray(sale.paymentMethods)) {
+        sale.paymentMethods.forEach(method => {
+          if (method && method.type && method.amount) {
+            const methodName = method.type.replace('_', ' ').toUpperCase();
+            if (!methods[methodName]) {
+              methods[methodName] = 0;
+            }
+            methods[methodName] += method.amount;
+          }
+        });
+      }
+    });
+    
+    return Object.entries(methods).map(([name, value]) => ({
+      name,
+      value,
+      percentage: ((value / Object.values(methods).reduce((a, b) => a + b, 0)) * 100).toFixed(1)
+    }));
+  }, [sales]);
+
+  // Top vendedores do mês
+  const topSellers = useMemo(() => {
+    const sellerStats = {};
+    
+    // Vendas do mês por vendedor
+    (sales || []).forEach(sale => {
+      if (sale && sale.sellerId && sale.date) {
+        const saleDate = new Date(sale.date);
+        if (saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear) {
+          if (!sellerStats[sale.sellerId]) {
+            const employee = (employees || []).find(emp => emp.id === sale.sellerId);
+            sellerStats[sale.sellerId] = {
+              name: employee ? employee.name : 'Vendedor não encontrado',
+              totalSales: 0,
+              salesCount: 0,
+              totalCommissions: 0
+            };
+          }
+          sellerStats[sale.sellerId].totalSales += sale.totalValue;
+          sellerStats[sale.sellerId].salesCount += 1;
+        }
+      }
+    });
+    
+    // Adicionar comissões
+    (employeeCommissions || []).forEach(commission => {
+      if (commission && commission.employeeId && commission.date) {
+        const commissionDate = new Date(commission.date);
+        if (commissionDate.getMonth() === currentMonth && commissionDate.getFullYear() === currentYear) {
+          if (sellerStats[commission.employeeId]) {
+            sellerStats[commission.employeeId].totalCommissions += commission.commissionAmount;
+          }
+        }
+      }
+    });
+    
+    return Object.values(sellerStats)
+      .filter(seller => seller && typeof seller === 'object')
+      .sort((a, b) => b.totalSales - a.totalSales)
+      .slice(0, 5);
+  }, [sales, employees, employeeCommissions, currentMonth, currentYear]);
+
+  if (loading || isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-24 h-24 bg-gradient-to-br from-green-600 to-emerald-700 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+            <Activity className="w-12 h-12 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Carregando Dashboard...</h2>
+          <p className="text-slate-600">Preparando seus dados financeiros</p>
+          {error && (
+            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl max-w-md mx-auto">
+              <p className="text-red-700 text-sm font-medium">{error}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
-}
+
+  // Show error state if there's an error but not loading
+  if (error && !loading && !isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center max-w-2xl mx-auto p-8">
+          <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertTriangle className="w-12 h-12 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Erro de Conexão</h2>
+          <div className="p-6 bg-red-50 border border-red-200 rounded-xl mb-6">
+            <p className="text-red-700 font-medium">{error}</p>
+          </div>
+          <div className="space-y-4">
+            <button
+              onClick={() => {
+                setError(null);
+                // Não recarregar página, apenas tentar reconectar
+                connectionManager.forceCheck().then(() => {
+                  if (connectionManager.isConnected()) {
+                    loadAllData();
+                  }
+                });
+              }}
+              className="btn-primary"
+            >
+              Tentar Novamente
+            </button>
+            <div className="p-6 bg-blue-50 border border-blue-200 rounded-xl">
+              <h3 className="font-bold text-blue-900 mb-4">Como Configurar o Supabase:</h3>
+              <ol className="text-left space-y-2 text-blue-800">
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">1.</span>
+                  <span>Crie um novo projeto em <a href="https://supabase.com/dashboard" target="_blank" className="text-blue-600 underline">supabase.com/dashboard</a></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">2.</span>
+                  <span>Vá em Settings → API no seu projeto</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">3.</span>
+                  <span>Configure o arquivo <code className="bg-blue-100 px-2 py-1 rounded">.env</code>:</span>
+                </li>
+                <li className="ml-6 bg-blue-100 p-3 rounded-lg font-mono text-sm">
+                  VITE_SUPABASE_URL=https://seu-projeto-id.supabase.co<br/>
+                  VITE_SUPABASE_ANON_KEY=sua-chave-anonima-aqui
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">4.</span>
+                  <span>Execute as migrações: <code className="bg-blue-100 px-2 py-1 rounded">supabase db push</code></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">5.</span>
+                  <span>Reinicie o servidor: <code className="bg-blue-100 px-2 py-1 rounded">npm run dev</code></span>
+                </li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center gap-6">
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-xl">
+          <Activity className="w-8 h-8 text-white" />
+        </div>
+        <div>
+          <h1 className="text-4xl font-black text-slate-900">Dashboard RevGold</h1>
+          <p className="text-slate-600 text-lg font-semibold">
+            Visão geral completa do seu negócio - {new Date().toLocaleDateString('pt-BR', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+          </p>
+        </div>
+      </div>
+
+      {/* Widgets Principais */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        {/* Total de Vendas Hoje */}
+        <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-lg">
+              <DollarSign className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-green-900 text-lg">Vendas Hoje</h3>
+              <p className="text-3xl font-black text-green-700">
+                R$ {dailyMetrics.totalSalesToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-green-600 font-semibold">
+                {dailyMetrics.todaySales} venda(s)
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Valor Recebido Hoje */}
+        <div className="card bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-600 to-green-700 modern-shadow-lg">
+              <ArrowUpCircle className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-emerald-900 text-lg">Recebido Hoje</h3>
+              <p className="text-3xl font-black text-emerald-700">
+                R$ {dailyMetrics.totalReceivedToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-emerald-600 font-semibold">
+                Entradas efetivas
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Total de Dívidas Hoje */}
+        <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 modern-shadow-lg">
+              <CreditCard className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-red-900 text-lg">Dívidas Hoje</h3>
+              <p className="text-3xl font-black text-red-700">
+                R$ {dailyMetrics.totalDebtsToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-red-600 font-semibold">
+                {dailyMetrics.todayDebts} dívida(s)
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Total Pago Hoje */}
+        <div className="card bg-gradient-to-br from-orange-50 to-red-50 border-orange-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-600 to-red-600 modern-shadow-lg">
+              <ArrowDownCircle className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-orange-900 text-lg">Pago Hoje</h3>
+              <p className="text-3xl font-black text-orange-700">
+                R$ {dailyMetrics.totalPaidToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-orange-600 font-semibold">
+                Saídas efetivas
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Saldo em Caixa */}
+        <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 modern-shadow-lg">
+              <Wallet className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-blue-900 text-lg">Saldo Caixa</h3>
+              <p className="text-3xl font-black text-blue-700">
+                R$ {(cashBalance?.currentBalance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <p className="text-sm text-blue-600 font-semibold">
+                  Disponível agora
+                </p>
+                <button
+                  onClick={async () => {
+                    setIsRecalculating(true);
+                    try {
+                      await recalculateCashBalance();
+                    } catch (error) {
+                      console.error('Erro ao recalcular:', error);
+                    } finally {
+                      setIsRecalculating(false);
+                    }
+                  }}
+                  disabled={isRecalculating}
+                  className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  title="Recalcular saldo"
+                >
+                  {isRecalculating ? '...' : '↻'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Segunda linha de widgets */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Lucro Líquido Hoje */}
+        <div className="card bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-600 to-violet-700 modern-shadow-lg">
+              <TrendingUp className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-purple-900 text-lg">Lucro Hoje</h3>
+              <p className={`text-3xl font-black ${
+                dailyMetrics.netProfitToday >= 0 ? 'text-green-700' : 'text-red-700'
+              }`}>
+                {dailyMetrics.netProfitToday >= 0 ? '+' : ''}R$ {dailyMetrics.netProfitToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-purple-600 font-semibold">
+                Recebido - Pago
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Funcionários */}
+        <div className="card bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-700 modern-shadow-lg">
+              <Users className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-indigo-900 text-lg">Funcionários</h3>
+              <p className="text-3xl font-black text-indigo-700">
+                {(employees || []).filter(emp => emp.isActive).length}
+              </p>
+              <p className="text-sm text-indigo-600 font-semibold">
+                {(employees || []).filter(emp => emp.isActive && emp.isSeller).length} vendedor(es)
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Comissões do Mês */}
+        <div className="card bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
+          <div className="flex items-center gap-4">
+            <div className="p-

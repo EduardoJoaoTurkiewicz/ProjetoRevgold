@@ -81,7 +81,7 @@ const Dashboard: React.FC = () => {
   const dailyMetrics = useMemo(() => {
     // 1. Total de Vendas do dia
     const todaySales = (sales || []).filter(sale => sale.date === today);
-    const totalSalesToday = todaySales.reduce((sum, sale) => sum + sale.totalValue, 0);
+    const totalSalesToday = todaySales.reduce((sum, sale) => sum + safeNumber(sale.totalValue, 0), 0);
 
     // 2. Valor Recebido do dia (vendas instantâneas + cheques compensados + boletos pagos)
     let totalReceivedToday = 0;
@@ -93,7 +93,7 @@ const Dashboard: React.FC = () => {
           if (method && method.type && method.amount) {
             if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
                 (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
-              totalReceivedToday += method.amount;
+              totalReceivedToday += safeNumber(method.amount, 0);
             }
           }
         });
@@ -103,22 +103,22 @@ const Dashboard: React.FC = () => {
     // Cheques compensados hoje
     (checks || []).forEach(check => {
       if (check && check.dueDate === today && check.status === 'compensado') {
-        totalReceivedToday += check.value;
+        totalReceivedToday += safeNumber(check.value, 0);
       }
     });
     
     // Boletos pagos hoje
     (boletos || []).forEach(boleto => {
       if (boleto && boleto.dueDate === today && boleto.status === 'compensado') {
-        const finalAmount = boleto.finalAmount || boleto.value;
-        const notaryCosts = boleto.notaryCosts || 0;
+        const finalAmount = safeNumber(boleto.finalAmount || boleto.value, 0);
+        const notaryCosts = safeNumber(boleto.notaryCosts, 0);
         totalReceivedToday += (finalAmount - notaryCosts);
       }
     });
 
     // 3. Total de Dívidas do dia
     const todayDebts = (debts || []).filter(debt => debt && debt.date === today);
-    const totalDebtsToday = todayDebts.reduce((sum, debt) => sum + (debt ? debt.totalValue : 0), 0);
+    const totalDebtsToday = todayDebts.reduce((sum, debt) => sum + safeNumber(debt?.totalValue, 0), 0);
 
     // 4. Total Pago hoje
     let totalPaidToday = 0;
@@ -128,7 +128,7 @@ const Dashboard: React.FC = () => {
       if (debt && debt.isPaid && debt.paymentMethods && Array.isArray(debt.paymentMethods)) {
         debt.paymentMethods.forEach(method => {
           if (method && method.type && method.amount && ['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(method.type)) {
-            totalPaidToday += method.amount;
+            totalPaidToday += safeNumber(method.amount, 0);
           }
         });
       }
@@ -137,14 +137,14 @@ const Dashboard: React.FC = () => {
     // Pagamentos de funcionários hoje
     (employeePayments || []).forEach(payment => {
       if (payment && payment.paymentDate === today) {
-        totalPaidToday += payment.amount;
+        totalPaidToday += safeNumber(payment.amount, 0);
       }
     });
     
     // Tarifas PIX hoje
     (pixFees || []).forEach(fee => {
       if (fee && fee.date === today) {
-        totalPaidToday += fee.amount;
+        totalPaidToday += safeNumber(fee.amount, 0);
       }
     });
 
@@ -171,12 +171,12 @@ const Dashboard: React.FC = () => {
       return commissionDate.getMonth() === currentMonth && 
              commissionDate.getFullYear() === currentYear;
     });
-    const totalCommissionsMonth = monthlyCommissions.reduce((sum, c) => sum + (c ? c.commissionAmount : 0), 0);
+    const totalCommissionsMonth = monthlyCommissions.reduce((sum, c) => sum + safeNumber(c?.commissionAmount, 0), 0);
 
     // Folha de pagamento do mês
     const monthlyPayroll = (employees || [])
       .filter(emp => emp && emp.isActive)
-      .reduce((sum, emp) => sum + (emp ? emp.salary : 0), 0);
+      .reduce((sum, emp) => sum + safeNumber(emp?.salary, 0), 0);
 
     // Vendas do mês
     const monthlySales = (sales || []).filter(sale => {
@@ -185,7 +185,7 @@ const Dashboard: React.FC = () => {
       return saleDate.getMonth() === currentMonth && 
              saleDate.getFullYear() === currentYear;
     });
-    const totalSalesMonth = monthlySales.reduce((sum, sale) => sum + (sale ? sale.totalValue : 0), 0);
+    const totalSalesMonth = monthlySales.reduce((sum, sale) => sum + safeNumber(sale?.totalValue, 0), 0);
 
     // Lucro do mês (simplificado)
     const monthlyProfit = totalSalesMonth - monthlyPayroll - totalCommissionsMonth;
@@ -247,12 +247,12 @@ const Dashboard: React.FC = () => {
     
     // Vendas com valores pendentes
     (sales || []).forEach(sale => {
-      if (sale && sale.pendingAmount > 0) {
+      if (sale && safeNumber(sale.pendingAmount, 0) > 0) {
         toReceive.push({
           id: sale.id,
           type: 'Venda',
           client: sale.client,
-          amount: sale.pendingAmount,
+          amount: safeNumber(sale.pendingAmount, 0),
           dueDate: sale.date,
           description: `Venda pendente`,
           status: sale.status
@@ -275,11 +275,11 @@ const Dashboard: React.FC = () => {
       
       // Vendas do dia
       const daySales = (sales || []).filter(sale => sale && sale.date === dateStr);
-      const salesValue = daySales.reduce((sum, sale) => sum + (sale ? sale.totalValue : 0), 0);
+      const salesValue = daySales.reduce((sum, sale) => sum + safeNumber(sale?.totalValue, 0), 0);
       
       // Dívidas do dia
       const dayDebts = (debts || []).filter(debt => debt && debt.date === dateStr);
-      const debtsValue = dayDebts.reduce((sum, debt) => sum + (debt ? debt.totalValue : 0), 0);
+      const debtsValue = dayDebts.reduce((sum, debt) => sum + safeNumber(debt?.totalValue, 0), 0);
       
       // Lucro do dia (vendas - dívidas)
       const profit = salesValue - debtsValue;
@@ -307,7 +307,7 @@ const Dashboard: React.FC = () => {
             if (!methods[methodName]) {
               methods[methodName] = 0;
             }
-            methods[methodName] += method.amount;
+            methods[methodName] += safeNumber(method.amount, 0);
           }
         });
       }
@@ -315,8 +315,8 @@ const Dashboard: React.FC = () => {
     
     return Object.entries(methods).map(([name, value]) => ({
       name,
-      value,
-      percentage: ((value / Object.values(methods).reduce((a, b) => a + b, 0)) * 100).toFixed(1)
+      value: safeNumber(value, 0),
+      percentage: ((safeNumber(value, 0) / Object.values(methods).reduce((a, b) => safeNumber(a, 0) + safeNumber(b, 0), 0)) * 100).toFixed(1)
     }));
   }, [sales]);
 
@@ -349,7 +349,7 @@ const Dashboard: React.FC = () => {
       if (commission && commission.employeeId && commission.date) {
         const commissionDate = new Date(commission.date);
         if (commissionDate.getMonth() === currentMonth && commissionDate.getFullYear() === currentYear) {
-          if (sellerStats[commission.employeeId]) {
+            sellerStats[sale.sellerId].totalSales += safeNumber(sale.totalValue, 0);
             sellerStats[commission.employeeId].totalCommissions += commission.commissionAmount;
           }
         }
@@ -362,7 +362,7 @@ const Dashboard: React.FC = () => {
       .slice(0, 5);
   }, [sales, employees, employeeCommissions, currentMonth, currentYear]);
 
-  if (loading || isLoading) {
+            sellerStats[commission.employeeId].totalCommissions += safeNumber(commission.commissionAmount, 0);
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
