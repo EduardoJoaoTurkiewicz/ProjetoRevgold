@@ -119,7 +119,8 @@ export function Sales() {
   const cleanUUIDFields = (data: any): any => {
     if (!data || typeof data !== 'object') return data;
     
-    const cleaned = { ...data };
+    // Deep clone to avoid modifying original
+    const cleaned = JSON.parse(JSON.stringify(data));
     
     // List of all possible UUID fields in sales
     const uuidFields = [
@@ -150,7 +151,7 @@ export function Sales() {
     // Clean UUID fields in payment methods
     if (cleaned.paymentMethods && Array.isArray(cleaned.paymentMethods)) {
       cleaned.paymentMethods = cleaned.paymentMethods.map((method: any) => {
-        const cleanedMethod = { ...method };
+        const cleanedMethod = JSON.parse(JSON.stringify(method));
         uuidFields.forEach(field => {
           if (cleanedMethod.hasOwnProperty(field)) {
             const value = cleanedMethod[field];
@@ -290,13 +291,13 @@ export function Sales() {
                         )}
                       </td>
                       <td className="py-4 px-6 text-sm font-black text-blue-600">
-                        R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {(sale.totalValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-4 px-6 text-sm font-black text-green-600">
-                        R$ {sale.receivedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {(sale.receivedAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-4 px-6 text-sm font-black text-orange-600">
-                        R$ {sale.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {(sale.pendingAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-4 px-6 text-sm">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
