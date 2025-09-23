@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Calendar, DollarSign, User, Package, FileText, Eye, Edit, Trash2, X, CreditCard, Receipt, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 import { SaleForm } from './forms/SaleForm';
 import { useAppContext } from '../context/AppContext';
+import { safeNumber, safeCurrency } from '../utils/numberUtils';
 import type { Sale } from '../types';
 
 export function Sales() {
@@ -145,10 +146,7 @@ export function Sales() {
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
+    return safeCurrency(value);
   };
 
   const formatDate = (date: string) => {
@@ -278,7 +276,7 @@ export function Sales() {
                   
                   <div className="text-right">
                     <p className="text-3xl font-black text-blue-600">
-                      {formatCurrency(sale.totalValue)}
+                      {safeCurrency(sale.totalValue)}
                     </p>
                     <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full border ${getStatusColor(sale.status)}`}>
                       {getStatusLabel(sale.status)}
@@ -310,7 +308,7 @@ export function Sales() {
                             {method.type.replace('_', ' ').toUpperCase()}
                           </span>
                           <span className="text-xl font-black text-green-600">
-                            {formatCurrency(method.amount)}
+                            {safeCurrency(method.amount)}
                           </span>
                         </div>
                         
@@ -319,7 +317,7 @@ export function Sales() {
                             <div className="flex justify-between">
                               <span className="text-green-700">Parcelas:</span>
                               <span className="font-bold text-green-800">
-                                {method.installments}x de {formatCurrency(method.installmentValue || 0)}
+                                {method.installments}x de {safeCurrency(method.installmentValue || 0)}
                               </span>
                             </div>
                             {method.installmentInterval && (
@@ -400,7 +398,7 @@ export function Sales() {
                               </p>
                             </div>
                             <span className="text-lg font-black text-yellow-600">
-                              {formatCurrency(check.value)}
+                              {safeCurrency(check.value)}
                             </span>
                           </div>
                           
@@ -466,7 +464,7 @@ export function Sales() {
                               </p>
                             </div>
                             <span className="text-lg font-black text-cyan-600">
-                              {formatCurrency(boleto.value)}
+                              {safeCurrency(boleto.value)}
                             </span>
                           </div>
                           
@@ -495,7 +493,7 @@ export function Sales() {
                               <div className="flex justify-between">
                                 <span className="text-cyan-700">Valor Final:</span>
                                 <span className="font-bold text-green-600">
-                                  {formatCurrency(boleto.finalAmount)}
+                                  {safeCurrency(boleto.finalAmount)}
                                 </span>
                               </div>
                             )}
@@ -527,19 +525,19 @@ export function Sales() {
                     <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-200">
                       <p className="text-blue-600 font-semibold">Total</p>
                       <p className="text-2xl font-black text-blue-700">
-                        {formatCurrency(sale.totalValue)}
+                        {safeCurrency(sale.totalValue)}
                       </p>
                     </div>
                     <div className="text-center p-4 bg-green-50 rounded-xl border border-green-200">
                       <p className="text-green-600 font-semibold">Recebido</p>
                       <p className="text-2xl font-black text-green-700">
-                        {formatCurrency(sale.receivedAmount)}
+                        {safeCurrency(sale.receivedAmount)}
                       </p>
                     </div>
                     <div className="text-center p-4 bg-orange-50 rounded-xl border border-orange-200">
                       <p className="text-orange-600 font-semibold">Pendente</p>
                       <p className="text-2xl font-black text-orange-700">
-                        {formatCurrency(sale.pendingAmount)}
+                        {safeCurrency(sale.pendingAmount)}
                       </p>
                     </div>
                   </div>
@@ -693,9 +691,9 @@ export function Sales() {
                   <div className="p-4 bg-green-50 rounded-xl border border-green-200">
                     <h4 className="font-bold text-green-900 mb-2">Valores</h4>
                     <div className="space-y-2 text-sm">
-                      <p><strong>Total:</strong> {formatCurrency(viewingSale.totalValue)}</p>
-                      <p><strong>Recebido:</strong> <span className="text-green-600 font-bold">{formatCurrency(viewingSale.receivedAmount)}</span></p>
-                      <p><strong>Pendente:</strong> <span className="text-orange-600 font-bold">{formatCurrency(viewingSale.pendingAmount)}</span></p>
+                      <p><strong>Total:</strong> {safeCurrency(viewingSale.totalValue)}</p>
+                      <p><strong>Recebido:</strong> <span className="text-green-600 font-bold">{safeCurrency(viewingSale.receivedAmount)}</span></p>
+                      <p><strong>Pendente:</strong> <span className="text-orange-600 font-bold">{safeCurrency(viewingSale.pendingAmount)}</span></p>
                     </div>
                   </div>
 
@@ -736,7 +734,7 @@ export function Sales() {
                             {method.type.replace('_', ' ').toUpperCase()}
                           </span>
                           <span className="text-2xl font-black text-green-600">
-                            {formatCurrency(method.amount)}
+                            {safeCurrency(method.amount)}
                           </span>
                         </div>
                         
@@ -744,7 +742,7 @@ export function Sales() {
                           <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                             <div>
                               <p><strong className="text-green-800">Parcelas:</strong> {method.installments}x</p>
-                              <p><strong className="text-green-800">Valor por parcela:</strong> {formatCurrency(method.installmentValue || 0)}</p>
+                              <p><strong className="text-green-800">Valor por parcela:</strong> {safeCurrency(method.installmentValue || 0)}</p>
                             </div>
                             <div>
                               <p><strong className="text-green-800">Intervalo:</strong> {method.installmentInterval} dias</p>
