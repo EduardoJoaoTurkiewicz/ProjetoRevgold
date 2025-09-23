@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ErrorHandler } from '../lib/errorHandler';
+import { safeNumber, validateFormNumber, safeCurrency } from '../utils/numberUtils';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -86,8 +87,8 @@ export function CashManagement() {
 
   // Calcular totais do período
   const periodTotals = useMemo(() => {
-    const entrada = filteredTransactions.filter(t => t.type === 'entrada').reduce((sum, t) => sum + t.amount, 0);
-    const saida = filteredTransactions.filter(t => t.type === 'saida').reduce((sum, t) => sum + t.amount, 0);
+    const entrada = filteredTransactions.filter(t => t.type === 'entrada').reduce((sum, t) => sum + safeNumber(t.amount, 0), 0);
+    const saida = filteredTransactions.filter(t => t.type === 'saida').reduce((sum, t) => sum + safeNumber(t.amount, 0), 0);
     const saldo = entrada - saida;
     
     return { entrada, saida, saldo };
@@ -96,7 +97,8 @@ export function CashManagement() {
   const handleInitializeCash = async (e) => {
     e.preventDefault();
     
-    if (initialAmount <= 0) {
+    const validAmount = validateFormNumber(initialAmount, 'Valor Inicial');
+    if (validAmount <= 0) {
       alert('O valor inicial deve ser maior que zero.');
       return;
     }
@@ -104,8 +106,8 @@ export function CashManagement() {
     setIsInitializing(true);
     
     try {
-      console.log('🔄 Inicializando caixa com valor:', initialAmount);
-      await initializeCashBalance(initialAmount);
+      console.log('🔄 Inicializando caixa com valor:', validAmount);
+      await initializeCashBalance(validAmount);
       console.log('✅ Caixa inicializado com sucesso');
       
       // Forçar recarregamento dos dados
@@ -271,7 +273,7 @@ export function CashManagement() {
                 step="0.01"
                 min="0"
                 value={initialAmount}
-                onChange={(e) => setInitialAmount(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setInitialAmount(safeNumber(e.target.value, 0))}
                 className="input-field text-center text-2xl font-bold"
                 placeholder="0,00"
                 required
@@ -362,7 +364,7 @@ export function CashManagement() {
             <div>
               <h3 className="font-bold text-green-900 text-lg">Saldo Atual</h3>
               <p className={`text-3xl font-black ${cashBalance.currentBalance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                R$ {(cashBalance.currentBalance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {safeCurrency(cashBalance.currentBalance)}
               </p>
               <p className="text-sm text-green-600 font-semibold">
                 Atualizado automaticamente
@@ -379,7 +381,7 @@ export function CashManagement() {
             <div>
               <h3 className="font-bold text-emerald-900 text-lg">Entradas</h3>
               <p className="text-3xl font-black text-emerald-700">
-                R$ {periodTotals.entrada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {safeCurrency(periodTotals.entrada)}
               </p>
               <p className="text-sm text-emerald-600 font-semibold">
                 {filteredTransactions.filter(t => t.type === 'entrada').length} transação(ões)
@@ -396,7 +398,7 @@ export function CashManagement() {
             <div>
               <h3 className="font-bold text-red-900 text-lg">Saídas</h3>
               <p className="text-3xl font-black text-red-700">
-                R$ {periodTotals.saida.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {safeCurrency(periodTotals.saida)}
               </p>
               <p className="text-sm text-red-600 font-semibold">
                 {filteredTransactions.filter(t => t.type === 'saida').length} transação(ões)
@@ -413,7 +415,7 @@ export function CashManagement() {
             <div>
               <h3 className="font-bold text-blue-900 text-lg">Saldo Inicial</h3>
               <p className="text-3xl font-black text-blue-700">
-                R$ {(cashBalance.initialBalance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {safeCurrency(cashBalance.initialBalance)}
               </p>
               <p className="text-sm text-blue-600 font-semibold">
                 {cashBalance.initialDate && new Date(cashBalance.initialDate).toLocaleDateString('pt-BR')}
@@ -597,7 +599,7 @@ export function CashManagement() {
                       </td>
                       <td className="py-4 px-6 text-sm font-black text-right">
                         <span className={transaction.type === 'entrada' ? 'text-green-600' : 'text-red-600'}>
-                          {transaction.type === 'entrada' ? '+' : '-'}R$ {transaction.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          {transaction.type === 'entrada' ? '+' : '-'}{safeCurrency(transaction.amount)}
                         </span>
                       </td>
                       <td className="py-4 px-6 text-sm">
