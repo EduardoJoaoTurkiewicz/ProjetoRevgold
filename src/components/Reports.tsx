@@ -534,4 +534,55 @@ export default function Reports() {
                       {new Date(item.date).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
-                  <span
+                  <span className="text-lg font-bold text-green-700">
+                    R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Paid Values */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-red-600">
+              <TrendingDown className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Valores Pagos</h3>
+          </div>
+          
+          <div className="space-y-3 max-h-80 overflow-y-auto modern-scrollbar">
+            {reportData.paidValues.slice(0, 10).map(item => (
+              <div key={item.id} className="p-4 bg-red-50 rounded-xl border border-red-200">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                        item.type === 'Dívida' ? 'bg-red-100 text-red-800' :
+                        item.type === 'Salário' ? 'bg-blue-100 text-blue-800' :
+                        'bg-purple-100 text-purple-800'
+                      }`}>
+                        {item.type}
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-red-900">
+                      {item.details.company || item.details.employeeName || item.details.bank}
+                    </h4>
+                    <p className="text-sm text-red-700">{item.description}</p>
+                    <p className="text-xs text-red-600">
+                      {new Date(item.date).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  <span className="text-lg font-bold text-red-700">
+                    R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
