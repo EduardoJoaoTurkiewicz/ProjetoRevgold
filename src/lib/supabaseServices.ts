@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { isSupabaseConfigured } from './supabase';
 import { ErrorHandler } from './errorHandler';
+import { sanitizeSupabaseData, safeNumber, logMonetaryValues } from '../utils/numberUtils';
 
 export class SupabaseService {
   protected supabase = supabase;
@@ -42,7 +43,12 @@ export class CashService extends SupabaseService {
         .rpc('get_current_cash_balance');
       
       if (error) throw error;
-      return data && data.length > 0 ? data[0] : null;
+      
+      const result = data && data.length > 0 ? sanitizeSupabaseData(data[0]) : null;
+      if (result) {
+        logMonetaryValues(result, 'Cash Balance');
+      }
+      return result;
     }, null);
   }
 
@@ -54,14 +60,22 @@ export class CashService extends SupabaseService {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      
+      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
+      console.log(`💰 Loaded ${sanitized.length} cash transactions`);
+      return sanitized;
     }, []);
   }
 
   async initializeCashBalance(amount: number) {
     return this.safeOperation(async () => {
+      const safeAmount = safeNumber(amount, 0);
+      if (safeAmount <= 0) {
+        throw new Error('Initial amount must be greater than zero');
+      }
+      
       const { data, error } = await this.supabase
-        .rpc('initialize_cash_balance', { initial_amount: amount });
+        .rpc('initialize_cash_balance', { initial_amount: safeAmount });
       
       if (error) throw error;
       return data;
@@ -80,9 +94,19 @@ export class CashService extends SupabaseService {
 
   async createTransaction(transaction: any) {
     return this.safeOperation(async () => {
+      // Sanitize monetary values before saving
+      const sanitizedTransaction = {
+        ...transaction,
+        amount: safeNumber(transaction.amount, 0)
+      };
+      
+      if (sanitizedTransaction.amount <= 0) {
+        throw new Error('Transaction amount must be greater than zero');
+      }
+      
       const { data, error } = await this.supabase
         .from('cash_transactions')
-        .insert([transaction])
+        .insert([sanitizedTransaction])
         .select();
       
       if (error) throw error;
@@ -92,9 +116,15 @@ export class CashService extends SupabaseService {
 
   async updateTransaction(id: string, transaction: any) {
     return this.safeOperation(async () => {
+      // Sanitize monetary values before updating
+      const sanitizedTransaction = {
+        ...transaction,
+        amount: safeNumber(transaction.amount, 0)
+      };
+      
       const { data, error } = await this.supabase
         .from('cash_transactions')
-        .update(transaction)
+        .update(sanitizedTransaction)
         .eq('id', id)
         .select();
       
@@ -174,7 +204,10 @@ export class DebtsService extends SupabaseService {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      
+      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
+      console.log(`💰 Loaded ${sanitized.length} debts`);
+      return sanitized;
     } catch (error) {
       this.handleError(error, 'getDebts');
     }
@@ -182,9 +215,21 @@ export class DebtsService extends SupabaseService {
 
   async create(debt: any) {
     try {
+      // Sanitize monetary values before saving
+      const sanitizedDebt = sanitizeSupabaseData({
+        ...debt,
+        totalValue: safeNumber(debt.totalValue, 0),
+        paidAmount: safeNumber(debt.paidAmount, 0),
+        pendingAmount: safeNumber(debt.pendingAmount, 0)
+      });
+      
+      if (sanitizedDebt.totalValue <= 0) {
+        throw new Error('Debt total value must be greater than zero');
+      }
+      
       const { data, error } = await this.supabase
         .from('debts')
-        .insert([debt])
+        .insert([sanitizedDebt])
         .select();
       
       if (error) throw error;
@@ -260,7 +305,10 @@ export class ChecksService extends SupabaseService {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      
+      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
+      console.log(`💰 Loaded ${sanitized.length} checks`);
+      return sanitized;
     } catch (error) {
       this.handleError(error, 'getChecks');
     }
@@ -268,9 +316,19 @@ export class ChecksService extends SupabaseService {
 
   async create(check: any) {
     try {
+      // Sanitize monetary values before saving
+      const sanitizedCheck = sanitizeSupabaseData({
+        ...check,
+        value: safeNumber(check.value, 0)
+      });
+      
+      if (sanitizedCheck.value <= 0) {
+        throw new Error('Check value must be greater than zero');
+      }
+      
       const { data, error } = await this.supabase
         .from('checks')
-        .insert([check])
+        .insert([sanitizedCheck])
         .select();
       
       if (error) throw error;
@@ -346,7 +404,10 @@ export class BoletosService extends SupabaseService {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      
+      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
+      console.log(`💰 Loaded ${sanitized.length} boletos`);
+      return sanitized;
     } catch (error) {
       this.handleError(error, 'getBoletos');
     }
@@ -354,9 +415,24 @@ export class BoletosService extends SupabaseService {
 
   async create(boleto: any) {
     try {
+      // Sanitize monetary values before saving
+      const sanitizedBoleto = sanitizeSupabaseData({
+        ...boleto,
+        value: safeNumber(boleto.value, 0),
+        finalAmount: safeNumber(boleto.finalAmount, boleto.value),
+        interestAmount: safeNumber(boleto.interestAmount, 0),
+        penaltyAmount: safeNumber(boleto.penaltyAmount, 0),
+        notaryCosts: safeNumber(boleto.notaryCosts, 0),
+        interestPaid: safeNumber(boleto.interestPaid, 0)
+      });
+      
+      if (sanitizedBoleto.value <= 0) {
+        throw new Error('Boleto value must be greater than zero');
+      }
+      
       const { data, error } = await this.supabase
         .from('boletos')
-        .insert([boleto])
+        .insert([sanitizedBoleto])
         .select();
       
       if (error) throw error;
@@ -432,7 +508,10 @@ export class EmployeePaymentsService extends SupabaseService {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      
+      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
+      console.log(`💰 Loaded ${sanitized.length} employee payments`);
+      return sanitized;
     } catch (error) {
       this.handleError(error, 'getPayments');
     }
@@ -440,9 +519,19 @@ export class EmployeePaymentsService extends SupabaseService {
 
   async create(payment: any) {
     try {
+      // Sanitize monetary values before saving
+      const sanitizedPayment = sanitizeSupabaseData({
+        ...payment,
+        amount: safeNumber(payment.amount, 0)
+      });
+      
+      if (sanitizedPayment.amount <= 0) {
+        throw new Error('Payment amount must be greater than zero');
+      }
+      
       const { data, error } = await this.supabase
         .from('employee_payments')
-        .insert([payment])
+        .insert([sanitizedPayment])
         .select();
       
       if (error) throw error;
@@ -490,7 +579,10 @@ export class EmployeeAdvancesService extends SupabaseService {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      
+      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
+      console.log(`💰 Loaded ${sanitized.length} employee advances`);
+      return sanitized;
     } catch (error) {
       this.handleError(error, 'getAdvances');
     }
@@ -498,9 +590,19 @@ export class EmployeeAdvancesService extends SupabaseService {
 
   async create(advance: any) {
     try {
+      // Sanitize monetary values before saving
+      const sanitizedAdvance = sanitizeSupabaseData({
+        ...advance,
+        amount: safeNumber(advance.amount, 0)
+      });
+      
+      if (sanitizedAdvance.amount <= 0) {
+        throw new Error('Advance amount must be greater than zero');
+      }
+      
       const { data, error } = await this.supabase
         .from('employee_advances')
-        .insert([advance])
+        .insert([sanitizedAdvance])
         .select();
       
       if (error) throw error;
@@ -563,7 +665,10 @@ export class EmployeeOvertimesService extends SupabaseService {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      
+      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
+      console.log(`💰 Loaded ${sanitized.length} employee overtimes`);
+      return sanitized;
     } catch (error) {
       this.handleError(error, 'getOvertimes');
     }
@@ -571,9 +676,21 @@ export class EmployeeOvertimesService extends SupabaseService {
 
   async create(overtime: any) {
     try {
+      // Sanitize monetary values before saving
+      const sanitizedOvertime = sanitizeSupabaseData({
+        ...overtime,
+        hours: safeNumber(overtime.hours, 0),
+        hourlyRate: safeNumber(overtime.hourlyRate, 0),
+        totalAmount: safeNumber(overtime.totalAmount, 0)
+      });
+      
+      if (sanitizedOvertime.hours <= 0 || sanitizedOvertime.hourlyRate <= 0) {
+        throw new Error('Hours and hourly rate must be greater than zero');
+      }
+      
       const { data, error } = await this.supabase
         .from('employee_overtimes')
-        .insert([overtime])
+        .insert([sanitizedOvertime])
         .select();
       
       if (error) throw error;
@@ -636,7 +753,10 @@ export class EmployeeCommissionsService extends SupabaseService {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      
+      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
+      console.log(`💰 Loaded ${sanitized.length} employee commissions`);
+      return sanitized;
     } catch (error) {
       this.handleError(error, 'getCommissions');
     }
@@ -644,9 +764,21 @@ export class EmployeeCommissionsService extends SupabaseService {
 
   async create(commission: any) {
     try {
+      // Sanitize monetary values before saving
+      const sanitizedCommission = sanitizeSupabaseData({
+        ...commission,
+        saleValue: safeNumber(commission.saleValue, 0),
+        commissionRate: safeNumber(commission.commissionRate, 5),
+        commissionAmount: safeNumber(commission.commissionAmount, 0)
+      });
+      
+      if (sanitizedCommission.saleValue <= 0 || sanitizedCommission.commissionAmount <= 0) {
+        throw new Error('Sale value and commission amount must be greater than zero');
+      }
+      
       const { data, error } = await this.supabase
         .from('employee_commissions')
-        .insert([commission])
+        .insert([sanitizedCommission])
         .select();
       
       if (error) throw error;
@@ -709,7 +841,10 @@ export class PixFeesService extends SupabaseService {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      
+      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
+      console.log(`💰 Loaded ${sanitized.length} PIX fees`);
+      return sanitized;
     } catch (error) {
       this.handleError(error, 'getPixFees');
     }
@@ -717,9 +852,19 @@ export class PixFeesService extends SupabaseService {
 
   async create(fee: any) {
     try {
+      // Sanitize monetary values before saving
+      const sanitizedFee = sanitizeSupabaseData({
+        ...fee,
+        amount: safeNumber(fee.amount, 0)
+      });
+      
+      if (sanitizedFee.amount <= 0) {
+        throw new Error('PIX fee amount must be greater than zero');
+      }
+      
       const { data, error } = await this.supabase
         .from('pix_fees')
-        .insert([fee])
+        .insert([sanitizedFee])
         .select();
       
       if (error) throw error;
@@ -795,7 +940,10 @@ export class TaxesService extends SupabaseService {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      
+      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
+      console.log(`💰 Loaded ${sanitized.length} taxes`);
+      return sanitized;
     } catch (error) {
       this.handleError(error, 'getTaxes');
     }
@@ -803,9 +951,19 @@ export class TaxesService extends SupabaseService {
 
   async create(tax: any) {
     try {
+      // Sanitize monetary values before saving
+      const sanitizedTax = sanitizeSupabaseData({
+        ...tax,
+        amount: safeNumber(tax.amount, 0)
+      });
+      
+      if (sanitizedTax.amount <= 0) {
+        throw new Error('Tax amount must be greater than zero');
+      }
+      
       const { data, error } = await this.supabase
         .from('taxes')
-        .insert([tax])
+        .insert([sanitizedTax])
         .select();
       
       if (error) throw error;
@@ -978,19 +1136,29 @@ export class SalesService extends SupabaseService {
       delete transformed.id;
     }
     
-    // Ensure required numeric fields are properly typed
-    if (transformed.total_value !== undefined) {
-      transformed.total_value = Number(transformed.total_value);
+    // Sanitize all monetary fields using safe number conversion
+    transformed.total_value = safeNumber(transformed.total_value, 0);
+    transformed.received_amount = safeNumber(transformed.received_amount, 0);
+    transformed.pending_amount = safeNumber(transformed.pending_amount, 0);
+    transformed.custom_commission_rate = safeNumber(transformed.custom_commission_rate, 5);
+    
+    // Validate that total value is greater than zero
+    if (transformed.total_value <= 0) {
+      throw new Error('Sale total value must be greater than zero');
     }
-    if (transformed.received_amount !== undefined) {
-      transformed.received_amount = Number(transformed.received_amount);
+    
+    // Sanitize payment methods
+    if (transformed.payment_methods && Array.isArray(transformed.payment_methods)) {
+      transformed.payment_methods = transformed.payment_methods.map((method: any) => ({
+        ...method,
+        amount: safeNumber(method.amount, 0),
+        installmentValue: safeNumber(method.installmentValue, 0),
+        installments: safeNumber(method.installments, 1),
+        installmentInterval: safeNumber(method.installmentInterval, 30)
+      }));
     }
-    if (transformed.pending_amount !== undefined) {
-      transformed.pending_amount = Number(transformed.pending_amount);
-    }
-    if (transformed.custom_commission_rate !== undefined) {
-      transformed.custom_commission_rate = Number(transformed.custom_commission_rate);
-    }
+    
+    logMonetaryValues(transformed, 'Sale Transform');
     
     return transformed;
   }
@@ -1054,7 +1222,10 @@ export class SalesService extends SupabaseService {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      
+      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
+      console.log(`💰 Loaded ${sanitized.length} sales`);
+      return sanitized;
     } catch (error) {
       this.handleError(error, 'getSales');
     }
@@ -1106,9 +1277,19 @@ export class SalesService extends SupabaseService {
 export class EmployeeService extends SupabaseService {
   async create(employee: any) {
     try {
+      // Sanitize monetary values before saving
+      const sanitizedEmployee = sanitizeSupabaseData({
+        ...employee,
+        salary: safeNumber(employee.salary, 0)
+      });
+      
+      if (sanitizedEmployee.salary < 0) {
+        throw new Error('Employee salary cannot be negative');
+      }
+      
       const { data, error } = await this.supabase
         .from('employees')
-        .insert([employee])
+        .insert([sanitizedEmployee])
         .select();
       
       if (error) throw error;
@@ -1154,7 +1335,10 @@ export class EmployeeService extends SupabaseService {
         .order('name');
       
       if (error) throw error;
-      return data;
+      
+      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
+      console.log(`👥 Loaded ${sanitized.length} employees`);
+      return sanitized;
     } catch (error) {
       this.handleError(error, 'getEmployees');
     }
@@ -1170,7 +1354,10 @@ export class AcertosService extends SupabaseService {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      
+      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
+      console.log(`💰 Loaded ${sanitized.length} acertos`);
+      return sanitized;
     } catch (error) {
       this.handleError(error, 'getAcertos');
     }
@@ -1192,9 +1379,22 @@ export class AcertosService extends SupabaseService {
 
   async create(acerto: any) {
     try {
+      // Sanitize monetary values before saving
+      const sanitizedAcerto = sanitizeSupabaseData({
+        ...acerto,
+        totalAmount: safeNumber(acerto.totalAmount, 0),
+        paidAmount: safeNumber(acerto.paidAmount, 0),
+        pendingAmount: safeNumber(acerto.pendingAmount, 0),
+        paymentInstallmentValue: safeNumber(acerto.paymentInstallmentValue, 0)
+      });
+      
+      if (sanitizedAcerto.totalAmount <= 0) {
+        throw new Error('Acerto total amount must be greater than zero');
+      }
+      
       const { data, error } = await this.supabase
         .from('acertos')
-        .insert([acerto])
+        .insert([sanitizedAcerto])
         .select();
       
       if (error) throw error;
@@ -1242,7 +1442,10 @@ export class AgendaService extends SupabaseService {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      
+      const sanitized = data ? data.map(item => sanitizeSupabaseData(item)) : [];
+      console.log(`📅 Loaded ${sanitized.length} agenda events`);
+      return sanitized;
     } catch (error) {
       this.handleError(error, 'getEvents');
     }
