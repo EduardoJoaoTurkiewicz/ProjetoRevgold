@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Calendar, DollarSign, User, Package, FileText, Eye, Edit, Trash2, X, CreditCard, Receipt, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
-import SaleForm from './forms/SaleForm';
+import { SaleForm } from './forms/SaleForm';
 import { useAppContext } from '../context/AppContext';
 import type { Sale } from '../types';
 
