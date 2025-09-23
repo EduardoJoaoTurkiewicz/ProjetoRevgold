@@ -325,10 +325,16 @@ export function AppProvider({ children }: AppProviderProps) {
   // Métodos de vendas
   const createSale = async (sale: Omit<Sale, 'id' | 'createdAt'>): Promise<string> => {
     try {
+      console.log('🔄 AppContext.createSale - Input sale data:', sale);
+      
       if (!isSupabaseConfigured()) {
         throw new Error('Supabase não configurado. Configure o arquivo .env para usar esta funcionalidade.');
       }
+      
+      console.log('🔄 AppContext.createSale - Calling salesService.create...');
       const saleId = await salesService.create(sale);
+      console.log('✅ AppContext.createSale - Sale created with ID:', saleId);
+      
       await loadAllData(); // Recarregar dados após criação
       return saleId;
     } catch (error) {

@@ -948,14 +948,72 @@ export async function getCheckImageUrl(filePath: string): Promise<string> {
 }
 
 export class SalesService extends SupabaseService {
+  // Transform camelCase keys to snake_case for Supabase
+  private transformSaleForSupabase(sale: any) {
+    const transformed: any = {};
+    
+    // Map camelCase to snake_case
+    const keyMapping: { [key: string]: string } = {
+      totalValue: 'total_value',
+      receivedAmount: 'received_amount',
+      pendingAmount: 'pending_amount',
+      sellerId: 'seller_id',
+      deliveryDate: 'delivery_date',
+      paymentMethods: 'payment_methods',
+      paymentDescription: 'payment_description',
+      paymentObservations: 'payment_observations',
+      customCommissionRate: 'custom_commission_rate',
+      createdAt: 'created_at',
+      updatedAt: 'updated_at'
+    };
+    
+    // Transform keys
+    Object.keys(sale).forEach(key => {
+      const snakeKey = keyMapping[key] || key;
+      transformed[snakeKey] = sale[key];
+    });
+    
+    // Remove empty id field if present
+    if (transformed.id === '' || transformed.id === null || transformed.id === undefined) {
+      delete transformed.id;
+    }
+    
+    // Ensure required numeric fields are properly typed
+    if (transformed.total_value !== undefined) {
+      transformed.total_value = Number(transformed.total_value);
+    }
+    if (transformed.received_amount !== undefined) {
+      transformed.received_amount = Number(transformed.received_amount);
+    }
+    if (transformed.pending_amount !== undefined) {
+      transformed.pending_amount = Number(transformed.pending_amount);
+    }
+    if (transformed.custom_commission_rate !== undefined) {
+      transformed.custom_commission_rate = Number(transformed.custom_commission_rate);
+    }
+    
+    return transformed;
+  }
+
   async create(sale: any) {
     try {
-      const { data, error } = await this.supabase
-        .rpc('create_sale', { payload: sale });
+      console.log('🔄 SalesService.create - Original sale data:', sale);
       
-      if (error) throw error;
+      const transformedSale = this.transformSaleForSupabase(sale);
+      console.log('🔄 SalesService.create - Transformed sale data:', transformedSale);
+      
+      const { data, error } = await this.supabase
+        .rpc('create_sale', { payload: transformedSale });
+      
+      if (error) {
+        console.error('❌ SalesService.create - Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('✅ SalesService.create - Success:', data);
       return data;
     } catch (error) {
+      console.error('❌ SalesService.create - Exception:', error);
       this.handleError(error, 'create');
     }
   }

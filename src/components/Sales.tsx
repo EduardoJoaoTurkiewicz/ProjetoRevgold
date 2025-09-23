@@ -26,12 +26,18 @@ export function Sales() {
     try {
       console.log('🔄 Submetendo venda:', saleData);
       
+      // Validate total value before submission
+      if (!saleData.totalValue || saleData.totalValue <= 0) {
+        throw new Error('Valor total deve ser maior que zero');
+      }
+      
       if (editingSale) {
         console.log('🔄 Atualizando venda existente:', editingSale.id);
         const updatedSale = await updateSale(editingSale.id, saleData);
         console.log('✅ Venda atualizada:', updatedSale);
       } else {
         console.log('🔄 Criando nova venda');
+        console.log('🔄 Sales.handleSaleSubmit - Sale data being sent:', saleData);
         await createSale(saleData);
       }
 
