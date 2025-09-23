@@ -12,7 +12,7 @@ import { supabase } from './supabase';
 import { ErrorHandler } from './errorHandler';
 import { checkSupabaseConnection } from './supabaseServices';
 import { isValidUUID } from './debugUtils';
-import { transformToSnakeCase } from '../utils/format';
+import { transformToSnakeCase } from '../utils/numberUtils';
 import toast from 'react-hot-toast';
 
 interface OfflineOperation {
