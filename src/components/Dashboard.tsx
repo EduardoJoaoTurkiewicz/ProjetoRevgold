@@ -26,6 +26,7 @@ export function Dashboard() {
   const pendingBoletos = boletos.filter(boleto => boleto.status === 'pendente').length;
   const pendingCommissions = employeeCommissions.filter(comm => comm.status === 'pendente').length;
   const todayEvents = agendaEvents.filter(event => {
+    if (!event || !event.date) return false;
     const eventDate = new Date(event.date);
     const today = new Date();
     return eventDate.toDateString() === today.toDateString() && event.status === 'pendente';
