@@ -332,65 +332,65 @@ export function Agenda() {
             {/* Calendar Grid */}
             <div className="p-6">
               {/* Day headers */}
-              <div className="grid grid-cols-7 gap-2 mb-6">
+              <div className="grid grid-cols-7 gap-1 mb-4">
                 {dayNames.map(day => (
-                  <div key={day} className="p-3 text-center text-sm font-bold text-indigo-700 bg-indigo-50 rounded-xl">
+                  <div key={day} className="p-2 text-center text-sm font-medium text-gray-500">
                     {day}
                   </div>
                 ))}
               </div>
 
               {/* Calendar days */}
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1">
                 {calendarDays.map((dayData, index) => (
-                  <div key={index} className="min-h-[120px] border border-slate-200 rounded-xl modern-shadow hover:modern-shadow-lg transition-all duration-300">
+                  <div key={index} className="min-h-[100px] border border-gray-100 rounded-lg">
                     {dayData ? (
                       <div
                         className={`
-                          h-full p-3 cursor-pointer transition-all duration-300 rounded-xl
-                          ${dayData.isToday ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-400 shadow-lg' : ''}
-                          ${dayData.isSelected ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-400 shadow-lg' : ''}
-                          ${!dayData.isToday && !dayData.isSelected ? 'bg-white hover:bg-gradient-to-br hover:from-slate-50 hover:to-gray-50 hover:shadow-md' : ''}
+                          h-full p-2 cursor-pointer transition-all duration-200 rounded-lg
+                          ${dayData.isToday ? 'bg-blue-50 border-2 border-blue-300' : ''}
+                          ${dayData.isSelected ? 'bg-green-50 border-2 border-green-300' : ''}
+                          ${!dayData.isToday && !dayData.isSelected ? 'hover:bg-gray-50' : ''}
                         `}
                         onClick={() => setSelectedDate(dayData.date)}
                       >
-                        <div className="flex justify-between items-start mb-2">
+                        <div className="flex justify-between items-start mb-1">
                           <span className={`
-                            text-sm font-bold
-                            ${dayData.isToday ? 'text-blue-700' : dayData.isSelected ? 'text-green-700' : 'text-slate-700'}
+                            text-sm font-medium
+                            ${dayData.isToday ? 'text-blue-700 font-bold' : 'text-gray-700'}
                           `}>
                             {dayData.day}
                           </span>
                           {dayData.events.length > 0 && (
-                            <span className="w-3 h-3 bg-gradient-to-br from-red-500 to-red-600 rounded-full shadow-sm animate-pulse"></span>
+                            <span className="w-2 h-2 bg-red-500 rounded-full"></span>
                           )}
                         </div>
                         
                         {/* Event indicators */}
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                           {dayData.events.slice(0, 3).map((event, eventIndex) => (
                             <div
                               key={event.id || eventIndex}
                               className={`
-                                text-xs px-2 py-1 rounded-lg truncate border font-medium shadow-sm
+                                text-xs px-2 py-1 rounded-md truncate border
                                 ${getPriorityColor(event.priority)}
-                                ${event.isAutomatic ? 'opacity-80 italic border-dashed' : ''}
+                                ${event.isAutomatic ? 'opacity-75 italic' : ''}
                               `}
                               title={event.title}
                             >
-                              {event.time && <span className="mr-1 font-bold">{event.time}</span>}
+                              {event.time && <span className="mr-1">{event.time}</span>}
                               {event.title}
                             </div>
                           ))}
                           {dayData.events.length > 3 && (
-                            <div className="text-xs text-slate-500 text-center font-bold bg-slate-100 rounded-lg py-1">
+                            <div className="text-xs text-gray-500 text-center">
                               +{dayData.events.length - 3} mais
                             </div>
                           )}
                         </div>
                       </div>
                     ) : (
-                      <div className="h-full bg-slate-50 rounded-xl"></div>
+                      <div className="h-full"></div>
                     )}
                   </div>
                 ))}
@@ -403,176 +403,6 @@ export function Agenda() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <h3 className="text-lg font-bold text-gray-900">
-              {selectedDate ? (
-                <>Eventos de {new Date(selectedDate + 'T00:00:00').toLocaleDateString('pt-BR')}</>
-              ) : (
-                'Selecione uma data'
-              )}
-            </h3>
-          </div>
-
-          <div className="p-6">
-            {selectedDate ? (
-              <div className="space-y-4">
-                {getEventsForDate(selectedDate).map((event) => (
-                  <div
-                    key={event.id}
-                    className={`
-                      p-4 rounded-lg border transition-all duration-200 hover:shadow-md
-                      ${event.isAutomatic ? 'bg-gray-50 border-gray-200' : 'bg-white border-gray-200'}
-                    `}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        {getStatusIcon(event.status)}
-                        <h4 className="font-semibold text-gray-900">{event.title}</h4>
-                        {!event.isAutomatic && (
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(event.priority)}`}>
-                            {event.priority}
-                          </span>
-                        )}
-                      </div>
-                      
-                      {!event.isAutomatic && (
-                        <div className="flex items-center space-x-1">
-                          {event.status === 'pendente' && (
-                            <button
-                              onClick={() => handleStatusChange(event.id!, 'concluido')}
-                              className="text-green-600 hover:text-green-700 p-1"
-                              title="Marcar como concluído"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => {
-                              setEditingEvent(event as AgendaEvent);
-                              setShowForm(true);
-                            }}
-                            className="text-blue-600 hover:text-blue-700 p-1"
-                            title="Editar"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteEvent(event.id!)}
-                            className="text-red-600 hover:text-red-700 p-1"
-                            title="Excluir"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {event.description && (
-                      <p className="text-gray-600 text-sm mb-2">{event.description}</p>
-                    )}
-                    
-                    <div className="flex items-center space-x-4 text-xs text-gray-500">
-                      {event.time && (
-                        <div className="flex items-center space-x-1">
-                          <Clock className="w-3 h-3" />
-                          <span>{event.time}</span>
-                        </div>
-                      )}
-                      <span className={`px-2 py-1 rounded-full border ${getTypeColor(event.type)}`}>
-                        {event.type}
-                      </span>
-                      <span className="capitalize">{event.status}</span>
-                      {event.isAutomatic && (
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full border border-blue-200">
-                          Automático
-                        </span>
-                      )}
-                    </div>
-
-                    {event.observations && (
-                      <p className="text-sm text-gray-500 mt-2 italic">{event.observations}</p>
-                    )}
-                  </div>
-                ))}
-                
-                {getEventsForDate(selectedDate).length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p>Nenhum evento nesta data</p>
-                    <button
-                      onClick={() => {
-                        setShowForm(true);
-                        // Pre-fill the form with selected date
-                      }}
-                      className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      Adicionar Evento
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                <p>Clique em uma data no calendário para ver os eventos</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Legenda</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-blue-50 border-2 border-blue-300 rounded"></div>
-            <span className="text-sm text-gray-600">Hoje</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-green-50 border-2 border-green-300 rounded"></div>
-            <span className="text-sm text-gray-600">Data Selecionada</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-            <span className="text-sm text-gray-600">Tem Eventos</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-gray-50 border border-gray-200 rounded opacity-75"></div>
-            <span className="text-sm text-gray-600">Eventos Automáticos</span>
-          </div>
-        </div>
-        
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <h4 className="font-medium text-gray-900 mb-2">Tipos de Eventos</h4>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {[
-              { type: 'evento', label: 'Evento' },
-              { type: 'reuniao', label: 'Reunião' },
-              { type: 'pagamento', label: 'Pagamento' },
-              { type: 'cobranca', label: 'Cobrança' },
-              { type: 'entrega', label: 'Entrega' },
-              { type: 'outros', label: 'Outros' }
-            ].map(({ type, label }) => (
-              <div key={type} className="flex items-center space-x-2">
-                <span className={`px-2 py-1 rounded text-xs border ${getTypeColor(type)}`}>
-                  {label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {showForm && (
-        <AgendaEventForm
-          event={editingEvent}
-          onSubmit={handleEventSubmit}
-          onCancel={() => {
-            setShowForm(false);
-            setEditingEvent(null);
-          }}
-          defaultDate={selectedDate}
-        />
-      )}
     </div>
   );
 }
