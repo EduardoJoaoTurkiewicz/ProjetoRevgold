@@ -65,10 +65,18 @@ export function CashManagement() {
 
   // Force reload cash balance on mount
   React.useEffect(() => {
+    let mounted = true;
+    
     console.log('🔄 Gestão de Caixa iniciada...');
     
-    // Data already loaded by AppContext - no need to reload here
-    console.log('💰 Cash Management mounted - using data from context');
+    if (mounted) {
+      // Data already loaded by AppContext - no need to reload here
+      console.log('💰 Cash Management mounted - using data from context');
+    }
+    
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // Calcular transações do período filtrado

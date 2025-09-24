@@ -197,6 +197,39 @@ class SyncManager {
   private async syncCreate(table: string, data: any): Promise<void> {
     const { isOffline, ...cleanData } = data;
     
+    // Check if record already exists to prevent duplicates
+    const supabaseTableName = this.getSupabaseTableName(table);
+    
+    // For sales, check by client, date, and total value to detect duplicates
+    if (table === 'sales') {
+      const { data: existingSales, error: checkError } = await supabase
+        .from(supabaseTableName)
+        .select('id')
+        .eq('client', cleanData.client)
+        .eq('date', cleanData.date)
+        .eq('total_value', cleanData.totalValue || cleanData.total_value);
+      
+      if (!checkError && existingSales && existingSales.length > 0) {
+        console.log('⚠️ Sale already exists, skipping sync:', cleanData.client);
+        return;
+      }
+    }
+    
+    // For debts, check by company, date, and total value to detect duplicates
+    if (table === 'debts') {
+      const { data: existingDebts, error: checkError } = await supabase
+        .from(supabaseTableName)
+        .select('id')
+        .eq('company', cleanData.company)
+        .eq('date', cleanData.date)
+        .eq('total_value', cleanData.totalValue || cleanData.total_value);
+      
+      if (!checkError && existingDebts && existingDebts.length > 0) {
+        console.log('⚠️ Debt already exists, skipping sync:', cleanData.company);
+        return;
+      }
+    }
+    
     // Limpar UUIDs para sincronização
     const uuidCleanedData = this.cleanUUIDFieldsForSync(cleanData);
     
@@ -207,8 +240,6 @@ class SyncManager {
     }
     
     console.log(`🔄 Sincronizando ${table} com dados limpos:`, uuidCleanedData);
-    
-    const supabaseTableName = this.getSupabaseTableName(table);
     
     switch (table) {
       case 'sales':

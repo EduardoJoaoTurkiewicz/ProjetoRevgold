@@ -47,6 +47,36 @@ export interface OfflineData {
 
 // Save data offline
 export async function saveOffline(table: string, data: any): Promise<string> {
+  // Check if this data already exists offline to prevent duplicates
+  const existingData = await getOfflineData(table);
+  
+  // For sales and debts, check for duplicates by key fields
+  if (table === 'sales') {
+    const duplicate = existingData.find(item => 
+      item.data.client === data.client &&
+      item.data.date === data.date &&
+      Math.abs((item.data.totalValue || 0) - (data.totalValue || 0)) < 0.01
+    );
+    
+    if (duplicate) {
+      console.log('⚠️ Sale already exists offline, returning existing ID:', duplicate.id);
+      return duplicate.id;
+    }
+  }
+  
+  if (table === 'debts') {
+    const duplicate = existingData.find(item => 
+      item.data.company === data.company &&
+      item.data.date === data.date &&
+      Math.abs((item.data.totalValue || 0) - (data.totalValue || 0)) < 0.01
+    );
+    
+    if (duplicate) {
+      console.log('⚠️ Debt already exists offline, returning existing ID:', duplicate.id);
+      return duplicate.id;
+    }
+  }
+  
   // Generate a proper offline ID that won't conflict with UUIDs
   const id = `offline-${Date.now()}-${generateUUID()}`;
   const offlineData: OfflineData = {

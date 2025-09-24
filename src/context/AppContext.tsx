@@ -240,7 +240,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const createSale = async (saleData: any) => {
     try {
       const result = await supabaseServices.sales.create(saleData);
-      await loadAllData(); // Refresh all data
+      // Only refresh sales data to prevent full reload
+      const salesData = await supabaseServices.sales.getSales();
+      setSales(salesData || []);
       return result;
     } catch (err) {
       console.error('Error creating sale:', err);
@@ -251,7 +253,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const updateSale = async (id: string, saleData: any) => {
     try {
       const result = await supabaseServices.sales.update(id, saleData);
-      await loadAllData(); // Refresh all data
+      // Only refresh sales data to prevent full reload
+      const salesData = await supabaseServices.sales.getSales();
+      setSales(salesData || []);
       return result;
     } catch (err) {
       console.error('Error updating sale:', err);
@@ -262,7 +266,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const deleteSale = async (id: string) => {
     try {
       await supabaseServices.sales.delete(id);
-      await loadAllData(); // Refresh all data
+      // Only refresh sales data to prevent full reload
+      const salesData = await supabaseServices.sales.getSales();
+      setSales(salesData || []);
     } catch (err) {
       console.error('Error deleting sale:', err);
       throw err;
@@ -306,7 +312,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const createDebt = async (debtData: any) => {
     try {
       const result = await supabaseServices.debts.create(debtData);
-      await loadAllData(); // Refresh all data
+      // Only refresh debts data to prevent full reload
+      const debtsData = await supabaseServices.debts.getDebts();
+      setDebts(debtsData || []);
       return result;
     } catch (err) {
       console.error('Error creating debt:', err);
@@ -317,7 +325,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const updateDebt = async (id: string, debtData: any) => {
     try {
       const result = await supabaseServices.debts.update(id, debtData);
-      await loadAllData(); // Refresh all data
+      // Only refresh debts data to prevent full reload
+      const debtsData = await supabaseServices.debts.getDebts();
+      setDebts(debtsData || []);
       return result;
     } catch (err) {
       console.error('Error updating debt:', err);
@@ -328,7 +338,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const deleteDebt = async (id: string) => {
     try {
       await supabaseServices.debts.delete(id);
-      await loadAllData(); // Refresh all data
+      // Only refresh debts data to prevent full reload
+      const debtsData = await supabaseServices.debts.getDebts();
+      setDebts(debtsData || []);
     } catch (err) {
       console.error('Error deleting debt:', err);
       throw err;
@@ -492,22 +504,41 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // Load data on mount
   useEffect(() => {
-    loadAllData();
+    let mounted = true;
+    
+    const initializeData = async () => {
+      if (mounted) {
+        await loadAllData();
+      }
+    };
+    
+    initializeData();
+    
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // Listen for connection changes
   useEffect(() => {
+    let mounted = true;
+    
     const handleConnectionChange = (status: any) => {
-      if (status.isOnline) {
+      if (status.isOnline && mounted) {
         // When coming back online, sync data
         syncManager.startSync().then(() => {
-          loadAllData();
+          if (mounted) {
+            loadAllData();
+          }
         });
       }
     };
 
     const unsubscribe = connectionManager.addListener(handleConnectionChange);
-    return () => unsubscribe();
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
   }, []);
 
   const value: AppContextType = {

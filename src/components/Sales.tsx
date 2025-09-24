@@ -37,14 +37,15 @@ export function Sales() {
         throw new Error('Valor total deve ser maior que zero');
       }
       
+      let result;
       if (editingSale) {
         console.log('🔄 Atualizando venda existente:', editingSale.id);
-        const updatedSale = await updateSale(editingSale.id, saleData);
-        console.log('✅ Venda atualizada:', updatedSale);
+        result = await updateSale(editingSale.id, saleData);
+        console.log('✅ Venda atualizada:', result);
       } else {
         console.log('🔄 Criando nova venda');
         console.log('🔄 Sales.handleSaleSubmit - Sale data being sent:', saleData);
-        await createSale(saleData);
+        result = await createSale(saleData);
         
         // Se há pagamento por acerto, criar acerto automaticamente
         if (hasAcertoPayment) {

@@ -95,6 +95,25 @@ export const salesService = {
   async create(sale: Omit<Sale, 'id' | 'createdAt'>): Promise<string> {
     console.log('🔄 salesService.create - Input sale:', sale);
     
+    // Check for duplicates before creating
+    if (isSupabaseConfigured() && connectionManager.isConnected()) {
+      try {
+        const { data: existingSales, error: checkError } = await supabase
+          .from('sales')
+          .select('id')
+          .eq('client', sale.client)
+          .eq('date', sale.date)
+          .eq('total_value', sale.totalValue);
+        
+        if (!checkError && existingSales && existingSales.length > 0) {
+          console.log('⚠️ Sale already exists, returning existing ID:', existingSales[0].id);
+          return existingSales[0].id;
+        }
+      } catch (error) {
+        console.warn('Could not check for duplicates, proceeding with creation');
+      }
+    }
+    
     // Sanitize all monetary values before sending
     const sanitizedSale = {
       ...sale,
@@ -461,6 +480,25 @@ export const debtsService = {
   },
 
   async create(debt: Omit<Debt, 'id' | 'createdAt'>): Promise<string> {
+    // Check for duplicates before creating
+    if (isSupabaseConfigured() && connectionManager.isConnected()) {
+      try {
+        const { data: existingDebts, error: checkError } = await supabase
+          .from('debts')
+          .select('id')
+          .eq('company', debt.company)
+          .eq('date', debt.date)
+          .eq('total_value', debt.totalValue);
+        
+        if (!checkError && existingDebts && existingDebts.length > 0) {
+          console.log('⚠️ Debt already exists, returning existing ID:', existingDebts[0].id);
+          return existingDebts[0].id;
+        }
+      } catch (error) {
+        console.warn('Could not check for duplicates, proceeding with creation');
+      }
+    }
+    
     const sanitizedDebt = {
       ...debt,
       totalValue: safeNumber(debt.totalValue, 0),

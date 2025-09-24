@@ -6,16 +6,32 @@ import toast from 'react-hot-toast';
 export const offlineDataManager = {
   async storeData(table: string, data: any): Promise<void> {
     try {
-      // Clear existing data for the table to maintain consistency
-      const existingData = await getOfflineData(table);
-      for (const item of existingData) {
-        await clearOfflineData(item.id);
+      // Only clear existing data if we're storing fresh online data
+      // Don't clear when storing new offline records
+      if (!data.isOffline) {
+        const existingData = await getOfflineData(table);
+        for (const item of existingData) {
+          if (item.synced) {
+            await clearOfflineData(item.id);
+          }
+        }
       }
       
       // Store new data
       if (Array.isArray(data)) {
         for (const item of data) {
-          await saveOffline(table, item);
+          // Only store if not already exists
+          const existing = await getOfflineData(table);
+          const alreadyExists = existing.some(existingItem => 
+            existingItem.data.id === item.id ||
+            (item.client && existingItem.data.client === item.client && 
+             existingItem.data.date === item.date &&
+             Math.abs((existingItem.data.totalValue || 0) - (item.totalValue || 0)) < 0.01)
+          );
+          
+          if (!alreadyExists) {
+            await saveOffline(table, item);
+          }
         }
       } else if (data) {
         await saveOffline(table, data);
