@@ -2,6 +2,52 @@ import { getOfflineData, saveOffline, clearOfflineData } from './offlineStorage'
 import { connectionManager } from './connectionManager';
 import toast from 'react-hot-toast';
 
+// Offline data manager object
+export const offlineDataManager = {
+  async storeData(table: string, data: any): Promise<void> {
+    try {
+      // Clear existing data for the table to maintain consistency
+      const existingData = await getOfflineData(table);
+      for (const item of existingData) {
+        await clearOfflineData(item.id);
+      }
+      
+      // Store new data
+      if (Array.isArray(data)) {
+        for (const item of data) {
+          await saveOffline(table, item);
+        }
+      } else if (data) {
+        await saveOffline(table, data);
+      }
+    } catch (error) {
+      console.error(`Error storing data for ${table}:`, error);
+      throw error;
+    }
+  },
+
+  async getData(table: string): Promise<any> {
+    try {
+      const offlineDataItems = await getOfflineData(table);
+      
+      if (offlineDataItems.length === 0) {
+        return table === 'cashBalance' ? null : [];
+      }
+      
+      // For single object tables like cashBalance, return the object directly
+      if (table === 'cashBalance') {
+        return offlineDataItems[0]?.data || null;
+      }
+      
+      // For array tables, return array of data
+      return offlineDataItems.map(item => item.data);
+    } catch (error) {
+      console.error(`Error getting data for ${table}:`, error);
+      return table === 'cashBalance' ? null : [];
+    }
+  }
+};
+
 // Merge online and offline data intelligently
 export function mergeOnlineOfflineData<T extends { id: string; createdAt?: string }>(
   onlineData: T[], 
