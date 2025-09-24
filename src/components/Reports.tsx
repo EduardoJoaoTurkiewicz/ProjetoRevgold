@@ -534,8 +534,10 @@ export default function Reports() {
                       {new Date(item.date).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
-                  <span className="text-lg font-bold text-green-700">
-                    R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <span className={`text-lg font-bold ${
+                    (reportData.totals.received - reportData.totals.paid) >= 0 ? 'text-green-700' : 'text-red-700'
+                  }`}>
+                    {(reportData.totals.received - reportData.totals.paid) >= 0 ? '+' : ''}R$ {(reportData.totals.received - reportData.totals.paid).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
