@@ -95,33 +95,33 @@ export function ExportButtons({ filters, data }: ExportButtonsProps) {
       <button
         onClick={previewReport}
         className="btn-secondary flex items-center gap-2"
-        title="Visualizar Relatório Completo - Todas as informações detalhadas"
+        title="Visualizar como ficará o PDF"
       >
         <FileText className="w-5 h-5" />
-        Visualizar Relatório Completo
+        Visualizar PDF
       </button>
       
       <button
         onClick={openClientPrint}
         className="btn-primary flex items-center gap-2"
-        title="Exportar PDF Completo - Relatório detalhado com todas as informações"
+        title="Exportar PDF (Cliente) - Abre janela de impressão do navegador"
       >
         <Printer className="w-5 h-5" />
-        Exportar PDF Completo
+        Exportar PDF (Cliente)
       </button>
       
       <button
         onClick={exportServerPDF}
         disabled={isExporting}
         className="btn-primary flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-        title="Exportar PDF Profissional - Relatório completo gerado no servidor"
+        title="Exportar PDF (Servidor) - Gera PDF profissional no servidor"
       >
         {isExporting ? (
           <Loader2 className="w-5 h-5 animate-spin" />
         ) : (
           <Download className="w-5 h-5" />
         )}
-        {isExporting ? 'Gerando Relatório...' : 'PDF Profissional'}
+        {isExporting ? 'Gerando...' : 'Exportar PDF (Servidor)'}
       </button>
     </div>
   );

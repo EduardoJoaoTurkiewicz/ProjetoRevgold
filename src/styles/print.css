@@ -37,8 +37,7 @@ html, body {
 table { 
   width: 100%; 
   border-collapse: collapse; 
-  margin: 20px 0;
-  font-size: 12px;
+  margin: 16px 0;
 }
 
 thead { 
@@ -55,74 +54,50 @@ tbody {
 
 /* Estética de tabela (alinhar ao design da aba) */
 th, td { 
-  padding: 10px 12px; 
+  padding: 12px 16px; 
   border-bottom: 1px solid rgba(0,0,0,0.08); 
-  font-size: 11px;
+  font-size: 12px;
   text-align: left;
-  vertical-align: top;
 }
 
 thead th { 
   background: linear-gradient(to right, #f1f5f9, #e2e8f0) !important;
-  font-weight: 800;
+  font-weight: 700;
   color: #334155 !important;
   border-bottom: 2px solid #cbd5e1 !important;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 tr:nth-child(even) td { 
   background: rgba(0,0,0,0.02) !important; 
 }
 
-/* Linhas de detalhes aninhadas */
-tr.detail-row td {
-  background: rgba(59, 130, 246, 0.05) !important;
-  border-left: 3px solid #3b82f6 !important;
-  font-size: 10px !important;
-  padding: 6px 12px !important;
-}
-
-tr.nested-detail td {
-  background: rgba(16, 185, 129, 0.05) !important;
-  border-left: 2px solid #10b981 !important;
-  font-size: 9px !important;
-  padding: 4px 12px !important;
-  padding-left: 24px !important;
-}
-
 .subtotal-row td {
   background: linear-gradient(to right, #f8fafc, #f1f5f9) !important;
-  font-weight: 800 !important;
+  font-weight: 700 !important;
   border-top: 2px solid #cbd5e1 !important;
   border-bottom: 2px solid #cbd5e1 !important;
-  font-size: 12px !important;
 }
 
 .total-row td {
   background: linear-gradient(to right, #dbeafe, #bfdbfe) !important;
-  font-weight: 900 !important;
-  font-size: 13px !important;
+  font-weight: 800 !important;
+  font-size: 14px !important;
   border-top: 3px solid #3b82f6 !important;
   border-bottom: 3px solid #3b82f6 !important;
-  color: #1e40af !important;
 }
 
 /* Títulos/Seções */
 .section-title { 
-  font-size: 16px; 
-  font-weight: 900; 
+  font-size: 18px; 
+  font-weight: 800; 
   margin: 24px 0 16px; 
   color: #1e293b;
   border-bottom: 2px solid #e2e8f0;
   padding-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
 }
 
 .subsection-title {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   margin: 20px 0 12px;
   color: #334155;
@@ -130,17 +105,16 @@ tr.nested-detail td {
 
 .subtle { 
   color: #64748b; 
-  font-size: 12px;
+  font-size: 14px;
 }
 
 /* Cards equivalentes */
 .print-card { 
   border: 1px solid rgba(0,0,0,0.08); 
   border-radius: 16px; 
-  padding: 16px; 
+  padding: 20px; 
   margin: 16px 0;
   background: white !important;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .print-card-header {
@@ -164,14 +138,14 @@ tr.nested-detail td {
 }
 
 .print-card-title {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 800;
   color: #1e293b;
   margin: 0;
 }
 
 .print-card-subtitle {
-  font-size: 13px;
+  font-size: 14px;
   color: #64748b;
   margin: 4px 0 0 0;
 }
@@ -180,39 +154,38 @@ tr.nested-detail td {
 .print-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 20px;
 }
 
 .print-grid-3 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 16px;
+  gap: 20px;
 }
 
 .print-grid-4 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr;
-  gap: 16px;
+  gap: 20px;
 }
 
 /* Metric cards */
 .metric-card {
   text-align: center;
-  padding: 16px;
+  padding: 20px;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   background: white !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .metric-value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 900;
   margin: 8px 0;
 }
 
 .metric-label {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   color: #64748b;
   text-transform: uppercase;
@@ -228,13 +201,12 @@ tr.nested-detail td {
 /* Status badges */
 .status-badge {
   display: inline-block;
-  padding: 3px 8px;
+  padding: 4px 12px;
   border-radius: 20px;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border: 1px solid transparent;
 }
 
 .status-paid {
@@ -244,9 +216,9 @@ tr.nested-detail td {
 }
 
 .status-pending {
-  background: #fee2e2 !important;
-  color: #991b1b !important;
-  border: 1px solid #fecaca !important;
+  background: #fef3c7 !important;
+  color: #92400e !important;
+  border: 1px solid #fde68a !important;
 }
 
 .status-partial {
@@ -258,12 +230,11 @@ tr.nested-detail td {
 /* Payment method badges */
 .payment-badge {
   display: inline-block;
-  padding: 2px 6px;
+  padding: 3px 8px;
   border-radius: 12px;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  border: 1px solid transparent;
 }
 
 .payment-dinheiro { background: #dcfce7 !important; color: #166534 !important; }
@@ -271,22 +242,6 @@ tr.nested-detail td {
 .payment-cartao { background: #f3e8ff !important; color: #7c3aed !important; }
 .payment-cheque { background: #fef3c7 !important; color: #92400e !important; }
 .payment-boleto { background: #cffafe !important; color: #0f766e !important; }
-
-/* Badges específicos para relatório */
-.report-badge {
-  display: inline-block;
-  padding: 2px 6px;
-  border-radius: 8px;
-  font-size: 8px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.report-badge-success { background: #dcfce7 !important; color: #166534 !important; }
-.report-badge-warning { background: #fef3c7 !important; color: #92400e !important; }
-.report-badge-danger { background: #fee2e2 !important; color: #991b1b !important; }
-.report-badge-info { background: #dbeafe !important; color: #1e40af !important; }
 
 /* Chart containers */
 .chart-container {
@@ -301,9 +256,8 @@ tr.nested-detail td {
 
 /* Logo and branding */
 .company-logo {
-  max-height: 80px;
+  max-height: 60px;
   max-width: 200px;
-  object-fit: contain;
 }
 
 .company-header {
@@ -316,19 +270,16 @@ tr.nested-detail td {
 }
 
 .report-title {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 900;
   color: #1e293b;
   margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 1px;
 }
 
 .report-subtitle {
-  font-size: 18px;
+  font-size: 16px;
   color: #64748b;
   margin: 8px 0 0 0;
-  font-weight: 600;
 }
 
 /* Filter summary */
@@ -391,133 +342,19 @@ tr.nested-detail td {
 
 /* Ensure proper spacing */
 .section-spacing {
-  margin: 28px 0;
+  margin: 32px 0;
 }
 
 .subsection-spacing {
-  margin: 20px 0;
+  margin: 24px 0;
 }
 
 /* Footer styling */
 .report-footer {
-  margin-top: 60px;
-  padding-top: 24px;
+  margin-top: 40px;
+  padding-top: 20px;
   border-top: 2px solid #e2e8f0;
   text-align: center;
   color: #64748b;
-  font-size: 11px;
-}
-
-/* Melhorias específicas para o relatório abrangente */
-.comprehensive-section {
-  margin: 32px 0;
-  break-inside: avoid;
-}
-
-.comprehensive-header {
-  background: linear-gradient(to right, #f8fafc, #f1f5f9) !important;
-  padding: 16px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  border: 2px solid #e2e8f0;
-}
-
-.comprehensive-title {
-  font-size: 20px;
-  font-weight: 900;
-  color: #1e293b;
-  margin: 0 0 8px 0;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.comprehensive-subtitle {
-  font-size: 14px;
-  color: #64748b;
-  margin: 0;
-  font-weight: 600;
-}
-
-/* Destaque para valores importantes */
-.highlight-value {
-  background: linear-gradient(to right, #fef3c7, #fde68a) !important;
-  padding: 8px 12px !important;
-  border-radius: 8px !important;
-  font-weight: 900 !important;
-  border: 2px solid #f59e0b !important;
-}
-
-/* Seções de alerta */
-.alert-section {
-  background: linear-gradient(to right, #fee2e2, #fecaca) !important;
-  border: 2px solid #ef4444 !important;
-  border-radius: 12px !important;
-  padding: 16px !important;
-  margin: 20px 0 !important;
-}
-
-.success-section {
-  background: linear-gradient(to right, #dcfce7, #bbf7d0) !important;
-  border: 2px solid #10b981 !important;
-  border-radius: 12px !important;
-  padding: 16px !important;
-  margin: 20px 0 !important;
-}
-
-/* Tabelas aninhadas para detalhes */
-.nested-table {
-  margin: 8px 0 !important;
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 8px !important;
-  overflow: hidden !important;
-}
-
-.nested-table th {
-  background: #f8fafc !important;
-  font-size: 9px !important;
-  padding: 6px 8px !important;
-  font-weight: 700 !important;
-}
-
-.nested-table td {
-  font-size: 9px !important;
-  padding: 4px 8px !important;
-  border-bottom: 1px solid #f1f5f9 !important;
-}
-
-/* Indicadores visuais */
-.visual-indicator {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 6px;
-}
-
-.indicator-green { background: #10b981 !important; }
-.indicator-red { background: #ef4444 !important; }
-.indicator-yellow { background: #f59e0b !important; }
-.indicator-blue { background: #3b82f6 !important; }
-
-/* Responsividade para impressão */
-@media print {
-  .comprehensive-section {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-  
-  .nested-table {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-  
-  /* Garantir que tabelas grandes quebrem adequadamente */
-  table {
-    break-inside: auto;
-  }
-  
-  tr {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
+  font-size: 12px;
 }

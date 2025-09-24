@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ComprehensiveReport } from './ComprehensiveReport';
+import { PrintableReport } from './PrintableReport';
 import { useAppContext } from '../../context/AppContext';
 import { Loader2 } from 'lucide-react';
 
@@ -8,9 +8,6 @@ export function PrintReportPage() {
   const [searchParams] = useSearchParams();
   const { 
     sales, 
-    debts,
-    checks,
-    boletos,
     debts, 
     checks, 
     boletos, 
@@ -42,11 +39,6 @@ export function PrintReportPage() {
         // Filter data by period (same logic as Reports component)
         const periodSales = sales.filter(sale => 
           sale.date >= startDate && sale.date <= endDate
-        );
-
-        // Filter debts by period
-        const periodDebts = debts.filter(debt => 
-          debt.date >= startDate && debt.date <= endDate
         );
 
         // Calculate received values
@@ -125,6 +117,11 @@ export function PrintReportPage() {
             });
           }
         });
+
+        // Period debts
+        const periodDebts = debts.filter(debt => 
+          debt.date >= startDate && debt.date <= endDate
+        );
 
         // Calculate paid values
         const paidValues = [];
@@ -291,7 +288,7 @@ export function PrintReportPage() {
   }
 
   return (
-    <ComprehensiveReport 
+    <PrintableReport 
       data={reportData}
       filters={{
         startDate,
@@ -301,10 +298,6 @@ export function PrintReportPage() {
         status
       }}
       user={user}
-      checks={checks}
-      boletos={boletos}
-      allSales={sales}
-      allDebts={debts}
     />
   );
 }
