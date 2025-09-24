@@ -2,6 +2,9 @@ import { supabase, isSupabaseConfigured } from './supabase';
 import { sanitizeSupabaseData, safeNumber, logMonetaryValues, transformToSnakeCase, transformFromSnakeCase } from '../utils/numberUtils';
 import { ErrorHandler } from './errorHandler';
 import { saveOffline, addToSyncQueue, getLocalCashBalance, setLocalCashBalance } from './offlineStorage';
+import { saveOfflineEnhanced, addToSyncQueueEnhanced } from './enhancedOfflineStorage';
+import { UUIDManager } from './uuidManager';
+import { DeduplicationService } from './deduplicationService';
 import { connectionManager } from './connectionManager';
 import type { 
   Sale, 
@@ -21,6 +24,8 @@ import type {
   Acerto
 } from '../types';
 
+// Enhanced Supabase services with deduplication
+export { enhancedSupabaseServices } from './enhancedSupabaseServices';
 // Helper function to safely execute Supabase operations
 async function safeSupabaseOperation<T>(
   operation: () => Promise<{ data: T | null; error: any }>,
@@ -68,7 +73,7 @@ export const salesService = {
     
     if (!data) return [];
     
-    return data.map(sale => {
+    const salesData = data.map(sale => {
       const sanitized = sanitizeSupabaseData(transformFromSnakeCase(sale));
       
       // Ensure all monetary fields are numbers
@@ -90,38 +95,40 @@ export const salesService = {
       
       return sanitized;
     });
+    
+    // Remove duplicates before returning
+    return DeduplicationService.removeDuplicatesById(salesData);
   },
 
   async create(sale: Omit<Sale, 'id' | 'createdAt'>): Promise<string> {
     console.log('🔄 salesService.create - Input sale:', sale);
     
-    // Check for duplicates before creating
+    // Enhanced duplicate checking
     if (isSupabaseConfigured() && connectionManager.isConnected()) {
       try {
-        const { data: existingSales, error: checkError } = await supabase
-          .from('sales')
-          .select('id')
-          .eq('client', sale.client)
-          .eq('date', sale.date)
-          .eq('total_value', sale.totalValue);
-        
-        if (!checkError && existingSales && existingSales.length > 0) {
-          console.log('⚠️ Sale already exists, returning existing ID:', existingSales[0].id);
-          return existingSales[0].id;
+        const duplicateCheck = await DeduplicationService.checkSaleDuplicate(saleData);
+        if (duplicateCheck.isDuplicate) {
+          console.log('⚠️ Sale duplicate detected:', duplicateCheck.reason);
+          return duplicateCheck.existingId!;
         }
       } catch (error) {
         console.warn('Could not check for duplicates, proceeding with creation');
       }
     }
     
+    // Generate UUID and clean data
+    const saleId = UUIDManager.generateUUID();
+    const saleWithId = { ...saleData, id: saleId };
+    const cleanedSale = UUIDManager.cleanObjectUUIDs(saleWithId);
+    
     // Sanitize all monetary values before sending
     const sanitizedSale = {
-      ...sale,
-      totalValue: safeNumber(sale.totalValue, 0),
-      receivedAmount: safeNumber(sale.receivedAmount, 0),
-      pendingAmount: safeNumber(sale.pendingAmount, 0),
-      customCommissionRate: safeNumber(sale.customCommissionRate, 5),
-      paymentMethods: (sale.paymentMethods || []).map(method => ({
+      ...cleanedSale,
+      totalValue: safeNumber(cleanedSale.totalValue, 0),
+      receivedAmount: safeNumber(cleanedSale.receivedAmount, 0),
+      pendingAmount: safeNumber(cleanedSale.pendingAmount, 0),
+      customCommissionRate: safeNumber(cleanedSale.customCommissionRate, 5),
+      paymentMethods: (cleanedSale.paymentMethods || []).map(method => ({
         ...method,
         amount: safeNumber(method.amount, 0),
         installmentValue: safeNumber(method.installmentValue, 0),
@@ -134,7 +141,7 @@ export const salesService = {
     
     if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
       console.log('💾 Saving sale offline');
-      return await saveOffline('sales', sanitizedSale);
+      return await saveOfflineEnhanced('sales', sanitizedSale);
     }
 
     try {
@@ -156,7 +163,7 @@ export const salesService = {
       // Save offline if network error
       if (error?.message?.includes('Failed to fetch') || error?.message?.includes('Network error')) {
         console.log('💾 Saving sale offline due to network error');
-        return await saveOffline('sales', sanitizedSale);
+        return await saveOfflineEnhanced('sales', sanitizedSale);
       }
       
       throw error;
@@ -164,12 +171,13 @@ export const salesService = {
   },
 
   async update(id: string, sale: Partial<Sale>): Promise<void> {
-    // Sanitize monetary values
-    const sanitizedSale = sanitizeSupabaseData(sale);
+    // Clean and sanitize data
+    const cleanedSale = UUIDManager.cleanObjectUUIDs(sale);
+    const sanitizedSale = sanitizeSupabaseData(cleanedSale);
     logMonetaryValues(sanitizedSale, 'Update Sale');
     
     if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
-      await addToSyncQueue({
+      await addToSyncQueueEnhanced({
         type: 'update',
         table: 'sales',
         data: { id, ...sanitizedSale },
@@ -188,7 +196,7 @@ export const salesService = {
 
   async delete(id: string): Promise<void> {
     if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
-      await addToSyncQueue({
+      await addToSyncQueueEnhanced({
         type: 'delete',
         table: 'sales',
         data: { id },
@@ -217,25 +225,46 @@ export const employeeService = {
     
     if (!data) return [];
     
-    return data.map(employee => {
+    const employeesData = data.map(employee => {
       const sanitized = sanitizeSupabaseData(transformFromSnakeCase(employee));
       sanitized.salary = safeNumber(sanitized.salary, 0);
       sanitized.paymentDay = safeNumber(sanitized.paymentDay, 5);
       return sanitized;
     });
+    
+    // Remove duplicates before returning
+    return DeduplicationService.removeDuplicatesById(employeesData);
   },
 
   async create(employee: Omit<Employee, 'id' | 'createdAt'>): Promise<string> {
+    // Enhanced duplicate checking
+    if (isSupabaseConfigured() && connectionManager.isConnected()) {
+      try {
+        const duplicateCheck = await DeduplicationService.checkEmployeeDuplicate(employee);
+        if (duplicateCheck.isDuplicate) {
+          console.log('⚠️ Employee duplicate detected:', duplicateCheck.reason);
+          return duplicateCheck.existingId!;
+        }
+      } catch (error) {
+        console.warn('Could not check for employee duplicates, proceeding with creation');
+      }
+    }
+    
+    // Generate UUID and clean data
+    const employeeId = UUIDManager.generateUUID();
+    const employeeWithId = { ...employee, id: employeeId };
+    const cleanedEmployee = UUIDManager.cleanObjectUUIDs(employeeWithId);
+    
     const sanitizedEmployee = {
-      ...employee,
-      salary: safeNumber(employee.salary, 0),
-      paymentDay: safeNumber(employee.paymentDay, 5)
+      ...cleanedEmployee,
+      salary: safeNumber(cleanedEmployee.salary, 0),
+      paymentDay: safeNumber(cleanedEmployee.paymentDay, 5)
     };
     
     logMonetaryValues(sanitizedEmployee, 'Create Employee');
     
     if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
-      return await saveOffline('employees', sanitizedEmployee);
+      return await saveOfflineEnhanced('employees', sanitizedEmployee);
     }
 
     const { data, error } = await supabase
@@ -249,11 +278,12 @@ export const employeeService = {
   },
 
   async update(id: string, employee: Partial<Employee>): Promise<void> {
-    const sanitizedEmployee = sanitizeSupabaseData(employee);
+    const cleanedEmployee = UUIDManager.cleanObjectUUIDs(employee);
+    const sanitizedEmployee = sanitizeSupabaseData(cleanedEmployee);
     logMonetaryValues(sanitizedEmployee, 'Update Employee');
     
     if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
-      await addToSyncQueue({
+      await addToSyncQueueEnhanced({
         type: 'update',
         table: 'employees',
         data: { id, ...sanitizedEmployee },
@@ -272,7 +302,7 @@ export const employeeService = {
 
   async delete(id: string): Promise<void> {
     if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
-      await addToSyncQueue({
+      await addToSyncQueueEnhanced({
         type: 'delete',
         table: 'employees',
         data: { id },
@@ -458,7 +488,7 @@ export const debtsService = {
     
     if (!data) return [];
     
-    return data.map(debt => {
+    const debtsData = data.map(debt => {
       const sanitized = sanitizeSupabaseData(transformFromSnakeCase(debt));
       
       // Ensure all monetary fields are numbers
@@ -477,34 +507,36 @@ export const debtsService = {
       
       return sanitized;
     });
+    
+    // Remove duplicates before returning
+    return DeduplicationService.removeDuplicatesById(debtsData);
   },
 
   async create(debt: Omit<Debt, 'id' | 'createdAt'>): Promise<string> {
-    // Check for duplicates before creating
+    // Enhanced duplicate checking
     if (isSupabaseConfigured() && connectionManager.isConnected()) {
       try {
-        const { data: existingDebts, error: checkError } = await supabase
-          .from('debts')
-          .select('id')
-          .eq('company', debt.company)
-          .eq('date', debt.date)
-          .eq('total_value', debt.totalValue);
-        
-        if (!checkError && existingDebts && existingDebts.length > 0) {
-          console.log('⚠️ Debt already exists, returning existing ID:', existingDebts[0].id);
-          return existingDebts[0].id;
+        const duplicateCheck = await DeduplicationService.checkDebtDuplicate(debt);
+        if (duplicateCheck.isDuplicate) {
+          console.log('⚠️ Debt duplicate detected:', duplicateCheck.reason);
+          return duplicateCheck.existingId!;
         }
       } catch (error) {
         console.warn('Could not check for duplicates, proceeding with creation');
       }
     }
     
+    // Generate UUID and clean data
+    const debtId = UUIDManager.generateUUID();
+    const debtWithId = { ...debt, id: debtId };
+    const cleanedDebt = UUIDManager.cleanObjectUUIDs(debtWithId);
+    
     const sanitizedDebt = {
-      ...debt,
-      totalValue: safeNumber(debt.totalValue, 0),
-      paidAmount: safeNumber(debt.paidAmount, 0),
-      pendingAmount: safeNumber(debt.pendingAmount, 0),
-      paymentMethods: (debt.paymentMethods || []).map(method => ({
+      ...cleanedDebt,
+      totalValue: safeNumber(cleanedDebt.totalValue, 0),
+      paidAmount: safeNumber(cleanedDebt.paidAmount, 0),
+      pendingAmount: safeNumber(cleanedDebt.pendingAmount, 0),
+      paymentMethods: (cleanedDebt.paymentMethods || []).map(method => ({
         ...method,
         amount: safeNumber(method.amount, 0),
         installmentValue: safeNumber(method.installmentValue, 0)
@@ -514,7 +546,7 @@ export const debtsService = {
     logMonetaryValues(sanitizedDebt, 'Create Debt');
     
     if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
-      return await saveOffline('debts', sanitizedDebt);
+      return await saveOfflineEnhanced('debts', sanitizedDebt);
     }
 
     const { data, error } = await supabase
@@ -528,11 +560,12 @@ export const debtsService = {
   },
 
   async update(id: string, debt: Partial<Debt>): Promise<void> {
-    const sanitizedDebt = sanitizeSupabaseData(debt);
+    const cleanedDebt = UUIDManager.cleanObjectUUIDs(debt);
+    const sanitizedDebt = sanitizeSupabaseData(cleanedDebt);
     logMonetaryValues(sanitizedDebt, 'Update Debt');
     
     if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
-      await addToSyncQueue({
+      await addToSyncQueueEnhanced({
         type: 'update',
         table: 'debts',
         data: { id, ...sanitizedDebt },
@@ -551,7 +584,7 @@ export const debtsService = {
 
   async delete(id: string): Promise<void> {
     if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
-      await addToSyncQueue({
+      await addToSyncQueueEnhanced({
         type: 'delete',
         table: 'debts',
         data: { id },

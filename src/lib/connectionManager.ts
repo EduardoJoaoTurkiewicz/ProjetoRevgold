@@ -54,7 +54,7 @@ class ConnectionManager {
     }, 30000);
   }
 
-  private updateStatus(updates: Partial<ConnectionStatus>) {
+  public updateStatus(updates: Partial<ConnectionStatus>) {
     this.status = {
       ...this.status,
       ...updates,

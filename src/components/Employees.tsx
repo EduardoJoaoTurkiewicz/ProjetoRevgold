@@ -6,6 +6,8 @@ import { EmployeeForm } from './forms/EmployeeForm';
 import { EmployeeAdvanceForm } from './forms/EmployeeAdvanceForm';
 import { EmployeeOvertimeForm } from './forms/EmployeeOvertimeForm';
 import { safeNumber, safeCurrency, logMonetaryValues } from '../utils/numberUtils';
+import { DeduplicationService } from '../lib/deduplicationService';
+import { UUIDManager } from '../lib/uuidManager';
 
 export function Employees() {
   const { 
@@ -35,31 +37,38 @@ export function Employees() {
   const [overtimeEmployee, setOvertimeEmployee] = useState<Employee | null>(null);
   const [viewingPayrollEmployee, setViewingPayrollEmployee] = useState<Employee | null>(null);
 
+  // Ensure employees data is deduplicated in the UI
+  const deduplicatedEmployees = React.useMemo(() => {
+    return DeduplicationService.removeDuplicatesById(employees || []);
+  }, [employees]);
   const handleAddEmployee = (employee: Omit<Employee, 'id' | 'createdAt'>) => {
     console.log('🔄 Adicionando novo funcionário:', employee);
     logMonetaryValues(employee, 'Add Employee');
     
+    // Clean UUID fields before submission
+    const cleanedEmployee = UUIDManager.cleanObjectUUIDs(employee);
+    
     // Validate employee data before submitting
-    if (!employee.name || !employee.name.trim()) {
+    if (!cleanedEmployee.name || !cleanedEmployee.name.trim()) {
       alert('Por favor, informe o nome do funcionário.');
       return;
     }
     
-    if (!employee.position || !employee.position.trim()) {
+    if (!cleanedEmployee.position || !cleanedEmployee.position.trim()) {
       alert('Por favor, informe o cargo do funcionário.');
       return;
     }
     
-    const salary = safeNumber(employee.salary, 0);
+    const salary = safeNumber(cleanedEmployee.salary, 0);
     if (salary <= 0) {
       alert('O salário deve ser maior que zero.');
       return;
     }
     
     const sanitizedEmployee = {
-      ...employee,
+      ...cleanedEmployee,
       salary: salary,
-      paymentDay: safeNumber(employee.paymentDay, 5)
+      paymentDay: safeNumber(cleanedEmployee.paymentDay, 5)
     };
     
     createEmployee(sanitizedEmployee).then(() => {
@@ -366,7 +375,7 @@ export function Employees() {
 
       {/* Employees List */}
       <div className="card">
-        {employees.length > 0 ? (
+        {deduplicatedEmployees.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full table-auto">
               <thead>
@@ -382,7 +391,13 @@ export function Employees() {
                 </tr>
               </thead>
               <tbody>
-                {employees.map(employee => {
+                {deduplicatedEmployees.map(employee => {
+                  // Additional safety check for duplicates in render
+                  if (!employee.id || !UUIDManager.isValidUUID(employee.id)) {
+                    console.warn('⚠️ Invalid employee ID detected in render:', employee.id);
+                    return null;
+                  }
+                  
                   const nextPayment = getNextPaymentDate(employee);
                   const lastPayment = getLastPayment(employee.id);
                   const today = new Date();

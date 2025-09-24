@@ -3,6 +3,8 @@ import { Plus, Search, Filter, Calendar, DollarSign, User, Package, FileText, Ey
 import { SaleForm } from './forms/SaleForm';
 import { useAppContext } from '../context/AppContext';
 import { safeNumber, safeCurrency, logMonetaryValues } from '../utils/numberUtils';
+import { DeduplicationService } from '../lib/deduplicationService';
+import { UUIDManager } from '../lib/uuidManager';
 import type { Sale } from '../types';
 
 export function Sales() {
@@ -23,16 +25,23 @@ export function Sales() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
+  // Ensure sales data is deduplicated in the UI
+  const deduplicatedSales = React.useMemo(() => {
+    return DeduplicationService.removeDuplicatesById(sales || []);
+  }, [sales]);
   const handleSaleSubmit = async (saleData: Partial<Sale>) => {
     try {
       console.log('🔄 Submetendo venda:', saleData);
       logMonetaryValues(saleData, 'Sale Submit');
       
+      // Clean UUID fields before submission
+      const cleanedSaleData = UUIDManager.cleanObjectUUIDs(saleData);
+      
       // Verificar se há método de pagamento "acerto"
-      const hasAcertoPayment = saleData.paymentMethods?.some(method => method.type === 'acerto');
+      const hasAcertoPayment = cleanedSaleData.paymentMethods?.some(method => method.type === 'acerto');
       
       // Validate total value before submission
-      const totalValue = safeNumber(saleData.totalValue, 0);
+      const totalValue = safeNumber(cleanedSaleData.totalValue, 0);
       if (totalValue <= 0) {
         throw new Error('Valor total deve ser maior que zero');
       }
@@ -40,16 +49,16 @@ export function Sales() {
       let result;
       if (editingSale) {
         console.log('🔄 Atualizando venda existente:', editingSale.id);
-        result = await updateSale(editingSale.id, saleData);
+        result = await updateSale(editingSale.id, cleanedSaleData);
         console.log('✅ Venda atualizada:', result);
       } else {
         console.log('🔄 Criando nova venda');
-        console.log('🔄 Sales.handleSaleSubmit - Sale data being sent:', saleData);
-        result = await createSale(saleData);
+        console.log('🔄 Sales.handleSaleSubmit - Sale data being sent:', cleanedSaleData);
+        result = await createSale(cleanedSaleData);
         
         // Se há pagamento por acerto, criar acerto automaticamente
         if (hasAcertoPayment) {
-          await createAcertoFromSale(saleData);
+          await createAcertoFromSale(cleanedSaleData);
         }
       }
 
@@ -105,6 +114,7 @@ export function Sales() {
   };
 
   const filteredSales = sales.filter(sale => {
+  const filteredSales = deduplicatedSales.filter(sale => {
     const matchesSearch = sale.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          sale.observations?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || sale.status === statusFilter;
@@ -226,6 +236,12 @@ export function Sales() {
       <div className="space-y-6">
         {filteredSales.length > 0 ? (
           filteredSales.map((sale) => {
+            // Additional safety check for duplicates in render
+            if (!sale.id || !UUIDManager.isValidUUID(sale.id)) {
+              console.warn('⚠️ Invalid sale ID detected in render:', sale.id);
+              return null;
+            }
+            
             const saleChecks = getSaleChecks(sale.id);
             const saleBoletos = getSaleBoletos(sale.id);
             

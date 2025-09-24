@@ -3,6 +3,8 @@ import { Plus, Edit, Trash2, Eye, CreditCard, FileText, AlertCircle, X } from 'l
 import { useAppContext } from '../context/AppContext';
 import { Debt } from '../types';
 import { DebtForm } from './forms/DebtForm';
+import { DeduplicationService } from '../lib/deduplicationService';
+import { UUIDManager } from '../lib/uuidManager';
 
 export function Debts() {
   const { debts, checks, isLoading, error, createDebt, updateDebt, deleteDebt } = useAppContext();
@@ -10,31 +12,38 @@ export function Debts() {
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
   const [viewingDebt, setViewingDebt] = useState<Debt | null>(null);
 
+  // Ensure debts data is deduplicated in the UI
+  const deduplicatedDebts = React.useMemo(() => {
+    return DeduplicationService.removeDuplicatesById(debts || []);
+  }, [debts]);
   const handleAddDebt = (debt: Omit<Debt, 'id' | 'createdAt'>) => {
     console.log('🔄 Adicionando nova dívida:', debt);
     
+    // Clean UUID fields before submission
+    const cleanedDebt = UUIDManager.cleanObjectUUIDs(debt);
+    
     // Verificar se há método de pagamento "acerto"
-    const hasAcertoPayment = debt.paymentMethods?.some(method => method.type === 'acerto');
+    const hasAcertoPayment = cleanedDebt.paymentMethods?.some(method => method.type === 'acerto');
     
     // Validate debt data before submitting
-    if (!debt.company || !debt.company.trim()) {
+    if (!cleanedDebt.company || !cleanedDebt.company.trim()) {
       alert('Por favor, informe o nome da empresa/fornecedor.');
       return;
     }
     
-    if (!debt.description || !debt.description.trim()) {
+    if (!cleanedDebt.description || !cleanedDebt.description.trim()) {
       alert('Por favor, informe a descrição da dívida.');
       return;
     }
     
-    if (debt.totalValue <= 0) {
+    if (cleanedDebt.totalValue <= 0) {
       alert('O valor total da dívida deve ser maior que zero.');
       return;
     }
     
     // Validar estrutura dos métodos de pagamento
-    if (debt.paymentMethods && debt.paymentMethods.length > 0) {
-      for (const method of debt.paymentMethods) {
+    if (cleanedDebt.paymentMethods && cleanedDebt.paymentMethods.length > 0) {
+      for (const method of cleanedDebt.paymentMethods) {
         if (!method.type || typeof method.type !== 'string') {
           alert('Todos os métodos de pagamento devem ter um tipo válido.');
           return;
@@ -46,12 +55,12 @@ export function Debts() {
       }
     }
     
-    createDebt(debt).then(() => {
+    createDebt(cleanedDebt).then(() => {
       console.log('✅ Dívida adicionada com sucesso');
       
       // Se há pagamento por acerto, criar acerto automaticamente
       if (hasAcertoPayment) {
-        createAcertoFromDebt(debt);
+        createAcertoFromDebt(cleanedDebt);
       }
       
       setIsFormOpen(false);
@@ -172,8 +181,15 @@ export function Debts() {
 
       {/* Debts List */}
       <div className="space-y-6">
-        {debts.length > 0 ? (
-          debts.map((debt) => (
+        {deduplicatedDebts.length > 0 ? (
+          deduplicatedDebts.map((debt) => {
+            // Additional safety check for duplicates in render
+            if (!debt.id || !UUIDManager.isValidUUID(debt.id)) {
+              console.warn('⚠️ Invalid debt ID detected in render:', debt.id);
+              return null;
+            }
+            
+            return (
             <div key={debt.id} className="card modern-shadow-xl">
               {/* Debt Header */}
               <div className="flex justify-between items-start mb-6">
@@ -333,7 +349,8 @@ export function Debts() {
                 </button>
               </div>
             </div>
-          ))
+            );
+          })
         ) : (
           <div className="text-center py-20">
             <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 floating-animation">

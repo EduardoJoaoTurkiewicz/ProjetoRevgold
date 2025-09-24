@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { WifiOff, Database, RefreshCw, AlertTriangle } from 'lucide-react';
-import { getOfflineStats } from '../lib/offlineStorage';
+import { getOfflineStatsEnhanced } from '../lib/enhancedOfflineStorage';
 import { connectionManager } from '../lib/connectionManager';
-import { syncManager } from '../lib/syncManager';
+import { enhancedSyncManager } from '../lib/enhancedSyncManager';
 import toast from 'react-hot-toast';
 
 export function OfflineIndicator() {
@@ -13,7 +13,7 @@ export function OfflineIndicator() {
   useEffect(() => {
     const updateOnlineStatus = () => setIsOnline(navigator.onLine);
     const updateStats = async () => {
-      const stats = await getOfflineStats();
+      const stats = await getOfflineStatsEnhanced();
       setOfflineStats(stats);
     };
 
@@ -72,7 +72,7 @@ export function OfflineIndicator() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                syncManager.forceSync();
+                enhancedSyncManager.forceSync();
               }}
               className="p-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
               title="Sincronizar agora"

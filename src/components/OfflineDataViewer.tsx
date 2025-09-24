@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Database, Trash2, RefreshCw, Eye, X, AlertTriangle } from 'lucide-react';
-import { getOfflineData, clearAllOfflineData, getOfflineStats } from '../lib/offlineStorage';
-import { syncManager } from '../lib/syncManager';
+import { getOfflineDataEnhanced, clearAllOfflineDataEnhanced, getOfflineStatsEnhanced } from '../lib/enhancedOfflineStorage';
+import { enhancedSyncManager } from '../lib/enhancedSyncManager';
 import toast from 'react-hot-toast';
 
 interface OfflineDataViewerProps {
@@ -19,8 +19,8 @@ export function OfflineDataViewer({ isOpen, onClose }: OfflineDataViewerProps) {
     setLoading(true);
     try {
       const [data, statsData] = await Promise.all([
-        getOfflineData(),
-        getOfflineStats()
+        getOfflineDataEnhanced(),
+        getOfflineStatsEnhanced()
       ]);
       setOfflineData(data);
       setStats(statsData);
@@ -38,7 +38,7 @@ export function OfflineDataViewer({ isOpen, onClose }: OfflineDataViewerProps) {
     }
 
     try {
-      await clearAllOfflineData();
+      await clearAllOfflineDataEnhanced();
       toast.success('Todos os dados offline foram limpos');
       loadData();
     } catch (error) {
@@ -49,7 +49,7 @@ export function OfflineDataViewer({ isOpen, onClose }: OfflineDataViewerProps) {
 
   const handleForceSync = async () => {
     try {
-      await syncManager.forceSync();
+      await enhancedSyncManager.forceSync();
       loadData();
     } catch (error) {
       console.error('Error forcing sync:', error ?? 'Unknown error');

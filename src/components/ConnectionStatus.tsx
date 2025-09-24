@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Wifi, WifiOff, Cloud, CloudOff, Loader2, RefreshCw, Database, CheckCircle, AlertTriangle } from 'lucide-react';
 import { connectionManager, ConnectionStatus as ConnStatus } from '../lib/connectionManager';
-import { syncManager } from '../lib/syncManager';
-import { getOfflineStats } from '../lib/offlineStorage';
+import { enhancedSyncManager } from '../lib/enhancedSyncManager';
+import { getOfflineStatsEnhanced } from '../lib/enhancedOfflineStorage';
 import { isSupabaseConfigured } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
@@ -17,11 +17,11 @@ export function ConnectionStatus() {
     const unsubscribeConnection = connectionManager.addListener(setStatus);
     
     // Escutar mudanças de sincronização
-    const unsubscribeSync = syncManager.addSyncListener(setSyncStatus);
+    const unsubscribeSync = enhancedSyncManager.addSyncListener(setSyncStatus);
     
     // Atualizar estatísticas offline periodicamente
     const updateStats = async () => {
-      const stats = await getOfflineStats();
+      const stats = await getOfflineStatsEnhanced();
       setOfflineStats(stats);
     };
     
@@ -37,7 +37,7 @@ export function ConnectionStatus() {
 
   const handleForceSync = async () => {
     try {
-      await syncManager.forceSync();
+      await enhancedSyncManager.forceSync();
     } catch (error) {
       toast.error('Erro ao forçar sincronização: ' + (error?.message ?? 'Erro desconhecido'));
     }

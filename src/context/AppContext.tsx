@@ -1,8 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabaseServices } from '../lib/supabaseServices';
+import { supabaseServices, enhancedSupabaseServices } from '../lib/supabaseServices';
+import { enhancedSyncManager } from '../lib/enhancedSyncManager';
+import { getOfflineDataEnhanced, mergeOnlineOfflineDataEnhanced } from '../lib/enhancedOfflineStorage';
+import { DeduplicationService } from '../lib/deduplicationService';
+import { UUIDManager } from '../lib/uuidManager';
 import { connectionManager } from '../lib/connectionManager';
-import { syncManager } from '../lib/syncManager';
-import { offlineDataManager } from '../lib/offlineDataManager';
+import { ErrorHandler } from '../lib/errorHandler';
 
 interface AppContextType {
   // Loading and error states
@@ -102,17 +105,28 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [cashBalance, setCashBalance] = useState<any>(null);
   const [cashTransactions, setCashTransactions] = useState<any[]>([]);
 
+  // Track loading state for each data type to prevent multiple loads
+  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
+  const [lastLoadTime, setLastLoadTime] = useState<Record<string, number>>({});
+
   // Load all data function
   const loadAllData = async () => {
+    // Prevent multiple simultaneous loads
+    if (loadingStates.loadAllData) {
+      console.log('🔄 Data loading already in progress, skipping...');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
+      setLoadingStates(prev => ({ ...prev, loadAllData: true }));
 
       // Check if we're online
       const isOnline = connectionManager.getStatus().isOnline;
       
       if (isOnline) {
-        // Load data from Supabase
+        // Load data from Supabase with enhanced services
         const [
           salesData,
           employeesData,
@@ -130,9 +144,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           balanceData,
           transactionsData
         ] = await Promise.all([
-          supabaseServices.sales.getSales(),
-          supabaseServices.employees.getEmployees(),
-          supabaseServices.debts.getDebts(),
+          enhancedSupabaseServices.sales.getSales(),
+          enhancedSupabaseServices.employees.getEmployees(),
+          enhancedSupabaseServices.debts.getDebts(),
           supabaseServices.checks.getChecks(),
           supabaseServices.boletos.getBoletos(),
           supabaseServices.employeeCommissions.getCommissions(),
@@ -147,10 +161,28 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           supabaseServices.cashTransactions.getTransactions()
         ]);
 
-        // Update states
-        setSales(salesData || []);
-        setEmployees(employeesData || []);
-        setDebts(debtsData || []);
+        // Merge with offline data and remove duplicates
+        const offlineSalesData = await getOfflineDataEnhanced('sales');
+        const offlineEmployeesData = await getOfflineDataEnhanced('employees');
+        const offlineDebtsData = await getOfflineDataEnhanced('debts');
+        
+        const mergedSales = mergeOnlineOfflineDataEnhanced(
+          salesData || [], 
+          offlineSalesData.map(d => d.data)
+        );
+        const mergedEmployees = mergeOnlineOfflineDataEnhanced(
+          employeesData || [], 
+          offlineEmployeesData.map(d => d.data)
+        );
+        const mergedDebts = mergeOnlineOfflineDataEnhanced(
+          debtsData || [], 
+          offlineDebtsData.map(d => d.data)
+        );
+
+        // Update states with deduplicated data
+        setSales(DeduplicationService.removeDuplicatesById(mergedSales));
+        setEmployees(DeduplicationService.removeDuplicatesById(mergedEmployees));
+        setDebts(DeduplicationService.removeDuplicatesById(mergedDebts));
         setChecks(checksData || []);
         setBoletos(boletosData || []);
         setEmployeeCommissions(commissionsData || []);
@@ -164,63 +196,36 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         setCashBalance(balanceData);
         setCashTransactions(transactionsData || []);
 
-        // Store data offline
-        await offlineDataManager.storeData('sales', salesData || []);
-        await offlineDataManager.storeData('employees', employeesData || []);
-        await offlineDataManager.storeData('debts', debtsData || []);
-        await offlineDataManager.storeData('checks', checksData || []);
-        await offlineDataManager.storeData('boletos', boletosData || []);
-        await offlineDataManager.storeData('employeeCommissions', commissionsData || []);
-        await offlineDataManager.storeData('employeePayments', paymentsData || []);
-        await offlineDataManager.storeData('employeeAdvances', advancesData || []);
-        await offlineDataManager.storeData('employeeOvertimes', overtimesData || []);
-        await offlineDataManager.storeData('pixFees', feesData || []);
-        await offlineDataManager.storeData('taxes', taxesData || []);
-        await offlineDataManager.storeData('agendaEvents', eventsData || []);
-        await offlineDataManager.storeData('acertos', acertosData || []);
-        await offlineDataManager.storeData('cashBalance', balanceData);
-        await offlineDataManager.storeData('cashTransactions', transactionsData || []);
+        console.log('✅ Data loaded and merged successfully');
       } else {
-        // Load data from offline storage
-        const offlineData = await Promise.all([
-          offlineDataManager.getData('sales'),
-          offlineDataManager.getData('employees'),
-          offlineDataManager.getData('debts'),
-          offlineDataManager.getData('checks'),
-          offlineDataManager.getData('boletos'),
-          offlineDataManager.getData('employeeCommissions'),
-          offlineDataManager.getData('employeePayments'),
-          offlineDataManager.getData('employeeAdvances'),
-          offlineDataManager.getData('employeeOvertimes'),
-          offlineDataManager.getData('pixFees'),
-          offlineDataManager.getData('taxes'),
-          offlineDataManager.getData('agendaEvents'),
-          offlineDataManager.getData('acertos'),
-          offlineDataManager.getData('cashBalance'),
-          offlineDataManager.getData('cashTransactions')
+        // Load data from enhanced offline storage
+        const [
+          offlineSalesData,
+          offlineEmployeesData,
+          offlineDebtsData
+        ] = await Promise.all([
+          getOfflineDataEnhanced('sales'),
+          getOfflineDataEnhanced('employees'),
+          getOfflineDataEnhanced('debts')
         ]);
 
-        setSales(offlineData[0] || []);
-        setEmployees(offlineData[1] || []);
-        setDebts(offlineData[2] || []);
-        setChecks(offlineData[3] || []);
-        setBoletos(offlineData[4] || []);
-        setEmployeeCommissions(offlineData[5] || []);
-        setEmployeePayments(offlineData[6] || []);
-        setEmployeeAdvances(offlineData[7] || []);
-        setEmployeeOvertimes(offlineData[8] || []);
-        setPixFees(offlineData[9] || []);
-        setTaxes(offlineData[10] || []);
-        setAgendaEvents(offlineData[11] || []);
-        setAcertos(offlineData[12] || []);
-        setCashBalance(offlineData[13]);
-        setCashTransactions(offlineData[14] || []);
+        // Set offline data with deduplication
+        setSales(DeduplicationService.removeDuplicatesById(offlineSalesData.map(d => d.data)));
+        setEmployees(DeduplicationService.removeDuplicatesById(offlineEmployeesData.map(d => d.data)));
+        setDebts(DeduplicationService.removeDuplicatesById(offlineDebtsData.map(d => d.data)));
+        
+        console.log('✅ Offline data loaded with deduplication');
       }
+      
+      // Update last load time
+      setLastLoadTime(prev => ({ ...prev, loadAllData: Date.now() }));
     } catch (err) {
       console.error('Error loading data:', err);
-      setError(err instanceof Error ? err.message : 'Erro ao carregar dados');
+      ErrorHandler.logProjectError(err, 'Load All Data');
+      setError(ErrorHandler.handleSupabaseError(err));
     } finally {
       setLoading(false);
+      setLoadingStates(prev => ({ ...prev, loadAllData: false }));
     }
   };
 
@@ -239,38 +244,38 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   // CRUD functions for sales
   const createSale = async (saleData: any) => {
     try {
-      const result = await supabaseServices.sales.create(saleData);
-      // Only refresh sales data to prevent full reload
-      const salesData = await supabaseServices.sales.getSales();
-      setSales(salesData || []);
+      console.log('🔄 AppContext.createSale - Enhanced creation');
+      const result = await enhancedSupabaseServices.sales.create(saleData);
+      
+      // Refresh only sales data with enhanced deduplication
+      await refreshSalesData();
       return result;
     } catch (err) {
       console.error('Error creating sale:', err);
+      ErrorHandler.logProjectError(err, 'Create Sale');
       throw err;
     }
   };
 
   const updateSale = async (id: string, saleData: any) => {
     try {
-      const result = await supabaseServices.sales.update(id, saleData);
-      // Only refresh sales data to prevent full reload
-      const salesData = await supabaseServices.sales.getSales();
-      setSales(salesData || []);
+      const result = await enhancedSupabaseServices.sales.update(id, saleData);
+      await refreshSalesData();
       return result;
     } catch (err) {
       console.error('Error updating sale:', err);
+      ErrorHandler.logProjectError(err, 'Update Sale');
       throw err;
     }
   };
 
   const deleteSale = async (id: string) => {
     try {
-      await supabaseServices.sales.delete(id);
-      // Only refresh sales data to prevent full reload
-      const salesData = await supabaseServices.sales.getSales();
-      setSales(salesData || []);
+      await enhancedSupabaseServices.sales.delete(id);
+      await refreshSalesData();
     } catch (err) {
       console.error('Error deleting sale:', err);
+      ErrorHandler.logProjectError(err, 'Delete Sale');
       throw err;
     }
   };
@@ -278,32 +283,35 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   // CRUD functions for employees
   const createEmployee = async (employeeData: any) => {
     try {
-      const result = await supabaseServices.employees.create(employeeData);
-      await loadAllData(); // Refresh all data
+      const result = await enhancedSupabaseServices.employees.create(employeeData);
+      await refreshEmployeesData();
       return result;
     } catch (err) {
       console.error('Error creating employee:', err);
+      ErrorHandler.logProjectError(err, 'Create Employee');
       throw err;
     }
   };
 
   const updateEmployee = async (id: string, employeeData: any) => {
     try {
-      const result = await supabaseServices.employees.update(id, employeeData);
-      await loadAllData(); // Refresh all data
+      const result = await enhancedSupabaseServices.employees.update(id, employeeData);
+      await refreshEmployeesData();
       return result;
     } catch (err) {
       console.error('Error updating employee:', err);
+      ErrorHandler.logProjectError(err, 'Update Employee');
       throw err;
     }
   };
 
   const deleteEmployee = async (id: string) => {
     try {
-      await supabaseServices.employees.delete(id);
-      await loadAllData(); // Refresh all data
+      await enhancedSupabaseServices.employees.delete(id);
+      await refreshEmployeesData();
     } catch (err) {
       console.error('Error deleting employee:', err);
+      ErrorHandler.logProjectError(err, 'Delete Employee');
       throw err;
     }
   };
@@ -311,39 +319,109 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   // CRUD functions for debts
   const createDebt = async (debtData: any) => {
     try {
-      const result = await supabaseServices.debts.create(debtData);
-      // Only refresh debts data to prevent full reload
-      const debtsData = await supabaseServices.debts.getDebts();
-      setDebts(debtsData || []);
+      const result = await enhancedSupabaseServices.debts.create(debtData);
+      await refreshDebtsData();
       return result;
     } catch (err) {
       console.error('Error creating debt:', err);
+      ErrorHandler.logProjectError(err, 'Create Debt');
       throw err;
     }
   };
 
   const updateDebt = async (id: string, debtData: any) => {
     try {
-      const result = await supabaseServices.debts.update(id, debtData);
-      // Only refresh debts data to prevent full reload
-      const debtsData = await supabaseServices.debts.getDebts();
-      setDebts(debtsData || []);
+      const result = await enhancedSupabaseServices.debts.update(id, debtData);
+      await refreshDebtsData();
       return result;
     } catch (err) {
       console.error('Error updating debt:', err);
+      ErrorHandler.logProjectError(err, 'Update Debt');
       throw err;
     }
   };
 
   const deleteDebt = async (id: string) => {
     try {
-      await supabaseServices.debts.delete(id);
-      // Only refresh debts data to prevent full reload
-      const debtsData = await supabaseServices.debts.getDebts();
-      setDebts(debtsData || []);
+      await enhancedSupabaseServices.debts.delete(id);
+      await refreshDebtsData();
     } catch (err) {
       console.error('Error deleting debt:', err);
+      ErrorHandler.logProjectError(err, 'Delete Debt');
       throw err;
+    }
+  };
+
+  // Enhanced refresh functions for specific data types
+  const refreshSalesData = async () => {
+    if (loadingStates.sales) return;
+    
+    try {
+      setLoadingStates(prev => ({ ...prev, sales: true }));
+      
+      if (connectionManager.isConnected()) {
+        const onlineSales = await enhancedSupabaseServices.sales.getSales();
+        const offlineSales = await getOfflineDataEnhanced('sales');
+        const merged = mergeOnlineOfflineDataEnhanced(onlineSales, offlineSales.map(d => d.data));
+        setSales(DeduplicationService.removeDuplicatesById(merged));
+      } else {
+        const offlineSales = await getOfflineDataEnhanced('sales');
+        setSales(DeduplicationService.removeDuplicatesById(offlineSales.map(d => d.data)));
+      }
+      
+      setLastLoadTime(prev => ({ ...prev, sales: Date.now() }));
+    } catch (error) {
+      ErrorHandler.logProjectError(error, 'Refresh Sales Data');
+    } finally {
+      setLoadingStates(prev => ({ ...prev, sales: false }));
+    }
+  };
+
+  const refreshEmployeesData = async () => {
+    if (loadingStates.employees) return;
+    
+    try {
+      setLoadingStates(prev => ({ ...prev, employees: true }));
+      
+      if (connectionManager.isConnected()) {
+        const onlineEmployees = await enhancedSupabaseServices.employees.getEmployees();
+        const offlineEmployees = await getOfflineDataEnhanced('employees');
+        const merged = mergeOnlineOfflineDataEnhanced(onlineEmployees, offlineEmployees.map(d => d.data));
+        setEmployees(DeduplicationService.removeDuplicatesById(merged));
+      } else {
+        const offlineEmployees = await getOfflineDataEnhanced('employees');
+        setEmployees(DeduplicationService.removeDuplicatesById(offlineEmployees.map(d => d.data)));
+      }
+      
+      setLastLoadTime(prev => ({ ...prev, employees: Date.now() }));
+    } catch (error) {
+      ErrorHandler.logProjectError(error, 'Refresh Employees Data');
+    } finally {
+      setLoadingStates(prev => ({ ...prev, employees: false }));
+    }
+  };
+
+  const refreshDebtsData = async () => {
+    if (loadingStates.debts) return;
+    
+    try {
+      setLoadingStates(prev => ({ ...prev, debts: true }));
+      
+      if (connectionManager.isConnected()) {
+        const onlineDebts = await enhancedSupabaseServices.debts.getDebts();
+        const offlineDebts = await getOfflineDataEnhanced('debts');
+        const merged = mergeOnlineOfflineDataEnhanced(onlineDebts, offlineDebts.map(d => d.data));
+        setDebts(DeduplicationService.removeDuplicatesById(merged));
+      } else {
+        const offlineDebts = await getOfflineDataEnhanced('debts');
+        setDebts(DeduplicationService.removeDuplicatesById(offlineDebts.map(d => d.data)));
+      }
+      
+      setLastLoadTime(prev => ({ ...prev, debts: Date.now() }));
+    } catch (error) {
+      ErrorHandler.logProjectError(error, 'Refresh Debts Data');
+    } finally {
+      setLoadingStates(prev => ({ ...prev, debts: false }));
     }
   };
 
@@ -525,10 +603,16 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     
     const handleConnectionChange = (status: any) => {
       if (status.isOnline && mounted) {
-        // When coming back online, sync data
-        syncManager.startSync().then(() => {
+        // When coming back online, sync data with enhanced manager
+        enhancedSyncManager.startSync().then(() => {
           if (mounted) {
-            loadAllData();
+            // Only reload if it's been more than 5 minutes since last load
+            const lastLoad = lastLoadTime.loadAllData || 0;
+            const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+            
+            if (lastLoad < fiveMinutesAgo) {
+              loadAllData();
+            }
           }
         });
       }
@@ -539,7 +623,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       mounted = false;
       unsubscribe();
     };
-  }, []);
+  }, [lastLoadTime]);
 
   const value: AppContextType = {
     // Loading and error states
