@@ -58,11 +58,11 @@ export default function Reports() {
 
   // Dados para gráfico de métodos de pagamento
   const paymentMethodsData = useMemo(() => {
-    const methods = {};
+    const methods: Record<string, number> = {};
     
     sales.forEach(sale => {
       (sale.paymentMethods || []).forEach(method => {
-        const methodName = method.type.replace('_', ' ');
+        const methodName = method.type.replace('_', ' ').toUpperCase();
         if (!methods[methodName]) {
           methods[methodName] = 0;
         }
@@ -73,7 +73,9 @@ export default function Reports() {
     return Object.entries(methods).map(([name, value]) => ({
       name,
       value,
-      percentage: ((value / Object.values(methods).reduce((a, b) => a + b, 0)) * 100).toFixed(1)
+      percentage: Object.values(methods).reduce((a, b) => a + b, 0) > 0 
+        ? ((value / Object.values(methods).reduce((a, b) => a + b, 0)) * 100).toFixed(1)
+        : '0'
     })).filter(item => item.value > 0);
   }, [sales]);
 
@@ -469,31 +471,35 @@ export default function Reports() {
             </div>
             <h3 className="text-xl font-bold text-slate-900">Métodos de Pagamento</h3>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <RechartsPieChart>
-              <Pie
-                data={[
-                  { name: 'Dinheiro', value: 35, fill: '#10b981' },
-                  { name: 'PIX', value: 30, fill: '#3b82f6' },
-                  { name: 'Cartão', value: 20, fill: '#8b5cf6' },
-                  { name: 'Cheque', value: 10, fill: '#f59e0b' },
-                  { name: 'Boleto', value: 5, fill: '#ef4444' }
-                ]}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, value }) => `${name}: ${value}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {[].map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </RechartsPieChart>
-          </ResponsiveContainer>
+          {paymentMethodsData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <RechartsPieChart>
+                <Pie
+                  data={paymentMethodsData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percentage }) => `${name}: ${percentage}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {paymentMethodsData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
+              </RechartsPieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="text-center py-12">
+              <PieChart className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+              <p className="text-slate-500 font-medium">Nenhum dado de pagamento disponível</p>
+              <p className="text-slate-400 text-sm mt-2">
+                Dados aparecerão aqui conforme as vendas forem registradas
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -534,10 +540,8 @@ export default function Reports() {
                       {new Date(item.date).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
-                  <span className={`text-lg font-bold ${
-                    (reportData.totals.received - reportData.totals.paid) >= 0 ? 'text-green-700' : 'text-red-700'
-                  }`}>
-                    {(reportData.totals.received - reportData.totals.paid) >= 0 ? '+' : ''}R$ {(reportData.totals.received - reportData.totals.paid).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <span className="text-lg font-bold text-green-700">
+                    R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>

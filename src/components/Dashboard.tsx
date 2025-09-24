@@ -72,12 +72,8 @@ const Dashboard: React.FC = () => {
   
   // Force data reload on mount
   React.useEffect(() => {
-    if (!loading && !isLoading) {
-      console.log('🔄 Dashboard montado, forçando reload dos dados...');
-      loadAllData().catch(error => {
-        console.error('Erro ao recarregar dados no dashboard:', error);
-      });
-    }
+    // Dashboard uses data from context - no need to reload
+    console.log('💰 Dashboard mounted - using data from context');
   }, []);
 
   // Calcular métricas do dia

@@ -1,7 +1,7 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { sanitizeSupabaseData, safeNumber, logMonetaryValues, transformToSnakeCase, transformFromSnakeCase } from '../utils/numberUtils';
 import { ErrorHandler } from './errorHandler';
-import { saveOffline, addToSyncQueue } from './offlineStorage';
+import { saveOffline, addToSyncQueue, getLocalCashBalance, setLocalCashBalance } from './offlineStorage';
 import { connectionManager } from './connectionManager';
 import type { 
   Sale, 
@@ -274,6 +274,20 @@ export const employeeService = {
 // Cash Service
 export const cashService = {
   async getCurrentBalance(): Promise<CashBalance | null> {
+    // If offline, use local balance
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      const localBalance = await getLocalCashBalance();
+      return {
+        id: 'local-balance',
+        currentBalance: localBalance,
+        initialBalance: localBalance,
+        initialDate: new Date().toISOString().split('T')[0],
+        lastUpdated: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+    
     const data = await safeSupabaseOperation(
       () => supabase.rpc('get_current_cash_balance'),
       null,
@@ -288,6 +302,9 @@ export const cashService = {
     // Ensure all balance fields are numbers
     sanitized.currentBalance = safeNumber(sanitized.currentBalance, 0);
     sanitized.initialBalance = safeNumber(sanitized.initialBalance, 0);
+    
+    // Update local balance to match Supabase
+    await setLocalCashBalance(sanitized.currentBalance);
     
     logMonetaryValues(sanitized, 'Cash Balance');
     return sanitized;
@@ -343,6 +360,19 @@ export const cashService = {
     logMonetaryValues(sanitizedTransaction, 'Create Cash Transaction');
     
     if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      // Update local cash balance for offline transactions
+      const currentBalance = await getLocalCashBalance();
+      let newBalance = currentBalance;
+      
+      if (sanitizedTransaction.type === 'entrada') {
+        newBalance += sanitizedTransaction.amount;
+      } else if (sanitizedTransaction.type === 'saida') {
+        newBalance -= sanitizedTransaction.amount;
+      }
+      
+      await setLocalCashBalance(newBalance);
+      console.log('💰 Local cash balance updated:', { old: currentBalance, new: newBalance });
+      
       return await saveOffline('cash_transactions', sanitizedTransaction);
     }
 

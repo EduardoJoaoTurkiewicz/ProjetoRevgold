@@ -60,6 +60,12 @@ export async function saveOffline(table: string, data: any): Promise<string> {
   
   await offlineDB.setItem(id, offlineData);
   console.log('💾 Data saved offline:', { table, id });
+  
+  // For cash transactions, also update local cash balance if needed
+  if (table === 'cash_transactions') {
+    await updateLocalCashBalance(data);
+  }
+  
   return id;
 }
 
@@ -161,4 +167,43 @@ export async function clearAllOfflineData(): Promise<void> {
   await syncQueueDB.clear();
   await localforage.removeItem('last-sync-timestamp');
   console.log('🧹 All offline data cleared');
+}
+
+// Update local cash balance for offline transactions
+async function updateLocalCashBalance(transaction: any): Promise<void> {
+  try {
+    const currentBalance = await localforage.getItem<number>('local-cash-balance') || 0;
+    const amount = transaction.amount || 0;
+    
+    let newBalance = currentBalance;
+    if (transaction.type === 'entrada') {
+      newBalance += amount;
+    } else if (transaction.type === 'saida') {
+      newBalance -= amount;
+    }
+    
+    await localforage.setItem('local-cash-balance', newBalance);
+    console.log('💰 Local cash balance updated:', { old: currentBalance, new: newBalance, transaction: amount });
+  } catch (error) {
+    console.error('Error updating local cash balance:', error);
+  }
+}
+
+// Get local cash balance
+export async function getLocalCashBalance(): Promise<number> {
+  try {
+    return await localforage.getItem<number>('local-cash-balance') || 0;
+  } catch (error) {
+    console.error('Error getting local cash balance:', error);
+    return 0;
+  }
+}
+
+// Set local cash balance
+export async function setLocalCashBalance(balance: number): Promise<void> {
+  try {
+    await localforage.setItem('local-cash-balance', balance);
+  } catch (error) {
+    console.error('Error setting local cash balance:', error);
+  }
 }

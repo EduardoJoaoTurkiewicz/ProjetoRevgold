@@ -38,7 +38,9 @@ export class ErrorBoundary extends Component<Props, State> {
 
   handleReset = () => {
     this.setState({ hasError: false, error: null, errorInfo: null });
-    window.location.reload();
+    // Use React state reset instead of page reload
+    window.location.hash = '';
+    window.location.hash = '#';
   };
 
   render() {

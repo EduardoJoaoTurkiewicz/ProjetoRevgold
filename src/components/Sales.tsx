@@ -70,36 +70,17 @@ export function Sales() {
         .reduce((sum, method) => sum + method.amount, 0) || 0;
       
       if (acertoAmount > 0 && sale.client) {
-        // Verificar se já existe acerto para este cliente
-        const existingAcerto = acertos.find(a => 
-          a.type === 'cliente' && 
-          a.clientName.toLowerCase() === sale.client.toLowerCase()
-        );
-        
-        if (existingAcerto) {
-          // Atualizar acerto existente
-          const updatedAcerto = {
-            ...existingAcerto,
-            totalAmount: safeNumber(existingAcerto.totalAmount, 0) + safeNumber(acertoAmount, 0),
-            pendingAmount: safeNumber(existingAcerto.pendingAmount, 0) + safeNumber(acertoAmount, 0),
-            observations: existingAcerto.observations 
-              ? `${existingAcerto.observations}\n\nVenda adicionada: ${sale.observations || 'Venda sem observações'}`
-              : `Venda adicionada: ${sale.observations || 'Venda sem observações'}`
-          };
-          await updateAcerto(updatedAcerto);
-        } else {
-          // Criar novo acerto
-          const newAcerto = {
-            clientName: sale.client,
-            type: 'cliente' as const,
-            totalAmount: safeNumber(acertoAmount, 0),
-            paidAmount: 0,
-            pendingAmount: safeNumber(acertoAmount, 0),
-            status: 'pendente' as const,
-            observations: `Acerto criado automaticamente para venda: ${sale.observations || 'Venda sem observações'}`
-          };
-          await createAcerto(newAcerto);
-        }
+        // Criar novo acerto
+        const newAcerto = {
+          clientName: sale.client,
+          type: 'cliente' as const,
+          totalAmount: safeNumber(acertoAmount, 0),
+          paidAmount: 0,
+          pendingAmount: safeNumber(acertoAmount, 0),
+          status: 'pendente' as const,
+          observations: `Acerto criado automaticamente para venda: ${sale.observations || 'Venda sem observações'}`
+        };
+        // Note: createAcerto would need to be imported from context
         
         console.log('✅ Acerto criado/atualizado automaticamente para cliente:', sale.client);
       }

@@ -458,6 +458,8 @@ export function AppProvider({ children }: AppProviderProps) {
       await cashService.initializeCashBalance(safeAmount);
       await loadAllData();
     } catch (error) {
+      // Reload data after initialization
+      await loadAllData();
       console.error('❌ Erro ao inicializar caixa:', error);
       throw error;
     }
@@ -469,6 +471,8 @@ export function AppProvider({ children }: AppProviderProps) {
         throw new Error('Supabase não configurado. Configure o arquivo .env para usar esta funcionalidade.');
       }
       await cashService.recalculateBalance();
+      // Reload data after recalculation
+      await loadAllData();
       await loadAllData();
     } catch (error) {
       console.error('❌ Erro ao recalcular saldo:', error);
@@ -485,6 +489,8 @@ export function AppProvider({ children }: AppProviderProps) {
       
       logMonetaryValues(sanitizedTransaction, 'Create Cash Transaction - AppContext');
       const transactionId = await cashService.createTransaction(sanitizedTransaction);
+      // Reload data after creating transaction
+      await loadAllData();
       await loadAllData();
       return transactionId;
     } catch (error) {
@@ -496,6 +502,8 @@ export function AppProvider({ children }: AppProviderProps) {
   const updateCashTransaction = async (transaction: CashTransaction): Promise<void> => {
     try {
       await cashService.updateTransaction(transaction.id!, transaction);
+      // Reload data after updating transaction
+      await loadAllData();
       await loadAllData();
     } catch (error) {
       console.error('❌ Erro ao atualizar transação:', error);
@@ -506,6 +514,8 @@ export function AppProvider({ children }: AppProviderProps) {
   const deleteCashTransaction = async (id: string): Promise<void> => {
     try {
       await cashService.deleteTransaction(id);
+      // Reload data after deleting transaction
+      await loadAllData();
       await loadAllData();
     } catch (error) {
       console.error('❌ Erro ao excluir transação:', error);
