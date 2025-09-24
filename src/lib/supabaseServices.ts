@@ -1292,6 +1292,25 @@ export const debugService = {
   }
 };
 
+// Export aggregated services object
+export const supabaseServices = {
+  sales: salesService,
+  employees: employeeService,
+  cashBalance: cashService,
+  cashTransactions: cashService,
+  debts: debtsService,
+  checks: checksService,
+  boletos: boletosService,
+  employeePayments: employeePaymentsService,
+  employeeAdvances: employeeAdvancesService,
+  employeeOvertimes: employeeOvertimesService,
+  employeeCommissions: employeeCommissionsService,
+  pixFees: pixFeesService,
+  taxes: taxesService,
+  agendaEvents: agendaService,
+  acertos: acertosService
+};
+
 // Image upload service
 export async function uploadCheckImage(file: File, checkId: string, imageType: 'front' | 'back'): Promise<string> {
   if (!isSupabaseConfigured()) {

@@ -130,21 +130,21 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           balanceData,
           transactionsData
         ] = await Promise.all([
-          supabaseServices.sales.getAll(),
-          supabaseServices.employees.getAll(),
-          supabaseServices.debts.getAll(),
-          supabaseServices.checks.getAll(),
-          supabaseServices.boletos.getAll(),
-          supabaseServices.employeeCommissions.getAll(),
-          supabaseServices.employeePayments.getAll(),
-          supabaseServices.employeeAdvances.getAll(),
-          supabaseServices.employeeOvertimes.getAll(),
-          supabaseServices.pixFees.getAll(),
-          supabaseServices.taxes.getAll(),
-          supabaseServices.agendaEvents.getAll(),
-          supabaseServices.acertos.getAll(),
-          supabaseServices.cashBalance.get(),
-          supabaseServices.cashTransactions.getAll()
+          supabaseServices.sales.getSales(),
+          supabaseServices.employees.getEmployees(),
+          supabaseServices.debts.getDebts(),
+          supabaseServices.checks.getChecks(),
+          supabaseServices.boletos.getBoletos(),
+          supabaseServices.employeeCommissions.getCommissions(),
+          supabaseServices.employeePayments.getPayments(),
+          supabaseServices.employeeAdvances.getAdvances(),
+          supabaseServices.employeeOvertimes.getOvertimes(),
+          supabaseServices.pixFees.getPixFees(),
+          supabaseServices.taxes.getTaxes(),
+          supabaseServices.agendaEvents.getEvents(),
+          supabaseServices.acertos.getAcertos(),
+          supabaseServices.cashBalance.getCurrentBalance(),
+          supabaseServices.cashTransactions.getTransactions()
         ]);
 
         // Update states
@@ -227,7 +227,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   // Cash balance functions
   const recalculateCashBalance = async () => {
     try {
-      const balance = await supabaseServices.cashBalance.recalculate();
+      const balance = await supabaseServices.cashBalance.recalculateBalance();
       setCashBalance(balance);
       return balance;
     } catch (err) {
@@ -481,7 +481,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const createCashTransaction = async (transactionData: any) => {
     try {
-      const result = await supabaseServices.cashTransactions.create(transactionData);
+      const result = await supabaseServices.cashTransactions.createTransaction(transactionData);
       await loadAllData(); // Refresh all data
       return result;
     } catch (err) {
