@@ -36,7 +36,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   );
 };
 
-export const useApp = (): AppContextType => {
+export const useAppContext = () => {
   const context = useContext(AppContext);
   if (context === undefined) {
     throw new Error('useApp must be used within an AppProvider');
