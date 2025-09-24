@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Eye, Users, DollarSign, Calendar, Upload, Clock, TrendingUp, CreditCard, Star, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Users, DollarSign, Calendar, Upload, Clock, TrendingUp, CreditCard, Star, X, Award, Building2, UserCheck, UserX, Briefcase, Phone, Mail, MapPin, ChevronDown, ChevronRight } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Employee, EmployeePayment, EmployeeAdvance, EmployeeOvertime, EmployeeCommission } from '../types';
 import { EmployeeForm } from './forms/EmployeeForm';
@@ -29,6 +29,7 @@ export function Employees() {
     updateEmployeeCommission,
     createCashTransaction
   } = useAppContext();
+  
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [viewingEmployee, setViewingEmployee] = useState<Employee | null>(null);
@@ -36,11 +37,22 @@ export function Employees() {
   const [advanceEmployee, setAdvanceEmployee] = useState<Employee | null>(null);
   const [overtimeEmployee, setOvertimeEmployee] = useState<Employee | null>(null);
   const [viewingPayrollEmployee, setViewingPayrollEmployee] = useState<Employee | null>(null);
+  const [expandedEmployees, setExpandedEmployees] = useState<Set<string>>(new Set());
 
   // Ensure employees data is deduplicated in the UI
   const deduplicatedEmployees = React.useMemo(() => {
     return DeduplicationService.removeDuplicatesById(employees || []);
   }, [employees]);
+
+  // Separar funcionários ativos e inativos
+  const activeEmployees = deduplicatedEmployees.filter(emp => emp.isActive);
+  const inactiveEmployees = deduplicatedEmployees.filter(emp => !emp.isActive);
+  const sellers = activeEmployees.filter(emp => emp.isSeller);
+
+  // Calcular estatísticas
+  const totalPayroll = activeEmployees.reduce((sum, emp) => sum + safeNumber(emp.salary, 0), 0);
+  const averageSalary = activeEmployees.length > 0 ? totalPayroll / activeEmployees.length : 0;
+
   const handleAddEmployee = (employee: Omit<Employee, 'id' | 'createdAt'>) => {
     console.log('🔄 Adicionando novo funcionário:', employee);
     logMonetaryValues(employee, 'Add Employee');
@@ -159,6 +171,7 @@ export function Employees() {
       alert('Erro ao criar hora extra: ' + error.message);
     });
   };
+
   const handlePayment = (payment: { amount: number; observations: string; receipt?: string }) => {
     if (paymentEmployee) {
       const amount = safeNumber(payment.amount, 0);
@@ -272,6 +285,7 @@ export function Employees() {
       pendingAdvances
     };
   };
+
   const getLastPayment = (employeeId: string) => {
     const payments = getEmployeePayments(employeeId);
     return payments.sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime())[0];
@@ -297,238 +311,507 @@ export function Employees() {
     return nextPaymentDate;
   };
 
+  const toggleEmployeeExpansion = (employeeId: string) => {
+    const newExpanded = new Set(expandedEmployees);
+    if (newExpanded.has(employeeId)) {
+      newExpanded.delete(employeeId);
+    } else {
+      newExpanded.add(employeeId);
+    }
+    setExpandedEmployees(newExpanded);
+  };
+
   const canEdit = true;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
           <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-600 to-violet-700 shadow-xl floating-animation">
             <Users className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Funcionários</h1>
-            <p className="text-slate-600 text-lg">Gestão de equipe e folha de pagamento</p>
+            <h1 className="text-3xl font-bold text-slate-900">Gestão de Funcionários</h1>
+            <p className="text-slate-600 text-lg">Controle completo da equipe e folha de pagamento</p>
           </div>
         </div>
         <button
           onClick={() => setIsFormOpen(true)}
-          className="btn-primary flex items-center gap-2"
+          className="btn-primary flex items-center gap-2 modern-shadow-xl hover:modern-shadow-lg"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-5 h-5" />
           Novo Funcionário
         </button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="card bg-blue-50 border-blue-200">
-          <div className="flex items-center gap-3">
-            <Users className="w-8 h-8 text-blue-600" />
-            <div>
-              <h3 className="font-medium text-blue-900">Total de Funcionários</h3>
-              <p className="text-blue-700">{employees.filter(e => e.isActive).length} ativos</p>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="card bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-purple-600 modern-shadow-lg">
+              <Users className="w-8 h-8 text-white" />
             </div>
-          </div>
-        </div>
-
-        <div className="card bg-green-50 border-green-200">
-          <div className="flex items-center gap-3">
-            <Star className="w-8 h-8 text-green-600" />
             <div>
-              <h3 className="font-medium text-green-900">Vendedores</h3>
-              <p className="text-green-700">{employees.filter(e => e.isActive && e.isSeller).length} ativos</p>
-            </div>
-          </div>
-        </div>
-        <div className="card bg-green-50 border-green-200">
-          <div className="flex items-center gap-3">
-            <DollarSign className="w-8 h-8 text-green-600" />
-            <div>
-              <h3 className="font-medium text-green-900">Folha de Pagamento</h3>
-              <p className="text-green-700">
-                {safeCurrency(employees
-                  .filter(e => e.isActive)
-                  .reduce((sum, e) => sum + safeNumber(e.salary, 0), 0))}
+              <h3 className="font-bold text-purple-900 text-lg">Funcionários Ativos</h3>
+              <p className="text-3xl font-black text-purple-700">{activeEmployees.length}</p>
+              <p className="text-sm text-purple-600 font-semibold">
+                {inactiveEmployees.length} inativo(s)
               </p>
             </div>
           </div>
         </div>
 
-        <div className="card bg-orange-50 border-orange-200">
-          <div className="flex items-center gap-3">
-            <Calendar className="w-8 h-8 text-orange-600" />
+        <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-green-600 modern-shadow-lg">
+              <Star className="w-8 h-8 text-white" />
+            </div>
             <div>
-              <h3 className="font-medium text-orange-900">Próximos Pagamentos</h3>
-              <p className="text-orange-700">
-                {employees.filter(e => {
-                  const nextPayment = getNextPaymentDate(e);
-                  const today = new Date();
-                  const diffDays = Math.ceil((nextPayment.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                  return diffDays <= 7 && e.isActive;
-                }).length} esta semana
+              <h3 className="font-bold text-green-900 text-lg">Vendedores</h3>
+              <p className="text-3xl font-black text-green-700">{sellers.length}</p>
+              <p className="text-sm text-green-600 font-semibold">
+                Comissão 5%
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-blue-600 modern-shadow-lg">
+              <DollarSign className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-blue-900 text-lg">Folha Total</h3>
+              <p className="text-3xl font-black text-blue-700">
+                {safeCurrency(totalPayroll)}
+              </p>
+              <p className="text-sm text-blue-600 font-semibold">
+                Mensal
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-orange-600 modern-shadow-lg">
+              <TrendingUp className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-orange-900 text-lg">Salário Médio</h3>
+              <p className="text-3xl font-black text-orange-700">
+                {safeCurrency(averageSalary)}
+              </p>
+              <p className="text-sm text-orange-600 font-semibold">
+                Por funcionário
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Employees List */}
-      <div className="card">
-        {deduplicatedEmployees.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full table-auto">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Nome</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Cargo</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Tipo</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Salário</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Dia do Pagamento</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Próximo Pagamento</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Status</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {deduplicatedEmployees.map(employee => {
-                  // Additional safety check for duplicates in render
-                  if (!employee.id || !UUIDManager.isValidUUID(employee.id)) {
-                    console.warn('⚠️ Invalid employee ID detected in render:', employee.id);
-                    return null;
-                  }
-                  
-                  const nextPayment = getNextPaymentDate(employee);
-                  const lastPayment = getLastPayment(employee.id);
-                  const today = new Date();
-                  const paymentDate = nextPayment;
-                  const diffDays = Math.ceil((paymentDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                  const payroll = calculateEmployeePayroll(employee.id);
-                  
-                  return (
-                    <tr key={employee.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4 text-sm font-medium">{employee.name}</td>
-                      <td className="py-3 px-4 text-sm">{employee.position}</td>
-                      <td className="py-3 px-4 text-sm">
-                        {employee.isSeller ? (
-                          <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold">
-                            Vendedor
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-bold">
-                            Funcionário
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-sm">
-                        <div>
-                          <span className="font-medium">{safeCurrency(employee.salary)}</span>
+      {/* Funcionários Ativos */}
+      <div className="card modern-shadow-xl">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="p-3 rounded-xl bg-purple-600">
+            <UserCheck className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-bold text-slate-900">Funcionários Ativos</h3>
+            <p className="text-slate-600 font-semibold">{activeEmployees.length} funcionário(s) ativo(s)</p>
+          </div>
+        </div>
+
+        {activeEmployees.length > 0 ? (
+          <div className="space-y-4">
+            {activeEmployees.map(employee => {
+              // Additional safety check for duplicates in render
+              if (!employee.id || !UUIDManager.isValidUUID(employee.id)) {
+                console.warn('⚠️ Invalid employee ID detected in render:', employee.id);
+                return null;
+              }
+              
+              const nextPayment = getNextPaymentDate(employee);
+              const lastPayment = getLastPayment(employee.id);
+              const today = new Date();
+              const paymentDate = nextPayment;
+              const diffDays = Math.ceil((paymentDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+              const payroll = calculateEmployeePayroll(employee.id);
+              const isExpanded = expandedEmployees.has(employee.id);
+              
+              return (
+                <div key={employee.id} className="border border-slate-200 rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300">
+                  {/* Employee Header */}
+                  <div 
+                    className="p-6 bg-gradient-to-r from-purple-50 to-transparent hover:from-purple-100 cursor-pointer transition-modern"
+                    onClick={() => toggleEmployeeExpansion(employee.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <button className="p-2 rounded-lg bg-purple-600 text-white modern-shadow">
+                          {isExpanded ? 
+                            <ChevronDown className="w-5 h-5" /> : 
+                            <ChevronRight className="w-5 h-5" />
+                          }
+                        </button>
+                        
+                        <div className="flex items-center gap-4">
+                          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold text-xl modern-shadow-lg ${
+                            employee.isSeller ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                          }`}>
+                            {employee.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                          </div>
+                          
+                          <div>
+                            <h3 className="text-xl font-bold text-slate-900">{employee.name}</h3>
+                            <div className="flex items-center gap-3 mt-1">
+                              <span className="text-slate-600 font-semibold">{employee.position}</span>
+                              {employee.isSeller && (
+                                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold border border-green-200">
+                                  <Star className="w-3 h-3 inline mr-1" />
+                                  VENDEDOR
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-4 h-4" />
+                                Contratado em {new Date(employee.hireDate).toLocaleDateString('pt-BR')}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <DollarSign className="w-4 h-4" />
+                                Paga dia {employee.paymentDay}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="text-right">
+                        <div className="flex items-center gap-4">
+                          <div>
+                            <p className="text-sm text-slate-600 font-semibold">Salário Base</p>
+                            <p className="text-2xl font-black text-purple-600">
+                              {safeCurrency(employee.salary)}
+                            </p>
+                          </div>
+                          
                           {payroll && payroll.totalToPay !== payroll.baseSalary && (
-                            <div className="text-xs text-green-600 font-bold">
-                              Total: {safeCurrency(payroll.totalToPay)}
+                            <div>
+                              <p className="text-sm text-slate-600 font-semibold">Total a Pagar</p>
+                              <p className="text-2xl font-black text-green-600">
+                                {safeCurrency(payroll.totalToPay)}
+                              </p>
                             </div>
                           )}
                         </div>
-                      </td>
-                      <td className="py-3 px-4 text-sm">Dia {employee.paymentDay}</td>
-                      <td className="py-3 px-4 text-sm">
-                        <span className={
-                          diffDays <= 3 ? 'text-red-600 font-medium' :
-                          diffDays <= 7 ? 'text-orange-600 font-medium' :
-                          'text-gray-900'
-                        }>
-                          {paymentDate.toLocaleDateString('pt-BR')}
-                          {diffDays <= 7 && (
-                            <span className="text-xs block">
-                              {diffDays === 0 ? 'Hoje!' : 
-                               diffDays === 1 ? 'Amanhã' : 
-                               `${diffDays} dias`}
-                            </span>
-                          )}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-sm">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          employee.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {employee.isActive ? 'Ativo' : 'Inativo'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setViewingEmployee(employee)}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="Visualizar"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setViewingPayrollEmployee(employee)}
-                            className="text-purple-600 hover:text-purple-800 p-1 rounded"
-                            title="Ver Folha de Pagamento"
-                          >
-                            <TrendingUp className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setAdvanceEmployee(employee)}
-                            className="text-orange-600 hover:text-orange-800 p-1 rounded"
-                            title="Adiantamento"
-                          >
-                            <CreditCard className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setOvertimeEmployee(employee)}
-                            className="text-green-600 hover:text-green-800 p-1 rounded"
-                            title="Horas Extras"
-                          >
-                            <Clock className="w-4 h-4" />
-                          </button>
-                          {canEdit && (
-                            <>
-                              <button
-                                onClick={() => setEditingEmployee(employee)}
-                                className="text-emerald-600 hover:text-emerald-800 p-1 rounded"
-                                title="Editar"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => setPaymentEmployee(employee)}
-                                className="text-indigo-600 hover:text-indigo-800 p-1 rounded"
-                                title="Registrar Pagamento"
-                              >
-                                <DollarSign className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteEmployee(employee.id)}
-                                className="text-red-600 hover:text-red-800 p-1 rounded"
-                                title="Excluir"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
+                        
+                        <div className="mt-3 flex items-center gap-2">
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                            diffDays <= 3 ? 'bg-red-100 text-red-800 border border-red-200' :
+                            diffDays <= 7 ? 'bg-orange-100 text-orange-800 border border-orange-200' :
+                            'bg-green-100 text-green-800 border border-green-200'
+                          }`}>
+                            {diffDays === 0 ? 'PAGAR HOJE!' : 
+                             diffDays === 1 ? 'Pagar amanhã' : 
+                             diffDays <= 7 ? `${diffDays} dias` : 'No prazo'}
+                          </span>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Employee Details (Expanded) */}
+                  {isExpanded && (
+                    <div className="border-t border-slate-200 bg-white">
+                      <div className="p-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                          {/* Informações Básicas */}
+                          <div className="space-y-4">
+                            <h4 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+                              <Briefcase className="w-5 h-5 text-purple-600" />
+                              Informações Básicas
+                            </h4>
+                            
+                            <div className="space-y-3">
+                              <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
+                                <p className="text-sm text-purple-600 font-semibold">Nome Completo</p>
+                                <p className="text-purple-900 font-bold">{employee.name}</p>
+                              </div>
+                              
+                              <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
+                                <p className="text-sm text-purple-600 font-semibold">Cargo</p>
+                                <p className="text-purple-900 font-bold">{employee.position}</p>
+                              </div>
+                              
+                              <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
+                                <p className="text-sm text-purple-600 font-semibold">Tipo</p>
+                                <div className="flex items-center gap-2">
+                                  {employee.isSeller ? (
+                                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold border border-green-200">
+                                      <Star className="w-3 h-3 inline mr-1" />
+                                      Vendedor (5% comissão)
+                                    </span>
+                                  ) : (
+                                    <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold border border-blue-200">
+                                      <Briefcase className="w-3 h-3 inline mr-1" />
+                                      Funcionário
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
+                                <p className="text-sm text-purple-600 font-semibold">Data de Contratação</p>
+                                <p className="text-purple-900 font-bold">
+                                  {new Date(employee.hireDate).toLocaleDateString('pt-BR')}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Informações Financeiras */}
+                          <div className="space-y-4">
+                            <h4 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+                              <DollarSign className="w-5 h-5 text-green-600" />
+                              Informações Financeiras
+                            </h4>
+                            
+                            <div className="space-y-3">
+                              <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+                                <p className="text-sm text-green-600 font-semibold">Salário Base</p>
+                                <p className="text-2xl font-black text-green-700">
+                                  {safeCurrency(employee.salary)}
+                                </p>
+                              </div>
+                              
+                              <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                                <p className="text-sm text-blue-600 font-semibold">Dia do Pagamento</p>
+                                <p className="text-blue-900 font-bold">Todo dia {employee.paymentDay}</p>
+                              </div>
+                              
+                              <div className="p-4 bg-orange-50 rounded-xl border border-orange-200">
+                                <p className="text-sm text-orange-600 font-semibold">Próximo Pagamento</p>
+                                <p className={`font-bold ${
+                                  diffDays <= 3 ? 'text-red-700' :
+                                  diffDays <= 7 ? 'text-orange-700' :
+                                  'text-orange-900'
+                                }`}>
+                                  {paymentDate.toLocaleDateString('pt-BR')}
+                                </p>
+                                {diffDays <= 7 && (
+                                  <p className="text-xs text-orange-600 font-bold">
+                                    {diffDays === 0 ? 'HOJE!' : 
+                                     diffDays === 1 ? 'Amanhã' : 
+                                     `${diffDays} dias`}
+                                  </p>
+                                )}
+                              </div>
+                              
+                              {payroll && payroll.totalToPay !== payroll.baseSalary && (
+                                <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                                  <p className="text-sm text-emerald-600 font-semibold">Total a Pagar</p>
+                                  <p className="text-2xl font-black text-emerald-700">
+                                    {safeCurrency(payroll.totalToPay)}
+                                  </p>
+                                  <p className="text-xs text-emerald-600">
+                                    Inclui comissões e extras
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Ações Rápidas */}
+                          <div className="space-y-4">
+                            <h4 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+                              <Award className="w-5 h-5 text-indigo-600" />
+                              Ações Rápidas
+                            </h4>
+                            
+                            <div className="space-y-3">
+                              <button
+                                onClick={() => setViewingEmployee(employee)}
+                                className="w-full p-4 bg-blue-50 rounded-xl border border-blue-200 hover:bg-blue-100 transition-colors flex items-center gap-3"
+                              >
+                                <Eye className="w-5 h-5 text-blue-600" />
+                                <span className="font-semibold text-blue-800">Ver Detalhes Completos</span>
+                              </button>
+                              
+                              <button
+                                onClick={() => setViewingPayrollEmployee(employee)}
+                                className="w-full p-4 bg-green-50 rounded-xl border border-green-200 hover:bg-green-100 transition-colors flex items-center gap-3"
+                              >
+                                <TrendingUp className="w-5 h-5 text-green-600" />
+                                <span className="font-semibold text-green-800">Folha de Pagamento</span>
+                              </button>
+                              
+                              <button
+                                onClick={() => setAdvanceEmployee(employee)}
+                                className="w-full p-4 bg-orange-50 rounded-xl border border-orange-200 hover:bg-orange-100 transition-colors flex items-center gap-3"
+                              >
+                                <CreditCard className="w-5 h-5 text-orange-600" />
+                                <span className="font-semibold text-orange-800">Dar Adiantamento</span>
+                              </button>
+                              
+                              <button
+                                onClick={() => setOvertimeEmployee(employee)}
+                                className="w-full p-4 bg-purple-50 rounded-xl border border-purple-200 hover:bg-purple-100 transition-colors flex items-center gap-3"
+                              >
+                                <Clock className="w-5 h-5 text-purple-600" />
+                                <span className="font-semibold text-purple-800">Registrar Horas Extras</span>
+                              </button>
+                              
+                              {canEdit && (
+                                <>
+                                  <button
+                                    onClick={() => setPaymentEmployee(employee)}
+                                    className="w-full p-4 bg-emerald-50 rounded-xl border border-emerald-200 hover:bg-emerald-100 transition-colors flex items-center gap-3"
+                                  >
+                                    <DollarSign className="w-5 h-5 text-emerald-600" />
+                                    <span className="font-semibold text-emerald-800">Registrar Pagamento</span>
+                                  </button>
+                                  
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                      onClick={() => setEditingEmployee(employee)}
+                                      className="p-3 bg-yellow-50 rounded-xl border border-yellow-200 hover:bg-yellow-100 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                      <Edit className="w-4 h-4 text-yellow-600" />
+                                      <span className="font-semibold text-yellow-800 text-sm">Editar</span>
+                                    </button>
+                                    
+                                    <button
+                                      onClick={() => handleDeleteEmployee(employee.id)}
+                                      className="p-3 bg-red-50 rounded-xl border border-red-200 hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                      <Trash2 className="w-4 h-4 text-red-600" />
+                                      <span className="font-semibold text-red-800 text-sm">Excluir</span>
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Resumo de Comissões e Extras (se for vendedor) */}
+                        {employee.isSeller && payroll && (
+                          <div className="mt-6 pt-6 border-t border-slate-200">
+                            <h5 className="font-bold text-slate-900 mb-4">Resumo de Comissões</h5>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="text-center p-4 bg-green-50 rounded-xl border border-green-200">
+                                <p className="text-green-600 font-semibold text-sm">Comissões Pendentes</p>
+                                <p className="text-xl font-black text-green-700">
+                                  {safeCurrency(payroll.totalPendingCommissions)}
+                                </p>
+                                <p className="text-xs text-green-600">
+                                  {payroll.allPendingCommissions.length} comissão(ões)
+                                </p>
+                              </div>
+                              
+                              <div className="text-center p-4 bg-purple-50 rounded-xl border border-purple-200">
+                                <p className="text-purple-600 font-semibold text-sm">Horas Extras</p>
+                                <p className="text-xl font-black text-purple-700">
+                                  {safeCurrency(payroll.totalOvertimes)}
+                                </p>
+                                <p className="text-xs text-purple-600">
+                                  {payroll.pendingOvertimes.length} registro(s)
+                                </p>
+                              </div>
+                              
+                              <div className="text-center p-4 bg-red-50 rounded-xl border border-red-200">
+                                <p className="text-red-600 font-semibold text-sm">Adiantamentos</p>
+                                <p className="text-xl font-black text-red-700">
+                                  -{safeCurrency(payroll.totalAdvances)}
+                                </p>
+                                <p className="text-xs text-red-600">
+                                  {payroll.pendingAdvances.length} adiantamento(s)
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">Nenhum funcionário cadastrado ainda.</p>
+          <div className="text-center py-16">
+            <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6 floating-animation">
+              <Users className="w-12 h-12 text-purple-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-slate-800 mb-4">Nenhum funcionário ativo</h3>
+            <p className="text-slate-600 mb-8 text-lg">Comece adicionando seu primeiro funcionário para gerenciar a equipe.</p>
             <button
               onClick={() => setIsFormOpen(true)}
-              className="btn-primary"
+              className="btn-primary modern-shadow-xl"
             >
-              Cadastrar primeiro funcionário
+              Adicionar primeiro funcionário
             </button>
           </div>
         )}
       </div>
+
+      {/* Funcionários Inativos */}
+      {inactiveEmployees.length > 0 && (
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-gray-600">
+              <UserX className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-900">Funcionários Inativos</h3>
+              <p className="text-slate-600 font-semibold">{inactiveEmployees.length} funcionário(s) inativo(s)</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {inactiveEmployees.map(employee => (
+              <div key={employee.id} className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 bg-gray-400 rounded-xl flex items-center justify-center text-white font-bold">
+                    {employee.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900">{employee.name}</h4>
+                    <p className="text-sm text-gray-600">{employee.position}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">
+                    {safeCurrency(employee.salary)}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setViewingEmployee(employee)}
+                      className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Ver detalhes"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => setEditingEmployee(employee)}
+                        className="p-2 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors"
+                        title="Editar"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Employee Form Modal */}
       {(isFormOpen || editingEmployee) && (
@@ -561,106 +844,138 @@ export function Employees() {
           onCancel={() => setOvertimeEmployee(null)}
         />
       )}
+
       {/* View Employee Modal */}
       {viewingEmployee && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h2 className="text-xl font-bold mb-4">Detalhes do Funcionário</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-4">
+                  <div className={`p-4 rounded-2xl modern-shadow-xl ${
+                    viewingEmployee.isSeller ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-purple-600 to-violet-700'
+                  }`}>
+                    {viewingEmployee.isSeller ? <Star className="w-8 h-8 text-white" /> : <Users className="w-8 h-8 text-white" />}
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-bold text-slate-900">{viewingEmployee.name}</h2>
+                    <p className="text-slate-600 text-lg">{viewingEmployee.position}</p>
+                    {viewingEmployee.isSeller && (
+                      <span className="inline-block mt-2 px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-bold border border-green-200">
+                        <Star className="w-4 h-4 inline mr-2" />
+                        Vendedor - Comissão 5%
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setViewingEmployee(null)}
+                  className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div>
-                  <label className="form-label">Nome</label>
-                  <p className="text-sm text-gray-900">{viewingEmployee.name}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                {/* Informações Pessoais */}
+                <div className="p-6 bg-gradient-to-r from-purple-50 to-violet-50 rounded-2xl border border-purple-200">
+                  <h3 className="text-xl font-bold text-purple-900 mb-4">Informações Pessoais</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="form-label">Nome Completo</label>
+                      <p className="text-sm text-slate-900 font-semibold">{viewingEmployee.name}</p>
+                    </div>
+                    <div>
+                      <label className="form-label">Cargo</label>
+                      <p className="text-sm text-slate-900 font-semibold">{viewingEmployee.position}</p>
+                    </div>
+                    <div>
+                      <label className="form-label">Data de Contratação</label>
+                      <p className="text-sm text-slate-900 font-semibold">
+                        {new Date(viewingEmployee.hireDate).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="form-label">Status</label>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                        viewingEmployee.isActive ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-gray-100 text-gray-700 border border-gray-200'
+                      }`}>
+                        {viewingEmployee.isActive ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="form-label">Cargo</label>
-                  <p className="text-sm text-gray-900">{viewingEmployee.position}</p>
-                </div>
-                <div>
-                  <label className="form-label">Tipo</label>
-                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                    viewingEmployee.isSeller ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {viewingEmployee.isSeller ? 'Vendedor (5% comissão)' : 'Funcionário'}
-                  </span>
-                </div>
-                <div>
-                  <label className="form-label">Salário</label>
-                  <p className="text-sm text-gray-900">
-                    {safeCurrency(viewingEmployee.salary)}
-                  </p>
-                </div>
-                <div>
-                  <label className="form-label">Dia do Pagamento</label>
-                  <p className="text-sm text-gray-900">Dia {viewingEmployee.paymentDay}</p>
-                </div>
-                <div>
-                  <label className="form-label">Data de Contratação</label>
-                  <p className="text-sm text-gray-900">
-                    {new Date(viewingEmployee.hireDate).toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
-                <div>
-                  <label className="form-label">Data do Próximo Pagamento</label>
-                  <p className="text-sm text-gray-900">
-                    {getNextPaymentDate(viewingEmployee).toLocaleDateString('pt-BR')}
-                  </p>
-                  {viewingEmployee.nextPaymentDate && (
-                    <p className="text-xs text-blue-600 mt-1">
-                      ✓ Data específica definida para próximo pagamento
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="form-label">Status</label>
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    viewingEmployee.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    {viewingEmployee.isActive ? 'Ativo' : 'Inativo'}
-                  </span>
+
+                {/* Informações Financeiras */}
+                <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
+                  <h3 className="text-xl font-bold text-green-900 mb-4">Informações Financeiras</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="form-label">Salário</label>
+                      <p className="text-lg font-black text-green-700">
+                        {safeCurrency(viewingEmployee.salary)}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="form-label">Dia do Pagamento</label>
+                      <p className="text-sm text-slate-900 font-semibold">Dia {viewingEmployee.paymentDay}</p>
+                    </div>
+                    <div>
+                      <label className="form-label">Próximo Pagamento</label>
+                      <p className="text-sm text-slate-900 font-semibold">
+                        {getNextPaymentDate(viewingEmployee).toLocaleDateString('pt-BR')}
+                      </p>
+                      {viewingEmployee.nextPaymentDate && (
+                        <p className="text-xs text-blue-600 mt-1 font-semibold">
+                          ✓ Data específica definida
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {viewingEmployee.observations && (
-                <div className="mb-6">
-                  <label className="form-label">Observações</label>
-                  <p className="text-sm text-gray-900 p-3 bg-gray-50 rounded-lg">
-                    {viewingEmployee.observations}
-                  </p>
+                <div className="mb-8 p-6 bg-slate-50 rounded-2xl border border-slate-200">
+                  <h3 className="text-xl font-bold text-slate-900 mb-4">Observações</h3>
+                  <p className="text-slate-700 text-lg">{viewingEmployee.observations}</p>
                 </div>
               )}
 
-              {/* Payment History */}
-              <div className="mb-6">
-                <h3 className="font-medium text-gray-900 mb-3">Histórico de Pagamentos</h3>
+              {/* Histórico de Pagamentos */}
+              <div className="mb-8">
+                <h3 className="text-xl font-bold text-slate-900 mb-6">Histórico de Pagamentos</h3>
                 {getEmployeePayments(viewingEmployee.id).length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3 max-h-64 overflow-y-auto modern-scrollbar">
                     {getEmployeePayments(viewingEmployee.id)
                       .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime())
                       .map(payment => (
-                        <div key={payment.id} className="p-3 bg-gray-50 rounded-lg">
+                        <div key={payment.id} className="p-4 bg-green-50 rounded-xl border border-green-200">
                           <div className="flex justify-between items-start">
                             <div>
-                              <p className="font-medium">
+                              <p className="font-bold text-green-900">
                                 {safeCurrency(payment.amount)}
                               </p>
-                              <p className="text-sm text-gray-600">
+                              <p className="text-sm text-green-700">
                                 {new Date(payment.paymentDate).toLocaleDateString('pt-BR')}
                               </p>
                               {payment.observations && (
-                                <p className="text-sm text-gray-700 mt-1">{payment.observations}</p>
+                                <p className="text-sm text-green-600 mt-1">{payment.observations}</p>
                               )}
                             </div>
-                            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
-                              Pago
+                            <span className="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full font-bold border border-green-200">
+                              <DollarSign className="w-3 h-3 inline mr-1" />
+                              PAGO
                             </span>
                           </div>
                         </div>
                       ))}
                   </div>
                 ) : (
-                    <p className="text-gray-500 text-center py-4">Nenhum pagamento registrado.</p>
+                  <div className="text-center py-12">
+                    <DollarSign className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+                    <p className="text-slate-500 font-medium">Nenhum pagamento registrado ainda.</p>
+                  </div>
                 )}
               </div>
 
@@ -680,10 +995,18 @@ export function Employees() {
       {/* Payroll Details Modal */}
       {viewingPayrollEmployee && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
+          <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
             <div className="p-8">
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-bold text-slate-900">Folha de Pagamento Detalhada</h2>
+                <div className="flex items-center gap-4">
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-xl">
+                    <TrendingUp className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-bold text-slate-900">Folha de Pagamento Detalhada</h2>
+                    <p className="text-slate-600 text-lg">{viewingPayrollEmployee.name}</p>
+                  </div>
+                </div>
                 <button
                   onClick={() => setViewingPayrollEmployee(null)}
                   className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-all"
@@ -700,24 +1023,41 @@ export function Employees() {
                   <div className="space-y-8">
                     {/* Employee Info */}
                     <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
-                      <h3 className="text-2xl font-bold text-blue-900 mb-2">{viewingPayrollEmployee.name}</h3>
-                      <p className="text-blue-700 font-semibold">{viewingPayrollEmployee.position}</p>
-                      {viewingPayrollEmployee.isSeller && (
-                        <span className="inline-block mt-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-bold">
-                          Vendedor - Comissão 5%
-                        </span>
-                      )}
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold text-xl modern-shadow-lg ${
+                          viewingPayrollEmployee.isSeller ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                        }`}>
+                          {viewingPayrollEmployee.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <h3 className="text-2xl font-bold text-blue-900">{viewingPayrollEmployee.name}</h3>
+                          <p className="text-blue-700 font-semibold text-lg">{viewingPayrollEmployee.position}</p>
+                          {viewingPayrollEmployee.isSeller && (
+                            <span className="inline-block mt-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-bold border border-green-200">
+                              <Star className="w-4 h-4 inline mr-1" />
+                              Vendedor - Comissão 5%
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Summary */}
+                    {/* Summary Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                      <div className="text-center p-6 bg-green-50 rounded-2xl border border-green-200">
+                      <div className="text-center p-6 bg-green-50 rounded-2xl border border-green-200 modern-shadow-lg">
+                        <div className="p-3 rounded-xl bg-green-600 w-fit mx-auto mb-4">
+                          <DollarSign className="w-6 h-6 text-white" />
+                        </div>
                         <h4 className="font-bold text-green-900 mb-2">Salário Base</h4>
                         <p className="text-2xl font-black text-green-700">
                           {safeCurrency(payroll.baseSalary)}
                         </p>
                       </div>
-                      <div className="text-center p-6 bg-blue-50 rounded-2xl border border-blue-200">
+                      
+                      <div className="text-center p-6 bg-blue-50 rounded-2xl border border-blue-200 modern-shadow-lg">
+                        <div className="p-3 rounded-xl bg-blue-600 w-fit mx-auto mb-4">
+                          <Star className="w-6 h-6 text-white" />
+                        </div>
                         <h4 className="font-bold text-blue-900 mb-2">Comissões</h4>
                         <p className="text-2xl font-black text-blue-700">
                           {safeCurrency(payroll.totalPendingCommissions)}
@@ -726,13 +1066,21 @@ export function Employees() {
                           {payroll.allPendingCommissions.length} comissão(ões) pendente(s)
                         </p>
                       </div>
-                      <div className="text-center p-6 bg-purple-50 rounded-2xl border border-purple-200">
+                      
+                      <div className="text-center p-6 bg-purple-50 rounded-2xl border border-purple-200 modern-shadow-lg">
+                        <div className="p-3 rounded-xl bg-purple-600 w-fit mx-auto mb-4">
+                          <Clock className="w-6 h-6 text-white" />
+                        </div>
                         <h4 className="font-bold text-purple-900 mb-2">Horas Extras</h4>
                         <p className="text-2xl font-black text-purple-700">
                           {safeCurrency(payroll.totalOvertimes)}
                         </p>
                       </div>
-                      <div className="text-center p-6 bg-red-50 rounded-2xl border border-red-200">
+                      
+                      <div className="text-center p-6 bg-red-50 rounded-2xl border border-red-200 modern-shadow-lg">
+                        <div className="p-3 rounded-xl bg-red-600 w-fit mx-auto mb-4">
+                          <CreditCard className="w-6 h-6 text-white" />
+                        </div>
                         <h4 className="font-bold text-red-900 mb-2">Adiantamentos</h4>
                         <p className="text-2xl font-black text-red-700">
                           - {safeCurrency(payroll.totalAdvances)}
@@ -741,12 +1089,17 @@ export function Employees() {
                     </div>
 
                     {/* Total to Pay */}
-                    <div className="p-8 bg-gradient-to-r from-green-100 to-emerald-100 rounded-3xl border-2 border-green-300 text-center">
-                      <h3 className="text-2xl font-bold text-green-900 mb-4">Total a Pagar</h3>
-                      <p className="text-5xl font-black text-green-700">
+                    <div className="p-8 bg-gradient-to-r from-green-100 to-emerald-100 rounded-3xl border-2 border-green-300 text-center modern-shadow-xl">
+                      <div className="flex items-center justify-center gap-4 mb-4">
+                        <div className="p-4 rounded-2xl bg-green-600 modern-shadow-lg">
+                          <Award className="w-8 h-8 text-white" />
+                        </div>
+                        <h3 className="text-3xl font-bold text-green-900">Total a Pagar</h3>
+                      </div>
+                      <p className="text-6xl font-black text-green-700 mb-4">
                         {safeCurrency(safeNumber(payroll.baseSalary, 0) + safeNumber(payroll.totalPendingCommissions, 0) + safeNumber(payroll.totalOvertimes, 0) - safeNumber(payroll.totalAdvances, 0))}
                       </p>
-                      <p className="text-sm text-green-600 font-bold mt-2">
+                      <p className="text-lg text-green-600 font-bold">
                         Inclui TODAS as comissões pendentes acumuladas
                       </p>
                     </div>
@@ -755,13 +1108,16 @@ export function Employees() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                       {/* Commissions */}
                       {payroll.allPendingCommissions.length > 0 && (
-                        <div className="card">
-                          <h4 className="font-bold text-slate-900 mb-4">Todas as Comissões Pendentes</h4>
-                          <div className="space-y-3">
+                        <div className="card modern-shadow-lg">
+                          <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                            <Star className="w-5 h-5 text-blue-600" />
+                            Todas as Comissões Pendentes
+                          </h4>
+                          <div className="space-y-3 max-h-64 overflow-y-auto modern-scrollbar">
                             {payroll.allPendingCommissions.map(commission => {
                               const sale = sales.find(s => s.id === commission.saleId);
                               return (
-                                <div key={commission.id} className="p-3 bg-blue-50 rounded-xl">
+                                <div key={commission.id} className="p-3 bg-blue-50 rounded-xl border border-blue-200">
                                   <p className="font-semibold text-blue-900">
                                     {sale ? sale.client : 'Venda não encontrada'}
                                   </p>
@@ -783,11 +1139,14 @@ export function Employees() {
 
                       {/* Overtime */}
                       {payroll.pendingOvertimes.length > 0 && (
-                        <div className="card">
-                          <h4 className="font-bold text-slate-900 mb-4">Horas Extras</h4>
-                          <div className="space-y-3">
+                        <div className="card modern-shadow-lg">
+                          <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                            <Clock className="w-5 h-5 text-purple-600" />
+                            Horas Extras
+                          </h4>
+                          <div className="space-y-3 max-h-64 overflow-y-auto modern-scrollbar">
                             {payroll.pendingOvertimes.map(overtime => (
-                              <div key={overtime.id} className="p-3 bg-purple-50 rounded-xl">
+                              <div key={overtime.id} className="p-3 bg-purple-50 rounded-xl border border-purple-200">
                                 <p className="font-semibold text-purple-900">{overtime.description}</p>
                                 <p className="text-sm text-purple-700">
                                   {safeNumber(overtime.hours, 0)}h × {safeCurrency(overtime.hourlyRate)}
@@ -806,11 +1165,14 @@ export function Employees() {
 
                       {/* Advances */}
                       {payroll.pendingAdvances.length > 0 && (
-                        <div className="card">
-                          <h4 className="font-bold text-slate-900 mb-4">Adiantamentos</h4>
-                          <div className="space-y-3">
+                        <div className="card modern-shadow-lg">
+                          <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                            <CreditCard className="w-5 h-5 text-red-600" />
+                            Adiantamentos
+                          </h4>
+                          <div className="space-y-3 max-h-64 overflow-y-auto modern-scrollbar">
                             {payroll.pendingAdvances.map(advance => (
-                              <div key={advance.id} className="p-3 bg-red-50 rounded-xl">
+                              <div key={advance.id} className="p-3 bg-red-50 rounded-xl border border-red-200">
                                 <p className="font-semibold text-red-900">{advance.description}</p>
                                 <p className="text-sm text-red-700">
                                   Método: {advance.paymentMethod.replace('_', ' ')}
@@ -843,12 +1205,29 @@ export function Employees() {
           </div>
         </div>
       )}
+
       {/* Payment Modal */}
       {paymentEmployee && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="p-6">
-              <h2 className="text-xl font-bold mb-4">Registrar Pagamento</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto modern-shadow-xl">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-xl">
+                    <DollarSign className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-bold text-slate-900">Registrar Pagamento</h2>
+                    <p className="text-slate-600">{paymentEmployee.name}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setPaymentEmployee(null)}
+                  className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
               
               <form onSubmit={(e) => {
                 e.preventDefault();
@@ -861,15 +1240,26 @@ export function Employees() {
                   receipt: formData.get('receipt') ? 'receipt-uploaded' : undefined
                 });
               }}>
-                <div className="space-y-4">
-                  <div>
-                    <label className="form-label">Funcionário</label>
-                    <p className="text-sm text-gray-900 font-medium">{paymentEmployee.name}</p>
-                    {paymentEmployee.isSeller && (
-                      <span className="inline-block mt-1 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold">
-                        Vendedor - Comissão 5%
-                      </span>
-                    )}
+                <div className="space-y-6">
+                  {/* Employee Info Card */}
+                  <div className="p-6 bg-gradient-to-r from-purple-50 to-violet-50 rounded-2xl border border-purple-200">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold text-xl modern-shadow-lg ${
+                        paymentEmployee.isSeller ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-purple-500 to-violet-600'
+                      }`}>
+                        {paymentEmployee.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-purple-900">{paymentEmployee.name}</h3>
+                        <p className="text-purple-700 font-semibold">{paymentEmployee.position}</p>
+                        {paymentEmployee.isSeller && (
+                          <span className="inline-block mt-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold border border-green-200">
+                            <Star className="w-3 h-3 inline mr-1" />
+                            Vendedor - Comissão 5%
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   
                   <div>
@@ -877,35 +1267,42 @@ export function Employees() {
                     {(() => {
                       const payroll = calculateEmployeePayroll(paymentEmployee.id);
                       return payroll ? (
-                        <div className="mb-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                          <h4 className="font-bold text-blue-900 mb-2">Cálculo Automático</h4>
-                          <div className="text-sm space-y-1">
-                            <div className="flex justify-between">
-                              <span>Salário Base:</span>
-                              <span className="font-bold">{safeCurrency(payroll.baseSalary)}</span>
+                        <div className="mb-4 p-6 bg-blue-50 rounded-2xl border border-blue-200">
+                          <h4 className="font-bold text-blue-900 mb-4 flex items-center gap-2">
+                            <TrendingUp className="w-5 h-5" />
+                            Cálculo Automático da Folha
+                          </h4>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span>Salário Base:</span>
+                                <span className="font-bold">{safeCurrency(payroll.baseSalary)}</span>
+                              </div>
+                              {payroll.totalCommissions > 0 && (
+                                <div className="flex justify-between text-green-700">
+                                  <span>+ Comissões:</span>
+                                  <span className="font-bold">{safeCurrency(payroll.totalPendingCommissions)}</span>
+                                </div>
+                              )}
                             </div>
-                            {payroll.totalCommissions > 0 && (
-                              <div className="flex justify-between text-green-700">
-                                <span>+ Comissões:</span>
-                                <span className="font-bold">{safeCurrency(payroll.totalPendingCommissions)}</span>
-                              </div>
-                            )}
-                            {payroll.totalOvertimes > 0 && (
-                              <div className="flex justify-between text-purple-700">
-                                <span>+ Horas Extras:</span>
-                                <span className="font-bold">{safeCurrency(payroll.totalOvertimes)}</span>
-                              </div>
-                            )}
-                            {payroll.totalAdvances > 0 && (
-                              <div className="flex justify-between text-red-700">
-                                <span>- Adiantamentos:</span>
-                                <span className="font-bold">{safeCurrency(payroll.totalAdvances)}</span>
-                              </div>
-                            )}
-                            <div className="flex justify-between border-t pt-2 text-lg font-black text-green-700">
-                              <span>Total:</span>
-                              <span>{safeCurrency(safeNumber(payroll.baseSalary, 0) + safeNumber(payroll.totalPendingCommissions, 0) + safeNumber(payroll.totalOvertimes, 0) - safeNumber(payroll.totalAdvances, 0))}</span>
+                            <div className="space-y-2">
+                              {payroll.totalOvertimes > 0 && (
+                                <div className="flex justify-between text-purple-700">
+                                  <span>+ Horas Extras:</span>
+                                  <span className="font-bold">{safeCurrency(payroll.totalOvertimes)}</span>
+                                </div>
+                              )}
+                              {payroll.totalAdvances > 0 && (
+                                <div className="flex justify-between text-red-700">
+                                  <span>- Adiantamentos:</span>
+                                  <span className="font-bold">{safeCurrency(payroll.totalAdvances)}</span>
+                                </div>
+                              )}
                             </div>
+                          </div>
+                          <div className="flex justify-between border-t border-blue-200 pt-4 mt-4 text-lg font-black text-green-700">
+                            <span>TOTAL A PAGAR:</span>
+                            <span>{safeCurrency(safeNumber(payroll.baseSalary, 0) + safeNumber(payroll.totalPendingCommissions, 0) + safeNumber(payroll.totalOvertimes, 0) - safeNumber(payroll.totalAdvances, 0))}</span>
                           </div>
                         </div>
                       ) : null;
@@ -914,15 +1311,11 @@ export function Employees() {
                       type="number"
                       step="0.01"
                       name="amount"
-                      value={(() => {
+                      defaultValue={(() => {
                         const payroll = calculateEmployeePayroll(paymentEmployee.id);
                         return payroll ? safeNumber(payroll.totalToPay, 0) : safeNumber(paymentEmployee.salary, 0);
                       })()}
-                      onChange={(e) => {
-                        // Update the input value safely
-                        e.target.value = safeNumber(e.target.value, 0).toString();
-                      }}
-                      className="input-field"
+                      className="input-field text-center text-2xl font-bold"
                       required
                     />
                   </div>
@@ -935,21 +1328,25 @@ export function Employees() {
                       rows={3}
                       placeholder="Observações sobre o pagamento..."
                     />
-                    <div className="mt-2 p-3 bg-blue-50 rounded-lg">
-                      <p className="text-sm text-blue-700">
-                        <strong>Data de Contratação:</strong> {new Date(paymentEmployee.hireDate).toLocaleDateString('pt-BR')}
-                      </p>
-                      <p className="text-sm text-blue-700">
-                        <strong>Próximo Pagamento:</strong> {getNextPaymentDate(paymentEmployee).toLocaleDateString('pt-BR')}
-                      </p>
+                    <div className="mt-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-blue-700 font-semibold">Data de Contratação:</p>
+                          <p className="text-blue-900">{new Date(paymentEmployee.hireDate).toLocaleDateString('pt-BR')}</p>
+                        </div>
+                        <div>
+                          <p className="text-blue-700 font-semibold">Próximo Pagamento:</p>
+                          <p className="text-blue-900">{getNextPaymentDate(paymentEmployee).toLocaleDateString('pt-BR')}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   
                   <div>
-                    <label className="form-label">Recibo de Comprovação</label>
+                    <label className="form-label">Comprovante de Pagamento</label>
                     <div className="border-2 border-dashed border-green-300 rounded-xl p-6 text-center hover:border-green-400 hover:bg-green-50 transition-all duration-300 cursor-pointer">
                       <Upload className="w-8 h-8 mx-auto text-green-500 mb-3" />
-                      <p className="text-sm text-green-700 font-semibold mb-2">Anexar recibo (opcional)</p>
+                      <p className="text-sm text-green-700 font-semibold mb-2">Anexar comprovante (opcional)</p>
                       <p className="text-xs text-green-600">PDF, JPG, PNG (máx. 10MB)</p>
                     </div>
                     <input
@@ -960,7 +1357,7 @@ export function Employees() {
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          console.log('Arquivo de recibo selecionado:', file.name, file.size);
+                          console.log('Arquivo de comprovante selecionado:', file.name, file.size);
                           if (file.size > 10 * 1024 * 1024) {
                             alert('Arquivo muito grande. Máximo 10MB.');
                             e.target.value = '';
@@ -972,7 +1369,7 @@ export function Employees() {
                   </div>
                 </div>
                 
-                <div className="flex justify-end gap-4 mt-6">
+                <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-slate-200">
                   <button
                     type="button"
                     onClick={() => setPaymentEmployee(null)}
