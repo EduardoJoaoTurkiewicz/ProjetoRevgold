@@ -13,7 +13,7 @@ import { Boletos } from './components/Boletos';
 import { PixFees } from './components/PixFees';
 import Reports from './components/Reports';
 import { CashManagement } from './components/CashManagement';
-import { Agenda } from './components/Agenda';
+import Agenda from './components/Agenda';
 import { Employees } from './components/Employees';
 import { Taxes } from './components/Taxes';
 import { Acertos } from './components/Acertos';
