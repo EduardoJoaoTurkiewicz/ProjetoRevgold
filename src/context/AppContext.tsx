@@ -109,7 +109,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setError(null);
 
       // Check if we're online
-      const isOnline = connectionManager.isOnline();
+      const isOnline = connectionManager.getStatus().isOnline;
       
       if (isOnline) {
         // Load data from Supabase
@@ -497,17 +497,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // Listen for connection changes
   useEffect(() => {
-    const handleConnectionChange = () => {
-      if (connectionManager.isOnline()) {
+    const handleConnectionChange = (status: any) => {
+      if (status.isOnline) {
         // When coming back online, sync data
-        syncManager.syncPendingOperations().then(() => {
+        syncManager.startSync().then(() => {
           loadAllData();
         });
       }
     };
 
-    connectionManager.addListener(handleConnectionChange);
-    return () => connectionManager.removeListener(handleConnectionChange);
+    const unsubscribe = connectionManager.addListener(handleConnectionChange);
+    return () => unsubscribe();
   }, []);
 
   const value: AppContextType = {
