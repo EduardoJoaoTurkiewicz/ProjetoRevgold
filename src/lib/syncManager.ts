@@ -37,6 +37,23 @@ class SyncManager {
   private isSyncing = false;
   private syncListeners: ((status: { isSyncing: boolean; progress: number; total: number }) => void)[] = [];
 
+  private getSupabaseTableName(tableName: string): string {
+    // Convert camelCase table names to snake_case for Supabase
+    const tableNameMap: Record<string, string> = {
+      'cashBalance': 'cash_balances',
+      'cashTransactions': 'cash_transactions',
+      'employeePayments': 'employee_payments',
+      'employeeAdvances': 'employee_advances',
+      'employeeOvertimes': 'employee_overtimes',
+      'employeeCommissions': 'employee_commissions',
+      'pixFees': 'pix_fees',
+      'agendaEvents': 'agenda_events',
+      'createSaleErrors': 'create_sale_errors'
+    };
+    
+    return tableNameMap[tableName] || tableName;
+  }
+
   constructor() {
     // Escutar mudanças de conexão
     connectionManager.addListener((status) => {
@@ -191,6 +208,8 @@ class SyncManager {
     
     console.log(`🔄 Sincronizando ${table} com dados limpos:`, uuidCleanedData);
     
+    const supabaseTableName = this.getSupabaseTableName(table);
+    
     switch (table) {
       case 'sales':
         // Usar RPC para vendas
@@ -204,10 +223,10 @@ class SyncManager {
       default:
         // Para outras tabelas, usar insert direto
         const { error } = await supabase
-          .from(table)
+          .from(supabaseTableName)
           .upsert([transformToSnakeCase(uuidCleanedData)], { onConflict: 'id' });
         if (error) throw error;
-        console.log(`✅ ${table} sincronizado:`, cleanData.id);
+        console.log(`✅ ${supabaseTableName} sincronizado:`, cleanData.id);
         break;
     }
   }
@@ -215,8 +234,10 @@ class SyncManager {
   private async syncUpdate(table: string, data: any): Promise<void> {
     const { id, ...updateData } = data;
     
+    const supabaseTableName = this.getSupabaseTableName(table);
+    
     const { error } = await supabase
-      .from(table)
+      .from(supabaseTableName)
       .update(transformToSnakeCase(updateData))
       .eq('id', id);
       
@@ -224,8 +245,10 @@ class SyncManager {
   }
 
   private async syncDelete(table: string, id: string): Promise<void> {
+    const supabaseTableName = this.getSupabaseTableName(table);
+    
     const { error } = await supabase
-      .from(table)
+      .from(supabaseTableName)
       .delete()
       .eq('id', id);
       
