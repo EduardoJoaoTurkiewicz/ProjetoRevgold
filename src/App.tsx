@@ -6,7 +6,7 @@ import { ConnectionStatus } from './components/ConnectionStatus';
 import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
-import { Sales } from './components/Sales';
+import Sales from './components/Sales';
 import { Debts } from './components/Debts';
 import { Checks } from './components/Checks';
 import { Boletos } from './components/Boletos';
