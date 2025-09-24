@@ -400,7 +400,7 @@ export const cashService = {
     if (error) throw error;
   },
 
-  async createTransaction(transaction: Omit<CashTransaction, 'id' | 'createdAt'>): Promise<string> {
+  async create(transaction: Omit<CashTransaction, 'id' | 'createdAt'>): Promise<string> {
     const sanitizedTransaction = {
       ...transaction,
       amount: safeNumber(transaction.amount, 0)

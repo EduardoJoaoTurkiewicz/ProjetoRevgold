@@ -74,6 +74,8 @@ interface AppContextType {
   createAgendaEvent: (eventData: any) => Promise<any>;
   createAcerto: (acertoData: any) => Promise<any>;
   createCashTransaction: (transactionData: any) => Promise<any>;
+  updateCashTransaction: (transactionData: any) => Promise<any>;
+  deleteCashTransaction: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -571,11 +573,33 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const createCashTransaction = async (transactionData: any) => {
     try {
-      const result = await supabaseServices.cashTransactions.createTransaction(transactionData);
+      const result = await supabaseServices.cashTransactions.create(transactionData);
       await loadAllData(); // Refresh all data
       return result;
     } catch (err) {
       console.error('Error creating cash transaction:', err);
+      throw err;
+    }
+  };
+
+  const updateCashTransaction = async (transactionData: any) => {
+    try {
+      const { id, ...updateData } = transactionData;
+      const result = await supabaseServices.cashTransactions.updateTransaction(id, updateData);
+      await loadAllData(); // Refresh all data
+      return result;
+    } catch (err) {
+      console.error('Error updating cash transaction:', err);
+      throw err;
+    }
+  };
+
+  const deleteCashTransaction = async (id: string) => {
+    try {
+      await supabaseServices.cashTransactions.deleteTransaction(id);
+      await loadAllData(); // Refresh all data
+    } catch (err) {
+      console.error('Error deleting cash transaction:', err);
       throw err;
     }
   };
@@ -682,6 +706,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     createAgendaEvent,
     createAcerto,
     createCashTransaction,
+    updateCashTransaction,
+    deleteCashTransaction,
   };
 
   return (
