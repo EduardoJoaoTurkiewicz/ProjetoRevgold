@@ -19,9 +19,6 @@ export function Debts() {
   const handleAddDebt = (debt: Omit<Debt, 'id' | 'createdAt'>) => {
     console.log('🔄 Adicionando nova dívida:', debt);
     
-    // Clean UUID fields before submission
-    const cleanedDebt = UUIDManager.cleanObjectUUIDs(debt);
-    
     // Verificar se há método de pagamento "acerto"
     const hasAcertoPayment = cleanedDebt.paymentMethods?.some(method => method.type === 'acerto');
     
