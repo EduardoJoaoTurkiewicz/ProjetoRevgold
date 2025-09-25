@@ -9,13 +9,47 @@ export function fmtBRL(value: number | string): string {
 }
 
 export function fmtDate(date: string | Date): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  let d: Date;
+  if (typeof date === 'string') {
+    // Parse date string without timezone conversion
+    if (date.includes('T')) {
+      d = new Date(date);
+    } else {
+      // For date-only strings, create date in local timezone
+      const parts = date.split('-');
+      if (parts.length === 3) {
+        d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      } else {
+        d = new Date(date + 'T12:00:00'); // Use noon to avoid timezone issues
+      }
+    }
+  } else {
+    d = date;
+  }
+  
   if (isNaN(d.getTime())) return '';
   return d.toLocaleDateString('pt-BR');
 }
 
 export function fmtDateTime(date: string | Date): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  let d: Date;
+  if (typeof date === 'string') {
+    // Parse date string without timezone conversion
+    if (date.includes('T')) {
+      d = new Date(date);
+    } else {
+      // For date-only strings, create date in local timezone
+      const parts = date.split('-');
+      if (parts.length === 3) {
+        d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      } else {
+        d = new Date(date + 'T12:00:00'); // Use noon to avoid timezone issues
+      }
+    }
+  } else {
+    d = date;
+  }
+  
   if (isNaN(d.getTime())) return '';
   return d.toLocaleString('pt-BR');
 }

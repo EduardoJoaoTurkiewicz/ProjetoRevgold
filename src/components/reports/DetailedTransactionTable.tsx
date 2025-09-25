@@ -20,13 +20,15 @@ export function DetailedTransactionTable({ receivedValues, paidValues }: Detaile
   const groupedTransactions = useMemo(() => {
     // Combine all transactions
     const allTransactions = [
-      ...receivedValues.map(t => ({ ...t, transactionType: 'entrada' })),
-      ...paidValues.map(t => ({ ...t, transactionType: 'saida' }))
+      ...(receivedValues || []).filter(t => t && typeof t === 'object').map(t => ({ ...t, transactionType: 'entrada' })),
+      ...(paidValues || []).filter(t => t && typeof t === 'object').map(t => ({ ...t, transactionType: 'saida' }))
     ];
 
     // Group by date
     const byDate: Record<string, any[]> = {};
     allTransactions.forEach(transaction => {
+      if (!transaction || !transaction.date) return;
+      
       const date = transaction.date;
       if (!byDate[date]) {
         byDate[date] = [];
@@ -46,15 +48,15 @@ export function DetailedTransactionTable({ receivedValues, paidValues }: Detaile
         if (a.transactionType !== b.transactionType) {
           return a.transactionType === 'entrada' ? -1 : 1;
         }
-        return b.amount - a.amount;
+        return (Number(b.amount) || 0) - (Number(a.amount) || 0);
       }),
       dailyTotals: {
         entrada: byDate[date]
           .filter(t => t.transactionType === 'entrada')
-          .reduce((sum, t) => sum + t.amount, 0),
+          .reduce((sum, t) => sum + (Number(t.amount) || 0), 0),
         saida: byDate[date]
           .filter(t => t.transactionType === 'saida')
-          .reduce((sum, t) => sum + t.amount, 0)
+          .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
       }
     }));
   }, [receivedValues, paidValues]);
@@ -82,8 +84,8 @@ export function DetailedTransactionTable({ receivedValues, paidValues }: Detaile
   };
 
   const grandTotals = useMemo(() => {
-    const totalEntrada = receivedValues.reduce((sum, t) => sum + t.amount, 0);
-    const totalSaida = paidValues.reduce((sum, t) => sum + t.amount, 0);
+    const totalEntrada = (receivedValues || []).reduce((sum, t) => sum + (Number(t?.amount) || 0), 0);
+    const totalSaida = (paidValues || []).reduce((sum, t) => sum + (Number(t?.amount) || 0), 0);
     return {
       entrada: totalEntrada,
       saida: totalSaida,
@@ -163,7 +165,7 @@ export function DetailedTransactionTable({ receivedValues, paidValues }: Detaile
                     fontWeight: '700',
                     fontSize: '13px'
                   }} className={transaction.transactionType === 'entrada' ? 'text-green' : 'text-red'}>
-                    {transaction.transactionType === 'entrada' ? '+' : '-'}{fmtBRL(transaction.amount)}
+                    {transaction.transactionType === 'entrada' ? '+' : '-'}{fmtBRL(Number(transaction.amount) || 0)}
                   </td>
                   <td style={{ fontSize: '10px', color: '#64748b' }}>
                     {transaction.details?.installment && (

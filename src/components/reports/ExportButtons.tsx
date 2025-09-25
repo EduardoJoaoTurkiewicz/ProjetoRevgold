@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Download, Printer, FileText, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface ExportButtonsProps {
   filters: {
@@ -16,11 +17,12 @@ export function ExportButtons({ filters, data }: ExportButtonsProps) {
   const [isExporting, setIsExporting] = useState(false);
 
   const buildQueryString = (autoprint: boolean = false) => {
+    try {
     const params = new URLSearchParams({
       startDate: filters.startDate,
       endDate: filters.endDate,
       status: filters.status || 'all',
-      reportType: filters.reportType || 'comprehensive',
+      reportType: (filters as any).reportType || 'comprehensive',
       user: 'Sistema RevGold',
       auto: autoprint ? '1' : '0'
     });
@@ -34,10 +36,18 @@ export function ExportButtons({ filters, data }: ExportButtonsProps) {
     }
 
     return params.toString();
+    } catch (error) {
+      console.error('Error building query string:', error);
+      toast.error('Erro ao preparar parâmetros do relatório');
+      return '';
+    }
   };
 
   const openClientPrint = () => {
+    try {
     const queryString = buildQueryString(true);
+    if (!queryString) return;
+    
     const printUrl = `/print/reports?${queryString}`;
     
     // Open in new window for printing
@@ -45,29 +55,46 @@ export function ExportButtons({ filters, data }: ExportButtonsProps) {
     
     if (printWindow) {
       printWindow.focus();
+      toast.success('Janela de impressão aberta');
     } else {
-      alert('Por favor, permita pop-ups para abrir a janela de impressão.');
+      toast.error('Por favor, permita pop-ups para abrir a janela de impressão.');
+    }
+    } catch (error) {
+      console.error('Error opening print window:', error);
+      toast.error('Erro ao abrir janela de impressão: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
     }
   };
 
   const exportServerPDF = async () => {
+    if (isExporting) return;
+    
     setIsExporting(true);
     
     try {
       const queryString = buildQueryString(false);
+      if (!queryString) {
+        throw new Error('Falha ao preparar parâmetros do relatório');
+      }
+      
       const response = await fetch(`/api/export/pdf?${queryString}`);
       
       if (!response.ok) {
-        throw new Error('Falha ao gerar PDF no servidor');
+        const errorText = await response.text().catch(() => 'Resposta inválida do servidor');
+        throw new Error(`Falha ao gerar PDF no servidor: ${response.status} - ${errorText}`);
       }
       
       const blob = await response.blob();
+      
+      if (blob.size === 0) {
+        throw new Error('PDF gerado está vazio');
+      }
+      
       const url = URL.createObjectURL(blob);
       
       // Create download link
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Relatorio_RevGold_${filters.startDate}_${filters.endDate}.pdf`;
+      a.download = `Relatorio_RevGold_${filters.startDate.replace(/-/g, '')}_${filters.endDate.replace(/-/g, '')}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -75,20 +102,45 @@ export function ExportButtons({ filters, data }: ExportButtonsProps) {
       // Clean up
       URL.revokeObjectURL(url);
       
+      toast.success('PDF exportado com sucesso!');
+      
     } catch (error) {
       console.error('Error exporting PDF:', error);
-      alert('Erro ao exportar PDF: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast.error('Erro ao exportar PDF: ' + errorMessage);
+      
+      // Fallback to client-side print if server export fails
+      if (errorMessage.includes('servidor') || errorMessage.includes('fetch')) {
+        toast.info('Tentando exportação alternativa...');
+        setTimeout(() => {
+          openClientPrint();
+        }, 1000);
+      }
     } finally {
       setIsExporting(false);
     }
   };
 
   const previewReport = () => {
+    try {
     const queryString = buildQueryString(false);
+    if (!queryString) return;
+    
     const previewUrl = `/print/reports?${queryString}`;
     
     // Open in new tab for preview
-    window.open(previewUrl, '_blank');
+    const previewWindow = window.open(previewUrl, '_blank');
+    
+    if (previewWindow) {
+      previewWindow.focus();
+      toast.success('Visualização do relatório aberta');
+    } else {
+      toast.error('Por favor, permita pop-ups para visualizar o relatório');
+    }
+    } catch (error) {
+      console.error('Error opening preview:', error);
+      toast.error('Erro ao abrir visualização: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+    }
   };
 
   return (
