@@ -482,6 +482,11 @@ export default function Reports() {
                   <Legend />
                   <Bar dataKey="vendas" fill="#10b981" name="Vendas" />
                   <Bar dataKey="dividas" fill="#ef4444" name="Dívidas" />
+                  <Line dataKey="lucro" stroke="#3b82f6" strokeWidth={3} name="Lucro" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
             {/* Payment Methods Distribution */}
             <div className="card modern-shadow-xl">
               <div className="flex items-center gap-4 mb-6">
@@ -519,15 +524,14 @@ export default function Reports() {
                   </p>
                 </div>
               )}
-            </div>
           </div>
-                  <Line dataKey="lucro" stroke="#3b82f6" strokeWidth={3} name="Lucro" />
+
           {/* Valores a Receber */}
           <ReceivablesReport />
-                </BarChart>
+
           {/* Valores a Pagar */}
           <PayablesReport />
-              </ResponsiveContainer>
+
           {/* Detailed Tables */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Received Values */}
