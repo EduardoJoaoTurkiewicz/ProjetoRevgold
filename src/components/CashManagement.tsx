@@ -2,30 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { ErrorHandler } from '../lib/errorHandler';
 import { safeNumber, validateFormNumber, safeCurrency, logMonetaryValues } from '../utils/numberUtils';
 import { connectionManager } from '../lib/connectionManager';
-import { 
-  DollarSign, 
-  TrendingUp, 
-  TrendingDown, 
-  Calendar, 
-  ArrowUpCircle, 
-  ArrowDownCircle, 
-  Activity, 
-  Wallet, 
-  Plus, 
-  RefreshCw, 
-  Filter, 
-  Search, 
-  Download, 
-  FileText, 
-  Eye, 
-  Edit, 
-  Trash2, 
-  X,
-  AlertCircle,
-  CreditCard,
-  Receipt,
-  Building2
-} from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Calendar, ArrowUpCircle, ArrowDownCircle, Activity, Wallet, Plus, RefreshCw, Filter, Search, Download, FileText, Eye, CreditCard as Edit, Trash2, X, AlertCircle, CreditCard, Receipt, Building2 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { CashTransactionForm } from './forms/CashTransactionForm';
 
@@ -149,7 +126,7 @@ export function CashManagement() {
     } catch (error) {
       ErrorHandler.logProjectError(error, 'Recalculate Balance');
       const errorMessage = error?.message ?? 'Erro desconhecido';
-     setError('Erro ao recalcular saldo: ' + ErrorHandler.handleSupabaseError(error));
+      alert('Erro ao recalcular saldo: ' + ErrorHandler.handleSupabaseError(error));
     } finally {
       setIsRecalculating(false);
     }
