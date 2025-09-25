@@ -2,26 +2,54 @@ import React, { useMemo } from 'react';
 import { 
   DollarSign, 
   TrendingUp, 
-  TrendingDown,
+  TrendingDown, 
   Calendar, 
   FileText, 
-  Receipt,
-  CreditCard,
+  ArrowUpCircle, 
+  ArrowDownCircle,
   Building2,
-  Users,
+  CreditCard,
+  Receipt,
+  PieChart,
+  BarChart3,
+  Activity,
+  User,
+  Clock,
   CheckCircle,
-  AlertTriangle,
-  Clock
+  AlertTriangle
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
-import { formatDateForDisplay } from '../../utils/dateUtils';
-import { safeCurrency } from '../../utils/numberUtils';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  AreaChart,
+  Area
+} from 'recharts';
+import { fmtBRL, fmtDate, fmtDateTime, nowBR, formatNumber } from '../../utils/format';
+import { DetailedTransactionTable } from './DetailedTransactionTable';
+import '../../styles/print.css';
+
+const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#84cc16', '#f97316'];
 
 interface ComprehensiveReportProps {
   filters: {
     startDate: string;
     endDate: string;
+    categories?: string[];
+    methods?: string[];
     status?: string;
+    reportType?: string;
   };
 }
 
@@ -34,18 +62,15 @@ export function ComprehensiveReport({ filters }: ComprehensiveReportProps) {
     employees, 
     employeePayments,
     pixFees,
-    taxes,
-    cashBalance
+    cashBalance,
+    loading 
   } = useAppContext();
 
-  // Filter data by period
+  // Calculate comprehensive report data
   const reportData = useMemo(() => {
+    // Filter sales by period
     const periodSales = sales.filter(sale => 
       sale.date >= filters.startDate && sale.date <= filters.endDate
-    );
-
-    const periodDebts = debts.filter(debt => 
-      debt.date >= filters.startDate && debt.date <= filters.endDate
     );
 
     // Calculate received values
@@ -59,17 +84,16 @@ export function ComprehensiveReport({ filters }: ComprehensiveReportProps) {
           receivedValues.push({
             id: `sale-${sale.id}-${methodIndex}`,
             date: sale.date,
-            type: 'Venda Instantânea',
+            type: 'Venda',
             description: `Venda - ${sale.client}`,
             paymentMethod: method.type.replace('_', ' ').toUpperCase(),
             amount: method.amount,
-            reference: sale,
             details: {
               saleId: sale.id,
               client: sale.client,
               products: sale.products,
               totalSaleValue: sale.totalValue,
-              seller: sale.sellerId ? employees.find(e => e.id === sale.sellerId)?.name : 'Sem vendedor'
+              seller: sale.sellerId ? employees.find(e => e.id === sale.sellerId)?.name : 'N/A'
             }
           });
         }
@@ -79,23 +103,21 @@ export function ComprehensiveReport({ filters }: ComprehensiveReportProps) {
     // Checks compensated in period
     checks.forEach(check => {
       if (check.dueDate >= filters.startDate && check.dueDate <= filters.endDate && check.status === 'compensado') {
-        const relatedSale = sales.find(s => s.id === check.saleId);
         receivedValues.push({
           id: `check-${check.id}`,
           date: check.dueDate,
-          type: 'Cheque Compensado',
+          type: 'Cheque',
           description: `Cheque compensado - ${check.client}`,
           paymentMethod: 'CHEQUE',
           amount: check.value,
-          reference: relatedSale,
           details: {
             checkId: check.id,
             client: check.client,
             dueDate: check.dueDate,
-            installment: `${check.installmentNumber}/${check.totalInstallments}`,
+            installment: check.installmentNumber && check.totalInstallments ? 
+              `${check.installmentNumber}/${check.totalInstallments}` : 'Único',
             usedFor: check.usedFor,
-            isOwnCheck: check.isOwnCheck,
-            relatedSale: relatedSale
+            isOwnCheck: check.isOwnCheck
           }
         });
       }
@@ -107,16 +129,14 @@ export function ComprehensiveReport({ filters }: ComprehensiveReportProps) {
         const finalAmount = boleto.finalAmount || boleto.value;
         const notaryCosts = boleto.notaryCosts || 0;
         const netReceived = finalAmount - notaryCosts;
-        const relatedSale = sales.find(s => s.id === boleto.saleId);
         
         receivedValues.push({
           id: `boleto-${boleto.id}`,
           date: boleto.dueDate,
-          type: 'Boleto Recebido',
+          type: 'Boleto',
           description: `Boleto pago - ${boleto.client}`,
           paymentMethod: 'BOLETO',
           amount: netReceived,
-          reference: relatedSale,
           details: {
             boletoId: boleto.id,
             client: boleto.client,
@@ -124,12 +144,16 @@ export function ComprehensiveReport({ filters }: ComprehensiveReportProps) {
             finalAmount: finalAmount,
             notaryCosts: notaryCosts,
             installment: `${boleto.installmentNumber}/${boleto.totalInstallments}`,
-            overdueAction: boleto.overdueAction,
-            relatedSale: relatedSale
+            overdueAction: boleto.overdueAction
           }
         });
       }
     });
+
+    // Period debts
+    const periodDebts = debts.filter(debt => 
+      debt.date >= filters.startDate && debt.date <= filters.endDate
+    );
 
     // Calculate paid values
     const paidValues = [];
@@ -142,11 +166,10 @@ export function ComprehensiveReport({ filters }: ComprehensiveReportProps) {
             paidValues.push({
               id: `debt-${debt.id}-${methodIndex}`,
               date: debt.date,
-              type: 'Pagamento de Dívida',
+              type: 'Dívida',
               description: `Pagamento - ${debt.company}`,
               paymentMethod: method.type.replace('_', ' ').toUpperCase(),
               amount: method.amount,
-              reference: debt,
               details: {
                 debtId: debt.id,
                 company: debt.company,
@@ -164,43 +187,19 @@ export function ComprehensiveReport({ filters }: ComprehensiveReportProps) {
     // Own checks paid in period
     checks.forEach(check => {
       if (check.isOwnCheck && check.dueDate >= filters.startDate && check.dueDate <= filters.endDate && check.status === 'compensado') {
-        const relatedDebt = debts.find(d => d.id === check.debtId);
         paidValues.push({
           id: `own-check-${check.id}`,
           date: check.dueDate,
-          type: 'Cheque Próprio Pago',
+          type: 'Cheque Próprio',
           description: `Cheque próprio pago - ${check.client}`,
           paymentMethod: 'CHEQUE PRÓPRIO',
           amount: check.value,
-          reference: relatedDebt,
           details: {
             checkId: check.id,
             client: check.client,
             usedFor: check.usedFor,
-            installment: `${check.installmentNumber}/${check.totalInstallments}`,
-            relatedDebt: relatedDebt
-          }
-        });
-      }
-    });
-
-    // Company boletos paid in period
-    boletos.forEach(boleto => {
-      if (boleto.isCompanyPayable && boleto.dueDate >= filters.startDate && boleto.dueDate <= filters.endDate && boleto.status === 'compensado') {
-        const relatedDebt = debts.find(d => d.id === boleto.debtId);
-        paidValues.push({
-          id: `company-boleto-${boleto.id}`,
-          date: boleto.dueDate,
-          type: 'Boleto Pago',
-          description: `Boleto pago - ${boleto.client}`,
-          paymentMethod: 'BOLETO',
-          amount: boleto.value,
-          reference: relatedDebt,
-          details: {
-            boletoId: boleto.id,
-            client: boleto.client,
-            installment: `${boleto.installmentNumber}/${boleto.totalInstallments}`,
-            relatedDebt: relatedDebt
+            installment: check.installmentNumber && check.totalInstallments ? 
+              `${check.installmentNumber}/${check.totalInstallments}` : 'Único'
           }
         });
       }
@@ -213,11 +212,10 @@ export function ComprehensiveReport({ filters }: ComprehensiveReportProps) {
         paidValues.push({
           id: `employee-payment-${payment.id}`,
           date: payment.paymentDate,
-          type: 'Pagamento de Salário',
+          type: 'Salário',
           description: `Pagamento de salário - ${employee?.name || 'Funcionário'}`,
           paymentMethod: 'DINHEIRO',
           amount: payment.amount,
-          reference: employee,
           details: {
             employeeId: payment.employeeId,
             employeeName: employee?.name,
@@ -239,7 +237,6 @@ export function ComprehensiveReport({ filters }: ComprehensiveReportProps) {
           description: `Tarifa PIX - ${fee.bank}`,
           paymentMethod: 'PIX',
           amount: fee.amount,
-          reference: null,
           details: {
             bank: fee.bank,
             transactionType: fee.transactionType,
@@ -250,1050 +247,620 @@ export function ComprehensiveReport({ filters }: ComprehensiveReportProps) {
       }
     });
 
-    // Tax payments in period
-    taxes.forEach(tax => {
-      if (tax.date >= filters.startDate && tax.date <= filters.endDate) {
-        paidValues.push({
-          id: `tax-${tax.id}`,
-          date: tax.date,
-          type: 'Pagamento de Imposto',
-          description: `Imposto - ${tax.description}`,
-          paymentMethod: tax.paymentMethod.replace('_', ' ').toUpperCase(),
-          amount: tax.amount,
-          reference: null,
-          details: {
-            taxType: tax.taxType,
-            description: tax.description,
-            documentNumber: tax.documentNumber,
-            referencePeriod: tax.referencePeriod
-          }
-        });
-      }
-    });
-
-    // Outstanding debts (unpaid)
-    const outstandingDebts = debts.filter(debt => !debt.isPaid);
-
-    // Outstanding receivables
-    const outstandingReceivables = [];
-    
-    // Pending checks
-    checks.forEach(check => {
-      if (check.status === 'pendente' && !check.isOwnCheck && !check.isCompanyPayable) {
-        const relatedSale = sales.find(s => s.id === check.saleId);
-        outstandingReceivables.push({
-          id: check.id,
-          type: 'Cheque Pendente',
-          client: check.client,
-          amount: check.value,
-          dueDate: check.dueDate,
-          description: `Cheque - Parcela ${check.installmentNumber}/${check.totalInstallments}`,
-          reference: relatedSale,
-          details: {
-            installment: `${check.installmentNumber}/${check.totalInstallments}`,
-            usedFor: check.usedFor,
-            relatedSale: relatedSale
-          }
-        });
-      }
-    });
-    
-    // Pending boletos
-    boletos.forEach(boleto => {
-      if (boleto.status === 'pendente' && !boleto.isCompanyPayable) {
-        const relatedSale = sales.find(s => s.id === boleto.saleId);
-        outstandingReceivables.push({
-          id: boleto.id,
-          type: 'Boleto Pendente',
-          client: boleto.client,
-          amount: boleto.value,
-          dueDate: boleto.dueDate,
-          description: `Boleto - Parcela ${boleto.installmentNumber}/${boleto.totalInstallments}`,
-          reference: relatedSale,
-          details: {
-            installment: `${boleto.installmentNumber}/${boleto.totalInstallments}`,
-            relatedSale: relatedSale
-          }
-        });
-      }
-    });
-    
-    // Pending sales amounts
-    sales.forEach(sale => {
-      if (sale.pendingAmount > 0) {
-        outstandingReceivables.push({
-          id: sale.id,
-          type: 'Venda Pendente',
-          client: sale.client,
-          amount: sale.pendingAmount,
-          dueDate: sale.date,
-          description: `Venda pendente`,
-          reference: sale,
-          details: {
-            totalValue: sale.totalValue,
-            receivedAmount: sale.receivedAmount,
-            status: sale.status
-          }
-        });
-      }
-    });
-
     // Calculate totals
     const totalSales = periodSales.reduce((sum, sale) => sum + sale.totalValue, 0);
     const totalReceived = receivedValues.reduce((sum, item) => sum + item.amount, 0);
     const totalDebts = periodDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
     const totalPaid = paidValues.reduce((sum, item) => sum + item.amount, 0);
-    const totalOutstandingDebts = outstandingDebts.reduce((sum, debt) => sum + debt.pendingAmount, 0);
-    const totalOutstandingReceivables = outstandingReceivables.reduce((sum, item) => sum + item.amount, 0);
 
     return {
-      periodSales: periodSales.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
-      periodDebts: periodDebts.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
-      receivedValues: receivedValues.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
-      paidValues: paidValues.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
-      outstandingDebts: outstandingDebts.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
-      outstandingReceivables: outstandingReceivables.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()),
+      sales: periodSales,
+      receivedValues: receivedValues.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+      debts: periodDebts,
+      paidValues: paidValues.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
       totals: {
         sales: totalSales,
         received: totalReceived,
         debts: totalDebts,
         paid: totalPaid,
-        outstandingDebts: totalOutstandingDebts,
-        outstandingReceivables: totalOutstandingReceivables,
-        netResult: totalReceived - totalPaid,
         cashBalance: cashBalance?.currentBalance || 0
       }
     };
-  }, [sales, debts, checks, boletos, employees, employeePayments, pixFees, taxes, cashBalance, filters]);
+  }, [sales, debts, checks, boletos, employees, employeePayments, pixFees, cashBalance, filters]);
 
-  const getRelatedInstallments = (item: any, type: 'sale' | 'debt') => {
-    if (type === 'sale') {
-      const saleChecks = checks.filter(c => c.saleId === item.id);
-      const saleBoletos = boletos.filter(b => b.saleId === item.id);
-      return { checks: saleChecks, boletos: saleBoletos };
-    } else {
-      const debtChecks = checks.filter(c => c.debtId === item.id);
-      const debtBoletos = boletos.filter(b => b.debtId === item.id);
-      return { checks: debtChecks, boletos: debtBoletos };
-    }
-  };
+  // Calculate additional metrics
+  const metrics = useMemo(() => {
+    const netResult = reportData.totals.received - reportData.totals.paid;
+    const periodDays = Math.ceil(
+      (new Date(filters.endDate).getTime() - new Date(filters.startDate).getTime()) / (1000 * 60 * 60 * 24)
+    ) + 1;
+    
+    // Group by categories
+    const categoryTotals = {};
+    [...reportData.receivedValues, ...reportData.paidValues].forEach(item => {
+      const category = item.type || 'Outros';
+      if (!categoryTotals[category]) {
+        categoryTotals[category] = { entrada: 0, saida: 0 };
+      }
+      
+      if (reportData.receivedValues.includes(item)) {
+        categoryTotals[category].entrada += item.amount;
+      } else {
+        categoryTotals[category].saida += item.amount;
+      }
+    });
+    
+    // Group by payment methods
+    const methodTotals = {};
+    [...reportData.receivedValues, ...reportData.paidValues].forEach(item => {
+      const method = item.paymentMethod || 'Não especificado';
+      if (!methodTotals[method]) {
+        methodTotals[method] = 0;
+      }
+      methodTotals[method] += item.amount;
+    });
+    
+    // Group by date for daily breakdown
+    const dailyTotals = {};
+    [...reportData.receivedValues, ...reportData.paidValues].forEach(item => {
+      const date = item.date;
+      if (!dailyTotals[date]) {
+        dailyTotals[date] = { entrada: 0, saida: 0 };
+      }
+      
+      if (reportData.receivedValues.includes(item)) {
+        dailyTotals[date].entrada += item.amount;
+      } else {
+        dailyTotals[date].saida += item.amount;
+      }
+    });
+    
+    return {
+      netResult,
+      periodDays,
+      categoryTotals: Object.entries(categoryTotals)
+        .map(([name, values]: [string, any]) => ({
+          name,
+          entrada: values.entrada,
+          saida: values.saida,
+          total: values.entrada - values.saida
+        }))
+        .sort((a, b) => Math.abs(b.total) - Math.abs(a.total)),
+      methodTotals: Object.entries(methodTotals)
+        .map(([name, value]: [string, any]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value),
+      dailyTotals: Object.entries(dailyTotals)
+        .map(([date, values]: [string, any]) => ({
+          date,
+          entrada: values.entrada,
+          saida: values.saida,
+          saldo: values.entrada - values.saida
+        }))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    };
+  }, [reportData, filters]);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pago':
-      case 'compensado':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'parcial':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'pendente':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'vencido':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+  // Chart data for financial flow
+  const flowChartData = useMemo(() => {
+    const last30Days = [];
+    const today = new Date();
+    
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      // Sales for this day
+      const daySales = sales.filter(sale => sale.date === dateStr);
+      const salesValue = daySales.reduce((sum, sale) => sum + sale.totalValue, 0);
+      
+      // Debts for this day
+      const dayDebts = debts.filter(debt => debt.date === dateStr);
+      const debtsValue = dayDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
+      
+      last30Days.push({
+        date: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+        vendas: salesValue,
+        dividas: debtsValue,
+        lucro: salesValue - debtsValue
+      });
     }
-  };
+    
+    return last30Days;
+  }, [sales, debts]);
 
-  const getPaymentMethodBadge = (method: string) => {
-    switch (method.toLowerCase()) {
-      case 'dinheiro':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'pix':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'cartao credito':
-      case 'cartao debito':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'cheque':
-      case 'cheque proprio':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'boleto':
-        return 'bg-cyan-100 text-cyan-800 border-cyan-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+  // Payment methods data for pie chart
+  const paymentMethodsData = useMemo(() => {
+    const methods = {};
+    
+    sales.forEach(sale => {
+      (sale.paymentMethods || []).forEach(method => {
+        const methodName = method.type.replace('_', ' ').toUpperCase();
+        if (!methods[methodName]) {
+          methods[methodName] = 0;
+        }
+        methods[methodName] += method.amount;
+      });
+    });
+    
+    return Object.entries(methods).map(([name, value]) => ({
+      name,
+      value,
+      percentage: ((value / Object.values(methods).reduce((a, b) => a + b, 0)) * 100).toFixed(1)
+    })).filter(item => item.value > 0);
+  }, [sales]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-8 print:space-y-6">
-      {/* Report Header */}
-      <div className="card bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl print:shadow-none">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700">
-              <FileText className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-blue-900">Relatório Financeiro Completo</h1>
-              <p className="text-blue-700 font-semibold">
-                Período: {formatDateForDisplay(filters.startDate)} até {formatDateForDisplay(filters.endDate)}
-              </p>
-              <p className="text-blue-600 text-sm">
-                Gerado em: {new Date().toLocaleString('pt-BR')} • Sistema RevGold
-              </p>
-            </div>
+    <div className="space-y-8 print-container">
+      {/* Print Header */}
+      <div className="print-card company-header avoid-break-inside">
+        <div>
+          <h1 className="report-title">Relatório Financeiro Completo RevGold</h1>
+          <p className="report-subtitle">
+            Período: {fmtDate(filters.startDate)} até {fmtDate(filters.endDate)}
+          </p>
+          <div className="subtle" style={{ marginTop: '12px' }}>
+            <div>Gerado em: {nowBR()}</div>
+            <div>Usuário: Sistema RevGold</div>
+            <div>Período: {metrics.periodDays} dias</div>
           </div>
-          <img 
-            src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
-            alt="RevGold Logo" 
-            className="h-16 w-auto"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-            }}
-          />
         </div>
+        <img 
+          src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
+          alt="RevGold Logo" 
+          className="company-logo"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.style.display = 'none';
+          }}
+        />
       </div>
 
       {/* Executive Summary */}
-      <div className="card modern-shadow-xl print:shadow-none">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 rounded-xl bg-green-600">
-            <TrendingUp className="w-6 h-6 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900">Resumo Executivo</h2>
-        </div>
+      <div className="section-spacing avoid-break-inside">
+        <h2 className="section-title">SUMÁRIO EXECUTIVO</h2>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <div className="text-center p-4 bg-green-50 rounded-xl border border-green-200">
-            <h3 className="font-bold text-green-900 mb-2">Vendas Realizadas</h3>
-            <p className="text-2xl font-black text-green-700">{safeCurrency(reportData.totals.sales)}</p>
-            <p className="text-sm text-green-600">{reportData.periodSales.length} venda(s)</p>
+        <div className="print-grid-4">
+          <div className="metric-card">
+            <div className="metric-label">Vendas Realizadas</div>
+            <div className="metric-value metric-green">{fmtBRL(reportData.totals.sales)}</div>
+            <div className="subtle">{reportData.sales.length} venda(s)</div>
           </div>
           
-          <div className="text-center p-4 bg-emerald-50 rounded-xl border border-emerald-200">
-            <h3 className="font-bold text-emerald-900 mb-2">Valores Recebidos</h3>
-            <p className="text-2xl font-black text-emerald-700">{safeCurrency(reportData.totals.received)}</p>
-            <p className="text-sm text-emerald-600">{reportData.receivedValues.length} recebimento(s)</p>
+          <div className="metric-card">
+            <div className="metric-label">Valores Recebidos</div>
+            <div className="metric-value metric-green">{fmtBRL(reportData.totals.received)}</div>
+            <div className="subtle">{reportData.receivedValues.length} recebimento(s)</div>
           </div>
           
-          <div className="text-center p-4 bg-red-50 rounded-xl border border-red-200">
-            <h3 className="font-bold text-red-900 mb-2">Valores Pagos</h3>
-            <p className="text-2xl font-black text-red-700">{safeCurrency(reportData.totals.paid)}</p>
-            <p className="text-sm text-red-600">{reportData.paidValues.length} pagamento(s)</p>
+          <div className="metric-card">
+            <div className="metric-label">Dívidas Feitas</div>
+            <div className="metric-value metric-red">{fmtBRL(reportData.totals.debts)}</div>
+            <div className="subtle">{reportData.debts.length} dívida(s)</div>
           </div>
           
-          <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-200">
-            <h3 className="font-bold text-blue-900 mb-2">Resultado Líquido</h3>
-            <p className={`text-2xl font-black ${reportData.totals.netResult >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-              {reportData.totals.netResult >= 0 ? '+' : ''}{safeCurrency(reportData.totals.netResult)}
-            </p>
-            <p className="text-sm text-blue-600">Recebido - Pago</p>
+          <div className="metric-card">
+            <div className="metric-label">Valores Pagos</div>
+            <div className="metric-value metric-red">{fmtBRL(reportData.totals.paid)}</div>
+            <div className="subtle">{reportData.paidValues.length} pagamento(s)</div>
           </div>
         </div>
-      </div>
 
-      {/* 1. ALL SALES */}
-      <div className="card modern-shadow-xl print:shadow-none">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 rounded-xl bg-green-600">
-            <DollarSign className="w-6 h-6 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900">1. Todas as Vendas do Período</h2>
-        </div>
-        
-        {reportData.periodSales.length > 0 ? (
-          <div className="space-y-4">
-            {reportData.periodSales.map(sale => {
-              const installments = getRelatedInstallments(sale, 'sale');
-              const seller = employees.find(e => e.id === sale.sellerId);
-              
-              return (
-                <div key={sale.id} className="p-6 bg-green-50 rounded-xl border border-green-200">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold text-green-900">{sale.client}</h3>
-                      <p className="text-green-700">Data: {formatDateForDisplay(sale.date)}</p>
-                      {seller && <p className="text-green-700">Vendedor: {seller.name}</p>}
-                      <p className="text-green-700">Produtos: {typeof sale.products === 'string' ? sale.products : 'Produtos vendidos'}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-black text-green-700">{safeCurrency(sale.totalValue)}</p>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusBadge(sale.status)}`}>
-                        {sale.status.toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Payment Methods */}
-                  <div className="mb-4">
-                    <h4 className="font-bold text-green-900 mb-2">Métodos de Pagamento:</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {(sale.paymentMethods || []).map((method, index) => (
-                        <div key={index} className="p-3 bg-white rounded-lg border border-green-100">
-                          <div className="flex justify-between items-center">
-                            <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getPaymentMethodBadge(method.type)}`}>
-                              {method.type.replace('_', ' ').toUpperCase()}
-                            </span>
-                            <span className="font-bold text-green-700">{safeCurrency(method.amount)}</span>
-                          </div>
-                          {method.installments && method.installments > 1 && (
-                            <p className="text-xs text-green-600 mt-1">
-                              {method.installments}x de {safeCurrency(method.installmentValue || 0)}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Related Installments */}
-                  {(installments.checks.length > 0 || installments.boletos.length > 0) && (
-                    <div className="border-t border-green-200 pt-4">
-                      <h4 className="font-bold text-green-900 mb-3">Parcelas Relacionadas:</h4>
-                      
-                      {installments.checks.length > 0 && (
-                        <div className="mb-4">
-                          <h5 className="font-semibold text-green-800 mb-2">Cheques ({installments.checks.length}):</h5>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {installments.checks.map(check => (
-                              <div key={check.id} className="p-2 bg-yellow-50 rounded-lg border border-yellow-200">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-xs font-bold text-yellow-800">
-                                    Parcela {check.installmentNumber}/{check.totalInstallments}
-                                  </span>
-                                  <span className="text-xs font-bold text-yellow-700">{safeCurrency(check.value)}</span>
-                                </div>
-                                <div className="flex justify-between items-center mt-1">
-                                  <span className="text-xs text-yellow-700">Venc: {formatDateForDisplay(check.dueDate)}</span>
-                                  <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getStatusBadge(check.status)}`}>
-                                    {check.status.toUpperCase()}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {installments.boletos.length > 0 && (
-                        <div>
-                          <h5 className="font-semibold text-green-800 mb-2">Boletos ({installments.boletos.length}):</h5>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {installments.boletos.map(boleto => (
-                              <div key={boleto.id} className="p-2 bg-cyan-50 rounded-lg border border-cyan-200">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-xs font-bold text-cyan-800">
-                                    Parcela {boleto.installmentNumber}/{boleto.totalInstallments}
-                                  </span>
-                                  <span className="text-xs font-bold text-cyan-700">{safeCurrency(boleto.value)}</span>
-                                </div>
-                                <div className="flex justify-between items-center mt-1">
-                                  <span className="text-xs text-cyan-700">Venc: {formatDateForDisplay(boleto.dueDate)}</span>
-                                  <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getStatusBadge(boleto.status)}`}>
-                                    {boleto.status.toUpperCase()}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Financial Summary */}
-                  <div className="border-t border-green-200 pt-4 mt-4">
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <p className="text-green-600 font-semibold">Total</p>
-                        <p className="text-lg font-bold text-green-800">{safeCurrency(sale.totalValue)}</p>
-                      </div>
-                      <div>
-                        <p className="text-green-600 font-semibold">Recebido</p>
-                        <p className="text-lg font-bold text-green-700">{safeCurrency(sale.receivedAmount)}</p>
-                      </div>
-                      <div>
-                        <p className="text-green-600 font-semibold">Pendente</p>
-                        <p className="text-lg font-bold text-orange-600">{safeCurrency(sale.pendingAmount)}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            
-            <div className="p-6 bg-green-100 rounded-xl border-2 border-green-300">
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-green-900 mb-2">TOTAL DE TODAS AS VENDAS</h3>
-                <p className="text-3xl font-black text-green-700">{safeCurrency(reportData.totals.sales)}</p>
-                <p className="text-green-600 font-semibold">{reportData.periodSales.length} venda(s) no período</p>
-              </div>
+        <div className="print-grid-2" style={{ marginTop: '20px' }}>
+          <div className="metric-card bg-green-light">
+            <div className="metric-label">Resultado Líquido</div>
+            <div className={`metric-value ${metrics.netResult >= 0 ? 'metric-green' : 'metric-red'}`}>
+              {metrics.netResult >= 0 ? '+' : ''}{fmtBRL(metrics.netResult)}
             </div>
+            <div className="subtle">Recebido - Pago</div>
           </div>
-        ) : (
-          <div className="text-center py-12">
-            <DollarSign className="w-16 h-16 mx-auto mb-4 text-green-300" />
-            <p className="text-green-600 font-semibold">Nenhuma venda no período selecionado</p>
+          
+          <div className="metric-card bg-blue-light">
+            <div className="metric-label">Saldo Final do Caixa</div>
+            <div className="metric-value metric-blue">{fmtBRL(reportData.totals.cashBalance)}</div>
+            <div className="subtle">Em {fmtDate(filters.endDate)}</div>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* 2. ALL DEBTS */}
-      <div className="card modern-shadow-xl print:shadow-none">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 rounded-xl bg-red-600">
-            <CreditCard className="w-6 h-6 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900">2. Todas as Dívidas do Período</h2>
-        </div>
-        
-        {reportData.periodDebts.length > 0 ? (
-          <div className="space-y-4">
-            {reportData.periodDebts.map(debt => {
-              const installments = getRelatedInstallments(debt, 'debt');
-              
-              return (
-                <div key={debt.id} className="p-6 bg-red-50 rounded-xl border border-red-200">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold text-red-900">{debt.company}</h3>
-                      <p className="text-red-700">Data: {formatDateForDisplay(debt.date)}</p>
-                      <p className="text-red-700">Descrição: {debt.description}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-black text-red-700">{safeCurrency(debt.totalValue)}</p>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${debt.isPaid ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'}`}>
-                        {debt.isPaid ? 'PAGO' : 'PENDENTE'}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Payment Methods */}
-                  <div className="mb-4">
-                    <h4 className="font-bold text-red-900 mb-2">Métodos de Pagamento:</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {(debt.paymentMethods || []).map((method, index) => (
-                        <div key={index} className="p-3 bg-white rounded-lg border border-red-100">
-                          <div className="flex justify-between items-center">
-                            <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getPaymentMethodBadge(method.type)}`}>
-                              {method.type.replace('_', ' ').toUpperCase()}
-                            </span>
-                            <span className="font-bold text-red-700">{safeCurrency(method.amount)}</span>
-                          </div>
-                          {method.installments && method.installments > 1 && (
-                            <p className="text-xs text-red-600 mt-1">
-                              {method.installments}x de {safeCurrency(method.installmentValue || 0)}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Related Installments */}
-                  {(installments.checks.length > 0 || installments.boletos.length > 0) && (
-                    <div className="border-t border-red-200 pt-4">
-                      <h4 className="font-bold text-red-900 mb-3">Parcelas Relacionadas:</h4>
-                      
-                      {installments.checks.length > 0 && (
-                        <div className="mb-4">
-                          <h5 className="font-semibold text-red-800 mb-2">Cheques ({installments.checks.length}):</h5>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {installments.checks.map(check => (
-                              <div key={check.id} className="p-2 bg-yellow-50 rounded-lg border border-yellow-200">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-xs font-bold text-yellow-800">
-                                    Parcela {check.installmentNumber}/{check.totalInstallments}
-                                  </span>
-                                  <span className="text-xs font-bold text-yellow-700">{safeCurrency(check.value)}</span>
-                                </div>
-                                <div className="flex justify-between items-center mt-1">
-                                  <span className="text-xs text-yellow-700">Venc: {formatDateForDisplay(check.dueDate)}</span>
-                                  <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getStatusBadge(check.status)}`}>
-                                    {check.status.toUpperCase()}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {installments.boletos.length > 0 && (
-                        <div>
-                          <h5 className="font-semibold text-red-800 mb-2">Boletos ({installments.boletos.length}):</h5>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {installments.boletos.map(boleto => (
-                              <div key={boleto.id} className="p-2 bg-cyan-50 rounded-lg border border-cyan-200">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-xs font-bold text-cyan-800">
-                                    Parcela {boleto.installmentNumber}/{boleto.totalInstallments}
-                                  </span>
-                                  <span className="text-xs font-bold text-cyan-700">{safeCurrency(boleto.value)}</span>
-                                </div>
-                                <div className="flex justify-between items-center mt-1">
-                                  <span className="text-xs text-cyan-700">Venc: {formatDateForDisplay(boleto.dueDate)}</span>
-                                  <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getStatusBadge(boleto.status)}`}>
-                                    {boleto.status.toUpperCase()}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Financial Summary */}
-                  <div className="border-t border-green-200 pt-4 mt-4">
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <p className="text-green-600 font-semibold">Total</p>
-                        <p className="text-lg font-bold text-green-800">{safeCurrency(sale.totalValue)}</p>
-                      </div>
-                      <div>
-                        <p className="text-green-600 font-semibold">Recebido</p>
-                        <p className="text-lg font-bold text-green-700">{safeCurrency(sale.receivedAmount)}</p>
-                      </div>
-                      <div>
-                        <p className="text-green-600 font-semibold">Pendente</p>
-                        <p className="text-lg font-bold text-orange-600">{safeCurrency(sale.pendingAmount)}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            
-            <div className="p-6 bg-green-100 rounded-xl border-2 border-green-300">
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-green-900 mb-2">TOTAL DE TODAS AS VENDAS</h3>
-                <p className="text-3xl font-black text-green-700">{safeCurrency(reportData.totals.sales)}</p>
-                <p className="text-green-600 font-semibold">{reportData.periodSales.length} venda(s) no período</p>
-              </div>
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 no-print">
+        {/* Financial Flow Chart */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-blue-600">
+              <BarChart3 className="w-6 h-6 text-white" />
             </div>
+            <h3 className="text-xl font-bold text-slate-900">Fluxo Financeiro (30 dias)</h3>
           </div>
-        ) : (
-          <div className="text-center py-12">
-            <DollarSign className="w-16 h-16 mx-auto mb-4 text-green-300" />
-            <p className="text-green-600 font-semibold">Nenhuma venda no período selecionado</p>
-          </div>
-        )}
-      </div>
-
-      {/* 3. ALL DEBTS */}
-      <div className="card modern-shadow-xl print:shadow-none">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 rounded-xl bg-red-600">
-            <Building2 className="w-6 h-6 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900">3. Todas as Dívidas do Período</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={flowChartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip 
+                formatter={(value, name) => [
+                  `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+                  name === 'vendas' ? 'Vendas' : name === 'dividas' ? 'Dívidas' : 'Lucro'
+                ]}
+                labelFormatter={(label) => `Data: ${label}`}
+              />
+              <Legend />
+              <Area type="monotone" dataKey="vendas" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} name="Vendas" />
+              <Area type="monotone" dataKey="dividas" stackId="2" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} name="Dívidas" />
+              <Line type="monotone" dataKey="lucro" stroke="#3b82f6" strokeWidth={3} name="Lucro" />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
-        
-        {reportData.periodDebts.length > 0 ? (
-          <div className="space-y-4">
-            {reportData.periodDebts.map(debt => {
-              const installments = getRelatedInstallments(debt, 'debt');
-              
-              return (
-                <div key={debt.id} className="p-6 bg-red-50 rounded-xl border border-red-200">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold text-red-900">{debt.company}</h3>
-                      <p className="text-red-700">Data: {formatDateForDisplay(debt.date)}</p>
-                      <p className="text-red-700">Descrição: {debt.description}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-black text-red-700">{safeCurrency(debt.totalValue)}</p>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${debt.isPaid ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'}`}>
-                        {debt.isPaid ? 'PAGO' : 'PENDENTE'}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Payment Methods */}
-                  <div className="mb-4">
-                    <h4 className="font-bold text-red-900 mb-2">Métodos de Pagamento:</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {(debt.paymentMethods || []).map((method, index) => (
-                        <div key={index} className="p-3 bg-white rounded-lg border border-red-100">
-                          <div className="flex justify-between items-center">
-                            <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getPaymentMethodBadge(method.type)}`}>
-                              {method.type.replace('_', ' ').toUpperCase()}
-                            </span>
-                            <span className="font-bold text-red-700">{safeCurrency(method.amount)}</span>
-                          </div>
-                          {method.installments && method.installments > 1 && (
-                            <p className="text-xs text-red-600 mt-1">
-                              {method.installments}x de {safeCurrency(method.installmentValue || 0)}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
 
-                  {/* Related Installments */}
-                  {(installments.checks.length > 0 || installments.boletos.length > 0) && (
-                    <div className="border-t border-red-200 pt-4">
-                      <h4 className="font-bold text-red-900 mb-3">Parcelas Relacionadas:</h4>
-                      
-                      {installments.checks.length > 0 && (
-                        <div className="mb-4">
-                          <h5 className="font-semibold text-red-800 mb-2">Cheques ({installments.checks.length}):</h5>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {installments.checks.map(check => (
-                              <div key={check.id} className="p-2 bg-yellow-50 rounded-lg border border-yellow-200">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-xs font-bold text-yellow-800">
-                                    Parcela {check.installmentNumber}/{check.totalInstallments}
-                                  </span>
-                                  <span className="text-xs font-bold text-yellow-700">{safeCurrency(check.value)}</span>
-                                </div>
-                                <div className="flex justify-between items-center mt-1">
-                                  <span className="text-xs text-yellow-700">Venc: {formatDateForDisplay(check.dueDate)}</span>
-                                  <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getStatusBadge(check.status)}`}>
-                                    {check.status.toUpperCase()}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {installments.boletos.length > 0 && (
-                        <div>
-                          <h5 className="font-semibold text-red-800 mb-2">Boletos ({installments.boletos.length}):</h5>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {installments.boletos.map(boleto => (
-                              <div key={boleto.id} className="p-2 bg-cyan-50 rounded-lg border border-cyan-200">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-xs font-bold text-cyan-800">
-                                    Parcela {boleto.installmentNumber}/{boleto.totalInstallments}
-                                  </span>
-                                  <span className="text-xs font-bold text-cyan-700">{safeCurrency(boleto.value)}</span>
-                                </div>
-                                <div className="flex justify-between items-center mt-1">
-                                  <span className="text-xs text-cyan-700">Venc: {formatDateForDisplay(boleto.dueDate)}</span>
-                                  <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getStatusBadge(boleto.status)}`}>
-                                    {boleto.status.toUpperCase()}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Financial Summary */}
-                  <div className="border-t border-red-200 pt-4 mt-4">
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <p className="text-red-600 font-semibold">Total</p>
-                        <p className="text-lg font-bold text-red-800">{safeCurrency(debt.totalValue)}</p>
-                      </div>
-                      <div>
-                        <p className="text-red-600 font-semibold">Pago</p>
-                        <p className="text-lg font-bold text-green-700">{safeCurrency(debt.paidAmount)}</p>
-                      </div>
-                      <div>
-                        <p className="text-red-600 font-semibold">Pendente</p>
-                        <p className="text-lg font-bold text-orange-600">{safeCurrency(debt.pendingAmount)}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            
-            <div className="p-6 bg-red-100 rounded-xl border-2 border-red-300">
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-red-900 mb-2">TOTAL DE TODAS AS DÍVIDAS</h3>
-                <p className="text-3xl font-black text-red-700">{safeCurrency(reportData.totals.debts)}</p>
-                <p className="text-red-600 font-semibold">{reportData.periodDebts.length} dívida(s) no período</p>
-              </div>
+        {/* Payment Methods Distribution */}
+        <div className="card modern-shadow-xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-purple-600">
+              <PieChart className="w-6 h-6 text-white" />
             </div>
+            <h3 className="text-xl font-bold text-slate-900">Métodos de Pagamento</h3>
           </div>
-        ) : (
-          <div className="text-center py-12">
-            <CreditCard className="w-16 h-16 mx-auto mb-4 text-red-300" />
-            <p className="text-red-600 font-semibold">Nenhuma dívida no período selecionado</p>
-          </div>
-        )}
+          {paymentMethodsData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <RechartsPieChart>
+                <Pie
+                  data={paymentMethodsData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percentage }) => `${name}: ${percentage}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {paymentMethodsData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
+              </RechartsPieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="text-center py-12">
+              <PieChart className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+              <p className="text-slate-500 font-medium">Nenhum dado de pagamento disponível</p>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* 4. ALL RECEIVED VALUES */}
-      <div className="card modern-shadow-xl print:shadow-none">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 rounded-xl bg-emerald-600">
-            <TrendingUp className="w-6 h-6 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900">4. Todos os Valores Recebidos</h2>
-        </div>
+      {/* Top Categories */}
+      <div className="section-spacing avoid-break-inside">
+        <h2 className="section-title">TOP 5 CATEGORIAS</h2>
         
-        {reportData.receivedValues.length > 0 ? (
-          <div className="space-y-3">
-            {reportData.receivedValues.map(item => (
-              <div key={item.id} className="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold border ${
-                        item.type === 'Venda Instantânea' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                        item.type === 'Cheque Compensado' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                        'bg-cyan-100 text-cyan-800 border-cyan-200'
-                      }`}>
-                        {item.type}
-                      </span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getPaymentMethodBadge(item.paymentMethod)}`}>
-                        {item.paymentMethod}
-                      </span>
-                    </div>
-                    <h4 className="font-bold text-emerald-900">{item.details.client}</h4>
-                    <p className="text-emerald-700 text-sm">{item.description}</p>
-                    <p className="text-emerald-600 text-xs">Data: {formatDateForDisplay(item.date)}</p>
-                    {item.details.installment && (
-                      <p className="text-emerald-600 text-xs">Parcela: {item.details.installment}</p>
-                    )}
-                    {item.details.seller && (
-                      <p className="text-emerald-600 text-xs">Vendedor: {item.details.seller}</p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xl font-black text-emerald-700">{safeCurrency(item.amount)}</p>
-                    {item.reference && (
-                      <p className="text-xs text-emerald-600">
-                        Ref: {item.reference.client || item.reference.company || 'N/A'}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Categoria</th>
+              <th style={{ textAlign: 'right' }}>Entradas</th>
+              <th style={{ textAlign: 'right' }}>Saídas</th>
+              <th style={{ textAlign: 'right' }}>Resultado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {metrics.categoryTotals.slice(0, 5).map((category, index) => (
+              <tr key={category.name}>
+                <td style={{ fontWeight: '600' }}>{category.name}</td>
+                <td style={{ textAlign: 'right' }} className="text-green">
+                  {fmtBRL(category.entrada)}
+                </td>
+                <td style={{ textAlign: 'right' }} className="text-red">
+                  {fmtBRL(category.saida)}
+                </td>
+                <td style={{ textAlign: 'right', fontWeight: '700' }} 
+                    className={category.total >= 0 ? 'text-green' : 'text-red'}>
+                  {category.total >= 0 ? '+' : ''}{fmtBRL(category.total)}
+                </td>
+              </tr>
             ))}
-            
-            <div className="p-6 bg-emerald-100 rounded-xl border-2 border-emerald-300">
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-emerald-900 mb-2">TOTAL DE VALORES RECEBIDOS</h3>
-                <p className="text-3xl font-black text-emerald-700">{safeCurrency(reportData.totals.received)}</p>
-                <p className="text-emerald-600 font-semibold">{reportData.receivedValues.length} recebimento(s) no período</p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <TrendingUp className="w-16 h-16 mx-auto mb-4 text-emerald-300" />
-            <p className="text-emerald-600 font-semibold">Nenhum valor recebido no período selecionado</p>
-          </div>
-        )}
+          </tbody>
+        </table>
       </div>
 
-      {/* 5. ALL PAID VALUES */}
-      <div className="card modern-shadow-xl print:shadow-none">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 rounded-xl bg-red-600">
-            <TrendingDown className="w-6 h-6 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900">5. Todos os Valores Pagos</h2>
-        </div>
+      {/* Top Payment Methods */}
+      <div className="section-spacing avoid-break-inside">
+        <h2 className="section-title">TOP 5 MÉTODOS DE PAGAMENTO</h2>
         
-        {reportData.paidValues.length > 0 ? (
-          <div className="space-y-3">
-            {reportData.paidValues.map(item => (
-              <div key={item.id} className="p-4 bg-red-50 rounded-xl border border-red-200">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold border ${
-                        item.type === 'Pagamento de Dívida' ? 'bg-red-100 text-red-800 border-red-200' :
-                        item.type === 'Pagamento de Salário' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                        item.type === 'Cheque Próprio Pago' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                        'bg-purple-100 text-purple-800 border-purple-200'
-                      }`}>
-                        {item.type}
-                      </span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getPaymentMethodBadge(item.paymentMethod)}`}>
-                        {item.paymentMethod}
-                      </span>
-                    </div>
-                    <h4 className="font-bold text-red-900">
-                      {item.details.company || item.details.employeeName || item.details.client || item.details.bank}
-                    </h4>
-                    <p className="text-red-700 text-sm">{item.description}</p>
-                    <p className="text-red-600 text-xs">Data: {formatDateForDisplay(item.date)}</p>
-                    {item.details.installment && (
-                      <p className="text-red-600 text-xs">Parcela: {item.details.installment}</p>
-                    )}
-                    {item.details.position && (
-                      <p className="text-red-600 text-xs">Cargo: {item.details.position}</p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xl font-black text-red-700">{safeCurrency(item.amount)}</p>
-                    {item.reference && (
-                      <p className="text-xs text-red-600">
-                        Ref: {item.reference.company || item.reference.name || 'N/A'}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-            
-            <div className="p-6 bg-red-100 rounded-xl border-2 border-red-300">
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-red-900 mb-2">TOTAL DE VALORES PAGOS</h3>
-                <p className="text-3xl font-black text-red-700">{safeCurrency(reportData.totals.paid)}</p>
-                <p className="text-red-600 font-semibold">{reportData.paidValues.length} pagamento(s) no período</p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <TrendingDown className="w-16 h-16 mx-auto mb-4 text-red-300" />
-            <p className="text-red-600 font-semibold">Nenhum valor pago no período selecionado</p>
-          </div>
-        )}
-      </div>
-
-      {/* 6. OUTSTANDING DEBTS */}
-      <div className="card modern-shadow-xl print:shadow-none">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 rounded-xl bg-orange-600">
-            <AlertTriangle className="w-6 h-6 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900">6. Dívidas Pendentes (A Pagar)</h2>
-        </div>
-        
-        {reportData.outstandingDebts.length > 0 ? (
-          <div className="space-y-4">
-            {reportData.outstandingDebts.map(debt => {
-              const installments = getRelatedInstallments(debt, 'debt');
-              const pendingChecks = installments.checks.filter(c => c.status === 'pendente');
-              const pendingBoletos = installments.boletos.filter(b => b.status === 'pendente');
-              
+        <table>
+          <thead>
+            <tr>
+              <th>Método de Pagamento</th>
+              <th style={{ textAlign: 'right' }}>Valor Total</th>
+              <th style={{ textAlign: 'right' }}>% do Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {metrics.methodTotals.slice(0, 5).map((method, index) => {
+              const percentage = (method.value / (reportData.totals.received + reportData.totals.paid)) * 100;
               return (
-                <div key={debt.id} className="p-6 bg-orange-50 rounded-xl border border-orange-200">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold text-orange-900">{debt.company}</h3>
-                      <p className="text-orange-700">Data: {formatDateForDisplay(debt.date)}</p>
-                      <p className="text-orange-700">Descrição: {debt.description}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-black text-orange-700">{safeCurrency(debt.pendingAmount)}</p>
-                      <span className="px-3 py-1 rounded-full text-xs font-bold border bg-orange-100 text-orange-800 border-orange-200">
-                        PENDENTE
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Payment Methods */}
-                  <div className="mb-4">
-                    <h4 className="font-bold text-orange-900 mb-2">Métodos de Pagamento:</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {(debt.paymentMethods || []).map((method, index) => (
-                        <div key={index} className="p-3 bg-white rounded-lg border border-orange-100">
-                          <div className="flex justify-between items-center">
-                            <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getPaymentMethodBadge(method.type)}`}>
-                              {method.type.replace('_', ' ').toUpperCase()}
-                            </span>
-                            <span className="font-bold text-orange-700">{safeCurrency(method.amount)}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Pending Installments */}
-                  {(pendingChecks.length > 0 || pendingBoletos.length > 0) && (
-                    <div className="border-t border-orange-200 pt-4">
-                      <h4 className="font-bold text-orange-900 mb-3">Parcelas Pendentes:</h4>
-                      
-                      {pendingChecks.length > 0 && (
-                        <div className="mb-4">
-                          <h5 className="font-semibold text-orange-800 mb-2">Cheques Pendentes ({pendingChecks.length}):</h5>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {pendingChecks.map(check => (
-                              <div key={check.id} className="p-2 bg-yellow-50 rounded-lg border border-yellow-200">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-xs font-bold text-yellow-800">
-                                    Parcela {check.installmentNumber}/{check.totalInstallments}
-                                  </span>
-                                  <span className="text-xs font-bold text-yellow-700">{safeCurrency(check.value)}</span>
-                                </div>
-                                <div className="flex justify-between items-center mt-1">
-                                  <span className="text-xs text-yellow-700">Venc: {formatDateForDisplay(check.dueDate)}</span>
-                                  <span className="px-1 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800">
-                                    PENDENTE
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {pendingBoletos.length > 0 && (
-                        <div>
-                          <h5 className="font-semibold text-orange-800 mb-2">Boletos Pendentes ({pendingBoletos.length}):</h5>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {pendingBoletos.map(boleto => (
-                              <div key={boleto.id} className="p-2 bg-cyan-50 rounded-lg border border-cyan-200">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-xs font-bold text-cyan-800">
-                                    Parcela {boleto.installmentNumber}/{boleto.totalInstallments}
-                                  </span>
-                                  <span className="text-xs font-bold text-cyan-700">{safeCurrency(boleto.value)}</span>
-                                </div>
-                                <div className="flex justify-between items-center mt-1">
-                                  <span className="text-xs text-cyan-700">Venc: {formatDateForDisplay(boleto.dueDate)}</span>
-                                  <span className="px-1 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800">
-                                    PENDENTE
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            
-            <div className="p-6 bg-emerald-100 rounded-xl border-2 border-emerald-300">
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-emerald-900 mb-2">TOTAL DE VALORES RECEBIDOS</h3>
-                <p className="text-3xl font-black text-emerald-700">{safeCurrency(reportData.totals.received)}</p>
-                <p className="text-emerald-600 font-semibold">{reportData.receivedValues.length} recebimento(s) no período</p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <TrendingUp className="w-16 h-16 mx-auto mb-4 text-emerald-300" />
-            <p className="text-emerald-600 font-semibold">Nenhum valor recebido no período selecionado</p>
-          </div>
-        )}
-      </div>
-
-      {/* 7. OUTSTANDING RECEIVABLES */}
-      <div className="card modern-shadow-xl print:shadow-none">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 rounded-xl bg-green-600">
-            <Receipt className="w-6 h-6 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900">7. Valores a Receber (Pendentes)</h2>
-        </div>
-        
-        {reportData.outstandingReceivables.length > 0 ? (
-          <div className="space-y-3">
-            {reportData.outstandingReceivables.map(item => (
-              <div key={item.id} className="p-4 bg-green-50 rounded-xl border border-green-200">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold border ${
-                        item.type === 'Cheque Pendente' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                        item.type === 'Boleto Pendente' ? 'bg-cyan-100 text-cyan-800 border-cyan-200' :
-                        'bg-purple-100 text-purple-800 border-purple-200'
-                      }`}>
-                        {item.type}
-                      </span>
-                    </div>
-                    <h4 className="font-bold text-green-900">{item.client}</h4>
-                    <p className="text-green-700 text-sm">{item.description}</p>
-                    <p className="text-green-600 text-xs">Vencimento: {formatDateForDisplay(item.dueDate)}</p>
-                    {item.details.installment && (
-                      <p className="text-green-600 text-xs">Parcela: {item.details.installment}</p>
-                    )}
-                    {item.reference && (
-                      <p className="text-green-600 text-xs">
-                        Venda Original: {formatDateForDisplay(item.reference.date)} - {safeCurrency(item.reference.totalValue || 0)}
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xl font-black text-green-700">{safeCurrency(item.amount)}</p>
-                    <span className="px-2 py-1 rounded-full text-xs font-bold border bg-orange-100 text-orange-800 border-orange-200">
-                      PENDENTE
+                <tr key={method.name}>
+                  <td>
+                    <span className="payment-badge">
+                      {method.name}
                     </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-            
-            <div className="p-6 bg-green-100 rounded-xl border-2 border-green-300">
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-green-900 mb-2">TOTAL A RECEBER</h3>
-                <p className="text-3xl font-black text-green-700">{safeCurrency(reportData.totals.outstandingReceivables)}</p>
-                <p className="text-green-600 font-semibold">{reportData.outstandingReceivables.length} item(s) pendente(s)</p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-400" />
-            <p className="text-green-600 font-semibold">Nenhum valor a receber pendente!</p>
-            <p className="text-green-500 text-sm mt-2">Todos os recebimentos estão em dia</p>
-          </div>
-        )}
+                  </td>
+                  <td style={{ textAlign: 'right', fontWeight: '700' }}>
+                    {fmtBRL(method.value)}
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    {formatNumber(percentage, 1)}%
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
+
+      {/* Daily Evolution */}
+      <div className="section-spacing">
+        <h2 className="section-title">EVOLUÇÃO DIÁRIA</h2>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th style={{ textAlign: 'right' }}>Entradas</th>
+              <th style={{ textAlign: 'right' }}>Saídas</th>
+              <th style={{ textAlign: 'right' }}>Saldo do Dia</th>
+            </tr>
+          </thead>
+          <tbody>
+            {metrics.dailyTotals.map((day) => (
+              <tr key={day.date}>
+                <td style={{ fontWeight: '600' }}>{fmtDate(day.date)}</td>
+                <td style={{ textAlign: 'right' }} className="text-green">
+                  {fmtBRL(day.entrada)}
+                </td>
+                <td style={{ textAlign: 'right' }} className="text-red">
+                  {fmtBRL(day.saida)}
+                </td>
+                <td style={{ textAlign: 'right', fontWeight: '700' }} 
+                    className={day.saldo >= 0 ? 'text-green' : 'text-red'}>
+                  {day.saldo >= 0 ? '+' : ''}{fmtBRL(day.saldo)}
+                </td>
+              </tr>
+            ))}
+            <tr className="total-row">
+              <td style={{ fontWeight: '800' }}>TOTAL DO PERÍODO</td>
+              <td style={{ textAlign: 'right', fontWeight: '800' }} className="text-green">
+                {fmtBRL(reportData.totals.received)}
+              </td>
+              <td style={{ textAlign: 'right', fontWeight: '800' }} className="text-red">
+                {fmtBRL(reportData.totals.paid)}
+              </td>
+              <td style={{ textAlign: 'right', fontWeight: '800' }} 
+                  className={metrics.netResult >= 0 ? 'text-green' : 'text-red'}>
+                {metrics.netResult >= 0 ? '+' : ''}{fmtBRL(metrics.netResult)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Detailed Transaction Table */}
+      <DetailedTransactionTable 
+        receivedValues={reportData.receivedValues}
+        paidValues={reportData.paidValues}
+      />
+
+      {/* Sales Realized */}
+      {reportData.sales.length > 0 && (
+        <div className="section-spacing">
+          <h2 className="section-title">1. VENDAS REALIZADAS</h2>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Cliente</th>
+                <th>Produtos</th>
+                <th>Vendedor</th>
+                <th style={{ textAlign: 'right' }}>Valor Total</th>
+                <th style={{ textAlign: 'right' }}>Recebido</th>
+                <th style={{ textAlign: 'right' }}>Pendente</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reportData.sales.map((sale) => (
+                <tr key={sale.id} className="avoid-break-inside">
+                  <td>{fmtDate(sale.date)}</td>
+                  <td style={{ fontWeight: '600' }}>{sale.client}</td>
+                  <td style={{ maxWidth: '200px', fontSize: '11px' }}>
+                    {typeof sale.products === 'string' ? sale.products : 'Produtos vendidos'}
+                  </td>
+                  <td style={{ fontSize: '11px' }}>
+                    {sale.sellerId ? employees.find(e => e.id === sale.sellerId)?.name || 'Vendedor' : 'Sem vendedor'}
+                  </td>
+                  <td style={{ textAlign: 'right', fontWeight: '700' }}>
+                    {fmtBRL(sale.totalValue)}
+                  </td>
+                  <td style={{ textAlign: 'right' }} className="text-green">
+                    {fmtBRL(sale.receivedAmount)}
+                  </td>
+                  <td style={{ textAlign: 'right' }} className="text-orange">
+                    {fmtBRL(sale.pendingAmount)}
+                  </td>
+                  <td>
+                    <span className={`status-badge ${
+                      sale.status === 'pago' ? 'status-paid' :
+                      sale.status === 'parcial' ? 'status-partial' :
+                      'status-pending'
+                    }`}>
+                      {sale.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              <tr className="subtotal-row">
+                <td colSpan={4} style={{ textAlign: 'right', fontWeight: '700' }}>
+                  TOTAL DE VENDAS:
+                </td>
+                <td style={{ textAlign: 'right', fontWeight: '800' }}>
+                  {fmtBRL(reportData.totals.sales)}
+                </td>
+                <td style={{ textAlign: 'right', fontWeight: '800' }} className="text-green">
+                  {fmtBRL(reportData.sales.reduce((sum, s) => sum + s.receivedAmount, 0))}
+                </td>
+                <td style={{ textAlign: 'right', fontWeight: '800' }} className="text-orange">
+                  {fmtBRL(reportData.sales.reduce((sum, s) => sum + s.pendingAmount, 0))}
+                </td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Debts Made */}
+      {reportData.debts.length > 0 && (
+        <div className="section-spacing">
+          <h2 className="section-title">2. DÍVIDAS FEITAS</h2>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Empresa</th>
+                <th>Descrição</th>
+                <th style={{ textAlign: 'right' }}>Valor Total</th>
+                <th style={{ textAlign: 'right' }}>Pago</th>
+                <th style={{ textAlign: 'right' }}>Pendente</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reportData.debts.map((debt) => (
+                <tr key={debt.id} className="avoid-break-inside">
+                  <td>{fmtDate(debt.date)}</td>
+                  <td style={{ fontWeight: '600' }}>{debt.company}</td>
+                  <td style={{ maxWidth: '250px', fontSize: '11px' }}>
+                    {debt.description}
+                  </td>
+                  <td style={{ textAlign: 'right', fontWeight: '700' }}>
+                    {fmtBRL(debt.totalValue)}
+                  </td>
+                  <td style={{ textAlign: 'right' }} className="text-green">
+                    {fmtBRL(debt.paidAmount)}
+                  </td>
+                  <td style={{ textAlign: 'right' }} className="text-orange">
+                    {fmtBRL(debt.pendingAmount)}
+                  </td>
+                  <td>
+                    <span className={`status-badge ${debt.isPaid ? 'status-paid' : 'status-pending'}`}>
+                      {debt.isPaid ? 'PAGO' : 'PENDENTE'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              <tr className="subtotal-row">
+                <td colSpan={3} style={{ textAlign: 'right', fontWeight: '700' }}>
+                  TOTAL DE DÍVIDAS:
+                </td>
+                <td style={{ textAlign: 'right', fontWeight: '800' }}>
+                  {fmtBRL(reportData.totals.debts)}
+                </td>
+                <td style={{ textAlign: 'right', fontWeight: '800' }} className="text-green">
+                  {fmtBRL(reportData.debts.reduce((sum, d) => sum + d.paidAmount, 0))}
+                </td>
+                <td style={{ textAlign: 'right', fontWeight: '800' }} className="text-orange">
+                  {fmtBRL(reportData.debts.reduce((sum, d) => sum + d.pendingAmount, 0))}
+                </td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Final Summary */}
-      <div className="card bg-gradient-to-br from-blue-100 via-indigo-100 to-purple-100 border-blue-300 modern-shadow-xl print:shadow-none">
-        <div className="text-center mb-6">
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700">
-              <Activity className="w-8 h-8 text-white" />
-            </div>
-            <h2 className="text-3xl font-bold text-blue-900">Resumo Final do Período</h2>
-          </div>
-        </div>
+      <div className="section-spacing page-break">
+        <h2 className="section-title">RESUMO FINAL DO PERÍODO</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="text-center p-6 bg-white rounded-2xl border border-blue-200">
-            <div className="p-3 rounded-xl bg-green-600 w-fit mx-auto mb-4">
-              <DollarSign className="w-6 h-6 text-white" />
+        <div className="print-card bg-blue-light">
+          <div className="print-grid-2">
+            <div>
+              <h3 style={{ margin: '0 0 16px 0', fontWeight: '700', color: '#1e40af' }}>
+                Movimentação Financeira
+              </h3>
+              <div style={{ display: 'grid', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Vendas Realizadas:</span>
+                  <span style={{ fontWeight: '700' }}>{fmtBRL(reportData.totals.sales)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Valores Recebidos:</span>
+                  <span style={{ fontWeight: '700' }} className="text-green">
+                    {fmtBRL(reportData.totals.received)}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Dívidas Feitas:</span>
+                  <span style={{ fontWeight: '700' }}>{fmtBRL(reportData.totals.debts)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Valores Pagos:</span>
+                  <span style={{ fontWeight: '700' }} className="text-red">
+                    {fmtBRL(reportData.totals.paid)}
+                  </span>
+                </div>
+              </div>
             </div>
-            <h4 className="font-bold text-blue-900 mb-2">Vendas Totais</h4>
-            <p className="text-2xl font-black text-green-600">{safeCurrency(reportData.totals.sales)}</p>
-            <p className="text-blue-600 text-sm">{reportData.periodSales.length} venda(s)</p>
-          </div>
-          
-          <div className="text-center p-6 bg-white rounded-2xl border border-blue-200">
-            <div className="p-3 rounded-xl bg-emerald-600 w-fit mx-auto mb-4">
-              <TrendingUp className="w-6 h-6 text-white" />
+            
+            <div>
+              <h3 style={{ margin: '0 0 16px 0', fontWeight: '700', color: '#1e40af' }}>
+                Resultado do Período
+              </h3>
+              <div style={{ display: 'grid', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Resultado Líquido:</span>
+                  <span style={{ fontWeight: '800', fontSize: '18px' }} 
+                        className={metrics.netResult >= 0 ? 'text-green' : 'text-red'}>
+                    {metrics.netResult >= 0 ? '+' : ''}{fmtBRL(metrics.netResult)}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Saldo Final do Caixa:</span>
+                  <span style={{ fontWeight: '800', fontSize: '18px' }} className="text-blue">
+                    {fmtBRL(reportData.totals.cashBalance)}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Período Analisado:</span>
+                  <span style={{ fontWeight: '700' }}>{metrics.periodDays} dias</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Total de Transações:</span>
+                  <span style={{ fontWeight: '700' }}>
+                    {reportData.receivedValues.length + reportData.paidValues.length}
+                  </span>
+                </div>
+              </div>
             </div>
-            <h4 className="font-bold text-blue-900 mb-2">Valores Recebidos</h4>
-            <p className="text-2xl font-black text-emerald-600">{safeCurrency(reportData.totals.received)}</p>
-            <p className="text-blue-600 text-sm">{reportData.receivedValues.length} recebimento(s)</p>
-          </div>
-          
-          <div className="text-center p-6 bg-white rounded-2xl border border-blue-200">
-            <div className="p-3 rounded-xl bg-red-600 w-fit mx-auto mb-4">
-              <TrendingDown className="w-6 h-6 text-white" />
-            </div>
-            <h4 className="font-bold text-blue-900 mb-2">Valores Pagos</h4>
-            <p className="text-2xl font-black text-red-600">{safeCurrency(reportData.totals.paid)}</p>
-            <p className="text-blue-600 text-sm">{reportData.paidValues.length} pagamento(s)</p>
-          </div>
-          
-          <div className="text-center p-6 bg-white rounded-2xl border border-blue-200">
-            <div className="p-3 rounded-xl bg-purple-600 w-fit mx-auto mb-4">
-              <Activity className="w-6 h-6 text-white" />
-            </div>
-            <h4 className="font-bold text-blue-900 mb-2">Resultado Final</h4>
-            <p className={`text-2xl font-black ${reportData.totals.netResult >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {reportData.totals.netResult >= 0 ? '+' : ''}{safeCurrency(reportData.totals.netResult)}
-            </p>
-            <p className="text-blue-600 text-sm">Saldo: {safeCurrency(reportData.totals.cashBalance)}</p>
           </div>
         </div>
-        
-        <div className="mt-8 text-center">
-          <p className="text-blue-700 font-semibold text-lg">
-            📊 Relatório completo com todas as transações, parcelas e valores do período
-          </p>
-          <p className="text-blue-600 text-sm mt-2">
-            Sistema RevGold - Gestão Empresarial Profissional
-          </p>
-        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="report-footer">
+        <div>Sistema RevGold - Gestão Empresarial Profissional</div>
+        <div>Relatório gerado em {nowBR()}</div>
+        <div>Este documento contém informações confidenciais da empresa</div>
       </div>
     </div>
   );
