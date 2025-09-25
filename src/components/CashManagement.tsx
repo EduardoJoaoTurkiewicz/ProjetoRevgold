@@ -40,6 +40,7 @@ export function CashManagement() {
     employees,
     isLoading, 
     error, 
+   setError,
     initializeCashBalance, 
     recalculateCashBalance, 
     loadAllData,
@@ -148,7 +149,7 @@ export function CashManagement() {
     } catch (error) {
       ErrorHandler.logProjectError(error, 'Recalculate Balance');
       const errorMessage = error?.message ?? 'Erro desconhecido';
-      alert('Erro ao recalcular saldo: ' + ErrorHandler.handleSupabaseError(error));
+     setError('Erro ao recalcular saldo: ' + ErrorHandler.handleSupabaseError(error));
     } finally {
       setIsRecalculating(false);
     }
