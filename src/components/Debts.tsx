@@ -20,27 +20,27 @@ export function Debts() {
     console.log('🔄 Adicionando nova dívida:', debt);
     
     // Verificar se há método de pagamento "acerto"
-    const hasAcertoPayment = cleanedDebt.paymentMethods?.some(method => method.type === 'acerto');
+    const hasAcertoPayment = debt.paymentMethods?.some(method => method.type === 'acerto');
     
     // Validate debt data before submitting
-    if (!cleanedDebt.company || !cleanedDebt.company.trim()) {
+    if (!debt.company || !debt.company.trim()) {
       alert('Por favor, informe o nome da empresa/fornecedor.');
       return;
     }
     
-    if (!cleanedDebt.description || !cleanedDebt.description.trim()) {
+    if (!debt.description || !debt.description.trim()) {
       alert('Por favor, informe a descrição da dívida.');
       return;
     }
     
-    if (cleanedDebt.totalValue <= 0) {
+    if (debt.totalValue <= 0) {
       alert('O valor total da dívida deve ser maior que zero.');
       return;
     }
     
     // Validar estrutura dos métodos de pagamento
-    if (cleanedDebt.paymentMethods && cleanedDebt.paymentMethods.length > 0) {
-      for (const method of cleanedDebt.paymentMethods) {
+    if (debt.paymentMethods && debt.paymentMethods.length > 0) {
+      for (const method of debt.paymentMethods) {
         if (!method.type || typeof method.type !== 'string') {
           alert('Todos os métodos de pagamento devem ter um tipo válido.');
           return;
@@ -52,15 +52,26 @@ export function Debts() {
       }
     }
     
-    createDebt(cleanedDebt).then(() => {
+    createDebt(debt).then(() => {
       console.log('✅ Dívida adicionada com sucesso');
       
       // Se há pagamento por acerto, criar acerto automaticamente
       if (hasAcertoPayment) {
-        createAcertoFromDebt(cleanedDebt);
+        createAcertoFromDebt(debt);
       }
       
       setIsFormOpen(false);
+      
+      // Show success message with installment info
+      const hasInstallments = debt.paymentMethods?.some(method => 
+        (method.type === 'cheque' || method.type === 'boleto') && method.installments > 1
+      );
+      
+      if (hasInstallments) {
+        setTimeout(() => {
+          alert('✅ Dívida criada com sucesso!\n\nOs cheques e boletos foram criados automaticamente e já estão disponíveis nas respectivas abas.');
+        }, 1000);
+      }
     }).catch(error => {
       console.error('❌ Erro ao adicionar dívida:', error);
       let errorMessage = 'Erro ao criar dívida';

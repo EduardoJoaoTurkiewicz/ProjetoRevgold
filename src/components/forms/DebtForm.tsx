@@ -24,7 +24,7 @@ const PAYMENT_TYPES = [
 
 export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
   const [formData, setFormData] = useState({
-    date: debt?.date || formatDateForInput(new Date()),
+    date: debt?.date || new Date().toISOString().split('T')[0],
     description: debt?.description || '',
     company: debt?.company || '',
     totalValue: safeNumber(debt?.totalValue, 0),

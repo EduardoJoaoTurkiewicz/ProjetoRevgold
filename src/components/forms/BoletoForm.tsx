@@ -15,7 +15,7 @@ export function BoletoForm({ boleto, onSubmit, onCancel }: BoletoFormProps) {
     saleId: boleto?.saleId || null,
     client: boleto?.client || '',
     value: boleto?.value || 0,
-    dueDate: boleto?.dueDate || formatDateForInput(new Date()),
+    dueDate: boleto?.dueDate || new Date().toISOString().split('T')[0],
     installmentNumber: boleto?.installmentNumber || 1,
     totalInstallments: boleto?.totalInstallments || 1,
     observations: boleto?.observations || '',

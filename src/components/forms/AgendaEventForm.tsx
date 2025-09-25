@@ -38,7 +38,7 @@ export function AgendaEventForm({ event, onSubmit, onCancel, defaultDate }: Agen
   const [formData, setFormData] = useState({
     title: event?.title || '',
     description: event?.description || '',
-    date: event?.date || defaultDate || formatDateForInput(new Date()),
+    date: event?.date || defaultDate || new Date().toISOString().split('T')[0],
     time: event?.time || '',
     type: event?.type || 'evento',
     priority: event?.priority || 'media',

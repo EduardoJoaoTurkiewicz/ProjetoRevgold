@@ -39,7 +39,7 @@ const COMMON_BANKS = [
 
 export function PixFeeForm({ pixFee, onSubmit, onCancel }: PixFeeFormProps) {
   const [formData, setFormData] = useState({
-    date: pixFee?.date || formatDateForInput(new Date()),
+    date: pixFee?.date || new Date().toISOString().split('T')[0],
     amount: pixFee?.amount || 0,
     description: pixFee?.description || '',
     bank: pixFee?.bank || '',

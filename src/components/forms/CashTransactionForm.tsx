@@ -42,7 +42,7 @@ export function CashTransactionForm({ transaction, onSubmit, onCancel }: CashTra
   const { sales, debts, checks, boletos } = useAppContext();
   
   const [formData, setFormData] = useState({
-    date: transaction?.date || formatDateForInput(new Date()),
+    date: transaction?.date || new Date().toISOString().split('T')[0],
     type: transaction?.type || 'entrada' as const,
     amount: transaction?.amount || 0,
     description: transaction?.description || '',
