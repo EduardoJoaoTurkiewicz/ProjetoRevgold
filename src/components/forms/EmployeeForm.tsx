@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { Employee } from '../../types';
+import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
 
 interface EmployeeFormProps {
   employee?: Employee | null;
@@ -17,7 +18,7 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
     paymentDay: employee?.paymentDay || 5,
     nextPaymentDate: employee?.nextPaymentDate || '',
     isActive: employee?.isActive !== undefined ? employee.isActive : true,
-    hireDate: employee?.hireDate || new Date().toISOString().split('T')[0],
+    hireDate: employee?.hireDate || formatDateForInput(new Date()),
     observations: employee?.observations || ''
   });
 
@@ -47,6 +48,7 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
     // Clean data - ensure empty strings become null for optional fields
     const cleanedData = {
       ...formData,
+      hireDate: parseInputDate(formData.hireDate),
       nextPaymentDate: !formData.nextPaymentDate || formData.nextPaymentDate.trim() === '' ? null : formData.nextPaymentDate,
       observations: !formData.observations || formData.observations.trim() === '' ? null : formData.observations
     };
@@ -127,7 +129,7 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
                 <input
                   type="date"
                   value={formData.hireDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, hireDate: e.target.value }))}
+                 onChange={(e) => setFormData(prev => ({ ...prev, hireDate: parseInputDate(e.target.value) }))}
                   className="input-field"
                   required
                 />
@@ -138,7 +140,7 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
                 <input
                   type="date"
                   value={formData.nextPaymentDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, nextPaymentDate: e.target.value }))}
+                 onChange={(e) => setFormData(prev => ({ ...prev, nextPaymentDate: parseInputDate(e.target.value) }))}
                   className="input-field"
                 />
               </div>

@@ -116,12 +116,7 @@ export function Debts() {
 
   const handleEditDebt = (debt: Omit<Debt, 'id' | 'createdAt'>) => {
     if (editingDebt) {
-      const updatedDebt: Debt = {
-        ...debt,
-        id: editingDebt.id,
-        createdAt: editingDebt.createdAt
-      };
-      updateDebt(updatedDebt).then(() => {
+      updateDebt({ ...debt, id: editingDebt.id, createdAt: editingDebt.createdAt }).then(() => {
         setEditingDebt(null);
       }).catch(error => {
         alert('Erro ao atualizar dívida: ' + error.message);

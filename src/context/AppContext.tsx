@@ -42,27 +42,27 @@ interface AppContextType {
 
   // CRUD functions for sales
   createSale: (saleData: any) => Promise<any>;
-  updateSale: (id: string, saleData: any) => Promise<any>;
+  updateSale: (saleData: any) => Promise<any>;
   deleteSale: (id: string) => Promise<void>;
 
   // CRUD functions for employees
   createEmployee: (employeeData: any) => Promise<any>;
-  updateEmployee: (id: string, employeeData: any) => Promise<any>;
+  updateEmployee: (employeeData: any) => Promise<any>;
   deleteEmployee: (id: string) => Promise<void>;
 
   // CRUD functions for debts
   createDebt: (debtData: any) => Promise<any>;
-  updateDebt: (id: string, debtData: any) => Promise<any>;
+  updateDebt: (debtData: any) => Promise<any>;
   deleteDebt: (id: string) => Promise<void>;
 
   // CRUD functions for checks
   createCheck: (checkData: any) => Promise<any>;
-  updateCheck: (id: string, checkData: any) => Promise<any>;
+  updateCheck: (checkData: any) => Promise<any>;
   deleteCheck: (id: string) => Promise<void>;
 
   // CRUD functions for boletos
   createBoleto: (boletoData: any) => Promise<any>;
-  updateBoleto: (id: string, boletoData: any) => Promise<any>;
+  updateBoleto: (boletoData: any) => Promise<any>;
   deleteBoleto: (id: string) => Promise<void>;
 
   // Other CRUD functions
@@ -70,9 +70,17 @@ interface AppContextType {
   createEmployeeAdvance: (advanceData: any) => Promise<any>;
   createEmployeeOvertime: (overtimeData: any) => Promise<any>;
   createPixFee: (feeData: any) => Promise<any>;
+  updatePixFee: (id: string, feeData: any) => Promise<any>;
+  deletePixFee: (id: string) => Promise<void>;
   createTax: (taxData: any) => Promise<any>;
+  updateTax: (id: string, taxData: any) => Promise<any>;
+  deleteTax: (id: string) => Promise<void>;
   createAgendaEvent: (eventData: any) => Promise<any>;
+  updateAgendaEvent: (eventData: any) => Promise<any>;
+  deleteAgendaEvent: (id: string) => Promise<void>;
   createAcerto: (acertoData: any) => Promise<any>;
+  updateAcerto: (acertoData: any) => Promise<any>;
+  deleteAcerto: (id: string) => Promise<void>;
   createCashTransaction: (transactionData: any) => Promise<any>;
   updateCashTransaction: (transactionData: any) => Promise<any>;
   deleteCashTransaction: (id: string) => Promise<void>;
@@ -261,7 +269,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const updateSale = async (id: string, saleData: any) => {
     try {
-      const result = await enhancedSupabaseServices.sales.update(id, saleData);
+      const { id, ...updateData } = saleData;
+      const result = await enhancedSupabaseServices.sales.update(id, updateData);
       await refreshSalesData();
       return result;
     } catch (err) {
@@ -295,9 +304,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
-  const updateEmployee = async (id: string, employeeData: any) => {
+  const updateEmployee = async (employeeData: any) => {
     try {
-      const result = await enhancedSupabaseServices.employees.update(id, employeeData);
+      const { id, ...updateData } = employeeData;
+      const result = await enhancedSupabaseServices.employees.update(id, updateData);
       await refreshEmployeesData();
       return result;
     } catch (err) {
@@ -331,9 +341,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
-  const updateDebt = async (id: string, debtData: any) => {
+  const updateDebt = async (debtData: any) => {
     try {
-      const result = await enhancedSupabaseServices.debts.update(id, debtData);
+      const { id, ...updateData } = debtData;
+      const result = await enhancedSupabaseServices.debts.update(id, updateData);
       await refreshDebtsData();
       return result;
     } catch (err) {
@@ -439,9 +450,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
-  const updateCheck = async (id: string, checkData: any) => {
+  const updateCheck = async (checkData: any) => {
     try {
-      const result = await supabaseServices.checks.update(id, checkData);
+      const { id, ...updateData } = checkData;
+      const result = await supabaseServices.checks.update(id, updateData);
       await loadAllData(); // Refresh all data
       return result;
     } catch (err) {
@@ -472,9 +484,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
-  const updateBoleto = async (id: string, boletoData: any) => {
+  const updateBoleto = async (boletoData: any) => {
     try {
-      const result = await supabaseServices.boletos.update(id, boletoData);
+      const { id, ...updateData } = boletoData;
+      const result = await supabaseServices.boletos.update(id, updateData);
       await loadAllData(); // Refresh all data
       return result;
     } catch (err) {
@@ -538,6 +551,26 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
+  const updatePixFee = async (id: string, feeData: any) => {
+    try {
+      const result = await supabaseServices.pixFees.update(id, feeData);
+      await loadAllData(); // Refresh all data
+      return result;
+    } catch (err) {
+      console.error('Error updating pix fee:', err);
+      throw err;
+    }
+  };
+
+  const deletePixFee = async (id: string) => {
+    try {
+      await supabaseServices.pixFees.delete(id);
+      await loadAllData(); // Refresh all data
+    } catch (err) {
+      console.error('Error deleting pix fee:', err);
+      throw err;
+    }
+  };
   const createTax = async (taxData: any) => {
     try {
       const result = await supabaseServices.taxes.create(taxData);
@@ -549,6 +582,26 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
+  const updateTax = async (id: string, taxData: any) => {
+    try {
+      const result = await supabaseServices.taxes.update(id, taxData);
+      await loadAllData(); // Refresh all data
+      return result;
+    } catch (err) {
+      console.error('Error updating tax:', err);
+      throw err;
+    }
+  };
+
+  const deleteTax = async (id: string) => {
+    try {
+      await supabaseServices.taxes.delete(id);
+      await loadAllData(); // Refresh all data
+    } catch (err) {
+      console.error('Error deleting tax:', err);
+      throw err;
+    }
+  };
   const createAgendaEvent = async (eventData: any) => {
     try {
       const result = await supabaseServices.agendaEvents.create(eventData);
@@ -560,6 +613,27 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
+  const updateAgendaEvent = async (eventData: any) => {
+    try {
+      const { id, ...updateData } = eventData;
+      const result = await supabaseServices.agendaEvents.update(id, updateData);
+      await loadAllData(); // Refresh all data
+      return result;
+    } catch (err) {
+      console.error('Error updating agenda event:', err);
+      throw err;
+    }
+  };
+
+  const deleteAgendaEvent = async (id: string) => {
+    try {
+      await supabaseServices.agendaEvents.delete(id);
+      await loadAllData(); // Refresh all data
+    } catch (err) {
+      console.error('Error deleting agenda event:', err);
+      throw err;
+    }
+  };
   const createAcerto = async (acertoData: any) => {
     try {
       const result = await supabaseServices.acertos.create(acertoData);
@@ -571,6 +645,27 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
+  const updateAcerto = async (acertoData: any) => {
+    try {
+      const { id, ...updateData } = acertoData;
+      const result = await supabaseServices.acertos.update(id, updateData);
+      await loadAllData(); // Refresh all data
+      return result;
+    } catch (err) {
+      console.error('Error updating acerto:', err);
+      throw err;
+    }
+  };
+
+  const deleteAcerto = async (id: string) => {
+    try {
+      await supabaseServices.acertos.delete(id);
+      await loadAllData(); // Refresh all data
+    } catch (err) {
+      console.error('Error deleting acerto:', err);
+      throw err;
+    }
+  };
   const createCashTransaction = async (transactionData: any) => {
     try {
       const result = await supabaseServices.cashTransactions.create(transactionData);
@@ -702,9 +797,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     createEmployeeAdvance,
     createEmployeeOvertime,
     createPixFee,
+    updatePixFee,
+    deletePixFee,
     createTax,
+    updateTax,
+    deleteTax,
     createAgendaEvent,
+    updateAgendaEvent,
+    deleteAgendaEvent,
     createAcerto,
+    updateAcerto,
+    deleteAcerto,
     createCashTransaction,
     updateCashTransaction,
     deleteCashTransaction,

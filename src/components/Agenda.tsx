@@ -114,12 +114,7 @@ export default function Agenda() {
 
   const handleEditEvent = (event: Omit<AgendaEvent, 'id' | 'createdAt'>) => {
     if (editingEvent) {
-      const updatedEvent: AgendaEvent = {
-        ...event,
-        id: editingEvent.id,
-        createdAt: editingEvent.createdAt
-      };
-      updateAgendaEvent(updatedEvent).then(() => {
+      updateAgendaEvent({ ...event, id: editingEvent.id, createdAt: editingEvent.createdAt }).then(() => {
         setEditingEvent(null);
       }).catch(error => {
         alert('Erro ao atualizar evento: ' + error.message);

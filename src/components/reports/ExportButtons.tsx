@@ -20,6 +20,7 @@ export function ExportButtons({ filters, data }: ExportButtonsProps) {
       startDate: filters.startDate,
       endDate: filters.endDate,
       status: filters.status || 'all',
+      reportType: filters.reportType || 'comprehensive',
       user: 'Sistema RevGold',
       auto: autoprint ? '1' : '0'
     });

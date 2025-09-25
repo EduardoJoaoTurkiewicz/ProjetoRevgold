@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { Boleto } from '../../types';
+import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
 
 interface BoletoFormProps {
   boleto?: Boleto | null;
@@ -13,7 +14,7 @@ export function BoletoForm({ boleto, onSubmit, onCancel }: BoletoFormProps) {
     saleId: boleto?.saleId || null,
     client: boleto?.client || '',
     value: boleto?.value || 0,
-    dueDate: boleto?.dueDate || new Date().toISOString().split('T')[0],
+    dueDate: boleto?.dueDate || formatDateForInput(new Date()),
     installmentNumber: boleto?.installmentNumber || 1,
     totalInstallments: boleto?.totalInstallments || 1,
     observations: boleto?.observations || '',
@@ -37,6 +38,7 @@ export function BoletoForm({ boleto, onSubmit, onCancel }: BoletoFormProps) {
     // Clean UUID fields - convert empty strings to null
     const cleanedData = {
       ...formData,
+      dueDate: parseInputDate(formData.dueDate),
       saleId: cleanUUIDField(formData.saleId),
       companyName: !formData.companyName || formData.companyName.trim() === '' ? null : formData.companyName
     };
@@ -100,7 +102,7 @@ export function BoletoForm({ boleto, onSubmit, onCancel }: BoletoFormProps) {
                 <input
                   type="date"
                   value={formData.dueDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
+                 onChange={(e) => setFormData(prev => ({ ...prev, dueDate: parseInputDate(e.target.value) }))}
                   className="input-field"
                   required
                 />

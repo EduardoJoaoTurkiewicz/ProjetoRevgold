@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Upload } from 'lucide-react';
 import { Tax } from '../../types';
+import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
 
 interface TaxFormProps {
   tax?: Tax | null;
@@ -36,7 +37,7 @@ const PAYMENT_METHODS = [
 
 export function TaxForm({ tax, onSubmit, onCancel }: TaxFormProps) {
   const [formData, setFormData] = useState({
-    date: tax?.date || new Date().toISOString().split('T')[0],
+    date: tax?.date || formatDateForInput(new Date()),
     taxType: tax?.taxType || 'outros' as const,
     description: tax?.description || '',
     amount: tax?.amount || 0,
@@ -50,7 +51,12 @@ export function TaxForm({ tax, onSubmit, onCancel }: TaxFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData as Omit<Tax, 'id' | 'createdAt'>);
+    const submitData = {
+      ...formData,
+      date: parseInputDate(formData.date),
+      dueDate: formData.dueDate ? parseInputDate(formData.dueDate) : null
+    };
+    onSubmit(submitData as Omit<Tax, 'id' | 'createdAt'>);
   };
 
   return (
@@ -73,7 +79,7 @@ export function TaxForm({ tax, onSubmit, onCancel }: TaxFormProps) {
                 <input
                   type="date"
                   value={formData.date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, date: parseInputDate(e.target.value) }))}
                   className="input-field"
                   required
                 />
@@ -112,7 +118,7 @@ export function TaxForm({ tax, onSubmit, onCancel }: TaxFormProps) {
                 <input
                   type="date"
                   value={formData.dueDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dueDate: parseInputDate(e.target.value) }))}
                   className="input-field"
                 />
               </div>

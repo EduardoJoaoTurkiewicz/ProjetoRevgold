@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { Check } from '../../types';
+import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
 
 interface CheckFormProps {
   check?: Check | null;
@@ -14,7 +15,7 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
     debtId: check?.debtId || null,
     client: check?.client || '',
     value: check?.value || 0,
-    dueDate: check?.dueDate || new Date().toISOString().split('T')[0],
+    dueDate: check?.dueDate || formatDateForInput(new Date()),
     isOwnCheck: check?.isOwnCheck || false,
     observations: check?.observations || '',
     usedFor: check?.usedFor || '',
@@ -40,6 +41,7 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
     // Clean UUID fields - convert empty strings to null
     const cleanedData = {
       ...formData,
+      dueDate: parseInputDate(formData.dueDate),
       saleId: cleanUUIDField(formData.saleId),
       debtId: cleanUUIDField(formData.debtId),
       companyName: !formData.companyName || formData.companyName.trim() === '' ? null : formData.companyName,
@@ -106,7 +108,7 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
                 <input
                   type="date"
                   value={formData.dueDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
+                 onChange={(e) => setFormData(prev => ({ ...prev, dueDate: parseInputDate(e.target.value) }))}
                   className="input-field"
                   required
                 />

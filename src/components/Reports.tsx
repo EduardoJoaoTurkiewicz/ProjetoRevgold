@@ -32,6 +32,7 @@ import {
 import { ExportButtons } from './reports/ExportButtons';
 import { ReceivablesReport } from './reports/ReceivablesReport';
 import { PayablesReport } from './reports/PayablesReport';
+import { ComprehensiveReport } from './reports/ComprehensiveReport';
 
 const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4'];
 
@@ -53,7 +54,8 @@ export default function Reports() {
     endDate: new Date().toISOString().split('T')[0],
     categories: [] as string[],
     methods: [] as string[],
-    status: 'all'
+    status: 'all',
+    reportType: 'comprehensive' as 'summary' | 'comprehensive'
   });
 
   // Dados para gráfico de métodos de pagamento
@@ -354,6 +356,18 @@ export default function Reports() {
             </select>
           </div>
           
+          <div>
+            <label className="form-label">Tipo de Relatório</label>
+            <select
+              value={filters.reportType}
+              onChange={(e) => setFilters(prev => ({ ...prev, reportType: e.target.value as 'summary' | 'comprehensive' }))}
+              className="input-field"
+            >
+              <option value="comprehensive">Completo (Recomendado)</option>
+              <option value="summary">Resumo</option>
+            </select>
+          </div>
+          
           <div className="flex items-end">
             <ExportButtons filters={filters} data={reportData} />
           </div>
@@ -433,162 +447,169 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Financial Flow Chart */}
-        <div className="card modern-shadow-xl">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-blue-600">
-              <BarChart3 className="w-6 h-6 text-white" />
+
+
+
+
+
+      {/* Report Content */}
+      {filters.reportType === 'comprehensive' ? (
+        <ComprehensiveReport filters={filters} />
+      ) : (
+        <>
+          {/* Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Financial Flow Chart */}
+            <div className="card modern-shadow-xl">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 rounded-xl bg-blue-600">
+                  <BarChart3 className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900">Fluxo Financeiro (30 dias)</h3>
+              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={flowChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip 
+                    formatter={(value, name) => [
+                      `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+                      name === 'vendas' ? 'Vendas' : name === 'dividas' ? 'Dívidas' : 'Lucro'
+                    ]}
+                    labelFormatter={(label) => `Data: ${label}`}
+                  />
+                  <Legend />
+                  <Bar dataKey="vendas" fill="#10b981" name="Vendas" />
+                  <Bar dataKey="dividas" fill="#ef4444" name="Dívidas" />
+            {/* Payment Methods Distribution */}
+            <div className="card modern-shadow-xl">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 rounded-xl bg-purple-600">
+                  <PieChart className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900">Métodos de Pagamento</h3>
+              </div>
+              {paymentMethodsData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <RechartsPieChart>
+                    <Pie
+                      data={paymentMethodsData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percentage }) => `${name}: ${percentage}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {paymentMethodsData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
+                  </RechartsPieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-center py-12">
+                  <PieChart className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+                  <p className="text-slate-500 font-medium">Nenhum dado de pagamento disponível</p>
+                  <p className="text-slate-400 text-sm mt-2">
+                    Dados aparecerão aqui conforme as vendas forem registradas
+                  </p>
+                </div>
+              )}
             </div>
-            <h3 className="text-xl font-bold text-slate-900">Fluxo Financeiro (30 dias)</h3>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={flowChartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip 
-                formatter={(value, name) => [
-                  `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-                  name === 'vendas' ? 'Vendas' : name === 'dividas' ? 'Dívidas' : 'Lucro'
-                ]}
-                labelFormatter={(label) => `Data: ${label}`}
-              />
-              <Legend />
-              <Bar dataKey="vendas" fill="#10b981" name="Vendas" />
-              <Bar dataKey="dividas" fill="#ef4444" name="Dívidas" />
-              <Line dataKey="lucro" stroke="#3b82f6" strokeWidth={3} name="Lucro" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Payment Methods Distribution */}
-        <div className="card modern-shadow-xl">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-purple-600">
-              <PieChart className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900">Métodos de Pagamento</h3>
-          </div>
-          {paymentMethodsData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <RechartsPieChart>
-                <Pie
-                  data={paymentMethodsData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percentage }) => `${name}: ${percentage}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {paymentMethodsData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
-              </RechartsPieChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="text-center py-12">
-              <PieChart className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-              <p className="text-slate-500 font-medium">Nenhum dado de pagamento disponível</p>
-              <p className="text-slate-400 text-sm mt-2">
-                Dados aparecerão aqui conforme as vendas forem registradas
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Valores a Receber */}
-      <ReceivablesReport />
-
-      {/* Valores a Pagar */}
-      <PayablesReport />
-
-      {/* Detailed Tables */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Received Values */}
-        <div className="card modern-shadow-xl">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-green-600">
-              <TrendingUp className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900">Valores Recebidos</h3>
-          </div>
-          
-          <div className="space-y-3 max-h-80 overflow-y-auto modern-scrollbar">
-            {reportData.receivedValues.slice(0, 10).map(item => (
-              <div key={item.id} className="p-4 bg-green-50 rounded-xl border border-green-200">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                        item.type === 'Venda' ? 'bg-blue-100 text-blue-800' :
-                        item.type === 'Cheque' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-cyan-100 text-cyan-800'
-                      }`}>
-                        {item.type}
+                  <Line dataKey="lucro" stroke="#3b82f6" strokeWidth={3} name="Lucro" />
+          {/* Valores a Receber */}
+          <ReceivablesReport />
+                </BarChart>
+          {/* Valores a Pagar */}
+          <PayablesReport />
+              </ResponsiveContainer>
+          {/* Detailed Tables */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Received Values */}
+            <div className="card modern-shadow-xl">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 rounded-xl bg-green-600">
+                  <TrendingUp className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900">Valores Recebidos</h3>
+              </div>
+              
+              <div className="space-y-3 max-h-80 overflow-y-auto modern-scrollbar">
+                {reportData.receivedValues.slice(0, 10).map(item => (
+                  <div key={item.id} className="p-4 bg-green-50 rounded-xl border border-green-200">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                            item.type === 'Venda' ? 'bg-blue-100 text-blue-800' :
+                            item.type === 'Cheque' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-cyan-100 text-cyan-800'
+                          }`}>
+                            {item.type}
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-green-900">{item.details.client}</h4>
+                        <p className="text-sm text-green-700">{item.description}</p>
+                        <p className="text-xs text-green-600">
+                          {new Date(item.date).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                      <span className="text-lg font-bold text-green-700">
+                        R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
-                    <h4 className="font-bold text-green-900">{item.details.client}</h4>
-                    <p className="text-sm text-green-700">{item.description}</p>
-                    <p className="text-xs text-green-600">
-                      {new Date(item.date).toLocaleDateString('pt-BR')}
-                    </p>
                   </div>
-                  <span className="text-lg font-bold text-green-700">
-                    R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Paid Values */}
-        <div className="card modern-shadow-xl">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-red-600">
-              <TrendingDown className="w-6 h-6 text-white" />
             </div>
-            <h3 className="text-xl font-bold text-slate-900">Valores Pagos</h3>
-          </div>
-          
-          <div className="space-y-3 max-h-80 overflow-y-auto modern-scrollbar">
-            {reportData.paidValues.slice(0, 10).map(item => (
-              <div key={item.id} className="p-4 bg-red-50 rounded-xl border border-red-200">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                        item.type === 'Dívida' ? 'bg-red-100 text-red-800' :
-                        item.type === 'Salário' ? 'bg-blue-100 text-blue-800' :
-                        'bg-purple-100 text-purple-800'
-                      }`}>
-                        {item.type}
+            </div>
+            {/* Paid Values */}
+            <div className="card modern-shadow-xl">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 rounded-xl bg-red-600">
+                  <TrendingDown className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900">Valores Pagos</h3>
+              </div>
+              
+              <div className="space-y-3 max-h-80 overflow-y-auto modern-scrollbar">
+                {reportData.paidValues.slice(0, 10).map(item => (
+                  <div key={item.id} className="p-4 bg-red-50 rounded-xl border border-red-200">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                            item.type === 'Dívida' ? 'bg-red-100 text-red-800' :
+                            item.type === 'Salário' ? 'bg-blue-100 text-blue-800' :
+                            'bg-purple-100 text-purple-800'
+                          }`}>
+                            {item.type}
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-red-900">
+                          {item.details.company || item.details.employeeName || item.details.bank}
+                        </h4>
+                        <p className="text-sm text-red-700">{item.description}</p>
+                        <p className="text-xs text-red-600">
+                          {new Date(item.date).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                      <span className="text-lg font-bold text-red-700">
+                        R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
-                    <h4 className="font-bold text-red-900">
-                      {item.details.company || item.details.employeeName || item.details.bank}
-                    </h4>
-                    <p className="text-sm text-red-700">{item.description}</p>
-                    <p className="text-xs text-red-600">
-                      {new Date(item.date).toLocaleDateString('pt-BR')}
-                    </p>
                   </div>
-                  <span className="text-lg font-bold text-red-700">
-                    R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }

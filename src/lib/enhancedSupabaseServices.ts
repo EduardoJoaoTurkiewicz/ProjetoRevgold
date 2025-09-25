@@ -139,6 +139,15 @@ export const enhancedSalesService = {
       }
       
       console.log('✅ Enhanced sale created with ID:', data);
+      
+      // Process installments after sale creation
+      try {
+        const { InstallmentService } = await import('./installmentService');
+        await InstallmentService.processInstallmentsForSale(data, sanitizedSale.client, sanitizedSale.paymentMethods || []);
+      } catch (installmentError) {
+        console.warn('Warning: Could not process installments:', installmentError);
+      }
+      
       return data;
     } catch (error) {
       console.error('❌ Error creating sale:', error);
@@ -282,6 +291,15 @@ export const enhancedDebtsService = {
       }
       
       console.log('✅ Enhanced debt created with ID:', data.id);
+      
+      // Process installments after debt creation
+      try {
+        const { InstallmentService } = await import('./installmentService');
+        await InstallmentService.processInstallmentsForDebt(data.id, sanitizedDebt.company, sanitizedDebt.paymentMethods || []);
+      } catch (installmentError) {
+        console.warn('Warning: Could not process installments:', installmentError);
+      }
+      
       return data.id;
     } catch (error) {
       console.error('❌ Error creating debt:', error);

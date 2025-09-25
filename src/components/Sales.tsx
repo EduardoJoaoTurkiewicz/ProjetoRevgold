@@ -81,12 +81,7 @@ export default function Sales() {
 
   const handleEditSale = (sale: Omit<Sale, 'id' | 'createdAt'>) => {
     if (editingSale) {
-      const updatedSale: Sale = {
-        ...sale,
-        id: editingSale.id,
-        createdAt: editingSale.createdAt
-      };
-      updateSale(updatedSale).then(() => {
+      updateSale({ ...sale, id: editingSale.id, createdAt: editingSale.createdAt }).then(() => {
         setEditingSale(null);
       }).catch(error => {
         alert('Erro ao atualizar venda: ' + error.message);

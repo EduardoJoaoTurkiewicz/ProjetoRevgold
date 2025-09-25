@@ -27,6 +27,7 @@ export function PrintReportPage() {
   const categories = searchParams.get('categories')?.split(',').filter(Boolean) || [];
   const methods = searchParams.get('methods')?.split(',').filter(Boolean) || [];
   const status = searchParams.get('status') || 'all';
+  const reportType = searchParams.get('reportType') || 'comprehensive';
   const auto = searchParams.get('auto') === '1';
   const user = searchParams.get('user') || 'Sistema';
 
@@ -295,7 +296,8 @@ export function PrintReportPage() {
         endDate,
         categories,
         methods,
-        status
+        status,
+        reportType
       }}
       user={user}
     />

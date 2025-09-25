@@ -53,12 +53,7 @@ export function Checks() {
 
   const handleEditCheck = (check: Omit<Check, 'id' | 'createdAt'>) => {
     if (editingCheck) {
-      const updatedCheck: Check = {
-        ...check,
-        id: editingCheck.id,
-        createdAt: editingCheck.createdAt
-      };
-      updateCheck(updatedCheck).then(() => {
+      updateCheck({ ...check, id: editingCheck.id, createdAt: editingCheck.createdAt }).then(() => {
         setEditingCheck(null);
       }).catch(error => {
         alert('Erro ao atualizar cheque: ' + error.message);
@@ -308,12 +303,22 @@ export function Checks() {
                                         const confirmMessage = `Marcar este cheque como compensado?\n\nValor: R$ ${check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\nEste valor será adicionado ao caixa da empresa.`;
                                         
                                         if (window.confirm(confirmMessage)) {
+                                          const oldStatus = check.status;
                                           const updatedCheck = { 
                                             ...check, 
                                             status: 'compensado' as const,
                                             paymentDate: new Date().toISOString().split('T')[0]
                                           };
-                                          updateCheck(updatedCheck).catch(error => {
+                                          
+                                          updateCheck({ ...updatedCheck, id: check.id }).then(async () => {
+                                            // Update cash balance
+                                            try {
+                                              const { CashBalanceService } = await import('../lib/cashBalanceService');
+                                              await CashBalanceService.handleCheckPayment(updatedCheck, oldStatus, 'compensado');
+                                            } catch (error) {
+                                              console.warn('Warning: Could not update cash balance:', error);
+                                            }
+                                          }).catch(error => {
                                             alert('Erro ao marcar como compensado: ' + error.message);
                                           });
                                         }
@@ -427,12 +432,22 @@ export function Checks() {
                                         const confirmMessage = `Marcar este cheque como pago?\n\nValor: R$ ${check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\nEste valor será descontado do caixa da empresa.`;
                                         
                                         if (window.confirm(confirmMessage)) {
+                                          const oldStatus = check.status;
                                           const updatedCheck = { 
                                             ...check, 
                                             status: 'compensado' as const,
                                             paymentDate: new Date().toISOString().split('T')[0]
                                           };
-                                          updateCheck(updatedCheck).catch(error => {
+                                          
+                                          updateCheck({ ...updatedCheck, id: check.id }).then(async () => {
+                                            // Update cash balance
+                                            try {
+                                              const { CashBalanceService } = await import('../lib/cashBalanceService');
+                                              await CashBalanceService.handleCheckPayment(updatedCheck, oldStatus, 'compensado');
+                                            } catch (error) {
+                                              console.warn('Warning: Could not update cash balance:', error);
+                                            }
+                                          }).catch(error => {
                                             alert('Erro ao marcar como pago: ' + error.message);
                                           });
                                         }
@@ -644,13 +659,13 @@ export function Checks() {
                     currentImage={viewingCheck.frontImage}
                     onImageUploaded={(imageUrl) => {
                       const updatedCheck = { ...viewingCheck, frontImage: imageUrl };
-                      updateCheck(updatedCheck).catch(error => {
+                      updateCheck({ ...updatedCheck, id: viewingCheck.id }).catch(error => {
                         alert('Erro ao atualizar cheque: ' + error.message);
                       });
                     }}
                     onImageDeleted={() => {
                       const updatedCheck = { ...viewingCheck, frontImage: null };
-                      updateCheck(updatedCheck).catch(error => {
+                      updateCheck({ ...updatedCheck, id: viewingCheck.id }).catch(error => {
                         alert('Erro ao atualizar cheque: ' + error.message);
                       });
                     }}
@@ -663,13 +678,13 @@ export function Checks() {
                     currentImage={viewingCheck.backImage}
                     onImageUploaded={(imageUrl) => {
                       const updatedCheck = { ...viewingCheck, backImage: imageUrl };
-                      updateCheck(updatedCheck).catch(error => {
+                      updateCheck({ ...updatedCheck, id: viewingCheck.id }).catch(error => {
                         alert('Erro ao atualizar cheque: ' + error.message);
                       });
                     }}
                     onImageDeleted={() => {
                       const updatedCheck = { ...viewingCheck, backImage: null };
-                      updateCheck(updatedCheck).catch(error => {
+                      updateCheck({ ...updatedCheck, id: viewingCheck.id }).catch(error => {
                         alert('Erro ao atualizar cheque: ' + error.message);
                       });
                     }}

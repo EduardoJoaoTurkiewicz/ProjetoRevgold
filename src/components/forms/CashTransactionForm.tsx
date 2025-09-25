@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, DollarSign, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { CashTransaction } from '../../types';
+import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
 
 interface CashTransactionFormProps {
   transaction?: CashTransaction | null;
@@ -40,7 +41,7 @@ export function CashTransactionForm({ transaction, onSubmit, onCancel }: CashTra
   const { sales, debts, checks, boletos } = useAppContext();
   
   const [formData, setFormData] = useState({
-    date: transaction?.date || new Date().toISOString().split('T')[0],
+    date: transaction?.date || formatDateForInput(new Date()),
     type: transaction?.type || 'entrada' as const,
     amount: transaction?.amount || 0,
     description: transaction?.description || '',
@@ -93,6 +94,7 @@ export function CashTransactionForm({ transaction, onSubmit, onCancel }: CashTra
     // Clean data - ensure empty strings become null for optional fields
     const cleanedData = {
       ...formData,
+      date: parseInputDate(formData.date),
       description: formData.description.trim(),
       relatedId: !formData.relatedId || formData.relatedId === '' ? null : formData.relatedId,
       paymentMethod: !formData.paymentMethod || formData.paymentMethod === '' ? null : formData.paymentMethod
@@ -141,7 +143,7 @@ export function CashTransactionForm({ transaction, onSubmit, onCancel }: CashTra
                   <input
                     type="date"
                     value={formData.date}
-                    onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                   onChange={(e) => setFormData(prev => ({ ...prev, date: parseInputDate(e.target.value) }))}
                     className="input-field"
                     required
                   />

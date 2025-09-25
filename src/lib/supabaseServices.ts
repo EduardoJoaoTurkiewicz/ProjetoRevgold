@@ -103,22 +103,9 @@ export const salesService = {
   async create(sale: Omit<Sale, 'id' | 'createdAt'>): Promise<string> {
     console.log('🔄 salesService.create - Input sale:', sale);
     
-    // Enhanced duplicate checking
-    if (isSupabaseConfigured() && connectionManager.isConnected()) {
-      try {
-        const duplicateCheck = await DeduplicationService.checkSaleDuplicate(saleData);
-        if (duplicateCheck.isDuplicate) {
-          console.log('⚠️ Sale duplicate detected:', duplicateCheck.reason);
-          return duplicateCheck.existingId!;
-        }
-      } catch (error) {
-        console.warn('Could not check for duplicates, proceeding with creation');
-      }
-    }
-    
     // Generate UUID and clean data
     const saleId = UUIDManager.generateUUID();
-    const saleWithId = { ...saleData, id: saleId };
+    const saleWithId = { ...sale, id: saleId };
     const cleanedSale = UUIDManager.cleanObjectUUIDs(saleWithId);
     
     // Sanitize all monetary values before sending
@@ -156,6 +143,15 @@ export const salesService = {
       }
       
       console.log('✅ salesService.create - Sale created with ID:', data);
+      
+      // Process installments after sale creation
+      try {
+        const { InstallmentService } = await import('./installmentService');
+        await InstallmentService.processInstallmentsForSale(data, sanitizedSale.client, sanitizedSale.paymentMethods || []);
+      } catch (installmentError) {
+        console.warn('Warning: Could not process installments:', installmentError);
+      }
+      
       return data;
     } catch (error) {
       console.error('❌ Error creating sale:', error);
@@ -237,19 +233,6 @@ export const employeeService = {
   },
 
   async create(employee: Omit<Employee, 'id' | 'createdAt'>): Promise<string> {
-    // Enhanced duplicate checking
-    if (isSupabaseConfigured() && connectionManager.isConnected()) {
-      try {
-        const duplicateCheck = await DeduplicationService.checkEmployeeDuplicate(employee);
-        if (duplicateCheck.isDuplicate) {
-          console.log('⚠️ Employee duplicate detected:', duplicateCheck.reason);
-          return duplicateCheck.existingId!;
-        }
-      } catch (error) {
-        console.warn('Could not check for employee duplicates, proceeding with creation');
-      }
-    }
-    
     // Generate UUID and clean data
     const employeeId = UUIDManager.generateUUID();
     const employeeWithId = { ...employee, id: employeeId };
@@ -513,19 +496,6 @@ export const debtsService = {
   },
 
   async create(debt: Omit<Debt, 'id' | 'createdAt'>): Promise<string> {
-    // Enhanced duplicate checking
-    if (isSupabaseConfigured() && connectionManager.isConnected()) {
-      try {
-        const duplicateCheck = await DeduplicationService.checkDebtDuplicate(debt);
-        if (duplicateCheck.isDuplicate) {
-          console.log('⚠️ Debt duplicate detected:', duplicateCheck.reason);
-          return duplicateCheck.existingId!;
-        }
-      } catch (error) {
-        console.warn('Could not check for duplicates, proceeding with creation');
-      }
-    }
-    
     // Generate UUID and clean data
     const debtId = UUIDManager.generateUUID();
     const debtWithId = { ...debt, id: debtId };
@@ -556,6 +526,15 @@ export const debtsService = {
       .single();
     
     if (error) throw error;
+    
+    // Process installments after debt creation
+    try {
+      const { InstallmentService } = await import('./installmentService');
+      await InstallmentService.processInstallmentsForDebt(data.id, sanitizedDebt.company, sanitizedDebt.paymentMethods || []);
+    } catch (installmentError) {
+      console.warn('Warning: Could not process installments:', installmentError);
+    }
+    
     return data.id;
   },
 

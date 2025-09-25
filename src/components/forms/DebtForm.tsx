@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { Debt, PaymentMethod } from '../../types';
 import { safeNumber, logMonetaryValues } from '../../utils/numberUtils';
+import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
 
 interface DebtFormProps {
   debt?: Debt | null;
@@ -22,7 +23,7 @@ const PAYMENT_TYPES = [
 
 export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
   const [formData, setFormData] = useState({
-    date: debt?.date || new Date().toISOString().split('T')[0],
+    date: debt?.date || formatDateForInput(new Date()),
     description: debt?.description || '',
     company: debt?.company || '',
     totalValue: safeNumber(debt?.totalValue, 0),
@@ -186,6 +187,7 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
     
     const debtToSubmit = {
       ...formData,
+      date: parseInputDate(formData.date),
       totalValue: safeNumber(formData.totalValue, 0),
       paymentMethods: cleanedPaymentMethods,
       paymentDescription,
@@ -219,7 +221,7 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
                 <input
                   type="date"
                   value={formData.date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, date: parseInputDate(e.target.value) }))}
                   className="input-field"
                   required
                 />

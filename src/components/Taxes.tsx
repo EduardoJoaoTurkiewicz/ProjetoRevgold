@@ -43,12 +43,7 @@ export function Taxes() {
 
   const handleEditTax = (tax: Omit<Tax, 'id' | 'createdAt'>) => {
     if (editingTax) {
-      const updatedTax: Tax = {
-        ...tax,
-        id: editingTax.id,
-        createdAt: editingTax.createdAt
-      };
-      updateTax(updatedTax).then(() => {
+      updateTax(editingTax.id, { ...tax, id: editingTax.id, createdAt: editingTax.createdAt }).then(() => {
         setEditingTax(null);
       }).catch(error => {
         alert('Erro ao atualizar imposto: ' + error.message);

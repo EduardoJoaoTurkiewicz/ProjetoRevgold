@@ -82,12 +82,7 @@ export function Acertos() {
 
   const handleEditAcerto = (acerto: Omit<Acerto, 'id' | 'createdAt'>) => {
     if (editingAcerto) {
-      const updatedAcerto: Acerto = {
-        ...acerto,
-        id: editingAcerto.id,
-        createdAt: editingAcerto.createdAt
-      };
-      updateAcerto(updatedAcerto).then(() => {
+      updateAcerto({ ...acerto, id: editingAcerto.id, createdAt: editingAcerto.createdAt }).then(() => {
         setEditingAcerto(null);
       }).catch(error => {
         alert('Erro ao atualizar acerto: ' + error.message);
@@ -105,12 +100,7 @@ export function Acertos() {
 
   const handlePaymentSubmit = (paymentData: Partial<Acerto>) => {
     if (paymentAcerto) {
-      const updatedAcerto: Acerto = {
-        ...paymentAcerto,
-        ...paymentData,
-        updatedAt: new Date().toISOString()
-      };
-      updateAcerto(updatedAcerto).then(() => {
+      updateAcerto({ ...paymentAcerto, ...paymentData, id: paymentAcerto.id, updatedAt: new Date().toISOString() }).then(() => {
         setPaymentAcerto(null);
       }).catch(error => {
         alert('Erro ao registrar pagamento: ' + error.message);
@@ -120,12 +110,7 @@ export function Acertos() {
 
   const handleNegotiationSubmit = (paymentData: any) => {
     if (negotiatingAcerto) {
-      const updatedAcerto: Acerto = {
-        ...negotiatingAcerto,
-        ...paymentData,
-        updatedAt: new Date().toISOString()
-      };
-      updateAcerto(updatedAcerto).then(() => {
+      updateAcerto({ ...negotiatingAcerto, ...paymentData, id: negotiatingAcerto.id, updatedAt: new Date().toISOString() }).then(() => {
         setNegotiatingAcerto(null);
       }).catch(error => {
         alert('Erro ao processar negociação: ' + error.message);

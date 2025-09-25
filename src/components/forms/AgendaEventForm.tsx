@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { AgendaEvent } from '../../types';
+import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
 
 interface AgendaEventFormProps {
   event?: AgendaEvent | null;
@@ -36,7 +37,7 @@ export function AgendaEventForm({ event, onSubmit, onCancel, defaultDate }: Agen
   const [formData, setFormData] = useState({
     title: event?.title || '',
     description: event?.description || '',
-    date: event?.date || defaultDate || new Date().toISOString().split('T')[0],
+    date: event?.date || defaultDate || formatDateForInput(new Date()),
     time: event?.time || '',
     type: event?.type || 'evento',
     priority: event?.priority || 'media',
@@ -56,10 +57,11 @@ export function AgendaEventForm({ event, onSubmit, onCancel, defaultDate }: Agen
     // Clean data - ensure empty strings become null for optional fields
     const cleanedData = {
       ...formData,
+      date: parseInputDate(formData.date),
       title: formData.title.trim(),
       description: !formData.description || formData.description.trim() === '' ? null : formData.description.trim(),
       time: !formData.time || formData.time.trim() === '' ? null : formData.time,
-      reminderDate: !formData.reminderDate || formData.reminderDate.trim() === '' ? null : formData.reminderDate,
+      reminderDate: !formData.reminderDate || formData.reminderDate.trim() === '' ? null : parseInputDate(formData.reminderDate),
       observations: !formData.observations || formData.observations.trim() === '' ? null : formData.observations.trim()
     };
     
@@ -99,7 +101,7 @@ export function AgendaEventForm({ event, onSubmit, onCancel, defaultDate }: Agen
                 <input
                   type="date"
                   value={formData.date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, date: parseInputDate(e.target.value) }))}
                   className="input-field"
                   required
                 />
@@ -168,7 +170,7 @@ export function AgendaEventForm({ event, onSubmit, onCancel, defaultDate }: Agen
                 <input
                   type="date"
                   value={formData.reminderDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, reminderDate: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, reminderDate: parseInputDate(e.target.value) }))}
                   className="input-field"
                 />
               </div>

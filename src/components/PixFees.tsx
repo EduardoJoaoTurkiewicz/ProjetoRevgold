@@ -48,7 +48,7 @@ export function PixFees() {
         id: editingPixFee.id,
         createdAt: editingPixFee.createdAt
       };
-      updatePixFee(updatedPixFee).then(() => {
+      updatePixFee(editingPixFee.id, updatedPixFee).then(() => {
         setEditingPixFee(null);
       }).catch(error => {
         alert('Erro ao atualizar tarifa PIX: ' + error.message);

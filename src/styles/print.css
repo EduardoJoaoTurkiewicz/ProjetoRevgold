@@ -11,6 +11,99 @@ html, body {
   margin: 14mm 12mm 16mm 12mm;
 }
 
+/* Print container */
+.print-container {
+  max-width: 210mm;
+  margin: 0 auto;
+  background: white;
+  padding: 20px;
+}
+
+@media print {
+  .print-container {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Hide non-essential elements when printing */
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Ensure proper page breaks */
+  .card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  
+  /* Remove shadows and effects for print */
+  .modern-shadow-xl,
+  .shadow-xl,
+  .shadow-lg {
+    box-shadow: none !important;
+  }
+  
+  /* Ensure text is readable */
+  * {
+    color: #000 !important;
+    background: white !important;
+  }
+  
+  /* Preserve important colors */
+  .text-green-700,
+  .text-green-800,
+  .text-green-900 {
+    color: #15803d !important;
+  }
+  
+  .text-red-700,
+  .text-red-800,
+  .text-red-900 {
+    color: #dc2626 !important;
+  }
+  
+  .text-blue-700,
+  .text-blue-800,
+  .text-blue-900 {
+    color: #1d4ed8 !important;
+  }
+  
+  .text-orange-700,
+  .text-orange-800,
+  .text-orange-900 {
+    color: #ea580c !important;
+  }
+  
+  /* Preserve background colors for badges */
+  .bg-green-100 {
+    background: #dcfce7 !important;
+  }
+  
+  .bg-red-100 {
+    background: #fee2e2 !important;
+  }
+  
+  .bg-blue-100 {
+    background: #dbeafe !important;
+  }
+  
+  .bg-yellow-100 {
+    background: #fef3c7 !important;
+  }
+  
+  .bg-orange-100 {
+    background: #fed7aa !important;
+  }
+  
+  .bg-purple-100 {
+    background: #f3e8ff !important;
+  }
+  
+  .bg-cyan-100 {
+    background: #cffafe !important;
+  }
+}
 /* Controle de quebras */
 .page-break { 
   break-after: page; 

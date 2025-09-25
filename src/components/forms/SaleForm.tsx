@@ -4,6 +4,7 @@ import { Sale, PaymentMethod } from '../../types';
 import { ThirdPartyCheckDetails } from '../../types';
 import { useAppContext } from '../../context/AppContext';
 import { safeNumber, validateFormNumber, logMonetaryValues } from '../../utils/numberUtils';
+import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
 
 interface SaleFormProps {
   sale?: Sale | null;
@@ -27,7 +28,7 @@ const INSTALLMENT_TYPES = ['cartao_credito', 'cheque', 'boleto'];
 export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   const { employees } = useAppContext();
   const [formData, setFormData] = useState({
-    date: sale?.date || new Date().toISOString().split('T')[0],
+    date: sale?.date || formatDateForInput(new Date()),
     deliveryDate: sale?.deliveryDate || '',
     client: sale?.client || '',
     sellerId: sale?.sellerId || '',
@@ -348,6 +349,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     
     const saleToSubmit = {
       ...formData,
+      date: parseInputDate(formData.date),
       totalValue: safeNumber(formData.totalValue, 0),
       sellerId: sellerId,
       deliveryDate: deliveryDate,
@@ -404,7 +406,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                 <input
                   type="date"
                   value={formData.date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, date: parseInputDate(e.target.value) }))}
                   className="input-field"
                   required
                 />
@@ -415,7 +417,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                 <input
                   type="date"
                   value={formData.deliveryDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, deliveryDate: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, deliveryDate: parseInputDate(e.target.value) }))}
                   className="input-field"
                   placeholder="Data prevista para entrega"
                 />
@@ -629,7 +631,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                 <input
                                   type="date"
                                   value={method.firstInstallmentDate || formData.date}
-                                  onChange={(e) => updatePaymentMethod(index, 'firstInstallmentDate', e.target.value)}
+                                  onChange={(e) => updatePaymentMethod(index, 'firstInstallmentDate', parseInputDate(e.target.value))}
                                   className="input-field"
                                 />
                               </div>
@@ -643,7 +645,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                               <input
                                 type="date"
                                 value={method.firstInstallmentDate || formData.date}
-                                onChange={(e) => updatePaymentMethod(index, 'firstInstallmentDate', e.target.value)}
+                                onChange={(e) => updatePaymentMethod(index, 'firstInstallmentDate', parseInputDate(e.target.value))}
                                 className="input-field"
                                 required
                               />

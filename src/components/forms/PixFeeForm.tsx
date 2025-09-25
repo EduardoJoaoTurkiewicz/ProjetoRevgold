@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { PixFee } from '../../types';
+import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
 
 interface PixFeeFormProps {
   pixFee?: PixFee | null;
@@ -37,7 +38,7 @@ const COMMON_BANKS = [
 
 export function PixFeeForm({ pixFee, onSubmit, onCancel }: PixFeeFormProps) {
   const [formData, setFormData] = useState({
-    date: pixFee?.date || new Date().toISOString().split('T')[0],
+    date: pixFee?.date || formatDateForInput(new Date()),
     amount: pixFee?.amount || 0,
     description: pixFee?.description || '',
     bank: pixFee?.bank || '',
@@ -49,6 +50,7 @@ export function PixFeeForm({ pixFee, onSubmit, onCancel }: PixFeeFormProps) {
     e.preventDefault();
     const submitData = {
       ...formData,
+      date: parseInputDate(formData.date),
       relatedTransactionId: formData.relatedTransactionId || null
     };
     onSubmit(submitData as Omit<PixFee, 'id' | 'createdAt'>);
@@ -74,7 +76,7 @@ export function PixFeeForm({ pixFee, onSubmit, onCancel }: PixFeeFormProps) {
                 <input
                   type="date"
                   value={formData.date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, date: parseInputDate(e.target.value) }))}
                   className="input-field"
                   required
                 />

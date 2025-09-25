@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { fmtBRL, fmtDate, fmtDateTime, nowBR, formatNumber } from '../../utils/format';
 import '../../styles/print.css';
+import { ComprehensiveReport } from './ComprehensiveReport';
 
 interface PrintableReportProps {
   data: {
@@ -41,6 +42,16 @@ interface PrintableReportProps {
 }
 
 export function PrintableReport({ data, filters, user }: PrintableReportProps) {
+  // Use comprehensive report for better client presentation
+  return (
+    <div className="print-container">
+      <ComprehensiveReport filters={filters} />
+    </div>
+  );
+}
+
+// Legacy report implementation (kept for reference)
+export function LegacyPrintableReport({ data, filters, user }: PrintableReportProps) {
   // Calculate additional metrics
   const metrics = useMemo(() => {
     const netResult = data.totals.received - data.totals.paid;
