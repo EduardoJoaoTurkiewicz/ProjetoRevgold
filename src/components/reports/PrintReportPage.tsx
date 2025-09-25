@@ -416,7 +416,6 @@ export function PrintReportPage() {
             Tentar Novamente
           </button>
         </div>
-        </p>
       </div>
     );
   }
