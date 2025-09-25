@@ -210,3 +210,7 @@ export function Boletos() {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
