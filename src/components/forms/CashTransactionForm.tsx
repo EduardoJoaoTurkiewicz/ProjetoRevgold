@@ -314,4 +314,24 @@ export function CashTransactionForm({ transaction, onSubmit, onCancel }: CashTra
               </div>
             </div>
 
-            <div className="flex justify-end gap-4 pt
+            <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="btn-secondary"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="btn-primary"
+              >
+                {transaction ? 'Atualizar' : 'Criar'} Transação
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -196,4 +196,17 @@ export function Boletos() {
         </div>
 
         {/* Boletos vencidos */}
-        <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 modern
+        <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-red-600 modern-shadow-lg">
+              <AlertTriangle className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-red-900 text-lg">Vencidos</h3>
+              <p className="text-red-700 font-medium">{overdue.length} boleto(s)</p>
+              <p className="text-sm text-red-600 font-semibold">
+                Total: R$ {totalOverdue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        </div>
