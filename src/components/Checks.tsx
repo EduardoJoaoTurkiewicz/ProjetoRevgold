@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Eye, FileText, DollarSign, Calendar, AlertCircle, X, Building2, CreditCard, Clock, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Eye, FileText, DollarSign, Calendar, AlertCircle, X, Building2, CreditCard, Clock, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Check } from '../types';
 import { CheckForm } from './forms/CheckForm';
@@ -303,22 +303,12 @@ export function Checks() {
                                         const confirmMessage = `Marcar este cheque como compensado?\n\nValor: R$ ${check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\nEste valor será adicionado ao caixa da empresa.`;
                                         
                                         if (window.confirm(confirmMessage)) {
-                                          const oldStatus = check.status;
                                           const updatedCheck = { 
                                             ...check, 
                                             status: 'compensado' as const,
                                             paymentDate: new Date().toISOString().split('T')[0]
                                           };
-                                          
-                                          updateCheck({ ...updatedCheck, id: check.id }).then(async () => {
-                                            // Update cash balance
-                                            try {
-                                              const { CashBalanceService } = await import('../lib/cashBalanceService');
-                                              await CashBalanceService.handleCheckPayment(updatedCheck, oldStatus, 'compensado');
-                                            } catch (error) {
-                                              console.warn('Warning: Could not update cash balance:', error);
-                                            }
-                                          }).catch(error => {
+                                          updateCheck({ ...updatedCheck, id: check.id }).catch(error => {
                                             alert('Erro ao marcar como compensado: ' + error.message);
                                           });
                                         }
@@ -432,22 +422,12 @@ export function Checks() {
                                         const confirmMessage = `Marcar este cheque como pago?\n\nValor: R$ ${check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\nEste valor será descontado do caixa da empresa.`;
                                         
                                         if (window.confirm(confirmMessage)) {
-                                          const oldStatus = check.status;
                                           const updatedCheck = { 
                                             ...check, 
                                             status: 'compensado' as const,
                                             paymentDate: new Date().toISOString().split('T')[0]
                                           };
-                                          
-                                          updateCheck({ ...updatedCheck, id: check.id }).then(async () => {
-                                            // Update cash balance
-                                            try {
-                                              const { CashBalanceService } = await import('../lib/cashBalanceService');
-                                              await CashBalanceService.handleCheckPayment(updatedCheck, oldStatus, 'compensado');
-                                            } catch (error) {
-                                              console.warn('Warning: Could not update cash balance:', error);
-                                            }
-                                          }).catch(error => {
+                                          updateCheck({ ...updatedCheck, id: check.id }).catch(error => {
                                             alert('Erro ao marcar como pago: ' + error.message);
                                           });
                                         }

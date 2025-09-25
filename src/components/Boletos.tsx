@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Eye, Receipt, DollarSign, Calendar, AlertTriangle, X, Building2, CreditCard, Clock, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Eye, Receipt, DollarSign, Calendar, AlertTriangle, X, Building2, CreditCard, Clock, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Boleto } from '../types';
 import { BoletoForm } from './forms/BoletoForm';
@@ -54,7 +54,12 @@ export function Boletos() {
 
   const handleEditBoleto = (boleto: Omit<Boleto, 'id' | 'createdAt'>) => {
     if (editingBoleto) {
-      updateBoleto({ ...boleto, id: editingBoleto.id, createdAt: editingBoleto.createdAt }).then(() => {
+      const updatedBoleto: Boleto = {
+        ...boleto,
+        id: editingBoleto.id,
+        createdAt: editingBoleto.createdAt
+      };
+      updateBoleto(updatedBoleto).then(() => {
         setEditingBoleto(null);
       }).catch(error => {
         alert('Erro ao atualizar boleto: ' + error.message);
@@ -321,22 +326,12 @@ export function Boletos() {
                                         const confirmMessage = `Marcar este boleto como pago?\n\nValor: R$ ${boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\nEste valor será adicionado ao caixa da empresa.`;
                                         
                                         if (window.confirm(confirmMessage)) {
-                                          const oldStatus = boleto.status;
                                           const updatedBoleto = { 
                                             ...boleto, 
                                             status: 'compensado' as const,
                                             paymentDate: new Date().toISOString().split('T')[0]
                                           };
-                                          
-                                          updateBoleto({ ...updatedBoleto, id: boleto.id }).then(async () => {
-                                            // Update cash balance
-                                            try {
-                                              const { CashBalanceService } = await import('../lib/cashBalanceService');
-                                              await CashBalanceService.handleBoletoPayment(updatedBoleto, oldStatus, 'compensado');
-                                            } catch (error) {
-                                              console.warn('Warning: Could not update cash balance:', error);
-                                            }
-                                          }).catch(error => {
+                                          updateBoleto(updatedBoleto).catch(error => {
                                             alert('Erro ao marcar como pago: ' + error.message);
                                           });
                                         }
@@ -450,22 +445,12 @@ export function Boletos() {
                                         const confirmMessage = `Marcar este boleto como pago?\n\nValor: R$ ${boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\nEste valor será descontado do caixa da empresa.`;
                                         
                                         if (window.confirm(confirmMessage)) {
-                                          const oldStatus = boleto.status;
                                           const updatedBoleto = { 
                                             ...boleto, 
                                             status: 'compensado' as const,
                                             paymentDate: new Date().toISOString().split('T')[0]
                                           };
-                                          
-                                          updateBoleto({ ...updatedBoleto, id: boleto.id }).then(async () => {
-                                            // Update cash balance
-                                            try {
-                                              const { CashBalanceService } = await import('../lib/cashBalanceService');
-                                              await CashBalanceService.handleBoletoPayment(updatedBoleto, oldStatus, 'compensado');
-                                            } catch (error) {
-                                              console.warn('Warning: Could not update cash balance:', error);
-                                            }
-                                          }).catch(error => {
+                                          updateBoleto(updatedBoleto).catch(error => {
                                             alert('Erro ao marcar como pago: ' + error.message);
                                           });
                                         }

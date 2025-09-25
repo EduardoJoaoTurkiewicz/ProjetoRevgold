@@ -1,21 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  Calendar, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  ChevronLeft, 
-  ChevronRight, 
-  Clock, 
-  AlertTriangle, 
-  CheckCircle, 
-  X,
-  MapPin,
-  User,
-  Bell,
-  FileText
-} from 'lucide-react';
+import { Calendar, Plus, CreditCard as Edit, Trash2, Eye, ChevronLeft, ChevronRight, Clock, AlertTriangle, CheckCircle, X, MapPin, User, Bell, FileText } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { AgendaEvent } from '../types';
 import { AgendaEventForm } from './forms/AgendaEventForm';

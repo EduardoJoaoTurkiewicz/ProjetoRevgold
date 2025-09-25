@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Eye, FileText, DollarSign, Calendar, AlertCircle, X, Building2, Receipt } from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Eye, FileText, DollarSign, Calendar, AlertCircle, X, Building2, Receipt } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Tax } from '../types';
 import { TaxForm } from './forms/TaxForm';

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Edit, Trash2, Eye, Clock, DollarSign, Calendar, AlertCircle, X, Building2, CreditCard, FileText, Users, Receipt, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Eye, Clock, DollarSign, Calendar, AlertCircle, X, Building2, CreditCard, FileText, Users, Receipt, ChevronDown, ChevronRight } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Acerto } from '../types';
 import { AcertoForm } from './forms/AcertoForm';

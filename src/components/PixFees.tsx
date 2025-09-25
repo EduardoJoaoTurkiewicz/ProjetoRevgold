@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Eye, Zap, DollarSign, Calendar, AlertCircle, X, Building2, CreditCard } from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Eye, Zap, DollarSign, Calendar, AlertCircle, X, Building2, CreditCard } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { PixFee } from '../types';
 import { PixFeeForm } from './forms/PixFeeForm';

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Eye, Users, DollarSign, Calendar, AlertCircle, X, Star, Clock, TrendingUp } from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Eye, Users, DollarSign, Calendar, AlertCircle, X, Star, Clock, TrendingUp } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Employee } from '../types';
 import { EmployeeForm } from './forms/EmployeeForm';

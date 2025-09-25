@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Eye, ShoppingCart, DollarSign, Calendar, AlertTriangle, X, User, FileText } from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Eye, ShoppingCart, DollarSign, Calendar, AlertTriangle, X, User, FileText } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Sale } from '../types';
 import { SaleForm } from './forms/SaleForm';
