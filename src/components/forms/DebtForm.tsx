@@ -3,6 +3,7 @@ import { X, Plus, Trash2 } from 'lucide-react';
 import { Debt, PaymentMethod } from '../../types';
 import { safeNumber, logMonetaryValues } from '../../utils/numberUtils';
 import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
+import { getCurrentDateString } from '../../utils/dateUtils';
 
 interface DebtFormProps {
   debt?: Debt | null;

@@ -3,6 +3,7 @@ import { X, DollarSign, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { CashTransaction } from '../../types';
 import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
+import { getCurrentDateString } from '../../utils/dateUtils';
 
 interface CashTransactionFormProps {
   transaction?: CashTransaction | null;

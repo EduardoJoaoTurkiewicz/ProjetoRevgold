@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { Employee } from '../../types';
 import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
+import { getCurrentDateString } from '../../utils/dateUtils';
 
 interface EmployeeFormProps {
   employee?: Employee | null;

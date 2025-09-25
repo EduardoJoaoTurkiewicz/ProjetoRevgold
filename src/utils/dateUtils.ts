@@ -1,3 +1,5 @@
+import { getCurrentDateString } from './dateUtils';
+
 // Date utilities with proper timezone handling to prevent date shifting
 export function formatDateForInput(date: string | Date): string {
   if (!date) return '';

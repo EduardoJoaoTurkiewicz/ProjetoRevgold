@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { AgendaEvent } from '../../types';
 import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
+import { getCurrentDateString } from '../../utils/dateUtils';
 
 interface AgendaEventFormProps {
   event?: AgendaEvent | null;

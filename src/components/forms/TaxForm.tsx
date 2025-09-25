@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Upload } from 'lucide-react';
 import { Tax } from '../../types';
 import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
+import { getCurrentDateString } from '../../utils/dateUtils';
 
 interface TaxFormProps {
   tax?: Tax | null;

@@ -5,6 +5,7 @@ import { ThirdPartyCheckDetails } from '../../types';
 import { useAppContext } from '../../context/AppContext';
 import { safeNumber, validateFormNumber, logMonetaryValues } from '../../utils/numberUtils';
 import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
+import { getCurrentDateString } from '../../utils/dateUtils';
 
 interface SaleFormProps {
   sale?: Sale | null;
