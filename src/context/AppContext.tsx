@@ -267,7 +267,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
-  const updateSale = async (id: string, saleData: any) => {
+  const updateSale = async (saleData: any) => {
     try {
       const { id, ...updateData } = saleData;
       const result = await enhancedSupabaseServices.sales.update(id, updateData);
