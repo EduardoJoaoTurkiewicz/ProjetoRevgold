@@ -849,7 +849,7 @@ const Dashboard: React.FC = () => {
                       index === 0 ? 'bg-yellow-500' :
                       index === 1 ? 'bg-gray-400' :
                       index === 2 ? 'bg-amber-600' : 'bg-slate-400'
-                    }`}>
+                          Venda de {new Date(sale.date + 'T12:00:00').toLocaleDateString('pt-BR')}
                       {index + 1}
                     </div>
                     <h4 className="font-bold text-yellow-900">{seller.name}</h4>

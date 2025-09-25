@@ -11,24 +11,14 @@ export function fmtBRL(value: number | string): string {
 export function fmtDate(date: string | Date): string {
   let d: Date;
   if (typeof date === 'string') {
-    // Parse date string in local timezone to prevent shifting
-    if (date.includes('T')) {
-      // For ISO strings, extract just the date part
-      const datePart = date.split('T')[0];
-      const parts = datePart.split('-');
-      if (parts.length === 3) {
-        d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-      } else {
-        d = new Date(date);
-      }
+    // Always extract just the date part to prevent timezone shifts
+    const datePart = date.includes('T') ? date.split('T')[0] : date;
+    // Parse manually to avoid timezone issues
+    const parts = datePart.split('-');
+    if (parts.length === 3) {
+      d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     } else {
-      // For date-only strings, create date in local timezone
-      const parts = date.split('-');
-      if (parts.length === 3) {
-        d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-      } else {
-        d = new Date(date + 'T00:00:00'); // Use midnight local time
-      }
+      d = new Date(date + 'T12:00:00'); // Use noon to avoid timezone edge cases
     }
   } else {
     d = date;
@@ -41,24 +31,14 @@ export function fmtDate(date: string | Date): string {
 export function fmtDateTime(date: string | Date): string {
   let d: Date;
   if (typeof date === 'string') {
-    // Parse date string in local timezone to prevent shifting
-    if (date.includes('T')) {
-      // For ISO strings, extract just the date part for date-only formatting
-      const datePart = date.split('T')[0];
-      const parts = datePart.split('-');
-      if (parts.length === 3) {
-        d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-      } else {
-        d = new Date(date);
-      }
+    // Always extract just the date part to prevent timezone shifts
+    const datePart = date.includes('T') ? date.split('T')[0] : date;
+    // Parse manually to avoid timezone issues
+    const parts = datePart.split('-');
+    if (parts.length === 3) {
+      d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     } else {
-      // For date-only strings, create date in local timezone
-      const parts = date.split('-');
-      if (parts.length === 3) {
-        d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-      } else {
-        d = new Date(date + 'T00:00:00'); // Use midnight local time
-      }
+      d = new Date(date + 'T12:00:00'); // Use noon to avoid timezone edge cases
     }
   } else {
     d = date;

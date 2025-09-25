@@ -348,7 +348,7 @@ export function PrintReportPage() {
               console.error('Error auto-printing:', printError);
               toast.error('Erro na impressão automática');
             }
-          }, 2000); // Increased delay to ensure content is fully loaded
+          }, 3000); // Further increased delay to ensure content is fully loaded
         }
       } catch (error) {
         console.error('Error generating report data:', error);
@@ -363,6 +363,53 @@ export function PrintReportPage() {
     generateReportData();
   }, [startDate, endDate, sales, debts, checks, boletos, employees, employeePayments, pixFees, cashBalance, auto, loadAllData]);
 
+  // Add a useEffect to handle the auto-print more reliably
+  useEffect(() => {
+    if (!loading && !error && reportData && auto) {
+      // Additional delay to ensure all content is rendered
+      const printTimer = setTimeout(() => {
+        try {
+          // Ensure all images are loaded before printing
+          const images = document.querySelectorAll('img');
+          let loadedImages = 0;
+          
+          if (images.length === 0) {
+            window.print();
+            return;
+          }
+          
+          images.forEach(img => {
+            if (img.complete) {
+              loadedImages++;
+            } else {
+              img.onload = () => {
+                loadedImages++;
+                if (loadedImages === images.length) {
+                  window.print();
+                }
+              };
+              img.onerror = () => {
+                loadedImages++;
+                if (loadedImages === images.length) {
+                  window.print();
+                }
+              };
+            }
+          });
+          
+          if (loadedImages === images.length) {
+            window.print();
+          }
+        } catch (printError) {
+          console.error('Error in delayed auto-print:', printError);
+          // Fallback to simple print
+          window.print();
+        }
+      }, 1000);
+      
+      return () => clearTimeout(printTimer);
+    }
+  }, [loading, error, reportData, auto]);
   // Add error boundary for the print page
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {

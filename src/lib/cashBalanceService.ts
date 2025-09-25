@@ -11,7 +11,7 @@ export class CashBalanceService {
       if (check.isOwnCheck || check.isCompanyPayable) {
         // Company's own check = cash outflow
         await this.createCashTransaction({
-          date: check.paymentDate || check.dueDate,
+          date: check.paymentDate || new Date().toISOString().split('T')[0],
           type: 'saida',
           amount: amount,
           description: `Cheque próprio pago - ${check.companyName || check.client}`,
@@ -22,7 +22,7 @@ export class CashBalanceService {
       } else {
         // Third-party check = cash inflow
         await this.createCashTransaction({
-          date: check.paymentDate || check.dueDate,
+          date: check.paymentDate || new Date().toISOString().split('T')[0],
           type: 'entrada',
           amount: amount,
           description: `Cheque compensado - ${check.client}`,
@@ -44,7 +44,7 @@ export class CashBalanceService {
       if (boleto.isCompanyPayable) {
         // Company's boleto = cash outflow
         await this.createCashTransaction({
-          date: boleto.paymentDate || boleto.dueDate,
+          date: boleto.paymentDate || new Date().toISOString().split('T')[0],
           type: 'saida',
           amount: finalAmount,
           description: `Boleto pago - ${boleto.companyName || boleto.client}`,
@@ -57,7 +57,7 @@ export class CashBalanceService {
         const netAmount = finalAmount - notaryCosts;
         
         await this.createCashTransaction({
-          date: boleto.paymentDate || boleto.dueDate,
+          date: boleto.paymentDate || new Date().toISOString().split('T')[0],
           type: 'entrada',
           amount: netAmount,
           description: `Boleto recebido - ${boleto.client}`,
@@ -69,7 +69,7 @@ export class CashBalanceService {
         // Create separate transaction for notary costs if any
         if (notaryCosts > 0) {
           await this.createCashTransaction({
-            date: boleto.paymentDate || boleto.dueDate,
+            date: boleto.paymentDate || new Date().toISOString().split('T')[0],
             type: 'saida',
             amount: notaryCosts,
             description: `Custos de cartório - ${boleto.client}`,
