@@ -51,7 +51,7 @@ export function PixFeeForm({ pixFee, onSubmit, onCancel }: PixFeeFormProps) {
     e.preventDefault();
     const submitData = {
       ...formData,
-      date: parseInputDate(formData.date),
+      date: formData.date,
       relatedTransactionId: formData.relatedTransactionId || null
     };
     onSubmit(submitData as Omit<PixFee, 'id' | 'createdAt'>);
@@ -77,7 +77,7 @@ export function PixFeeForm({ pixFee, onSubmit, onCancel }: PixFeeFormProps) {
                 <input
                   type="date"
                   value={formData.date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, date: parseInputDate(e.target.value) }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
                   className="input-field"
                   required
                 />

@@ -58,11 +58,11 @@ export function AgendaEventForm({ event, onSubmit, onCancel, defaultDate }: Agen
     // Clean data - ensure empty strings become null for optional fields
     const cleanedData = {
       ...formData,
-      date: parseInputDate(formData.date),
+      date: formData.date,
       title: formData.title.trim(),
       description: !formData.description || formData.description.trim() === '' ? null : formData.description.trim(),
       time: !formData.time || formData.time.trim() === '' ? null : formData.time,
-      reminderDate: !formData.reminderDate || formData.reminderDate.trim() === '' ? null : parseInputDate(formData.reminderDate),
+      reminderDate: !formData.reminderDate || formData.reminderDate.trim() === '' ? null : formData.reminderDate,
       observations: !formData.observations || formData.observations.trim() === '' ? null : formData.observations.trim()
     };
     
@@ -102,7 +102,7 @@ export function AgendaEventForm({ event, onSubmit, onCancel, defaultDate }: Agen
                 <input
                   type="date"
                   value={formData.date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, date: parseInputDate(e.target.value) }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
                   className="input-field"
                   required
                 />
@@ -171,7 +171,7 @@ export function AgendaEventForm({ event, onSubmit, onCancel, defaultDate }: Agen
                 <input
                   type="date"
                   value={formData.reminderDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, reminderDate: parseInputDate(e.target.value) }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, reminderDate: e.target.value }))}
                   className="input-field"
                 />
               </div>

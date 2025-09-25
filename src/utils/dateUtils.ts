@@ -1,5 +1,3 @@
-import { getCurrentDateString } from './dateUtils';
-
 // Date utilities with proper timezone handling to prevent date shifting
 export function formatDateForInput(date: string | Date): string {
   if (!date) return '';
@@ -8,14 +6,21 @@ export function formatDateForInput(date: string | Date): string {
   if (typeof date === 'string') {
     // Parse date string without timezone conversion
     if (date.includes('T')) {
-      d = new Date(date);
+      // For ISO strings, extract just the date part
+      const datePart = date.split('T')[0];
+      const parts = datePart.split('-');
+      if (parts.length === 3) {
+        d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      } else {
+        d = new Date(date);
+      }
     } else {
       // For date-only strings, create date in local timezone
       const parts = date.split('-');
       if (parts.length === 3) {
         d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
       } else {
-        d = new Date(date + 'T12:00:00'); // Use noon to avoid timezone issues
+        d = new Date(date + 'T00:00:00'); // Use midnight local time
       }
     }
   } else {
@@ -39,14 +44,21 @@ export function formatDateForDisplay(date: string | Date): string {
   if (typeof date === 'string') {
     // Parse date string without timezone conversion
     if (date.includes('T')) {
-      d = new Date(date);
+      // For ISO strings, extract just the date part
+      const datePart = date.split('T')[0];
+      const parts = datePart.split('-');
+      if (parts.length === 3) {
+        d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      } else {
+        d = new Date(date);
+      }
     } else {
       // For date-only strings, create date in local timezone
       const parts = date.split('-');
       if (parts.length === 3) {
         d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
       } else {
-        d = new Date(date + 'T12:00:00'); // Use noon to avoid timezone issues
+        d = new Date(date + 'T00:00:00'); // Use midnight local time
       }
     }
   } else {
@@ -75,8 +87,8 @@ export function createDateFromInput(dateString: string): Date {
     return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
   }
   
-  // Fallback with noon time to avoid timezone issues
-  return new Date(dateString + 'T12:00:00');
+  // Fallback with midnight time to avoid timezone issues
+  return new Date(dateString + 'T00:00:00');
 }
 
 export function getCurrentDateString(): string {
@@ -89,7 +101,7 @@ export function getCurrentDateString(): string {
 }
 
 export function addDays(dateString: string, days: number): string {
-  // Parse date in local timezone
+  // Parse date in local timezone to prevent shifting
   const parts = dateString.split('-');
   if (parts.length === 3) {
     const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
@@ -103,7 +115,7 @@ export function addDays(dateString: string, days: number): string {
   }
   
   // Fallback method
-  const date = new Date(dateString + 'T12:00:00');
+  const date = new Date(dateString + 'T00:00:00');
   date.setDate(date.getDate() + days);
   return date.toISOString().split('T')[0];
 }
@@ -119,7 +131,7 @@ export function normalizeDate(date: string | Date): string {
     }
     
     // Parse and normalize other formats
-    const d = new Date(date + 'T12:00:00');
+    const d = new Date(date + 'T00:00:00');
     if (isNaN(d.getTime())) return getCurrentDateString();
     
     return formatDateForInput(d);

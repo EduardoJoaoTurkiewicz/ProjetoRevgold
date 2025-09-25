@@ -222,7 +222,7 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
                 <input
                   type="date"
                   value={formData.date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, date: parseInputDate(e.target.value) }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
                   className="input-field"
                   required
                 />

@@ -92,4 +92,83 @@ export class CashBalanceService {
       throw error;
     }
   }
+
+  // Handle acerto payment processing
+  static async handleAcertoPayment(acerto: any, paymentData: any): Promise<void> {
+    try {
+      // If payment method creates installments, process them
+      if (paymentData.paymentMethod === 'cheque' && paymentData.paymentInstallments > 1) {
+        await this.createChecksForAcerto(acerto, paymentData);
+      } else if (paymentData.paymentMethod === 'boleto' && paymentData.paymentInstallments > 1) {
+        await this.createBoletosForAcerto(acerto, paymentData);
+      } else if (['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(paymentData.paymentMethod)) {
+        // Direct cash payment
+        await this.createCashTransaction({
+          date: paymentData.paymentDate,
+          type: acerto.type === 'cliente' ? 'entrada' : 'saida',
+          amount: paymentData.paymentAmount || (paymentData.paidAmount - acerto.paidAmount),
+          description: `Pagamento de acerto - ${acerto.clientName}`,
+          category: 'outro',
+          relatedId: acerto.id,
+          paymentMethod: paymentData.paymentMethod
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error handling acerto payment:', error);
+      throw error;
+    }
+  }
+
+  // Create checks for acerto payment
+  private static async createChecksForAcerto(acerto: any, paymentData: any): Promise<void> {
+    const installments = paymentData.paymentInstallments || 1;
+    const installmentValue = paymentData.paymentInstallmentValue || 0;
+    const interval = paymentData.paymentInterval || 30;
+    
+    for (let i = 1; i <= installments; i++) {
+      const dueDate = new Date(paymentData.paymentDate);
+      dueDate.setDate(dueDate.getDate() + (i - 1) * interval);
+      
+      const checkData = {
+        client: acerto.clientName,
+        value: installmentValue,
+        dueDate: dueDate.toISOString().split('T')[0],
+        status: 'pendente',
+        isOwnCheck: acerto.type === 'empresa',
+        isCompanyPayable: acerto.type === 'empresa',
+        companyName: acerto.type === 'empresa' ? acerto.companyName : null,
+        installmentNumber: i,
+        totalInstallments: installments,
+        observations: `Cheque ${i}/${installments} - Pagamento de acerto para ${acerto.clientName}`
+      };
+      
+      await supabaseServices.checks.create(checkData);
+    }
+  }
+
+  // Create boletos for acerto payment
+  private static async createBoletosForAcerto(acerto: any, paymentData: any): Promise<void> {
+    const installments = paymentData.paymentInstallments || 1;
+    const installmentValue = paymentData.paymentInstallmentValue || 0;
+    const interval = paymentData.paymentInterval || 30;
+    
+    for (let i = 1; i <= installments; i++) {
+      const dueDate = new Date(paymentData.paymentDate);
+      dueDate.setDate(dueDate.getDate() + (i - 1) * interval);
+      
+      const boletoData = {
+        client: acerto.clientName,
+        value: installmentValue,
+        dueDate: dueDate.toISOString().split('T')[0],
+        status: 'pendente',
+        installmentNumber: i,
+        totalInstallments: installments,
+        isCompanyPayable: acerto.type === 'empresa',
+        companyName: acerto.type === 'empresa' ? acerto.companyName : null,
+        observations: `Boleto ${i}/${installments} - Pagamento de acerto para ${acerto.clientName}`
+      };
+      
+      await supabaseServices.boletos.create(boletoData);
+    }
+  }
 }

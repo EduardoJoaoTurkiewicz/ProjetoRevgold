@@ -95,7 +95,7 @@ export function CashTransactionForm({ transaction, onSubmit, onCancel }: CashTra
     // Clean data - ensure empty strings become null for optional fields
     const cleanedData = {
       ...formData,
-      date: parseInputDate(formData.date),
+      date: formData.date,
       description: formData.description.trim(),
       relatedId: !formData.relatedId || formData.relatedId === '' ? null : formData.relatedId,
       paymentMethod: !formData.paymentMethod || formData.paymentMethod === '' ? null : formData.paymentMethod
@@ -144,7 +144,7 @@ export function CashTransactionForm({ transaction, onSubmit, onCancel }: CashTra
                   <input
                     type="date"
                     value={formData.date}
-                   onChange={(e) => setFormData(prev => ({ ...prev, date: parseInputDate(e.target.value) }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
                     className="input-field"
                     required
                   />
@@ -314,17 +314,4 @@ export function CashTransactionForm({ transaction, onSubmit, onCancel }: CashTra
               </div>
             </div>
 
-            <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
-              <button type="button" onClick={onCancel} className="btn-secondary">
-                Cancelar
-              </button>
-              <button type="submit" className="btn-primary">
-                {transaction ? 'Atualizar' : 'Registrar'} Transação
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-}
+            <div className="flex justify-end gap-4 pt

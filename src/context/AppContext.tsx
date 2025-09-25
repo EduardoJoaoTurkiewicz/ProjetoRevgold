@@ -442,7 +442,16 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const createCheck = async (checkData: any) => {
     try {
       const result = await supabaseServices.checks.create(checkData);
-      await loadAllData(); // Refresh all data
+      // Refresh only checks data for better performance
+      const checksData = await supabaseServices.checks.getChecks();
+      setChecks(checksData || []);
+      
+      // Also refresh cash data since check creation might affect cash
+      const balanceData = await supabaseServices.cashBalance.getCurrentBalance();
+      setCashBalance(balanceData);
+      const transactionsData = await supabaseServices.cashTransactions.getTransactions();
+      setCashTransactions(transactionsData || []);
+      
       return result;
     } catch (err) {
       console.error('Error creating check:', err);
@@ -454,7 +463,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     try {
       const { id, ...updateData } = checkData;
       const result = await supabaseServices.checks.update(id, updateData);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh only checks data for better performance
+      const checksData = await supabaseServices.checks.getChecks();
+      setChecks(checksData || []);
+      
+      // Also refresh cash data since check updates might affect cash
+      const balanceData = await supabaseServices.cashBalance.getCurrentBalance();
+      setCashBalance(balanceData);
+      const transactionsData = await supabaseServices.cashTransactions.getTransactions();
+      setCashTransactions(transactionsData || []);
+      
       return result;
     } catch (err) {
       console.error('Error updating check:', err);
@@ -465,7 +484,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const deleteCheck = async (id: string) => {
     try {
       await supabaseServices.checks.delete(id);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh only checks data for better performance
+      const checksData = await supabaseServices.checks.getChecks();
+      setChecks(checksData || []);
     } catch (err) {
       console.error('Error deleting check:', err);
       throw err;
@@ -476,7 +498,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const createBoleto = async (boletoData: any) => {
     try {
       const result = await supabaseServices.boletos.create(boletoData);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh only boletos data for better performance
+      const boletosData = await supabaseServices.boletos.getBoletos();
+      setBoletos(boletosData || []);
+      
+      // Also refresh cash data since boleto creation might affect cash
+      const balanceData = await supabaseServices.cashBalance.getCurrentBalance();
+      setCashBalance(balanceData);
+      const transactionsData = await supabaseServices.cashTransactions.getTransactions();
+      setCashTransactions(transactionsData || []);
+      
       return result;
     } catch (err) {
       console.error('Error creating boleto:', err);
@@ -488,7 +520,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     try {
       const { id, ...updateData } = boletoData;
       const result = await supabaseServices.boletos.update(id, updateData);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh only boletos data for better performance
+      const boletosData = await supabaseServices.boletos.getBoletos();
+      setBoletos(boletosData || []);
+      
+      // Also refresh cash data since boleto updates might affect cash
+      const balanceData = await supabaseServices.cashBalance.getCurrentBalance();
+      setCashBalance(balanceData);
+      const transactionsData = await supabaseServices.cashTransactions.getTransactions();
+      setCashTransactions(transactionsData || []);
+      
       return result;
     } catch (err) {
       console.error('Error updating boleto:', err);
@@ -499,7 +541,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const deleteBoleto = async (id: string) => {
     try {
       await supabaseServices.boletos.delete(id);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh only boletos data for better performance
+      const boletosData = await supabaseServices.boletos.getBoletos();
+      setBoletos(boletosData || []);
     } catch (err) {
       console.error('Error deleting boleto:', err);
       throw err;
@@ -510,7 +555,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const createEmployeePayment = async (paymentData: any) => {
     try {
       const result = await supabaseServices.employeePayments.create(paymentData);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh employee payments and cash data
+      const paymentsData = await supabaseServices.employeePayments.getPayments();
+      setEmployeePayments(paymentsData || []);
+      
+      // Refresh cash data since payment affects cash
+      const balanceData = await supabaseServices.cashBalance.getCurrentBalance();
+      setCashBalance(balanceData);
+      const transactionsData = await supabaseServices.cashTransactions.getTransactions();
+      setCashTransactions(transactionsData || []);
+      
       return result;
     } catch (err) {
       console.error('Error creating employee payment:', err);
@@ -521,7 +576,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const createEmployeeAdvance = async (advanceData: any) => {
     try {
       const result = await supabaseServices.employeeAdvances.create(advanceData);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh employee advances and cash data
+      const advancesData = await supabaseServices.employeeAdvances.getAdvances();
+      setEmployeeAdvances(advancesData || []);
+      
+      // Refresh cash data since advance affects cash
+      const balanceData = await supabaseServices.cashBalance.getCurrentBalance();
+      setCashBalance(balanceData);
+      const transactionsData = await supabaseServices.cashTransactions.getTransactions();
+      setCashTransactions(transactionsData || []);
+      
       return result;
     } catch (err) {
       console.error('Error creating employee advance:', err);
@@ -532,7 +597,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const createEmployeeOvertime = async (overtimeData: any) => {
     try {
       const result = await supabaseServices.employeeOvertimes.create(overtimeData);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh employee overtimes data
+      const overtimesData = await supabaseServices.employeeOvertimes.getOvertimes();
+      setEmployeeOvertimes(overtimesData || []);
+      
       return result;
     } catch (err) {
       console.error('Error creating employee overtime:', err);
@@ -543,7 +612,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const createPixFee = async (feeData: any) => {
     try {
       const result = await supabaseServices.pixFees.create(feeData);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh PIX fees and cash data
+      const feesData = await supabaseServices.pixFees.getPixFees();
+      setPixFees(feesData || []);
+      
+      // Refresh cash data since PIX fee affects cash
+      const balanceData = await supabaseServices.cashBalance.getCurrentBalance();
+      setCashBalance(balanceData);
+      const transactionsData = await supabaseServices.cashTransactions.getTransactions();
+      setCashTransactions(transactionsData || []);
+      
       return result;
     } catch (err) {
       console.error('Error creating pix fee:', err);
@@ -554,7 +633,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const updatePixFee = async (id: string, feeData: any) => {
     try {
       const result = await supabaseServices.pixFees.update(id, feeData);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh PIX fees data
+      const feesData = await supabaseServices.pixFees.getPixFees();
+      setPixFees(feesData || []);
+      
       return result;
     } catch (err) {
       console.error('Error updating pix fee:', err);
@@ -565,7 +648,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const deletePixFee = async (id: string) => {
     try {
       await supabaseServices.pixFees.delete(id);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh PIX fees data
+      const feesData = await supabaseServices.pixFees.getPixFees();
+      setPixFees(feesData || []);
     } catch (err) {
       console.error('Error deleting pix fee:', err);
       throw err;
@@ -574,7 +660,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const createTax = async (taxData: any) => {
     try {
       const result = await supabaseServices.taxes.create(taxData);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh taxes and cash data
+      const taxesData = await supabaseServices.taxes.getTaxes();
+      setTaxes(taxesData || []);
+      
+      // Refresh cash data since tax affects cash
+      const balanceData = await supabaseServices.cashBalance.getCurrentBalance();
+      setCashBalance(balanceData);
+      const transactionsData = await supabaseServices.cashTransactions.getTransactions();
+      setCashTransactions(transactionsData || []);
+      
       return result;
     } catch (err) {
       console.error('Error creating tax:', err);
@@ -585,7 +681,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const updateTax = async (id: string, taxData: any) => {
     try {
       const result = await supabaseServices.taxes.update(id, taxData);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh taxes data
+      const taxesData = await supabaseServices.taxes.getTaxes();
+      setTaxes(taxesData || []);
+      
       return result;
     } catch (err) {
       console.error('Error updating tax:', err);
@@ -596,7 +696,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const deleteTax = async (id: string) => {
     try {
       await supabaseServices.taxes.delete(id);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh taxes data
+      const taxesData = await supabaseServices.taxes.getTaxes();
+      setTaxes(taxesData || []);
     } catch (err) {
       console.error('Error deleting tax:', err);
       throw err;
@@ -605,7 +708,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const createAgendaEvent = async (eventData: any) => {
     try {
       const result = await supabaseServices.agendaEvents.create(eventData);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh agenda events data
+      const eventsData = await supabaseServices.agendaEvents.getEvents();
+      setAgendaEvents(eventsData || []);
+      
       return result;
     } catch (err) {
       console.error('Error creating agenda event:', err);
@@ -617,7 +724,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     try {
       const { id, ...updateData } = eventData;
       const result = await supabaseServices.agendaEvents.update(id, updateData);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh agenda events data
+      const eventsData = await supabaseServices.agendaEvents.getEvents();
+      setAgendaEvents(eventsData || []);
+      
       return result;
     } catch (err) {
       console.error('Error updating agenda event:', err);
@@ -628,7 +739,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const deleteAgendaEvent = async (id: string) => {
     try {
       await supabaseServices.agendaEvents.delete(id);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh agenda events data
+      const eventsData = await supabaseServices.agendaEvents.getEvents();
+      setAgendaEvents(eventsData || []);
     } catch (err) {
       console.error('Error deleting agenda event:', err);
       throw err;
@@ -637,7 +751,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const createAcerto = async (acertoData: any) => {
     try {
       const result = await supabaseServices.acertos.create(acertoData);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh acertos data
+      const acertosData = await supabaseServices.acertos.getAcertos();
+      setAcertos(acertosData || []);
+      
       return result;
     } catch (err) {
       console.error('Error creating acerto:', err);
@@ -649,7 +767,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     try {
       const { id, ...updateData } = acertoData;
       const result = await supabaseServices.acertos.update(id, updateData);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh acertos data
+      const acertosData = await supabaseServices.acertos.getAcertos();
+      setAcertos(acertosData || []);
+      
       return result;
     } catch (err) {
       console.error('Error updating acerto:', err);
@@ -660,7 +782,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const deleteAcerto = async (id: string) => {
     try {
       await supabaseServices.acertos.delete(id);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh acertos data
+      const acertosData = await supabaseServices.acertos.getAcertos();
+      setAcertos(acertosData || []);
     } catch (err) {
       console.error('Error deleting acerto:', err);
       throw err;
@@ -669,7 +794,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const createCashTransaction = async (transactionData: any) => {
     try {
       const result = await supabaseServices.cashTransactions.create(transactionData);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh cash data
+      const balanceData = await supabaseServices.cashBalance.getCurrentBalance();
+      setCashBalance(balanceData);
+      const transactionsData = await supabaseServices.cashTransactions.getTransactions();
+      setCashTransactions(transactionsData || []);
+      
       return result;
     } catch (err) {
       console.error('Error creating cash transaction:', err);
@@ -681,7 +812,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     try {
       const { id, ...updateData } = transactionData;
       const result = await supabaseServices.cashTransactions.updateTransaction(id, updateData);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh cash data
+      const balanceData = await supabaseServices.cashBalance.getCurrentBalance();
+      setCashBalance(balanceData);
+      const transactionsData = await supabaseServices.cashTransactions.getTransactions();
+      setCashTransactions(transactionsData || []);
+      
       return result;
     } catch (err) {
       console.error('Error updating cash transaction:', err);
@@ -692,7 +829,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const deleteCashTransaction = async (id: string) => {
     try {
       await supabaseServices.cashTransactions.deleteTransaction(id);
-      await loadAllData(); // Refresh all data
+      
+      // Refresh cash data
+      const balanceData = await supabaseServices.cashBalance.getCurrentBalance();
+      setCashBalance(balanceData);
+      const transactionsData = await supabaseServices.cashTransactions.getTransactions();
+      setCashTransactions(transactionsData || []);
     } catch (err) {
       console.error('Error deleting cash transaction:', err);
       throw err;
@@ -744,6 +886,29 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     };
   }, [lastLoadTime]);
 
+  // Add function to refresh specific data types after installment operations
+  const refreshInstallmentData = async () => {
+    try {
+      // Refresh all installment-related data
+      const [checksData, boletosData, acertosData, balanceData, transactionsData] = await Promise.all([
+        supabaseServices.checks.getChecks(),
+        supabaseServices.boletos.getBoletos(),
+        supabaseServices.acertos.getAcertos(),
+        supabaseServices.cashBalance.getCurrentBalance(),
+        supabaseServices.cashTransactions.getTransactions()
+      ]);
+      
+      setChecks(checksData || []);
+      setBoletos(boletosData || []);
+      setAcertos(acertosData || []);
+      setCashBalance(balanceData);
+      setCashTransactions(transactionsData || []);
+      
+      console.log('✅ Installment data refreshed successfully');
+    } catch (error) {
+      console.error('❌ Error refreshing installment data:', error);
+    }
+  };
   const value: AppContextType = {
     // Loading and error states
     isLoading,
@@ -811,6 +976,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     createCashTransaction,
     updateCashTransaction,
     deleteCashTransaction,
+    
+    // Utility functions
+    refreshInstallmentData,
   };
 
   return (

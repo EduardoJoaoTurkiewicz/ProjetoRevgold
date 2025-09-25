@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, DollarSign, FileText, CreditCard, Receipt, Plus, Trash2 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { Acerto } from '../../types';
+import { CashBalanceService } from '../../lib/cashBalanceService';
 
 interface CompanyPaymentNegotiationFormProps {
   acerto: Acerto;
@@ -150,6 +151,15 @@ export function CompanyPaymentNegotiationForm({ acerto, onSubmit, onCancel }: Co
         observations: formData.observations || acerto.observations,
         availableChecks: formData.selectedChecks
       };
+      
+      // Process payment through cash balance service
+      CashBalanceService.handleAcertoPayment(acerto, { ...paymentData, paymentAmount: formData.paymentAmount })
+        .then(() => {
+          console.log('✅ Company acerto payment processed through cash service');
+        })
+        .catch(error => {
+          console.error('❌ Error processing company acerto payment:', error);
+        });
       
       onSubmit(paymentData);
     } catch (error) {

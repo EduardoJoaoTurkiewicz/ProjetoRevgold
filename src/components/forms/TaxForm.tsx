@@ -54,8 +54,8 @@ export function TaxForm({ tax, onSubmit, onCancel }: TaxFormProps) {
     e.preventDefault();
     const submitData = {
       ...formData,
-      date: parseInputDate(formData.date),
-      dueDate: formData.dueDate ? parseInputDate(formData.dueDate) : null
+      date: formData.date,
+      dueDate: formData.dueDate || null
     };
     onSubmit(submitData as Omit<Tax, 'id' | 'createdAt'>);
   };
@@ -80,7 +80,7 @@ export function TaxForm({ tax, onSubmit, onCancel }: TaxFormProps) {
                 <input
                   type="date"
                   value={formData.date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, date: parseInputDate(e.target.value) }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
                   className="input-field"
                   required
                 />
@@ -119,7 +119,7 @@ export function TaxForm({ tax, onSubmit, onCancel }: TaxFormProps) {
                 <input
                   type="date"
                   value={formData.dueDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dueDate: parseInputDate(e.target.value) }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
                   className="input-field"
                 />
               </div>

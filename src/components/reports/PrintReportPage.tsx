@@ -48,12 +48,23 @@ export function PrintReportPage() {
   useEffect(() => {
     const generateReportData = async () => {
       setError(null);
+      setLoading(true);
       
       try {
         console.log('🔄 Generating report data for period:', { startDate, endDate });
         
-        // Ensure all data is loaded
-        await loadAllData();
+        // Ensure all data is loaded with timeout
+        const loadTimeout = setTimeout(() => {
+          throw new Error('Timeout loading data - please try again');
+        }, 15000);
+        
+        try {
+          await loadAllData();
+          clearTimeout(loadTimeout);
+        } catch (loadError) {
+          clearTimeout(loadTimeout);
+          throw loadError;
+        }
         
         // Validate data arrays
         if (!Array.isArray(sales)) {
@@ -326,30 +337,43 @@ export function PrintReportPage() {
         });
         
         setReportData(finalReportData);
-        setLoading(false);
 
         // Auto print if requested
         if (auto) {
           setTimeout(() => {
             try {
               window.print();
+              toast.success('Relatório enviado para impressão');
             } catch (printError) {
               console.error('Error auto-printing:', printError);
               toast.error('Erro na impressão automática');
             }
-          }, 1000);
+          }, 2000); // Increased delay to ensure content is fully loaded
         }
       } catch (error) {
         console.error('Error generating report data:', error);
         const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
         setError(errorMessage);
-        setLoading(false);
         toast.error('Erro ao gerar relatório: ' + errorMessage);
+      } finally {
+        setLoading(false);
       }
     };
 
     generateReportData();
   }, [startDate, endDate, sales, debts, checks, boletos, employees, employeePayments, pixFees, cashBalance, auto, loadAllData]);
+
+  // Add error boundary for the print page
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      console.error('Print page error:', event.error);
+      setError('Erro ao carregar página de impressão: ' + event.error?.message);
+      setLoading(false);
+    };
+
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
 
   if (loading) {
     return (
@@ -367,6 +391,9 @@ export function PrintReportPage() {
         </p>
         <p style={{ fontSize: '14px', color: '#94a3b8' }}>
           Período: {startDate} até {endDate}
+        </p>
+        <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '8px' }}>
+          Aguarde enquanto os dados são processados...
         </p>
       </div>
     );

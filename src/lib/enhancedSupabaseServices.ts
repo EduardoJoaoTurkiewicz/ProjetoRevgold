@@ -144,8 +144,10 @@ export const enhancedSalesService = {
       try {
         const { InstallmentService } = await import('./installmentService');
         await InstallmentService.processInstallmentsForSale(data, sanitizedSale.client, sanitizedSale.paymentMethods || []);
+        console.log('✅ Installments processed successfully for sale:', data);
       } catch (installmentError) {
-        console.warn('Warning: Could not process installments:', installmentError);
+        console.error('❌ Error processing installments for sale:', installmentError);
+        // Don't throw here - sale was created successfully, installments are secondary
       }
       
       return data;
@@ -296,8 +298,10 @@ export const enhancedDebtsService = {
       try {
         const { InstallmentService } = await import('./installmentService');
         await InstallmentService.processInstallmentsForDebt(data.id, sanitizedDebt.company, sanitizedDebt.paymentMethods || []);
+        console.log('✅ Installments processed successfully for debt:', data.id);
       } catch (installmentError) {
-        console.warn('Warning: Could not process installments:', installmentError);
+        console.error('❌ Error processing installments for debt:', installmentError);
+        // Don't throw here - debt was created successfully, installments are secondary
       }
       
       return data.id;

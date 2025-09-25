@@ -45,20 +45,31 @@ export function ExportButtons({ filters, data }: ExportButtonsProps) {
 
   const openClientPrint = () => {
     try {
-    const queryString = buildQueryString(true);
-    if (!queryString) return;
-    
-    const printUrl = `/print/reports?${queryString}`;
-    
-    // Open in new window for printing
-    const printWindow = window.open(printUrl, '_blank', 'width=1200,height=800,scrollbars=yes');
-    
-    if (printWindow) {
-      printWindow.focus();
-      toast.success('Janela de impressão aberta');
-    } else {
-      toast.error('Por favor, permita pop-ups para abrir a janela de impressão.');
-    }
+      const queryString = buildQueryString(true);
+      if (!queryString) return;
+      
+      const printUrl = `/print/reports?${queryString}`;
+      
+      // Open in new window for printing with proper dimensions
+      const printWindow = window.open(printUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+      
+      if (printWindow) {
+        // Wait for the window to load before focusing
+        printWindow.addEventListener('load', () => {
+          printWindow.focus();
+          // Auto-print after a short delay to ensure content is loaded
+          setTimeout(() => {
+            try {
+              printWindow.print();
+            } catch (printError) {
+              console.warn('Auto-print failed:', printError);
+            }
+          }, 1500);
+        });
+        toast.success('Relatório sendo preparado para impressão...');
+      } else {
+        toast.error('Por favor, permita pop-ups para abrir a janela de impressão.');
+      }
     } catch (error) {
       console.error('Error opening print window:', error);
       toast.error('Erro ao abrir janela de impressão: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
@@ -123,20 +134,23 @@ export function ExportButtons({ filters, data }: ExportButtonsProps) {
 
   const previewReport = () => {
     try {
-    const queryString = buildQueryString(false);
-    if (!queryString) return;
-    
-    const previewUrl = `/print/reports?${queryString}`;
-    
-    // Open in new tab for preview
-    const previewWindow = window.open(previewUrl, '_blank');
-    
-    if (previewWindow) {
-      previewWindow.focus();
-      toast.success('Visualização do relatório aberta');
-    } else {
-      toast.error('Por favor, permita pop-ups para visualizar o relatório');
-    }
+      const queryString = buildQueryString(false);
+      if (!queryString) return;
+      
+      const previewUrl = `/print/reports?${queryString}`;
+      
+      // Open in new tab for preview with proper dimensions
+      const previewWindow = window.open(previewUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+      
+      if (previewWindow) {
+        // Ensure the window loads properly
+        previewWindow.addEventListener('load', () => {
+          previewWindow.focus();
+        });
+        toast.success('Visualização do relatório aberta');
+      } else {
+        toast.error('Por favor, permita pop-ups para visualizar o relatório');
+      }
     } catch (error) {
       console.error('Error opening preview:', error);
       toast.error('Erro ao abrir visualização: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));

@@ -407,7 +407,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                 <input
                   type="date"
                   value={formData.date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, date: parseInputDate(e.target.value) }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
                   className="input-field"
                   required
                 />
@@ -418,7 +418,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                 <input
                   type="date"
                   value={formData.deliveryDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, deliveryDate: parseInputDate(e.target.value) }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, deliveryDate: e.target.value }))}
                   className="input-field"
                   placeholder="Data prevista para entrega"
                 />
@@ -632,7 +632,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                 <input
                                   type="date"
                                   value={method.firstInstallmentDate || formData.date}
-                                  onChange={(e) => updatePaymentMethod(index, 'firstInstallmentDate', parseInputDate(e.target.value))}
+                                  onChange={(e) => updatePaymentMethod(index, 'firstInstallmentDate', e.target.value)}
                                   className="input-field"
                                 />
                               </div>
@@ -646,7 +646,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                               <input
                                 type="date"
                                 value={method.firstInstallmentDate || formData.date}
-                                onChange={(e) => updatePaymentMethod(index, 'firstInstallmentDate', parseInputDate(e.target.value))}
+                                onChange={(e) => updatePaymentMethod(index, 'firstInstallmentDate', e.target.value)}
                                 className="input-field"
                                 required
                               />

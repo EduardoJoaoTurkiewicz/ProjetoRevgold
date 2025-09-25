@@ -29,6 +29,9 @@ export default function Sales() {
     // Clean UUID fields before submission
     const cleanedSale = UUIDManager.cleanObjectUUIDs(sale);
     
+    // Verificar se há método de pagamento "acerto"
+    const hasAcertoPayment = cleanedSale.paymentMethods?.some(method => method.type === 'acerto');
+    
     // Validate sale data before submitting
     if (!cleanedSale.client || !cleanedSale.client.trim()) {
       alert('Por favor, informe o nome do cliente.');
@@ -56,6 +59,12 @@ export default function Sales() {
     
     createSale(cleanedSale).then(() => {
       console.log('✅ Venda adicionada com sucesso');
+      
+      // Se há pagamento por acerto, criar acerto automaticamente
+      if (hasAcertoPayment) {
+        createAcertoFromSale(cleanedSale);
+      }
+      
       setIsFormOpen(false);
     }).catch(error => {
       console.error('❌ Erro ao adicionar venda:', error);
@@ -79,6 +88,32 @@ export default function Sales() {
     });
   };
 
+  // Função para criar acerto automaticamente a partir de venda
+  const createAcertoFromSale = async (sale: Omit<Sale, 'id' | 'createdAt'>) => {
+    try {
+      const acertoAmount = sale.paymentMethods
+        ?.filter(method => method.type === 'acerto')
+        .reduce((sum, method) => sum + method.amount, 0) || 0;
+      
+      if (acertoAmount > 0) {
+        const newAcerto = {
+          clientName: sale.client,
+          type: 'cliente' as const,
+          totalAmount: acertoAmount,
+          paidAmount: 0,
+          pendingAmount: acertoAmount,
+          status: 'pendente' as const,
+          observations: `Acerto criado automaticamente para venda: ${sale.client}`,
+          relatedSales: [] // Será preenchido após criação da venda
+        };
+        
+        await createAcerto(newAcerto);
+        console.log('✅ Acerto criado automaticamente para cliente:', sale.client);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao criar acerto automático:', error);
+    }
+  };
   const handleEditSale = (sale: Omit<Sale, 'id' | 'createdAt'>) => {
     if (editingSale) {
       updateSale({ ...sale, id: editingSale.id, createdAt: editingSale.createdAt }).then(() => {

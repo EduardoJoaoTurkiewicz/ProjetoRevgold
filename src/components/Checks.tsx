@@ -306,7 +306,8 @@ export function Checks() {
                                           const updatedCheck = { 
                                             ...check, 
                                             status: 'compensado' as const,
-                                            paymentDate: new Date().toISOString().split('T')[0]
+                                            paymentDate: new Date().toISOString().split('T')[0],
+                                            updatedAt: new Date().toISOString()
                                           };
                                           updateCheck({ ...updatedCheck, id: check.id }).catch(error => {
                                             alert('Erro ao marcar como compensado: ' + error.message);
@@ -425,7 +426,8 @@ export function Checks() {
                                           const updatedCheck = { 
                                             ...check, 
                                             status: 'compensado' as const,
-                                            paymentDate: new Date().toISOString().split('T')[0]
+                                            paymentDate: new Date().toISOString().split('T')[0],
+                                            updatedAt: new Date().toISOString()
                                           };
                                           updateCheck({ ...updatedCheck, id: check.id }).catch(error => {
                                             alert('Erro ao marcar como pago: ' + error.message);

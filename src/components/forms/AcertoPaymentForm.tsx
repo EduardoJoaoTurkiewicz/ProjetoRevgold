@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, DollarSign, Calendar, CreditCard } from 'lucide-react';
 import { Acerto } from '../../types';
+import { CashBalanceService } from '../../lib/cashBalanceService';
 
 interface AcertoPaymentFormProps {
   acerto: Acerto;
@@ -68,6 +69,15 @@ export function AcertoPaymentForm({ acerto, onSubmit, onCancel }: AcertoPaymentF
       paymentInterval: formData.paymentInstallments > 1 ? formData.paymentInterval : undefined,
       observations: formData.observations || acerto.observations
     };
+    
+    // Process payment through cash balance service
+    CashBalanceService.handleAcertoPayment(acerto, { ...paymentData, paymentAmount: formData.paymentAmount })
+      .then(() => {
+        console.log('✅ Acerto payment processed through cash service');
+      })
+      .catch(error => {
+        console.error('❌ Error processing acerto payment:', error);
+      });
     
     console.log('📝 Enviando pagamento de acerto:', paymentData);
     onSubmit(paymentData);

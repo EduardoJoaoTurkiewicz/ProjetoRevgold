@@ -2,6 +2,7 @@
 import { supabaseServices } from './supabaseServices';
 import { formatDateForInput, addDays } from '../utils/dateUtils';
 import { safeNumber } from '../utils/numberUtils';
+import { UUIDManager } from './uuidManager';
 
 export class InstallmentService {
   // Create checks for sale payment method
@@ -13,10 +14,13 @@ export class InstallmentService {
     const interval = safeNumber(paymentMethod.installmentInterval, 30);
     const startDate = paymentMethod.firstInstallmentDate || formatDateForInput(new Date());
     
+    console.log(`🔄 Creating ${installments} checks for sale ${saleId}`);
+    
     for (let i = 1; i <= installments; i++) {
       const dueDate = addDays(startDate, (i - 1) * interval);
       
       const checkData = {
+        id: UUIDManager.generateUUID(),
         saleId,
         client,
         value: installmentValue,
@@ -28,8 +32,16 @@ export class InstallmentService {
         observations: `Cheque ${i}/${installments} - Venda para ${client}`
       };
       
-      await supabaseServices.checks.create(checkData);
+      try {
+        await supabaseServices.checks.create(checkData);
+        console.log(`✅ Check ${i}/${installments} created for sale`);
+      } catch (error) {
+        console.error(`❌ Error creating check ${i}/${installments}:`, error);
+        throw error;
+      }
     }
+    
+    console.log(`✅ All ${installments} checks created for sale ${saleId}`);
   }
 
   // Create boletos for sale payment method
@@ -41,10 +53,13 @@ export class InstallmentService {
     const interval = safeNumber(paymentMethod.installmentInterval, 30);
     const startDate = paymentMethod.firstInstallmentDate || formatDateForInput(new Date());
     
+    console.log(`🔄 Creating ${installments} boletos for sale ${saleId}`);
+    
     for (let i = 1; i <= installments; i++) {
       const dueDate = addDays(startDate, (i - 1) * interval);
       
       const boletoData = {
+        id: UUIDManager.generateUUID(),
         saleId,
         client,
         value: installmentValue,
@@ -55,8 +70,16 @@ export class InstallmentService {
         observations: `Boleto ${i}/${installments} - Venda para ${client}`
       };
       
-      await supabaseServices.boletos.create(boletoData);
+      try {
+        await supabaseServices.boletos.create(boletoData);
+        console.log(`✅ Boleto ${i}/${installments} created for sale`);
+      } catch (error) {
+        console.error(`❌ Error creating boleto ${i}/${installments}:`, error);
+        throw error;
+      }
     }
+    
+    console.log(`✅ All ${installments} boletos created for sale ${saleId}`);
   }
 
   // Create acerto for sale payment method
@@ -66,35 +89,46 @@ export class InstallmentService {
     const amount = safeNumber(paymentMethod.amount, 0);
     if (amount <= 0) return;
     
-    // Check if acerto already exists for this client
-    const existingAcertos = await supabaseServices.acertos.getAcertos();
-    const existingAcerto = existingAcertos.find(a => 
-      a.clientName === client && a.type === 'cliente'
-    );
+    console.log(`🔄 Creating/updating acerto for client ${client}, amount: ${amount}`);
     
-    if (existingAcerto) {
-      // Update existing acerto
-      const updatedAcerto = {
-        ...existingAcerto,
-        totalAmount: existingAcerto.totalAmount + amount,
-        pendingAmount: existingAcerto.pendingAmount + amount,
-        status: 'pendente' as const
-      };
+    // Check if acerto already exists for this client
+    try {
+      const existingAcertos = await supabaseServices.acertos.getAcertos();
+      const existingAcerto = existingAcertos.find(a => 
+        a.clientName === client && a.type === 'cliente'
+      );
+    
+      if (existingAcerto) {
+        // Update existing acerto
+        const updatedAcerto = {
+          ...existingAcerto,
+          totalAmount: existingAcerto.totalAmount + amount,
+          pendingAmount: existingAcerto.pendingAmount + amount,
+          status: 'pendente' as const,
+          updatedAt: new Date().toISOString()
+        };
       
-      await supabaseServices.acertos.update(existingAcerto.id!, updatedAcerto);
-    } else {
-      // Create new acerto
-      const acertoData = {
-        clientName: client,
-        type: 'cliente' as const,
-        totalAmount: amount,
-        paidAmount: 0,
-        pendingAmount: amount,
-        status: 'pendente' as const,
-        observations: `Acerto criado automaticamente para vendas de ${client}`
-      };
+        await supabaseServices.acertos.update(existingAcerto.id!, updatedAcerto);
+        console.log(`✅ Acerto updated for client ${client}`);
+      } else {
+        // Create new acerto
+        const acertoData = {
+          id: UUIDManager.generateUUID(),
+          clientName: client,
+          type: 'cliente' as const,
+          totalAmount: amount,
+          paidAmount: 0,
+          pendingAmount: amount,
+          status: 'pendente' as const,
+          observations: `Acerto criado automaticamente para vendas de ${client}`
+        };
       
-      await supabaseServices.acertos.create(acertoData);
+        await supabaseServices.acertos.create(acertoData);
+        console.log(`✅ New acerto created for client ${client}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error creating/updating acerto for client ${client}:`, error);
+      throw error;
     }
   }
 
@@ -107,10 +141,13 @@ export class InstallmentService {
     const interval = safeNumber(paymentMethod.installmentInterval, 30);
     const startDate = paymentMethod.firstInstallmentDate || formatDateForInput(new Date());
     
+    console.log(`🔄 Creating ${installments} checks for debt ${debtId}`);
+    
     for (let i = 1; i <= installments; i++) {
       const dueDate = addDays(startDate, (i - 1) * interval);
       
       const checkData = {
+        id: UUIDManager.generateUUID(),
         debtId,
         client: company,
         value: installmentValue,
@@ -124,8 +161,16 @@ export class InstallmentService {
         observations: `Cheque próprio ${i}/${installments} - Pagamento para ${company}`
       };
       
-      await supabaseServices.checks.create(checkData);
+      try {
+        await supabaseServices.checks.create(checkData);
+        console.log(`✅ Check ${i}/${installments} created for debt`);
+      } catch (error) {
+        console.error(`❌ Error creating check ${i}/${installments}:`, error);
+        throw error;
+      }
     }
+    
+    console.log(`✅ All ${installments} checks created for debt ${debtId}`);
   }
 
   // Create boletos for debt payment method
@@ -137,10 +182,13 @@ export class InstallmentService {
     const interval = safeNumber(paymentMethod.installmentInterval, 30);
     const startDate = paymentMethod.firstInstallmentDate || formatDateForInput(new Date());
     
+    console.log(`🔄 Creating ${installments} boletos for debt ${debtId}`);
+    
     for (let i = 1; i <= installments; i++) {
       const dueDate = addDays(startDate, (i - 1) * interval);
       
       const boletoData = {
+        id: UUIDManager.generateUUID(),
         debtId,
         client: company,
         value: installmentValue,
@@ -153,8 +201,16 @@ export class InstallmentService {
         observations: `Boleto ${i}/${installments} - Pagamento para ${company}`
       };
       
-      await supabaseServices.boletos.create(boletoData);
+      try {
+        await supabaseServices.boletos.create(boletoData);
+        console.log(`✅ Boleto ${i}/${installments} created for debt`);
+      } catch (error) {
+        console.error(`❌ Error creating boleto ${i}/${installments}:`, error);
+        throw error;
+      }
     }
+    
+    console.log(`✅ All ${installments} boletos created for debt ${debtId}`);
   }
 
   // Create acerto for debt payment method
@@ -164,76 +220,119 @@ export class InstallmentService {
     const amount = safeNumber(paymentMethod.amount, 0);
     if (amount <= 0) return;
     
-    // Check if acerto already exists for this company
-    const existingAcertos = await supabaseServices.acertos.getAcertos();
-    const existingAcerto = existingAcertos.find(a => 
-      a.companyName === company && a.type === 'empresa'
-    );
+    console.log(`🔄 Creating/updating acerto for company ${company}, amount: ${amount}`);
     
-    if (existingAcerto) {
-      // Update existing acerto
-      const updatedAcerto = {
-        ...existingAcerto,
-        totalAmount: existingAcerto.totalAmount + amount,
-        pendingAmount: existingAcerto.pendingAmount + amount,
-        status: 'pendente' as const
-      };
+    // Check if acerto already exists for this company
+    try {
+      const existingAcertos = await supabaseServices.acertos.getAcertos();
+      const existingAcerto = existingAcertos.find(a => 
+        a.companyName === company && a.type === 'empresa'
+      );
+    
+      if (existingAcerto) {
+        // Update existing acerto
+        const updatedAcerto = {
+          ...existingAcerto,
+          totalAmount: existingAcerto.totalAmount + amount,
+          pendingAmount: existingAcerto.pendingAmount + amount,
+          status: 'pendente' as const,
+          updatedAt: new Date().toISOString()
+        };
       
-      await supabaseServices.acertos.update(existingAcerto.id!, updatedAcerto);
-    } else {
-      // Create new acerto
-      const acertoData = {
-        clientName: company,
-        companyName: company,
-        type: 'empresa' as const,
-        totalAmount: amount,
-        paidAmount: 0,
-        pendingAmount: amount,
-        status: 'pendente' as const,
-        observations: `Acerto criado automaticamente para dívidas de ${company}`
-      };
+        await supabaseServices.acertos.update(existingAcerto.id!, updatedAcerto);
+        console.log(`✅ Acerto updated for company ${company}`);
+      } else {
+        // Create new acerto
+        const acertoData = {
+          id: UUIDManager.generateUUID(),
+          clientName: company,
+          companyName: company,
+          type: 'empresa' as const,
+          totalAmount: amount,
+          paidAmount: 0,
+          pendingAmount: amount,
+          status: 'pendente' as const,
+          observations: `Acerto criado automaticamente para dívidas de ${company}`
+        };
       
-      await supabaseServices.acertos.create(acertoData);
+        await supabaseServices.acertos.create(acertoData);
+        console.log(`✅ New acerto created for company ${company}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error creating/updating acerto for company ${company}:`, error);
+      throw error;
     }
   }
 
   // Process all installments for a sale
   static async processInstallmentsForSale(saleId: string, client: string, paymentMethods: any[]): Promise<void> {
+    console.log(`🔄 Processing installments for sale ${saleId}, client: ${client}`);
+    
     for (const method of paymentMethods) {
-      if (method.installments && method.installments > 1) {
-        switch (method.type) {
-          case 'cheque':
-            await this.createChecksForSale(saleId, client, method);
-            break;
-          case 'boleto':
-            await this.createBoletosForSale(saleId, client, method);
-            break;
+      try {
+        if (method.installments && method.installments > 1) {
+          switch (method.type) {
+            case 'cheque':
+              await this.createChecksForSale(saleId, client, method);
+              break;
+            case 'boleto':
+              await this.createBoletosForSale(saleId, client, method);
+              break;
+          }
+        } else if (method.type === 'cheque' || method.type === 'boleto') {
+          // Handle single installment cheques and boletos
+          if (method.type === 'cheque') {
+            await this.createChecksForSale(saleId, client, { ...method, installments: 1, installmentValue: method.amount });
+          } else if (method.type === 'boleto') {
+            await this.createBoletosForSale(saleId, client, { ...method, installments: 1, installmentValue: method.amount });
+          }
         }
-      }
       
-      if (method.type === 'acerto') {
-        await this.createAcertoForSale(client, method);
+        if (method.type === 'acerto') {
+          await this.createAcertoForSale(client, method);
+        }
+      } catch (error) {
+        console.error(`❌ Error processing payment method ${method.type} for sale:`, error);
+        // Continue with other methods even if one fails
       }
     }
+    
+    console.log(`✅ All installments processed for sale ${saleId}`);
   }
 
   // Process all installments for a debt
   static async processInstallmentsForDebt(debtId: string, company: string, paymentMethods: any[]): Promise<void> {
+    console.log(`🔄 Processing installments for debt ${debtId}, company: ${company}`);
+    
     for (const method of paymentMethods) {
-      if (method.installments && method.installments > 1) {
-        switch (method.type) {
-          case 'cheque':
-            await this.createChecksForDebt(debtId, company, method);
-            break;
-          case 'boleto':
-            await this.createBoletosForDebt(debtId, company, method);
-            break;
+      try {
+        if (method.installments && method.installments > 1) {
+          switch (method.type) {
+            case 'cheque':
+              await this.createChecksForDebt(debtId, company, method);
+              break;
+            case 'boleto':
+              await this.createBoletosForDebt(debtId, company, method);
+              break;
+          }
+        } else if (method.type === 'cheque' || method.type === 'boleto') {
+          // Handle single installment cheques and boletos
+          if (method.type === 'cheque') {
+            await this.createChecksForDebt(debtId, company, { ...method, installments: 1, installmentValue: method.amount });
+          } else if (method.type === 'boleto') {
+            await this.createBoletosForDebt(debtId, company, { ...method, installments: 1, installmentValue: method.amount });
+          }
         }
-      }
       
-      if (method.type === 'acerto') {
-        await this.createAcertoForDebt(company, method);
+        if (method.type === 'acerto') {
+          await this.createAcertoForDebt(company, method);
+        }
+      } catch (error) {
+        console.error(`❌ Error processing payment method ${method.type} for debt:`, error);
+        // Continue with other methods even if one fails
       }
     }
+    
+    console.log(`✅ All installments processed for debt ${debtId}`);
   }
 }
