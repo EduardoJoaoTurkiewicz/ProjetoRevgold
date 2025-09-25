@@ -171,7 +171,7 @@ export function Boletos() {
             <AlertTriangle className="w-8 h-8 text-red-600" />
             <div>
               <h3 className="font-bold text-red-800">Erro no Sistema</h3>
-              <p className="text-red-700">{error}</p>
+                  Vencimento: {new Date(check.dueDate + 'T12:00:00').toLocaleDateString('pt-BR')}
             </div>
           </div>
         </div>
