@@ -4,25 +4,21 @@ export function formatDateForInput(date: string | Date): string {
   
   let d: Date;
   if (typeof date === 'string') {
-    // Parse date string without timezone conversion
-    if (date.includes('T')) {
-      // For ISO strings, extract just the date part
-      const datePart = date.split('T')[0];
-      const parts = datePart.split('-');
-      if (parts.length === 3) {
-        d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-      } else {
-        d = new Date(date);
-      }
-    } else {
-      // For date-only strings, create date in local timezone
-      const parts = date.split('-');
-      if (parts.length === 3) {
-        d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-      } else {
-        d = new Date(date + 'T00:00:00'); // Use midnight local time
-      }
+    // Always extract just the date part to prevent timezone shifts
+    const datePart = date.includes('T') ? date.split('T')[0] : date;
+    // Return the date string directly if it's already in YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+      return datePart;
     }
+    // Parse manually to avoid timezone issues
+    const parts = datePart.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0]);
+      const month = String(parseInt(parts[1])).padStart(2, '0');
+      const day = String(parseInt(parts[2])).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    d = new Date(date);
   } else {
     d = date;
   }
@@ -42,24 +38,14 @@ export function formatDateForDisplay(date: string | Date): string {
   
   let d: Date;
   if (typeof date === 'string') {
-    // Parse date string without timezone conversion
-    if (date.includes('T')) {
-      // For ISO strings, extract just the date part
-      const datePart = date.split('T')[0];
-      const parts = datePart.split('-');
-      if (parts.length === 3) {
-        d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-      } else {
-        d = new Date(date);
-      }
+    // Always extract just the date part to prevent timezone shifts
+    const datePart = date.includes('T') ? date.split('T')[0] : date;
+    // Parse manually to avoid timezone issues
+    const parts = datePart.split('-');
+    if (parts.length === 3) {
+      d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     } else {
-      // For date-only strings, create date in local timezone
-      const parts = date.split('-');
-      if (parts.length === 3) {
-        d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-      } else {
-        d = new Date(date + 'T00:00:00'); // Use midnight local time
-      }
+      d = new Date(date + 'T12:00:00'); // Use noon to avoid timezone edge cases
     }
   } else {
     d = date;
@@ -73,8 +59,20 @@ export function formatDateForDisplay(date: string | Date): string {
 export function parseInputDate(dateString: string): string {
   if (!dateString) return '';
   
-  // Return the exact date string without any conversion
-  // This prevents timezone shifts when saving to database
+  // Ensure we always return YYYY-MM-DD format without timezone conversion
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return dateString;
+  }
+  
+  // If it's not in the correct format, try to parse and reformat
+  const parts = dateString.split('-');
+  if (parts.length === 3) {
+    const year = parseInt(parts[0]);
+    const month = String(parseInt(parts[1])).padStart(2, '0');
+    const day = String(parseInt(parts[2])).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  
   return dateString;
 }
 
@@ -101,8 +99,9 @@ export function getCurrentDateString(): string {
 }
 
 export function addDays(dateString: string, days: number): string {
-  // Parse date in local timezone to prevent shifting
-  const parts = dateString.split('-');
+  // Always work with the date string directly to prevent timezone shifts
+  const datePart = dateString.includes('T') ? dateString.split('T')[0] : dateString;
+  const parts = datePart.split('-');
   if (parts.length === 3) {
     const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     date.setDate(date.getDate() + days);
@@ -114,8 +113,8 @@ export function addDays(dateString: string, days: number): string {
     return `${year}-${month}-${day}`;
   }
   
-  // Fallback method
-  const date = new Date(dateString + 'T00:00:00');
+  // Fallback method with noon time to avoid timezone edge cases
+  const date = new Date(dateString + 'T12:00:00');
   date.setDate(date.getDate() + days);
   return date.toISOString().split('T')[0];
 }

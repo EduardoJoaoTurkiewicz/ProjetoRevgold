@@ -50,26 +50,59 @@ export function ExportButtons({ filters, data }: ExportButtonsProps) {
       
       const printUrl = `/print/reports?${queryString}`;
       
-      // Open in new window for printing with proper dimensions
-      const printWindow = window.open(printUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+      // Create a temporary iframe to load and print the report
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-9999px';
+      iframe.style.left = '-9999px';
+      iframe.style.width = '1200px';
+      iframe.style.height = '800px';
+      iframe.src = printUrl;
       
-      if (printWindow) {
-        // Wait for the window to load before focusing
-        printWindow.addEventListener('load', () => {
-          printWindow.focus();
-          // Auto-print after a short delay to ensure content is loaded
+      document.body.appendChild(iframe);
+      
+      iframe.onload = () => {
+        try {
+          // Wait for content to fully load
           setTimeout(() => {
-            try {
-              printWindow.print();
-            } catch (printError) {
-              console.warn('Auto-print failed:', printError);
+            // Open the content in a new window for printing
+            const printWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+            if (printWindow) {
+              printWindow.document.write(iframe.contentDocument?.documentElement.outerHTML || '');
+              printWindow.document.close();
+              
+              // Wait for images and content to load in the new window
+              setTimeout(() => {
+                printWindow.focus();
+                printWindow.print();
+                
+                // Close the window after printing
+                printWindow.addEventListener('afterprint', () => {
+                  printWindow.close();
+                });
+              }, 1000);
+              
+              toast.success('Relatório aberto para impressão');
+            } else {
+              toast.error('Por favor, permita pop-ups para abrir a janela de impressão.');
             }
-          }, 1500);
-        });
-        toast.success('Relatório sendo preparado para impressão...');
-      } else {
-        toast.error('Por favor, permita pop-ups para abrir a janela de impressão.');
-      }
+            
+            // Clean up the iframe
+            document.body.removeChild(iframe);
+          }, 2000);
+        } catch (error) {
+          console.error('Error in print process:', error);
+          toast.error('Erro ao preparar impressão');
+          document.body.removeChild(iframe);
+        }
+      };
+      
+      iframe.onerror = () => {
+        toast.error('Erro ao carregar relatório');
+        document.body.removeChild(iframe);
+      };
+      
+      toast.success('Preparando relatório para impressão...');
     } catch (error) {
       console.error('Error opening print window:', error);
       toast.error('Erro ao abrir janela de impressão: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
@@ -139,14 +172,18 @@ export function ExportButtons({ filters, data }: ExportButtonsProps) {
       
       const previewUrl = `/print/reports?${queryString}`;
       
-      // Open in new tab for preview with proper dimensions
-      const previewWindow = window.open(previewUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+      // Create a more reliable preview window
+      const previewWindow = window.open('about:blank', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=yes,menubar=yes');
       
       if (previewWindow) {
-        // Ensure the window loads properly
-        previewWindow.addEventListener('load', () => {
+        // Set the location after the window is created
+        previewWindow.location.href = previewUrl;
+        
+        // Focus the window
+        setTimeout(() => {
           previewWindow.focus();
-        });
+        }, 500);
+        
         toast.success('Visualização do relatório aberta');
       } else {
         toast.error('Por favor, permita pop-ups para visualizar o relatório');

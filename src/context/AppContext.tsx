@@ -259,6 +259,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       
       // Refresh only sales data with enhanced deduplication
       await refreshSalesData();
+      
+      // Also refresh installment-related data to show new checks/boletos immediately
+      await refreshInstallmentData();
+      
       return result;
     } catch (err) {
       console.error('Error creating sale:', err);
@@ -333,6 +337,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     try {
       const result = await enhancedSupabaseServices.debts.create(debtData);
       await refreshDebtsData();
+      
+      // Also refresh installment-related data to show new checks/boletos immediately
+      await refreshInstallmentData();
+      
       return result;
     } catch (err) {
       console.error('Error creating debt:', err);
@@ -474,6 +482,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       const transactionsData = await supabaseServices.cashTransactions.getTransactions();
       setCashTransactions(transactionsData || []);
       
+      // Refresh related sales and debts to update their status
+      await refreshSalesData();
+      await refreshDebtsData();
+      
       return result;
     } catch (err) {
       console.error('Error updating check:', err);
@@ -530,6 +542,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setCashBalance(balanceData);
       const transactionsData = await supabaseServices.cashTransactions.getTransactions();
       setCashTransactions(transactionsData || []);
+      
+      // Refresh related sales and debts to update their status
+      await refreshSalesData();
+      await refreshDebtsData();
       
       return result;
     } catch (err) {

@@ -12,7 +12,7 @@ export class InstallmentService {
     const installments = safeNumber(paymentMethod.installments, 1);
     const installmentValue = safeNumber(paymentMethod.installmentValue, paymentMethod.amount);
     const interval = safeNumber(paymentMethod.installmentInterval, 30);
-    const startDate = paymentMethod.firstInstallmentDate || formatDateForInput(new Date());
+    const startDate = paymentMethod.firstInstallmentDate || new Date().toISOString().split('T')[0];
     
     console.log(`🔄 Creating ${installments} checks for sale ${saleId}`);
     
@@ -51,7 +51,7 @@ export class InstallmentService {
     const installments = safeNumber(paymentMethod.installments, 1);
     const installmentValue = safeNumber(paymentMethod.installmentValue, paymentMethod.amount);
     const interval = safeNumber(paymentMethod.installmentInterval, 30);
-    const startDate = paymentMethod.firstInstallmentDate || formatDateForInput(new Date());
+    const startDate = paymentMethod.firstInstallmentDate || new Date().toISOString().split('T')[0];
     
     console.log(`🔄 Creating ${installments} boletos for sale ${saleId}`);
     
@@ -139,7 +139,7 @@ export class InstallmentService {
     const installments = safeNumber(paymentMethod.installments, 1);
     const installmentValue = safeNumber(paymentMethod.installmentValue, paymentMethod.amount);
     const interval = safeNumber(paymentMethod.installmentInterval, 30);
-    const startDate = paymentMethod.firstInstallmentDate || formatDateForInput(new Date());
+    const startDate = paymentMethod.firstInstallmentDate || new Date().toISOString().split('T')[0];
     
     console.log(`🔄 Creating ${installments} checks for debt ${debtId}`);
     
@@ -180,7 +180,7 @@ export class InstallmentService {
     const installments = safeNumber(paymentMethod.installments, 1);
     const installmentValue = safeNumber(paymentMethod.installmentValue, paymentMethod.amount);
     const interval = safeNumber(paymentMethod.installmentInterval, 30);
-    const startDate = paymentMethod.firstInstallmentDate || formatDateForInput(new Date());
+    const startDate = paymentMethod.firstInstallmentDate || new Date().toISOString().split('T')[0];
     
     console.log(`🔄 Creating ${installments} boletos for debt ${debtId}`);
     
