@@ -50,8 +50,21 @@ export default function Reports() {
   } = useAppContext();
 
   const [filters, setFilters] = useState({
-    startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
+    startDate: (() => {
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      const year = firstDay.getFullYear();
+      const month = String(firstDay.getMonth() + 1).padStart(2, '0');
+      const day = String(firstDay.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })(),
+    endDate: (() => {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })(),
     categories: [] as string[],
     methods: [] as string[],
     status: 'all',
@@ -93,7 +106,15 @@ export default function Reports() {
     
     // Sales with instant payment
     periodSales.forEach(sale => {
+      if (!sale.paymentMethods || !Array.isArray(sale.paymentMethods)) {
+        return; // Skip sales without valid payment methods
+      }
+      
       (sale.paymentMethods || []).forEach((method, methodIndex) => {
+        if (!method || typeof method !== 'object') {
+          return; // Skip invalid payment methods
+        }
+        
         if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
             (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
           receivedValues.push({
@@ -102,12 +123,12 @@ export default function Reports() {
             type: 'Venda',
             description: `Venda - ${sale.client}`,
             paymentMethod: method.type.replace('_', ' ').toUpperCase(),
-            amount: method.amount,
+            amount: Number(method.amount) || 0,
             details: {
               saleId: sale.id,
               client: sale.client,
               products: sale.products,
-              totalSaleValue: sale.totalValue,
+              totalSaleValue: Number(sale.totalValue) || 0,
               seller: sale.sellerId ? employees.find(e => e.id === sale.sellerId)?.name : 'N/A'
             }
           });
@@ -117,6 +138,10 @@ export default function Reports() {
 
     // Checks compensated in period
     checks.forEach(check => {
+      if (!check || typeof check !== 'object') {
+        return; // Skip invalid checks
+      }
+      
       if (check.dueDate >= filters.startDate && check.dueDate <= filters.endDate && check.status === 'compensado') {
         receivedValues.push({
           id: `check-${check.id}`,
@@ -124,7 +149,7 @@ export default function Reports() {
           type: 'Cheque',
           description: `Cheque compensado - ${check.client}`,
           paymentMethod: 'CHEQUE',
-          amount: check.value,
+          amount: Number(check.value) || 0,
           details: {
             checkId: check.id,
             client: check.client,
@@ -140,9 +165,13 @@ export default function Reports() {
 
     // Boletos paid in period
     boletos.forEach(boleto => {
+      if (!boleto || typeof boleto !== 'object') {
+        return; // Skip invalid boletos
+      }
+      
       if (boleto.dueDate >= filters.startDate && boleto.dueDate <= filters.endDate && boleto.status === 'compensado') {
-        const finalAmount = boleto.finalAmount || boleto.value;
-        const notaryCosts = boleto.notaryCosts || 0;
+        const finalAmount = Number(boleto.finalAmount) || Number(boleto.value) || 0;
+        const notaryCosts = Number(boleto.notaryCosts) || 0;
         const netReceived = finalAmount - notaryCosts;
         
         receivedValues.push({
@@ -155,7 +184,7 @@ export default function Reports() {
           details: {
             boletoId: boleto.id,
             client: boleto.client,
-            originalValue: boleto.value,
+            originalValue: Number(boleto.value) || 0,
             finalAmount: finalAmount,
             notaryCosts: notaryCosts,
             installment: `${boleto.installmentNumber}/${boleto.totalInstallments}`,
@@ -175,8 +204,20 @@ export default function Reports() {
 
     // Paid debts in period
     periodDebts.forEach(debt => {
+      if (!debt || typeof debt !== 'object') {
+        return; // Skip invalid debts
+      }
+      
       if (debt.isPaid) {
+        if (!debt.paymentMethods || !Array.isArray(debt.paymentMethods)) {
+          return; // Skip debts without valid payment methods
+        }
+        
         (debt.paymentMethods || []).forEach((method, methodIndex) => {
+          if (!method || typeof method !== 'object') {
+            return; // Skip invalid payment methods
+          }
+          
           if (['dinheiro', 'pix', 'cartao_debito', 'transferencia'].includes(method.type)) {
             paidValues.push({
               id: `debt-${debt.id}-${methodIndex}`,
@@ -184,14 +225,14 @@ export default function Reports() {
               type: 'Dívida',
               description: `Pagamento - ${debt.company}`,
               paymentMethod: method.type.replace('_', ' ').toUpperCase(),
-              amount: method.amount,
+              amount: Number(method.amount) || 0,
               details: {
                 debtId: debt.id,
                 company: debt.company,
                 description: debt.description,
-                totalDebtValue: debt.totalValue,
-                paidAmount: debt.paidAmount,
-                pendingAmount: debt.pendingAmount
+                totalDebtValue: Number(debt.totalValue) || 0,
+                paidAmount: Number(debt.paidAmount) || 0,
+                pendingAmount: Number(debt.pendingAmount) || 0
               }
             });
           }
@@ -201,6 +242,10 @@ export default function Reports() {
 
     // Employee payments in period
     employeePayments.forEach(payment => {
+      if (!payment || typeof payment !== 'object') {
+        return; // Skip invalid payments
+      }
+      
       if (payment.paymentDate >= filters.startDate && payment.paymentDate <= filters.endDate) {
         const employee = employees.find(e => e.id === payment.employeeId);
         paidValues.push({
@@ -209,7 +254,7 @@ export default function Reports() {
           type: 'Salário',
           description: `Pagamento de salário - ${employee?.name || 'Funcionário'}`,
           paymentMethod: 'DINHEIRO',
-          amount: payment.amount,
+          amount: Number(payment.amount) || 0,
           details: {
             employeeId: payment.employeeId,
             employeeName: employee?.name,
@@ -223,6 +268,10 @@ export default function Reports() {
 
     // PIX fees in period
     pixFees.forEach(fee => {
+      if (!fee || typeof fee !== 'object') {
+        return; // Skip invalid fees
+      }
+      
       if (fee.date >= filters.startDate && fee.date <= filters.endDate) {
         paidValues.push({
           id: `pix-fee-${fee.id}`,
@@ -230,7 +279,7 @@ export default function Reports() {
           type: 'Tarifa PIX',
           description: `Tarifa PIX - ${fee.bank}`,
           paymentMethod: 'PIX',
-          amount: fee.amount,
+          amount: Number(fee.amount) || 0,
           details: {
             bank: fee.bank,
             transactionType: fee.transactionType,
@@ -242,10 +291,10 @@ export default function Reports() {
     });
 
     // Calculate totals
-    const totalSales = periodSales.reduce((sum, sale) => sum + sale.totalValue, 0);
-    const totalReceived = receivedValues.reduce((sum, item) => sum + item.amount, 0);
-    const totalDebts = periodDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
-    const totalPaid = paidValues.reduce((sum, item) => sum + item.amount, 0);
+    const totalSales = periodSales.reduce((sum, sale) => sum + (Number(sale.totalValue) || 0), 0);
+    const totalReceived = receivedValues.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const totalDebts = periodDebts.reduce((sum, debt) => sum + (Number(debt.totalValue) || 0), 0);
+    const totalPaid = paidValues.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
     return {
       sales: periodSales,
@@ -257,7 +306,7 @@ export default function Reports() {
         received: totalReceived,
         debts: totalDebts,
         paid: totalPaid,
-        cashBalance: cashBalance?.currentBalance || 0
+        cashBalance: Number(cashBalance?.currentBalance) || 0
       }
     };
   }, [sales, debts, checks, boletos, employees, employeePayments, pixFees, cashBalance, filters]);
@@ -525,6 +574,7 @@ export default function Reports() {
                 </div>
               )}
           </div>
+          </div>
 
           {/* Valores a Receber */}
           <ReceivablesReport />
@@ -571,7 +621,7 @@ export default function Reports() {
                 ))}
               </div>
             </div>
-            </div>
+
             {/* Paid Values */}
             <div className="card modern-shadow-xl">
               <div className="flex items-center gap-4 mb-6">

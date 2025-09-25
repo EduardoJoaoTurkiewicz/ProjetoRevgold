@@ -33,8 +33,21 @@ export function CashManagement() {
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [viewingTransaction, setViewingTransaction] = useState(null);
   const [filters, setFilters] = useState({
-    startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
+    startDate: (() => {
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      const year = firstDay.getFullYear();
+      const month = String(firstDay.getMonth() + 1).padStart(2, '0');
+      const day = String(firstDay.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })(),
+    endDate: (() => {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })(),
     category: 'all',
     paymentMethod: 'all',
     type: 'all',
