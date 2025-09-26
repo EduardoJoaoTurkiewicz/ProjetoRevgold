@@ -729,7 +729,6 @@ export const boletosService = {
   },
 
   async update(id: string, boleto: Partial<Boleto>): Promise<void> {
-    const oldBoleto = boletos.find(b => b.id === id);
     const sanitizedBoleto = sanitizeSupabaseData(boleto);
     logMonetaryValues(sanitizedBoleto, 'Update Boleto');
     
@@ -749,16 +748,6 @@ export const boletosService = {
       .eq('id', id);
     
     if (error) throw error;
-    
-    // Handle cash balance update for status changes
-    if (oldBoleto && sanitizedBoleto.status && oldBoleto.status !== sanitizedBoleto.status) {
-      const { CashBalanceService } = await import('./cashBalanceService');
-      await CashBalanceService.handleBoletoPayment(
-        { ...oldBoleto, ...sanitizedBoleto }, 
-        oldBoleto.status, 
-        sanitizedBoleto.status
-      );
-    }
   },
 
   async delete(id: string): Promise<void> {

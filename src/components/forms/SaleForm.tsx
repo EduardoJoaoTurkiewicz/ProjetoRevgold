@@ -655,6 +655,19 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                               </p>
                             </div>
                           )}
+                         
+                         {method.type === 'acerto' && (
+                           <div className="md:col-span-2">
+                             <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                               <p className="text-sm text-blue-800 font-semibold">
+                                 💡 Acerto: Este valor será adicionado ao acerto mensal do cliente "{formData.client}"
+                               </p>
+                               <p className="text-xs text-blue-600 mt-1">
+                                 O cliente pagará este valor junto com outras vendas em acerto no final do mês
+                               </p>
+                             </div>
+                           </div>
+                         )}
                         </>
                       )}
 

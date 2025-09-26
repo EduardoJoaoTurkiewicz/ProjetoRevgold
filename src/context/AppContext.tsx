@@ -470,12 +470,23 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const updateCheck = async (checkData: any) => {
     try {
       const { id, ...updateData } = checkData;
+     const oldCheck = checks.find(c => c.id === id);
       const result = await supabaseServices.checks.update(id, updateData);
       
       // Refresh only checks data for better performance
       const checksData = await supabaseServices.checks.getChecks();
       setChecks(checksData || []);
       
+     // Handle cash balance update for status changes
+     if (oldCheck && updateData.status && oldCheck.status !== updateData.status) {
+       const { CashBalanceService } = await import('../lib/cashBalanceService');
+       await CashBalanceService.handleCheckPayment(
+         { ...oldCheck, ...updateData }, 
+         oldCheck.status, 
+         updateData.status
+       );
+     }
+     
       // Also refresh cash data since check updates might affect cash
       const balanceData = await supabaseServices.cashBalance.getCurrentBalance();
       setCashBalance(balanceData);
@@ -531,12 +542,23 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const updateBoleto = async (boletoData: any) => {
     try {
       const { id, ...updateData } = boletoData;
+     const oldBoleto = boletos.find(b => b.id === id);
       const result = await supabaseServices.boletos.update(id, updateData);
       
       // Refresh only boletos data for better performance
       const boletosData = await supabaseServices.boletos.getBoletos();
       setBoletos(boletosData || []);
       
+     // Handle cash balance update for status changes
+     if (oldBoleto && updateData.status && oldBoleto.status !== updateData.status) {
+       const { CashBalanceService } = await import('../lib/cashBalanceService');
+       await CashBalanceService.handleBoletoPayment(
+         { ...oldBoleto, ...updateData }, 
+         oldBoleto.status, 
+         updateData.status
+       );
+     }
+     
       // Also refresh cash data since boleto updates might affect cash
       const balanceData = await supabaseServices.cashBalance.getCurrentBalance();
       setCashBalance(balanceData);

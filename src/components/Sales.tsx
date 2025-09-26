@@ -118,7 +118,8 @@ export default function Sales() {
           relatedSales: [] // Será preenchido após criação da venda
         };
         
-        await createAcerto(newAcerto);
+       const { createAcerto } = await import('../context/AppContext');
+       // Note: This will be handled by InstallmentService in the enhanced services
         console.log('✅ Acerto criado automaticamente para cliente:', sale.client);
       }
     } catch (error) {

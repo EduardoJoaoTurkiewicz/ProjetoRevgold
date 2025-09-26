@@ -385,6 +385,21 @@ export function Acertos() {
                                   <span className="font-semibold text-blue-800">Registrar Pagamento</span>
                                 </button>
                               )}
+                             
+                             <button
+                               onClick={() => {
+                                 // Navegar para a aba de vendas e filtrar por cliente
+                                 window.location.hash = '#sales';
+                                 setTimeout(() => {
+                                   // Implementar filtro por cliente na aba vendas
+                                   console.log('Filtrar vendas por cliente:', acerto.clientName);
+                                 }, 100);
+                               }}
+                               className="w-full p-4 bg-purple-50 rounded-xl border border-purple-200 hover:bg-purple-100 transition-colors flex items-center gap-3"
+                             >
+                               <FileText className="w-5 h-5 text-purple-600" />
+                               <span className="font-semibold text-purple-800">Ver Vendas Relacionadas</span>
+                             </button>
                               
                               <button
                                 onClick={() => setEditingAcerto(acerto)}
@@ -535,6 +550,21 @@ export function Acertos() {
                                   <span className="font-semibold text-purple-800">Negociar Pagamento</span>
                                 </button>
                               )}
+                             
+                             <button
+                               onClick={() => {
+                                 // Navegar para a aba de dívidas e filtrar por empresa
+                                 window.location.hash = '#debts';
+                                 setTimeout(() => {
+                                   // Implementar filtro por empresa na aba dívidas
+                                   console.log('Filtrar dívidas por empresa:', acerto.companyName);
+                                 }, 100);
+                               }}
+                               className="w-full p-4 bg-indigo-50 rounded-xl border border-indigo-200 hover:bg-indigo-100 transition-colors flex items-center gap-3"
+                             >
+                               <CreditCard className="w-5 h-5 text-indigo-600" />
+                               <span className="font-semibold text-indigo-800">Ver Dívidas Relacionadas</span>
+                             </button>
                               
                               <button
                                 onClick={() => setEditingAcerto(acerto)}

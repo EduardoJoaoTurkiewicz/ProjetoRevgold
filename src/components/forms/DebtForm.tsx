@@ -336,6 +336,92 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
                           placeholder="0,00"
                         />
                       </div>
+                     
+                     {(method.type === 'cheque' || method.type === 'boleto') && (
+                       <>
+                         <div>
+                           <label className="form-label">Número de Parcelas</label>
+                           <input
+                             type="number"
+                             min="1"
+                             max="24"
+                             value={safeNumber(method.installments, 1)}
+                             onChange={(e) => updatePaymentMethod(index, 'installments', safeNumber(e.target.value, 1))}
+                             className="input-field"
+                             placeholder="1"
+                           />
+                         </div>
+                         
+                         {safeNumber(method.installments, 1) > 1 && (
+                           <>
+                             <div>
+                               <label className="form-label">Valor por Parcela</label>
+                               <input
+                                 type="number"
+                                 step="0.01"
+                                 value={safeNumber(method.installmentValue, 0)}
+                                 className="input-field bg-gray-50"
+                                 readOnly
+                               />
+                               <p className="text-xs text-blue-600 mt-1 font-bold">
+                                 ✓ Calculado automaticamente: R$ {(safeNumber(method.amount, 0) / safeNumber(method.installments, 1)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                               </p>
+                             </div>
+                             
+                             <div>
+                               <label className="form-label">Intervalo (dias)</label>
+                               <input
+                                 type="number"
+                                 min="1"
+                                 value={safeNumber(method.installmentInterval, 30)}
+                                 onChange={(e) => updatePaymentMethod(index, 'installmentInterval', safeNumber(e.target.value, 30))}
+                                 className="input-field"
+                                 placeholder="30"
+                               />
+                             </div>
+                             
+                             <div>
+                               <label className="form-label">Data da Primeira Parcela</label>
+                               <input
+                                 type="date"
+                                 value={method.firstInstallmentDate || formData.date}
+                                 onChange={(e) => updatePaymentMethod(index, 'firstInstallmentDate', e.target.value)}
+                                 className="input-field"
+                               />
+                             </div>
+                           </>
+                         )}
+                         
+                         {safeNumber(method.installments, 1) === 1 && (
+                           <div>
+                             <label className="form-label">Data de Vencimento/Pagamento *</label>
+                             <input
+                               type="date"
+                               value={method.firstInstallmentDate || formData.date}
+                               onChange={(e) => updatePaymentMethod(index, 'firstInstallmentDate', e.target.value)}
+                               className="input-field"
+                               required
+                             />
+                             <p className="text-xs text-gray-500 mt-1">
+                               Data em que o {method.type === 'cheque' ? 'cheque' : 'boleto'} será pago/vencerá
+                             </p>
+                           </div>
+                         )}
+                       </>
+                     )}
+                     
+                     {method.type === 'acerto' && (
+                       <div className="md:col-span-2">
+                         <div className="p-4 bg-red-50 rounded-xl border border-red-200">
+                           <p className="text-sm text-red-800 font-semibold">
+                             💡 Acerto: Este valor será adicionado ao acerto mensal da empresa "{formData.company}"
+                           </p>
+                           <p className="text-xs text-red-600 mt-1">
+                             A empresa pagará este valor junto com outras dívidas em acerto no final do mês
+                           </p>
+                         </div>
+                       </div>
+                     )}
                     </div>
                   </div>
                 ))}

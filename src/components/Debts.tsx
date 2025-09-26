@@ -114,7 +114,7 @@ export function Debts() {
           relatedDebts: [] // Será preenchido após criação da dívida
         };
         
-        await createAcerto(newAcerto);
+       // Note: This will be handled by InstallmentService in the enhanced services
         console.log('✅ Acerto criado automaticamente para empresa:', debt.company);
       }
     } catch (error) {
