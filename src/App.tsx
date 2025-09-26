@@ -18,6 +18,7 @@ import { Employees } from './components/Employees';
 import { Taxes } from './components/Taxes';
 import { Acertos } from './components/Acertos';
 import { PrintReportPage } from './components/reports/PrintReportPage';
+import { Permutas } from './components/Permutas';
 
 function App() {
   return (
