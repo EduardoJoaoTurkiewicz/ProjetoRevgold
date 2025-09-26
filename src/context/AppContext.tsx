@@ -114,6 +114,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [acertos, setAcertos] = useState<any[]>([]);
   const [cashBalance, setCashBalance] = useState<any>(null);
   const [cashTransactions, setCashTransactions] = useState<any[]>([]);
+  const [permutas, setPermutas] = useState<any[]>([]);
 
   // Track loading state for each data type to prevent multiple loads
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
@@ -152,7 +153,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           eventsData,
           acertosData,
           balanceData,
-          transactionsData
+          transactionsData,
+          permutasData
         ] = await Promise.all([
           enhancedSupabaseServices.sales.getSales(),
           enhancedSupabaseServices.employees.getEmployees(),
@@ -168,7 +170,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           supabaseServices.agendaEvents.getEvents(),
           supabaseServices.acertos.getAcertos(),
           supabaseServices.cashBalance.getCurrentBalance(),
-          supabaseServices.cashTransactions.getTransactions()
+          supabaseServices.cashTransactions.getTransactions(),
+          supabaseServices.permutas.getPermutas()
         ]);
 
         // Merge with offline data and remove duplicates
@@ -205,6 +208,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         setAcertos(acertosData || []);
         setCashBalance(balanceData);
         setCashTransactions(transactionsData || []);
+        setPermutas(permutasData || []);
 
         console.log('✅ Data loaded and merged successfully');
       } else {
@@ -223,6 +227,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         setSales(DeduplicationService.removeDuplicatesById(offlineSalesData.map(d => d.data)));
         setEmployees(DeduplicationService.removeDuplicatesById(offlineEmployeesData.map(d => d.data)));
         setDebts(DeduplicationService.removeDuplicatesById(offlineDebtsData.map(d => d.data)));
+        setPermutas([]); // No offline support for permutas yet
         
         console.log('✅ Offline data loaded with deduplication');
       }

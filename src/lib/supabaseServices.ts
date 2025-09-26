@@ -21,7 +21,8 @@ import type {
   PixFee,
   Tax,
   AgendaEvent,
-  Acerto
+  Acerto,
+  Permuta
 } from '../types';
 
 // Enhanced Supabase services with deduplication
@@ -1311,6 +1312,99 @@ export const acertosService = {
   }
 };
 
+// Permutas Service
+export const permutasService = {
+  async getPermutas(): Promise<Permuta[]> {
+    const data = await safeSupabaseOperation(
+      () => supabase.from('permutas').select('*').order('created_at', { ascending: false }),
+      [],
+      'Get Permutas'
+    );
+    
+    if (!data) return [];
+    
+    return data.map(permuta => {
+      const sanitized = sanitizeSupabaseData(transformFromSnakeCase(permuta));
+      
+      // Ensure all monetary fields are numbers
+      sanitized.vehicleValue = safeNumber(sanitized.vehicleValue, 0);
+      sanitized.consumedValue = safeNumber(sanitized.consumedValue, 0);
+      sanitized.remainingValue = safeNumber(sanitized.remainingValue, 0);
+      sanitized.vehicleYear = safeNumber(sanitized.vehicleYear, new Date().getFullYear());
+      sanitized.vehicleMileage = safeNumber(sanitized.vehicleMileage, 0);
+      
+      return sanitized;
+    });
+  },
+
+  async create(permuta: Omit<Permuta, 'id' | 'createdAt'>): Promise<string> {
+    const sanitizedPermuta = {
+      ...permuta,
+      vehicleValue: safeNumber(permuta.vehicleValue, 0),
+      consumedValue: safeNumber(permuta.consumedValue, 0),
+      remainingValue: safeNumber(permuta.remainingValue, 0),
+      vehicleYear: safeNumber(permuta.vehicleYear, new Date().getFullYear()),
+      vehicleMileage: safeNumber(permuta.vehicleMileage, 0)
+    };
+    
+    logMonetaryValues(sanitizedPermuta, 'Create Permuta');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      return await saveOffline('permutas', sanitizedPermuta);
+    }
+
+    const { data, error } = await supabase
+      .from('permutas')
+      .insert([transformToSnakeCase(sanitizedPermuta)])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data.id;
+  },
+
+  async update(id: string, permuta: Partial<Permuta>): Promise<void> {
+    const sanitizedPermuta = sanitizeSupabaseData(permuta);
+    logMonetaryValues(sanitizedPermuta, 'Update Permuta');
+    
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'update',
+        table: 'permutas',
+        data: { id, ...sanitizedPermuta },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('permutas')
+      .update(transformToSnakeCase(sanitizedPermuta))
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
+      await addToSyncQueue({
+        type: 'delete',
+        table: 'permutas',
+        data: { id },
+        maxRetries: 3
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('permutas')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+};
+
 // Debug Service
 export const debugService = {
   async getRecentSaleErrors(limit: number = 50): Promise<any[]> {
@@ -1362,7 +1456,8 @@ export const supabaseServices = {
   pixFees: pixFeesService,
   taxes: taxesService,
   agendaEvents: agendaService,
-  acertos: acertosService
+  acertos: acertosService,
+  permutas: permutasService
 };
 
 // Image upload service

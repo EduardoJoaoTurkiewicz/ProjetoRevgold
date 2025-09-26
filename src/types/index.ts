@@ -299,6 +299,27 @@ export interface Acerto {
   updatedAt?: string;
 }
 
+// Permuta interface
+export interface Permuta {
+  id?: string;
+  clientName: string;
+  vehicleMake: string;
+  vehicleModel: string;
+  vehicleYear: number;
+  vehiclePlate: string;
+  vehicleChassis?: string;
+  vehicleColor?: string;
+  vehicleMileage?: number;
+  vehicleValue: number;
+  consumedValue: number;
+  remainingValue: number;
+  status: 'ativo' | 'finalizado' | 'cancelado';
+  notes?: string;
+  registrationDate: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // Sale Boleto interface (A Receber)
 export interface SaleBoleto {
   id: string;

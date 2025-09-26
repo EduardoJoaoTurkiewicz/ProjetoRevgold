@@ -21,13 +21,14 @@ const PAYMENT_TYPES = [
   { value: 'cheque', label: 'Cheque' },
   { value: 'boleto', label: 'Boleto' },
   { value: 'transferencia', label: 'Transferência' },
-  { value: 'acerto', label: 'Acerto (Pagamento Mensal)' }
+  { value: 'acerto', label: 'Acerto (Pagamento Mensal)' },
+  { value: 'permuta', label: 'Permuta (Troca de Veículo)' }
 ];
 
 const INSTALLMENT_TYPES = ['cartao_credito', 'cheque', 'boleto'];
 
 export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
-  const { employees } = useAppContext();
+  const { employees, permutas } = useAppContext();
   const [formData, setFormData] = useState({
     date: sale?.date || new Date().toISOString().split('T')[0],
     deliveryDate: sale?.deliveryDate || '',
@@ -50,6 +51,13 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
 
   // Filtrar apenas vendedores ativos
   const sellers = employees.filter(emp => emp.isActive && emp.isSeller);
+
+  // Filtrar permutas ativas do cliente atual
+  const availablePermutas = permutas.filter(permuta => 
+    permuta.status === 'ativo' && 
+    permuta.remainingValue > 0 &&
+    permuta.clientName.toLowerCase() === formData.client.toLowerCase()
+  );
 
   const addPaymentMethod = () => {
     setFormData(prev => ({
@@ -668,6 +676,81 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                              </div>
                            </div>
                          )}
+                          
+                          {method.type === 'permuta' && (
+                            <div className="md:col-span-2">
+                              <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
+                                <h4 className="font-semibold text-purple-900 mb-3">
+                                  🚗 Permuta: Selecione o veículo para usar como pagamento
+                                </h4>
+                                
+                                {availablePermutas.length > 0 ? (
+                                  <div className="space-y-3">
+                                    <select
+                                      value={method.vehicleId || ''}
+                                      onChange={(e) => updatePaymentMethod(index, 'vehicleId', e.target.value)}
+                                      className="input-field"
+                                      required
+                                    >
+                                      <option value="">Selecione o veículo...</option>
+                                      {availablePermutas.map(permuta => (
+                                        <option key={permuta.id} value={permuta.id}>
+                                          {permuta.vehicleMake} {permuta.vehicleModel} {permuta.vehicleYear} - 
+                                          Disponível: R$ {permuta.remainingValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    
+                                    {method.vehicleId && (
+                                      <div className="p-3 bg-white rounded-lg border border-purple-100">
+                                        {(() => {
+                                          const selectedVehicle = availablePermutas.find(p => p.id === method.vehicleId);
+                                          if (!selectedVehicle) return null;
+                                          
+                                          return (
+                                            <div>
+                                              <p className="font-bold text-purple-900 mb-2">
+                                                {selectedVehicle.vehicleMake} {selectedVehicle.vehicleModel} {selectedVehicle.vehicleYear}
+                                              </p>
+                                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                                <div>
+                                                  <span className="text-purple-600">Placa:</span>
+                                                  <span className="font-bold text-purple-800 ml-2">{selectedVehicle.vehiclePlate}</span>
+                                                </div>
+                                                <div>
+                                                  <span className="text-purple-600">Disponível:</span>
+                                                  <span className="font-bold text-green-600 ml-2">
+                                                    R$ {selectedVehicle.remainingValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                              
+                                              {method.amount > selectedVehicle.remainingValue && (
+                                                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+                                                  <p className="text-xs text-red-700 font-semibold">
+                                                    ⚠️ Valor excede o disponível na permuta
+                                                  </p>
+                                                </div>
+                                              )}
+                                            </div>
+                                          );
+                                        })()}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                                    <p className="text-sm text-yellow-800 font-semibold">
+                                      ⚠️ Nenhum veículo disponível para permuta com este cliente
+                                    </p>
+                                    <p className="text-xs text-yellow-700 mt-1">
+                                      Registre primeiro um veículo na aba "Permutas" para este cliente: "{formData.client}"
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </>
                       )}
 
