@@ -12,6 +12,7 @@ import {
   Clock,
   TrendingUp,
   Zap,
+  Car,
 } from 'lucide-react';
 
 interface LayoutProps {

@@ -695,6 +695,65 @@ export interface Database {
           updated_at?: string
         }
       }
+      permutas: {
+        Row: {
+          id: string
+          client_name: string
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_year: number
+          vehicle_plate: string
+          vehicle_chassis: string | null
+          vehicle_color: string | null
+          vehicle_mileage: number | null
+          vehicle_value: number
+          consumed_value: number
+          remaining_value: number
+          status: string
+          notes: string | null
+          registration_date: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          client_name: string
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_year: number
+          vehicle_plate: string
+          vehicle_chassis?: string | null
+          vehicle_color?: string | null
+          vehicle_mileage?: number | null
+          vehicle_value?: number
+          consumed_value?: number
+          remaining_value?: number
+          status?: string
+          notes?: string | null
+          registration_date?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          client_name?: string
+          vehicle_make?: string
+          vehicle_model?: string
+          vehicle_year?: number
+          vehicle_plate?: string
+          vehicle_chassis?: string | null
+          vehicle_color?: string | null
+          vehicle_mileage?: number | null
+          vehicle_value?: number
+          consumed_value?: number
+          remaining_value?: number
+          status?: string
+          notes?: string | null
+          registration_date?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

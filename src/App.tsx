@@ -97,6 +97,8 @@ function renderPage(currentPage: string) {
       return <Agenda />;
     case 'acertos':
       return <Acertos />;
+    case 'permutas':
+      return <Permutas />;
     default:
       return <Dashboard />;
   }

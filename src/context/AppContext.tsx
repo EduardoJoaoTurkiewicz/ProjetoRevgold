@@ -1019,6 +1019,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     createCashTransaction,
     updateCashTransaction,
     deleteCashTransaction,
+    createPermuta,
+    updatePermuta,
+    deletePermuta,
     
     // Utility functions
     refreshInstallmentData,

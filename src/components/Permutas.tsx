@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Car, Eye, Edit, Trash2, Calendar, DollarSign, User, AlertTriangle, X, FileText, Activity, TrendingUp, CheckCircle, Clock } from 'lucide-react';
+import { Plus, Car, Eye, CreditCard as Edit, Trash2, Calendar, DollarSign, User, AlertTriangle, X, FileText, Activity, TrendingUp, CheckCircle, Clock } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Permuta } from '../types';
 import { PermutaForm } from './forms/PermutaForm';
