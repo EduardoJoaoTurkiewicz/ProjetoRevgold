@@ -33,6 +33,7 @@ interface AppContextType {
   acertos: any[];
   cashBalance: any;
   cashTransactions: any[];
+  permutas: any[];
 
   // Data loading function
   loadAllData: () => Promise<void>;
@@ -84,6 +85,11 @@ interface AppContextType {
   createCashTransaction: (transactionData: any) => Promise<any>;
   updateCashTransaction: (transactionData: any) => Promise<any>;
   deleteCashTransaction: (id: string) => Promise<void>;
+
+  // CRUD functions for permutas
+  createPermuta: (permutaData: any) => Promise<any>;
+  updatePermuta: (permutaData: any) => Promise<any>;
+  deletePermuta: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -884,6 +890,51 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
+  // CRUD functions for permutas
+  const createPermuta = async (permutaData: any) => {
+    try {
+      const result = await supabaseServices.permutas.create(permutaData);
+      
+      // Refresh permutas data
+      const permutasData = await supabaseServices.permutas.getPermutas();
+      setPermutas(permutasData || []);
+      
+      return result;
+    } catch (err) {
+      console.error('Error creating permuta:', err);
+      throw err;
+    }
+  };
+
+  const updatePermuta = async (permutaData: any) => {
+    try {
+      const { id, ...updateData } = permutaData;
+      const result = await supabaseServices.permutas.update(id, updateData);
+      
+      // Refresh permutas data
+      const permutasData = await supabaseServices.permutas.getPermutas();
+      setPermutas(permutasData || []);
+      
+      return result;
+    } catch (err) {
+      console.error('Error updating permuta:', err);
+      throw err;
+    }
+  };
+
+  const deletePermuta = async (id: string) => {
+    try {
+      await supabaseServices.permutas.delete(id);
+      
+      // Refresh permutas data
+      const permutasData = await supabaseServices.permutas.getPermutas();
+      setPermutas(permutasData || []);
+    } catch (err) {
+      console.error('Error deleting permuta:', err);
+      throw err;
+    }
+  };
+
   // Load data on mount
   useEffect(() => {
     let mounted = true;
@@ -978,6 +1029,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     acertos,
     cashBalance,
     cashTransactions,
+    permutas,
 
     // Data loading function
     loadAllData,
@@ -1019,12 +1071,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     createCashTransaction,
     updateCashTransaction,
     deleteCashTransaction,
+    
+    // CRUD functions for permutas
     createPermuta,
     updatePermuta,
     deletePermuta,
-    
-    // Utility functions
-    refreshInstallmentData,
   };
 
   return (
