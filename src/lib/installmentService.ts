@@ -27,9 +27,12 @@ export class InstallmentService {
         dueDate,
         status: 'pendente',
         isOwnCheck: paymentMethod.isOwnCheck || false,
+        isThirdPartyCheck: paymentMethod.isThirdPartyCheck || false,
         installmentNumber: i,
         totalInstallments: installments,
-        observations: `Cheque ${i}/${installments} - Venda para ${client}`
+        observations: `Cheque ${i}/${installments} - Venda para ${client}`,
+        // Add third party details if available
+        thirdPartyDetails: paymentMethod.thirdPartyDetails?.[i-1] || null
       };
       
       try {
@@ -158,7 +161,8 @@ export class InstallmentService {
         companyName: company,
         installmentNumber: i,
         totalInstallments: installments,
-        observations: `Cheque próprio ${i}/${installments} - Pagamento para ${company}`
+        observations: `Cheque próprio ${i}/${installments} - Pagamento para ${company}`,
+        usedFor: `Pagamento de dívida - ${company}`
       };
       
       try {
@@ -226,7 +230,7 @@ export class InstallmentService {
     try {
       const existingAcertos = await supabaseServices.acertos.getAcertos();
       const existingAcerto = existingAcertos.find(a => 
-        a.companyName === company && a.type === 'empresa'
+        (a.companyName === company || a.clientName === company) && a.type === 'empresa'
       );
     
       if (existingAcerto) {
@@ -270,24 +274,37 @@ export class InstallmentService {
     
     for (const method of paymentMethods) {
       try {
-        if (method.installments && method.installments > 1) {
-          switch (method.type) {
-            case 'cheque':
-              await this.createChecksForSale(saleId, client, method);
-              break;
-            case 'boleto':
-              await this.createBoletosForSale(saleId, client, method);
-              break;
-          }
-        } else if (method.type === 'cheque' || method.type === 'boleto') {
-          // Handle single installment cheques and boletos
-          if (method.type === 'cheque') {
-            await this.createChecksForSale(saleId, client, { ...method, installments: 1, installmentValue: method.amount });
-          } else if (method.type === 'boleto') {
-            await this.createBoletosForSale(saleId, client, { ...method, installments: 1, installmentValue: method.amount });
+        // Handle cheques (both single and multiple installments)
+        if (method.type === 'cheque') {
+          if (method.installments && method.installments > 1) {
+            await this.createChecksForSale(saleId, client, method);
+          } else {
+            // Single check
+            await this.createChecksForSale(saleId, client, { 
+              ...method, 
+              installments: 1, 
+              installmentValue: method.amount,
+              firstInstallmentDate: method.firstInstallmentDate || new Date().toISOString().split('T')[0]
+            });
           }
         }
-      
+        
+        // Handle boletos (both single and multiple installments)
+        if (method.type === 'boleto') {
+          if (method.installments && method.installments > 1) {
+            await this.createBoletosForSale(saleId, client, method);
+          } else {
+            // Single boleto
+            await this.createBoletosForSale(saleId, client, { 
+              ...method, 
+              installments: 1, 
+              installmentValue: method.amount,
+              firstInstallmentDate: method.firstInstallmentDate || new Date().toISOString().split('T')[0]
+            });
+          }
+        }
+        
+        // Handle acertos
         if (method.type === 'acerto') {
           await this.createAcertoForSale(client, method);
         }
@@ -306,24 +323,37 @@ export class InstallmentService {
     
     for (const method of paymentMethods) {
       try {
-        if (method.installments && method.installments > 1) {
-          switch (method.type) {
-            case 'cheque':
-              await this.createChecksForDebt(debtId, company, method);
-              break;
-            case 'boleto':
-              await this.createBoletosForDebt(debtId, company, method);
-              break;
-          }
-        } else if (method.type === 'cheque' || method.type === 'boleto') {
-          // Handle single installment cheques and boletos
-          if (method.type === 'cheque') {
-            await this.createChecksForDebt(debtId, company, { ...method, installments: 1, installmentValue: method.amount });
-          } else if (method.type === 'boleto') {
-            await this.createBoletosForDebt(debtId, company, { ...method, installments: 1, installmentValue: method.amount });
+        // Handle cheques (both single and multiple installments)
+        if (method.type === 'cheque') {
+          if (method.installments && method.installments > 1) {
+            await this.createChecksForDebt(debtId, company, method);
+          } else {
+            // Single check
+            await this.createChecksForDebt(debtId, company, { 
+              ...method, 
+              installments: 1, 
+              installmentValue: method.amount,
+              firstInstallmentDate: method.firstInstallmentDate || new Date().toISOString().split('T')[0]
+            });
           }
         }
-      
+        
+        // Handle boletos (both single and multiple installments)
+        if (method.type === 'boleto') {
+          if (method.installments && method.installments > 1) {
+            await this.createBoletosForDebt(debtId, company, method);
+          } else {
+            // Single boleto
+            await this.createBoletosForDebt(debtId, company, { 
+              ...method, 
+              installments: 1, 
+              installmentValue: method.amount,
+              firstInstallmentDate: method.firstInstallmentDate || new Date().toISOString().split('T')[0]
+            });
+          }
+        }
+        
+        // Handle acertos
         if (method.type === 'acerto') {
           await this.createAcertoForDebt(company, method);
         }

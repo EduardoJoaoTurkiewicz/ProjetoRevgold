@@ -291,6 +291,11 @@ export function Checks() {
                                   Status: {getStatusLabel(check.status)}
                                   {check.status === 'compensado' && ' ✓'}
                                 </div>
+                               {check.usedFor && (
+                                 <div className="text-sm text-blue-600 font-semibold">
+                                   Usado para: {check.usedFor}
+                                 </div>
+                               )}
                               </div>
                               <div className="text-right">
                                 <span className="font-medium text-yellow-600">
@@ -411,6 +416,11 @@ export function Checks() {
                                   Status: {getStatusLabel(check.status)}
                                   {check.status === 'compensado' && ' ✓'}
                                 </div>
+                               {check.usedFor && (
+                                 <div className="text-sm text-blue-600 font-semibold">
+                                   Usado para: {check.usedFor}
+                                 </div>
+                               )}
                               </div>
                               <div className="text-right">
                                 <span className="font-medium text-orange-600">
