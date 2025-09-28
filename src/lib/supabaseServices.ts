@@ -42,6 +42,12 @@ async function safeSupabaseOperation<T>(
     const { data, error } = await operation();
     
     if (error) {
+      // Handle PGRST116 error (no rows found) gracefully
+      if (error.code === 'PGRST116') {
+        console.log(`ℹ️ No rows found for ${context} - returning null`);
+        return null;
+      }
+      
       console.error(`❌ Supabase error in ${context}:`, error);
       throw error;
     }
@@ -143,19 +149,34 @@ export const salesService = {
         throw error;
       }
       
-      console.log('✅ salesService.create - Sale created with ID:', data);
+      // Parse the RPC response to extract the actual sale ID
+      let saleId: string;
+      if (typeof data === 'string') {
+        try {
+          const parsedData = JSON.parse(data);
+          saleId = parsedData.sale_id || data;
+        } catch {
+          saleId = data;
+        }
+      } else if (data && typeof data === 'object' && data.sale_id) {
+        saleId = data.sale_id;
+      } else {
+        saleId = data;
+      }
+      
+      console.log('✅ salesService.create - Sale created with ID:', saleId);
       
       // Process installments after sale creation
       try {
         const { InstallmentService } = await import('./installmentService');
-        await InstallmentService.processInstallmentsForSale(data, sanitizedSale.client, sanitizedSale.paymentMethods || []);
-        console.log('✅ Installments processed successfully for sale:', data);
+        await InstallmentService.processInstallmentsForSale(saleId, sanitizedSale.client, sanitizedSale.paymentMethods || []);
+        console.log('✅ Installments processed successfully for sale:', saleId);
       } catch (installmentError) {
         console.error('❌ Error processing installments for sale:', installmentError);
         // Don't throw here - sale was created successfully, installments are secondary
       }
       
-      return data;
+      return saleId;
     } catch (error) {
       console.error('❌ Error creating sale:', error);
       
