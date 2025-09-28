@@ -1315,13 +1315,20 @@ export const acertosService = {
 // Permutas Service
 export const permutasService = {
   async getPermutas(): Promise<Permuta[]> {
+    console.log('🔄 Loading permutas from Supabase...');
+    
     const data = await safeSupabaseOperation(
       () => supabase.from('permutas').select('*').order('created_at', { ascending: false }),
       [],
       'Get Permutas'
     );
     
-    if (!data) return [];
+    if (!data) {
+      console.log('⚠️ No permutas data received from Supabase');
+      return [];
+    }
+    
+    console.log(`✅ Loaded ${data.length} permutas from Supabase`);
     
     return data.map(permuta => {
       const sanitized = sanitizeSupabaseData(transformFromSnakeCase(permuta));

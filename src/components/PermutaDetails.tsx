@@ -140,6 +140,11 @@ export function PermutaDetails({ permuta, relatedSales, onClose }: PermutaDetail
                   <p className="text-xl font-black text-green-600">
                     R$ {permuta.consumedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
+                  {hasDiscrepancy && (
+                    <p className="text-xs text-orange-600 mt-1">
+                      (Vendas: R$ {totalConsumedBySales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p className="text-blue-600 font-semibold">Disponível</p>

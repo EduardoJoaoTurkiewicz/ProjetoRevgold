@@ -56,7 +56,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   const availablePermutas = permutas.filter(permuta => 
     permuta.status === 'ativo' && 
     permuta.remainingValue > 0 &&
-    permuta.clientName.toLowerCase() === formData.client.toLowerCase()
+    formData.client && permuta.clientName.toLowerCase() === formData.client.toLowerCase()
   );
 
   const addPaymentMethod = () => {

@@ -51,6 +51,11 @@ export default function Sales() {
           return;
         }
         if (typeof method.amount !== 'number' || method.amount < 0) {
+        
+        // Handle permutas - update consumed value
+        if (method.type === 'permuta' && method.vehicleId) {
+          await this.updatePermutaConsumedValue(method.vehicleId, method.amount);
+        }
           alert('Todos os métodos de pagamento devem ter um valor válido.');
           return;
         }
@@ -59,6 +64,31 @@ export default function Sales() {
     
     createSale(cleanedSale).then(() => {
       console.log('✅ Venda adicionada com sucesso');
+  
+  // Function to update permuta consumed value
+  const updatePermutaConsumedValue = async (vehicleId: string, amount: number) => {
+    try {
+      const { updatePermuta, permutas } = await import('../context/AppContext');
+      const permuta = permutas.find(p => p.id === vehicleId);
+      
+      if (permuta) {
+        const newConsumedValue = permuta.consumedValue + amount;
+        const newRemainingValue = permuta.vehicleValue - newConsumedValue;
+        const newStatus = newRemainingValue <= 0 ? 'finalizado' : 'ativo';
+        
+        await updatePermuta({
+          ...permuta,
+          consumedValue: newConsumedValue,
+          remainingValue: newRemainingValue,
+          status: newStatus
+        });
+        
+        console.log(`✅ Permuta ${vehicleId} updated - consumed: ${amount}`);
+      }
+    } catch (error) {
+      console.error('❌ Error updating permuta consumed value:', error);
+    }
+  };
       
       // Se há pagamento por acerto, criar acerto automaticamente
       if (hasAcertoPayment) {

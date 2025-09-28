@@ -364,6 +364,12 @@ export function PermutaForm({ permuta, onSubmit, onCancel }: PermutaFormProps) {
                   Status: {getStatusLabel(formData.status)}
                 </span>
               </div>
+              
+              <div className="mt-6 p-4 bg-green-50 rounded-xl border border-green-200">
+                <p className="text-sm text-green-800 font-semibold text-center">
+                  ✅ Após registrar, este veículo estará disponível para uso em vendas com pagamento via permuta
+                </p>
+              </div>
             </div>
 
             <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">

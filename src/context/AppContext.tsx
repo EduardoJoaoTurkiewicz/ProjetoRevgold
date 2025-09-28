@@ -214,9 +214,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         setAcertos(acertosData || []);
         setCashBalance(balanceData);
         setCashTransactions(transactionsData || []);
-        setPermutas(permutasData || []);
+        setPermutas(DeduplicationService.removeDuplicatesById(permutasData || []));
 
         console.log('✅ Data loaded and merged successfully');
+        console.log(`📊 Loaded data summary: ${salesData?.length || 0} sales, ${employeesData?.length || 0} employees, ${debtsData?.length || 0} debts, ${permutasData?.length || 0} permutas`);
       } else {
         // Load data from enhanced offline storage
         const [

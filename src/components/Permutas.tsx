@@ -43,7 +43,7 @@ export function Permutas() {
     return sales.filter(sale => {
       // Verificar se a venda tem método de pagamento "permuta" e é do mesmo cliente
       return sale.paymentMethods?.some(method => method.type === 'permuta') &&
-             sale.client.toLowerCase() === clientName.toLowerCase();
+             sale.client && sale.client.toLowerCase() === clientName.toLowerCase();
     });
   };
 
