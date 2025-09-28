@@ -99,6 +99,11 @@ export function PermutaForm({ permuta, onSubmit, onCancel }: PermutaFormProps) {
       notes: !formData.notes || formData.notes.trim() === '' ? null : formData.notes.trim()
     };
     
+    // Ensure vehicleMileage is properly handled
+    if (cleanedData.vehicleMileage === undefined || cleanedData.vehicleMileage === null) {
+      cleanedData.vehicleMileage = 0;
+    }
+    
     console.log('📝 Enviando permuta:', cleanedData);
     onSubmit(cleanedData as Omit<Permuta, 'id' | 'createdAt'>);
   };
