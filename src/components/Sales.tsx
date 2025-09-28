@@ -10,7 +10,7 @@ import { DeduplicationService } from '../lib/deduplicationService';
 import { UUIDManager } from '../lib/uuidManager';
 
 export default function Sales() {
-  const { sales, employees, isLoading, error, createSale, updateSale, deleteSale } = useAppContext();
+  const { sales, employees, permutas, isLoading, error, createSale, updateSale, deleteSale, updatePermuta } = useAppContext();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [viewingSale, setViewingSale] = useState<Sale | null>(null);
@@ -26,7 +26,6 @@ export default function Sales() {
   // Function to update permuta consumed value
   const updatePermutaConsumedValue = async (vehicleId: string, amount: number) => {
     try {
-      const { updatePermuta, permutas } = await import('../context/AppContext');
       const permuta = permutas.find(p => p.id === vehicleId);
       
       if (permuta) {
@@ -49,46 +48,38 @@ export default function Sales() {
   };
 
   const handleAddSale = async (sale: Omit<Sale, 'id' | 'createdAt'>) => {
-  const updatePermutaConsumedValue = async (vehicleId: string, amount: number) => {
     try {
-      const { updatePermuta, permutas } = await import('../context/AppContext');
-      const permuta = permutas.find(p => p.id === vehicleId);
+      console.log('🔄 Creating sale with data:', sale);
       
-      if (permuta) {
-        const newConsumedValue = permuta.consumedValue + amount;
-        const newRemainingValue = permuta.vehicleValue - newConsumedValue;
-        const newStatus = newRemainingValue <= 0 ? 'finalizado' : 'ativo';
-        
-        await updatePermuta({
-          ...permuta,
-          consumedValue: newConsumedValue,
-          remainingValue: newRemainingValue,
-          status: newStatus
-        });
-        
-        console.log(`✅ Permuta ${vehicleId} updated - consumed: ${amount}`);
+      // Validate payment methods
+      if (!sale.paymentMethods || sale.paymentMethods.length === 0) {
+        alert('Pelo menos um método de pagamento deve ser informado.');
+        return;
       }
-    } catch (error) {
-      console.error('❌ Error updating permuta consumed value:', error);
-    }
-  };
-
-  const handleAddSale = async (sale: Omit<Sale, 'id' | 'createdAt'>) => {
-  const updatePermutaConsumedValue = async (vehicleId: string, amount: number) => {
-    try {
-      const { updatePermuta, permutas } = await import('../context/AppContext');
-      const permuta = permutas.find(p => p.id === vehicleId);
       
-      if (permuta) {
-        const newConsumedValue = permuta.consumedValue + amount;
-        const newRemainingValue = permuta.vehicleValue - newConsumedValue;
-        const newStatus = newRemainingValue <= 0 ? 'finalizado' : 'ativo';
+      // Validate payment method amounts
+      for (const method of sale.paymentMethods) {
+        if (!method.amount || method.amount <= 0) {
+          alert('Todos os métodos de pagamento devem ter um valor válido.');
+          return;
+        }
         
-        await updatePermuta({
-          ...permuta,
-          consumedValue: newConsumedValue,
-          remainingValue: newRemainingValue,
-          status: newStatus
+        // Handle permutas - update consumed value
+        if (method.type === 'permuta' && method.vehicleId) {
+          await updatePermutaConsumedValue(method.vehicleId, method.amount);
+        }
+      }
+      
+      // Check if there's acerto payment
+      const hasAcertoPayment = sale.paymentMethods.some(method => method.type === 'acerto');
+      
+      // Create the sale
+      const cleanedSale = {
+        ...sale,
+        products: typeof sale.products === 'string' ? sale.products : JSON.stringify(sale.products)
+      };
+      
+      await createSale(cleanedSale);
       
       // Se há pagamento por acerto, criar acerto automaticamente
       if (hasAcertoPayment) {
@@ -107,7 +98,7 @@ export default function Sales() {
           alert('✅ Venda criada com sucesso!\n\nOs cheques e boletos foram criados automaticamente e já estão disponíveis nas respectivas abas.');
         }, 1000);
       }
-    }).catch(error => {
+    } catch (error) {
       console.error('❌ Erro ao adicionar venda:', error);
       let errorMessage = 'Erro ao criar venda';
       
@@ -115,18 +106,14 @@ export default function Sales() {
         if (error.message.includes('duplicate key') || error.message.includes('unique constraint') || error.message.includes('já existe')) {
           errorMessage = 'Esta venda já existe no sistema. O sistema previne duplicatas automaticamente.';
         } else if (error.message.includes('constraint') || error.message.includes('violates')) {
+          errorMessage = 'Erro de validação dos dados. Verifique se todos os campos estão preenchidos corretamente.';
         } else {
           errorMessage = error.message;
         }
       }
       
       alert('Erro ao criar venda: ' + errorMessage);
-        
-        // Handle permutas - update consumed value
-        if (method.type === 'permuta' && method.vehicleId) {
-          await updatePermutaConsumedValue(method.vehicleId, method.amount);
-        }
-    });
+    }
   };
 
   // Função para criar acerto automaticamente a partir de venda
@@ -148,14 +135,14 @@ export default function Sales() {
           relatedSales: [] // Será preenchido após criação da venda
         };
         
-       const { createAcerto } = await import('../context/AppContext');
-       // Note: This will be handled by InstallmentService in the enhanced services
+        // Note: This will be handled by InstallmentService in the enhanced services
         console.log('✅ Acerto criado automaticamente para cliente:', sale.client);
       }
     } catch (error) {
       console.error('❌ Erro ao criar acerto automático:', error);
     }
   };
+
   const handleEditSale = (sale: Omit<Sale, 'id' | 'createdAt'>) => {
     if (editingSale) {
       updateSale({ ...sale, id: editingSale.id, createdAt: editingSale.createdAt }).then(() => {
