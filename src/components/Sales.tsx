@@ -48,7 +48,6 @@ export default function Sales() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total em Vendas</p>
-              <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalSales)}</p>
               <p className="text-2xl font-bold text-gray-900">{fmtBRL(totalSales)}</p>
             </div>
           </div>
