@@ -3,7 +3,7 @@ import { useAppContext } from '../context/AppContext';
 import { SaleForm } from './forms/SaleForm';
 import { Sale } from '../types';
 import { Plus, Search, Calendar, DollarSign, User, Package } from 'lucide-react';
-import { formatCurrency, formatDate } from '../utils/format';
+import { fmtBRL, fmtDate } from '../utils/format';
 
 export default function Sales() {
   const { sales, loading } = useAppContext();
@@ -49,6 +49,7 @@ export default function Sales() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total em Vendas</p>
               <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalSales)}</p>
+              <p className="text-2xl font-bold text-gray-900">{fmtBRL(totalSales)}</p>
             </div>
           </div>
         </div>
@@ -144,12 +145,12 @@ export default function Sales() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900 flex items-center">
                         <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                        {formatDate(sale.sale_date)}
+                        {fmtDate(sale.sale_date)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {formatCurrency(sale.total_amount || 0)}
+                        {fmtBRL(sale.total_amount || 0)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -222,11 +223,11 @@ export default function Sales() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Data da Venda</label>
-                  <p className="mt-1 text-sm text-gray-900">{formatDate(selectedSale.sale_date)}</p>
+                  <p className="mt-1 text-sm text-gray-900">{fmtDate(selectedSale.sale_date)}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Valor Total</label>
-                  <p className="mt-1 text-sm text-gray-900">{formatCurrency(selectedSale.total_amount || 0)}</p>
+                  <p className="mt-1 text-sm text-gray-900">{fmtBRL(selectedSale.total_amount || 0)}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Status do Pagamento</label>
