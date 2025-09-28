@@ -32,7 +32,7 @@ async function safeSupabaseOperationEnhanced<T>(
       // Handle PGRST116 error (no rows found) gracefully
       if (error.code === 'PGRST116') {
         console.log(`ℹ️ No rows found for ${context} - returning null`);
-        return null;
+        return fallbackValue;
       }
       
       console.error(`❌ Supabase error in ${context}:`, error);
@@ -44,6 +44,12 @@ async function safeSupabaseOperationEnhanced<T>(
     
     return sanitizedData;
   } catch (error) {
+    // Handle PGRST116 error in catch block as well
+    if (error?.code === 'PGRST116') {
+      console.log(`ℹ️ No rows found for ${context} - returning fallback value`);
+      return fallbackValue;
+    }
+    
     ErrorHandler.logProjectError(error, context);
     
     if (error?.message?.includes('Failed to fetch') || error?.message?.includes('Network error')) {
