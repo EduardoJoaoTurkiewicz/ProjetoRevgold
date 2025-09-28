@@ -23,48 +23,6 @@ export default function Sales() {
     return DeduplicationService.removeDuplicatesById(sales || []);
   }, [sales]);
 
-  const handleAddSale = (sale: Omit<Sale, 'id' | 'createdAt'>) => {
-    console.log('🔄 Adicionando nova venda:', sale);
-    
-    // Clean UUID fields before submission
-    const cleanedSale = UUIDManager.cleanObjectUUIDs(sale);
-    
-    // Verificar se há método de pagamento "acerto"
-    const hasAcertoPayment = cleanedSale.paymentMethods?.some(method => method.type === 'acerto');
-    
-    // Validate sale data before submitting
-    if (!cleanedSale.client || !cleanedSale.client.trim()) {
-      alert('Por favor, informe o nome do cliente.');
-      return;
-    }
-    
-    if (cleanedSale.totalValue <= 0) {
-      alert('O valor total da venda deve ser maior que zero.');
-      return;
-    }
-    
-    // Validar estrutura dos métodos de pagamento
-    if (cleanedSale.paymentMethods && cleanedSale.paymentMethods.length > 0) {
-      for (const method of cleanedSale.paymentMethods) {
-        if (!method.type || typeof method.type !== 'string') {
-          alert('Todos os métodos de pagamento devem ter um tipo válido.');
-          return;
-        }
-        if (typeof method.amount !== 'number' || method.amount < 0) {
-        
-        // Handle permutas - update consumed value
-        if (method.type === 'permuta' && method.vehicleId) {
-          await this.updatePermutaConsumedValue(method.vehicleId, method.amount);
-        }
-          alert('Todos os métodos de pagamento devem ter um valor válido.');
-          return;
-        }
-      }
-    }
-    
-    createSale(cleanedSale).then(() => {
-      console.log('✅ Venda adicionada com sucesso');
-  
   // Function to update permuta consumed value
   const updatePermutaConsumedValue = async (vehicleId: string, amount: number) => {
     try {
@@ -89,6 +47,48 @@ export default function Sales() {
       console.error('❌ Error updating permuta consumed value:', error);
     }
   };
+
+  const handleAddSale = async (sale: Omit<Sale, 'id' | 'createdAt'>) => {
+  const updatePermutaConsumedValue = async (vehicleId: string, amount: number) => {
+    try {
+      const { updatePermuta, permutas } = await import('../context/AppContext');
+      const permuta = permutas.find(p => p.id === vehicleId);
+      
+      if (permuta) {
+        const newConsumedValue = permuta.consumedValue + amount;
+        const newRemainingValue = permuta.vehicleValue - newConsumedValue;
+        const newStatus = newRemainingValue <= 0 ? 'finalizado' : 'ativo';
+        
+        await updatePermuta({
+          ...permuta,
+          consumedValue: newConsumedValue,
+          remainingValue: newRemainingValue,
+          status: newStatus
+        });
+        
+        console.log(`✅ Permuta ${vehicleId} updated - consumed: ${amount}`);
+      }
+    } catch (error) {
+      console.error('❌ Error updating permuta consumed value:', error);
+    }
+  };
+
+  const handleAddSale = async (sale: Omit<Sale, 'id' | 'createdAt'>) => {
+  const updatePermutaConsumedValue = async (vehicleId: string, amount: number) => {
+    try {
+      const { updatePermuta, permutas } = await import('../context/AppContext');
+      const permuta = permutas.find(p => p.id === vehicleId);
+      
+      if (permuta) {
+        const newConsumedValue = permuta.consumedValue + amount;
+        const newRemainingValue = permuta.vehicleValue - newConsumedValue;
+        const newStatus = newRemainingValue <= 0 ? 'finalizado' : 'ativo';
+        
+        await updatePermuta({
+          ...permuta,
+          consumedValue: newConsumedValue,
+          remainingValue: newRemainingValue,
+          status: newStatus
       
       // Se há pagamento por acerto, criar acerto automaticamente
       if (hasAcertoPayment) {
@@ -115,17 +115,17 @@ export default function Sales() {
         if (error.message.includes('duplicate key') || error.message.includes('unique constraint') || error.message.includes('já existe')) {
           errorMessage = 'Esta venda já existe no sistema. O sistema previne duplicatas automaticamente.';
         } else if (error.message.includes('constraint') || error.message.includes('violates')) {
-          errorMessage = 'Dados inválidos ou duplicados. Verifique as informações inseridas.';
-        } else if (error.message.includes('invalid input syntax')) {
-          errorMessage = 'Formato de dados inválido. Verifique os valores inseridos.';
-        } else if (error.message.includes('null value')) {
-          errorMessage = 'Campos obrigatórios não preenchidos. Verifique todos os campos.';
         } else {
           errorMessage = error.message;
         }
       }
       
       alert('Erro ao criar venda: ' + errorMessage);
+        
+        // Handle permutas - update consumed value
+        if (method.type === 'permuta' && method.vehicleId) {
+          await updatePermutaConsumedValue(method.vehicleId, method.amount);
+        }
     });
   };
 
@@ -625,6 +625,11 @@ export default function Sales() {
       {/* Offline Data Viewer */}
       <OfflineDataViewer 
         isOpen={showOfflineViewer} 
+        onClose={() => setShowOfflineViewer(false)} 
+      />
+    </div>
+  );
+}lineViewer} 
         onClose={() => setShowOfflineViewer(false)} 
       />
     </div>
