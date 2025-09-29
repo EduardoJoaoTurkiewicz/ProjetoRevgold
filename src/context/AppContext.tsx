@@ -40,6 +40,7 @@ interface AppContextType {
 
   // Cash balance functions
   recalculateCashBalance: () => Promise<void>;
+  initializeCashBalance: (amount: number) => Promise<void>;
 
   // CRUD functions for sales
   createSale: (saleData: any) => Promise<any>;
@@ -263,6 +264,24 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
+  const initializeCashBalance = async (amount: number) => {
+    try {
+      const balanceId = await supabaseServices.cashBalance.initializeCashBalance(amount);
+      
+      // Refresh cash data after initialization
+      const balanceData = await supabaseServices.cashBalance.getCurrentBalance();
+      setCashBalance(balanceData);
+      
+      const transactionsData = await supabaseServices.cashTransactions.getTransactions();
+      setCashTransactions(transactionsData || []);
+      
+      console.log('✅ Cash balance initialized successfully with ID:', balanceId);
+      return balanceId;
+    } catch (err) {
+      console.error('Error initializing cash balance:', err);
+      throw err;
+    }
+  };
   // CRUD functions for sales
   const createSale = async (saleData: any) => {
     try {
@@ -1037,6 +1056,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
     // Cash balance functions
     recalculateCashBalance,
+    initializeCashBalance,
 
     // CRUD functions
     createSale,
