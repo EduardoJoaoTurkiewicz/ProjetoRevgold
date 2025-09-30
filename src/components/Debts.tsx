@@ -253,7 +253,27 @@ export function Debts() {
                           R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </span>
                       </div>
-                      
+
+                      {method.selectedChecks && method.selectedChecks.length > 0 && (
+                        <div className="mb-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                          <p className="text-xs font-semibold text-yellow-800 mb-2">
+                            Cheques Utilizados ({method.selectedChecks.length}):
+                          </p>
+                          <div className="space-y-1">
+                            {method.selectedChecks.map(checkId => {
+                              const check = checks.find(c => c.id === checkId);
+                              if (!check) return null;
+                              return (
+                                <div key={checkId} className="text-xs text-yellow-700 flex justify-between">
+                                  <span>{check.client}</span>
+                                  <span className="font-bold">R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       {method.installments && method.installments > 1 && (
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
@@ -473,7 +493,45 @@ export function Debts() {
                             R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </span>
                         </div>
-                        
+
+                        {method.selectedChecks && method.selectedChecks.length > 0 && (
+                          <div className="mb-3 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <p className="text-sm font-bold text-yellow-900 mb-3">
+                              Cheques Utilizados de Clientes ({method.selectedChecks.length}):
+                            </p>
+                            <div className="space-y-2">
+                              {method.selectedChecks.map(checkId => {
+                                const check = checks.find(c => c.id === checkId);
+                                if (!check) return null;
+                                return (
+                                  <div key={checkId} className="p-2 bg-white rounded border border-yellow-100">
+                                    <div className="flex justify-between items-center">
+                                      <div>
+                                        <p className="text-sm font-medium text-slate-900">{check.client}</p>
+                                        <p className="text-xs text-slate-600">
+                                          Vencimento: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
+                                        </p>
+                                      </div>
+                                      <span className="font-bold text-yellow-600">
+                                        R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <p className="text-xs text-yellow-700 mt-2 font-semibold">
+                              Total dos cheques: R$ {
+                                method.selectedChecks
+                                  .map(id => checks.find(c => c.id === id))
+                                  .filter(Boolean)
+                                  .reduce((sum, c) => sum + (c?.value || 0), 0)
+                                  .toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+                              }
+                            </p>
+                          </div>
+                        )}
+
                         {method.installments && method.installments > 1 && (
                           <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                             <div>

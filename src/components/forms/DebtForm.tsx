@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { X, Plus, Trash2, Info } from 'lucide-react';
 import { Debt, PaymentMethod } from '../../types';
+import { useAppContext } from '../../context/AppContext';
 import { safeNumber, logMonetaryValues } from '../../utils/numberUtils';
 import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
 import { getCurrentDateString } from '../../utils/dateUtils';
@@ -23,6 +24,16 @@ const PAYMENT_TYPES = [
 ];
 
 export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
+  const { checks } = useAppContext();
+
+  // Get available checks (from sales, not used in debts, and status is pending or compensado)
+  const availableChecks = checks.filter(check =>
+    check.saleId &&
+    !check.debtId &&
+    !check.used_in_debt &&
+    (check.status === 'pendente' || check.status === 'compensado')
+  );
+
   const [formData, setFormData] = useState({
     date: debt?.date || new Date().toISOString().split('T')[0],
     description: debt?.description || '',
@@ -33,7 +44,10 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
       amount: safeNumber(method.amount, 0),
       installmentValue: safeNumber(method.installmentValue, 0),
       installments: safeNumber(method.installments, 1),
-      installmentInterval: safeNumber(method.installmentInterval, 30)
+      installmentInterval: safeNumber(method.installmentInterval, 30),
+      useCustomValues: method.useCustomValues || false,
+      customInstallmentValues: method.customInstallmentValues || [],
+      selectedChecks: method.selectedChecks || []
     })),
     paymentDescription: debt?.paymentDescription || '',
     debtPaymentDescription: debt?.debtPaymentDescription || ''
@@ -56,14 +70,88 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
   const updatePaymentMethod = (index: number, field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
-      paymentMethods: prev.paymentMethods.map((method, i) => 
-        i === index ? { 
-          ...method, 
-          [field]: ['amount', 'installmentValue'].includes(field) ? safeNumber(value, 0) : 
-                   ['installments', 'installmentInterval'].includes(field) ? safeNumber(value, field === 'installments' ? 1 : 30) : 
-                   value 
-        } : method
-      )
+      paymentMethods: prev.paymentMethods.map((method, i) => {
+        if (i === index) {
+          const updatedMethod = { ...method, [field]: value };
+
+          // Sanitize numeric values
+          if (field === 'amount') {
+            updatedMethod.amount = safeNumber(value, 0);
+          }
+          if (field === 'installments') {
+            updatedMethod.installments = safeNumber(value, 1);
+            // Initialize custom values array when installments change
+            if (updatedMethod.useCustomValues) {
+              const newInstallments = safeNumber(value, 1);
+              const installmentValue = safeNumber(method.amount, 0) / newInstallments;
+              updatedMethod.customInstallmentValues = Array(newInstallments).fill(installmentValue);
+            }
+          }
+          if (field === 'installmentInterval') {
+            updatedMethod.installmentInterval = safeNumber(value, 30);
+          }
+
+          // Handle custom values toggle
+          if (field === 'useCustomValues') {
+            if (value) {
+              // Initialize custom values array with equal distribution
+              const numInstallments = safeNumber(method.installments, 1);
+              const installmentValue = safeNumber(method.amount, 0) / numInstallments;
+              updatedMethod.customInstallmentValues = Array(numInstallments).fill(installmentValue);
+            } else {
+              // Clear custom values
+              updatedMethod.customInstallmentValues = [];
+            }
+          }
+
+          // Calculate installment value when installments change (for non-custom mode)
+          if (field === 'installments' && safeNumber(value, 1) > 1 && !updatedMethod.useCustomValues) {
+            updatedMethod.installmentValue = safeNumber(method.amount, 0) / safeNumber(value, 1);
+          } else if (field === 'amount' && safeNumber(method.installments, 1) > 1 && !updatedMethod.useCustomValues) {
+            // Recalculate installment value when amount changes
+            updatedMethod.installmentValue = safeNumber(value, 0) / safeNumber(method.installments, 1);
+          }
+
+          return updatedMethod;
+        }
+        return method;
+      })
+    }));
+  };
+
+  const updateCustomInstallmentValue = (methodIndex: number, installmentIndex: number, value: number) => {
+    setFormData(prev => ({
+      ...prev,
+      paymentMethods: prev.paymentMethods.map((method, i) => {
+        if (i === methodIndex && method.customInstallmentValues) {
+          const newCustomValues = [...method.customInstallmentValues];
+          newCustomValues[installmentIndex] = safeNumber(value, 0);
+          return {
+            ...method,
+            customInstallmentValues: newCustomValues
+          };
+        }
+        return method;
+      })
+    }));
+  };
+
+  const toggleCheckSelection = (methodIndex: number, checkId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      paymentMethods: prev.paymentMethods.map((method, i) => {
+        if (i === methodIndex) {
+          const selectedChecks = method.selectedChecks || [];
+          const isSelected = selectedChecks.includes(checkId);
+          return {
+            ...method,
+            selectedChecks: isSelected
+              ? selectedChecks.filter(id => id !== checkId)
+              : [...selectedChecks, checkId]
+          };
+        }
+        return method;
+      })
     }));
   };
 
@@ -351,23 +439,71 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
                              placeholder="1"
                            />
                          </div>
-                         
+
                          {safeNumber(method.installments, 1) > 1 && (
                            <>
-                             <div>
-                               <label className="form-label">Valor por Parcela</label>
-                               <input
-                                 type="number"
-                                 step="0.01"
-                                 value={safeNumber(method.installmentValue, 0)}
-                                 className="input-field bg-gray-50"
-                                 readOnly
-                               />
-                               <p className="text-xs text-blue-600 mt-1 font-bold">
-                                 ✓ Calculado automaticamente: R$ {(safeNumber(method.amount, 0) / safeNumber(method.installments, 1)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                             <div className="md:col-span-2">
+                               <label className="flex items-center gap-2">
+                                 <input
+                                   type="checkbox"
+                                   checked={method.useCustomValues || false}
+                                   onChange={(e) => updatePaymentMethod(index, 'useCustomValues', e.target.checked)}
+                                   className="rounded"
+                                 />
+                                 <span className="form-label mb-0">Valores personalizados?</span>
+                               </label>
+                               <p className="text-xs text-blue-600 mt-1">
+                                 Marque para definir valores diferentes para cada parcela
                                </p>
                              </div>
-                             
+
+                             {!method.useCustomValues && (
+                               <div>
+                                 <label className="form-label">Valor por Parcela</label>
+                                 <input
+                                   type="number"
+                                   step="0.01"
+                                   value={safeNumber(method.installmentValue, 0)}
+                                   className="input-field bg-gray-50"
+                                   readOnly
+                                 />
+                                 <p className="text-xs text-blue-600 mt-1 font-bold">
+                                   ✓ Calculado automaticamente: R$ {(safeNumber(method.amount, 0) / safeNumber(method.installments, 1)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                 </p>
+                               </div>
+                             )}
+
+                             {method.useCustomValues && method.customInstallmentValues && (
+                               <div className="md:col-span-2">
+                                 <div className="bg-red-50 p-4 rounded-xl border border-red-200">
+                                   <h4 className="font-semibold text-red-900 mb-3">
+                                     Valores de Cada Parcela
+                                   </h4>
+                                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                     {method.customInstallmentValues.map((value, installmentIndex) => (
+                                       <div key={installmentIndex}>
+                                         <label className="text-xs font-medium text-red-700">
+                                           Parcela {installmentIndex + 1}
+                                         </label>
+                                         <input
+                                           type="number"
+                                           step="0.01"
+                                           min="0"
+                                           value={safeNumber(value, 0)}
+                                           onChange={(e) => updateCustomInstallmentValue(index, installmentIndex, safeNumber(e.target.value, 0))}
+                                           className="input-field text-sm"
+                                           placeholder="0,00"
+                                         />
+                                       </div>
+                                     ))}
+                                   </div>
+                                   <p className="text-xs text-red-600 mt-3 font-bold">
+                                     Total das parcelas: R$ {method.customInstallmentValues.reduce((sum, val) => sum + safeNumber(val, 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                   </p>
+                                 </div>
+                               </div>
+                             )}
+
                              <div>
                                <label className="form-label">Intervalo (dias)</label>
                                <input
@@ -379,7 +515,7 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
                                  placeholder="30"
                                />
                              </div>
-                             
+
                              <div>
                                <label className="form-label">Data da Primeira Parcela</label>
                                <input
@@ -391,7 +527,7 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
                              </div>
                            </>
                          )}
-                         
+
                          {safeNumber(method.installments, 1) === 1 && (
                            <div>
                              <label className="form-label">Data de Vencimento/Pagamento *</label>
@@ -405,6 +541,67 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
                              <p className="text-xs text-gray-500 mt-1">
                                Data em que o {method.type === 'cheque' ? 'cheque' : 'boleto'} será pago/vencerá
                              </p>
+                           </div>
+                         )}
+
+                         {method.type === 'cheque' && availableChecks.length > 0 && (
+                           <div className="md:col-span-2">
+                             <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200">
+                               <div className="flex items-center gap-2 mb-3">
+                                 <Info className="w-5 h-5 text-yellow-600" />
+                                 <h4 className="font-semibold text-yellow-900">
+                                   Usar Cheques Recebidos de Clientes
+                                 </h4>
+                               </div>
+                               <p className="text-xs text-yellow-700 mb-3">
+                                 Você pode usar cheques recebidos de vendas para pagar esta dívida. Selecione os cheques abaixo:
+                               </p>
+                               <div className="space-y-2 max-h-60 overflow-y-auto">
+                                 {availableChecks.map(check => (
+                                   <label key={check.id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-yellow-100 hover:bg-yellow-50 cursor-pointer">
+                                     <input
+                                       type="checkbox"
+                                       checked={method.selectedChecks?.includes(check.id) || false}
+                                       onChange={() => toggleCheckSelection(index, check.id)}
+                                       className="rounded"
+                                     />
+                                     <div className="flex-1">
+                                       <div className="flex justify-between items-start">
+                                         <div>
+                                           <p className="font-medium text-slate-900">{check.client}</p>
+                                           <p className="text-xs text-slate-600">
+                                             Vencimento: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
+                                           </p>
+                                           <p className="text-xs text-slate-600">
+                                             Parcela {check.installmentNumber}/{check.totalInstallments}
+                                           </p>
+                                         </div>
+                                         <div className="text-right">
+                                           <p className="font-bold text-yellow-600">
+                                             R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                           </p>
+                                           <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
+                                             {check.status === 'compensado' ? 'Compensado' : 'Pendente'}
+                                           </span>
+                                         </div>
+                                       </div>
+                                     </div>
+                                   </label>
+                                 ))}
+                               </div>
+                               {method.selectedChecks && method.selectedChecks.length > 0 && (
+                                 <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded">
+                                   <p className="text-xs text-green-700 font-bold">
+                                     ✓ {method.selectedChecks.length} cheque(s) selecionado(s) - Total: R$ {
+                                       availableChecks
+                                         .filter(c => method.selectedChecks?.includes(c.id))
+                                         .reduce((sum, c) => sum + c.value, 0)
+                                         .toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+                                     }
+                                   </p>
+                                 </div>
+                               )}
+                             </div>
                            </div>
                          )}
                        </>

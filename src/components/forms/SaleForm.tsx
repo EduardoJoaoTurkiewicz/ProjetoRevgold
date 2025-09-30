@@ -43,7 +43,9 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       amount: safeNumber(method.amount, 0),
       installmentValue: safeNumber(method.installmentValue, 0),
       installments: safeNumber(method.installments, 1),
-      installmentInterval: safeNumber(method.installmentInterval, 30)
+      installmentInterval: safeNumber(method.installmentInterval, 30),
+      useCustomValues: method.useCustomValues || false,
+      customInstallmentValues: method.customInstallmentValues || []
     })),
     paymentDescription: sale?.paymentDescription || '',
     paymentObservations: sale?.paymentObservations || ''
@@ -79,26 +81,45 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       paymentMethods: prev.paymentMethods.map((method, i) => {
         if (i === index) {
           const updatedMethod = { ...method, [field]: value };
-          
+
           // Sanitize numeric values
           if (field === 'amount') {
             updatedMethod.amount = safeNumber(value, 0);
           }
           if (field === 'installments') {
             updatedMethod.installments = safeNumber(value, 1);
+            // Initialize custom values array when installments change
+            if (updatedMethod.useCustomValues) {
+              const newInstallments = safeNumber(value, 1);
+              const installmentValue = safeNumber(method.amount, 0) / newInstallments;
+              updatedMethod.customInstallmentValues = Array(newInstallments).fill(installmentValue);
+            }
           }
           if (field === 'installmentInterval') {
             updatedMethod.installmentInterval = safeNumber(value, 30);
           }
-          
-          // Calculate installment value when installments change
-          if (field === 'installments' && safeNumber(value, 1) > 1) {
+
+          // Handle custom values toggle
+          if (field === 'useCustomValues') {
+            if (value) {
+              // Initialize custom values array with equal distribution
+              const numInstallments = safeNumber(method.installments, 1);
+              const installmentValue = safeNumber(method.amount, 0) / numInstallments;
+              updatedMethod.customInstallmentValues = Array(numInstallments).fill(installmentValue);
+            } else {
+              // Clear custom values
+              updatedMethod.customInstallmentValues = [];
+            }
+          }
+
+          // Calculate installment value when installments change (for non-custom mode)
+          if (field === 'installments' && safeNumber(value, 1) > 1 && !updatedMethod.useCustomValues) {
             updatedMethod.installmentValue = safeNumber(method.amount, 0) / safeNumber(value, 1);
-          } else if (field === 'amount' && safeNumber(method.installments, 1) > 1) {
+          } else if (field === 'amount' && safeNumber(method.installments, 1) > 1 && !updatedMethod.useCustomValues) {
             // Recalculate installment value when amount changes
             updatedMethod.installmentValue = safeNumber(value, 0) / safeNumber(method.installments, 1);
           }
-          
+
           // Reset installment fields if payment type doesn't support installments
           if (field === 'type' && !INSTALLMENT_TYPES.includes(value)) {
             delete updatedMethod.installments;
@@ -109,9 +130,28 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
             delete updatedMethod.isThirdPartyCheck;
             delete updatedMethod.thirdPartyDetails;
             delete updatedMethod.isOwnCheck;
+            delete updatedMethod.useCustomValues;
+            delete updatedMethod.customInstallmentValues;
           }
-          
+
           return updatedMethod;
+        }
+        return method;
+      })
+    }));
+  };
+
+  const updateCustomInstallmentValue = (methodIndex: number, installmentIndex: number, value: number) => {
+    setFormData(prev => ({
+      ...prev,
+      paymentMethods: prev.paymentMethods.map((method, i) => {
+        if (i === methodIndex && method.customInstallmentValues) {
+          const newCustomValues = [...method.customInstallmentValues];
+          newCustomValues[installmentIndex] = safeNumber(value, 0);
+          return {
+            ...method,
+            customInstallmentValues: newCustomValues
+          };
         }
         return method;
       })
@@ -606,22 +646,70 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
 
                           {safeNumber(method.installments, 1) > 1 && (
                             <>
-                              <div>
-                                <label className="form-label">Valor por Parcela</label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  value={safeNumber(method.installmentValue, 0)}
-                                  onChange={(e) => updatePaymentMethod(index, 'installmentValue', safeNumber(e.target.value, 0))}
-                                  className="input-field"
-                                  placeholder="0,00"
-                                  readOnly
-                                />
-                                <p className="text-xs text-blue-600 mt-1 font-bold">
-                                  ✓ Calculado automaticamente: R$ {safeNumber(method.amount, 0) && safeNumber(method.installments, 1) ? (safeNumber(method.amount, 0) / safeNumber(method.installments, 1)).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'} por parcela
+                              <div className="md:col-span-2">
+                                <label className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={method.useCustomValues || false}
+                                    onChange={(e) => updatePaymentMethod(index, 'useCustomValues', e.target.checked)}
+                                    className="rounded"
+                                  />
+                                  <span className="form-label mb-0">Valores personalizados?</span>
+                                </label>
+                                <p className="text-xs text-blue-600 mt-1">
+                                  Marque para definir valores diferentes para cada parcela
                                 </p>
                               </div>
+
+                              {!method.useCustomValues && (
+                                <div>
+                                  <label className="form-label">Valor por Parcela</label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={safeNumber(method.installmentValue, 0)}
+                                    onChange={(e) => updatePaymentMethod(index, 'installmentValue', safeNumber(e.target.value, 0))}
+                                    className="input-field"
+                                    placeholder="0,00"
+                                    readOnly
+                                  />
+                                  <p className="text-xs text-blue-600 mt-1 font-bold">
+                                    ✓ Calculado automaticamente: R$ {safeNumber(method.amount, 0) && safeNumber(method.installments, 1) ? (safeNumber(method.amount, 0) / safeNumber(method.installments, 1)).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'} por parcela
+                                  </p>
+                                </div>
+                              )}
+
+                              {method.useCustomValues && method.customInstallmentValues && (
+                                <div className="md:col-span-2">
+                                  <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                                    <h4 className="font-semibold text-blue-900 mb-3">
+                                      Valores de Cada Parcela
+                                    </h4>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                      {method.customInstallmentValues.map((value, installmentIndex) => (
+                                        <div key={installmentIndex}>
+                                          <label className="text-xs font-medium text-blue-700">
+                                            Parcela {installmentIndex + 1}
+                                          </label>
+                                          <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={safeNumber(value, 0)}
+                                            onChange={(e) => updateCustomInstallmentValue(index, installmentIndex, safeNumber(e.target.value, 0))}
+                                            className="input-field text-sm"
+                                            placeholder="0,00"
+                                          />
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <p className="text-xs text-blue-600 mt-3 font-bold">
+                                      Total das parcelas: R$ {method.customInstallmentValues.reduce((sum, val) => sum + safeNumber(val, 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
 
                               <div>
                                 <label className="form-label">Intervalo (dias)</label>

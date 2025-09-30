@@ -15,7 +15,7 @@ export interface Product {
 
 // Payment method interface
 export interface PaymentMethod {
-  type: 'dinheiro' | 'pix' | 'cartao_credito' | 'cartao_debito' | 'cheque' | 'boleto' | 'transferencia';
+  type: 'dinheiro' | 'pix' | 'cartao_credito' | 'cartao_debito' | 'cheque' | 'boleto' | 'transferencia' | 'acerto' | 'permuta';
   amount: number;
   installments?: number;
   installmentValue?: number;
@@ -25,6 +25,10 @@ export interface PaymentMethod {
   isOwnCheck?: boolean;
   isThirdPartyCheck?: boolean;
   thirdPartyDetails?: ThirdPartyCheckDetails[];
+  useCustomValues?: boolean;
+  customInstallmentValues?: number[];
+  selectedChecks?: string[];
+  vehicleId?: string;
 }
 
 // Third party check details

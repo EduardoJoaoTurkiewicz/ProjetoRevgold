@@ -8,22 +8,29 @@ export class InstallmentService {
   // Create checks for sale payment method
   static async createChecksForSale(saleId: string, client: string, paymentMethod: any): Promise<void> {
     if (paymentMethod.type !== 'cheque') return;
-    
+
     const installments = safeNumber(paymentMethod.installments, 1);
-    const installmentValue = safeNumber(paymentMethod.installmentValue, paymentMethod.amount);
     const interval = safeNumber(paymentMethod.installmentInterval, 30);
     const startDate = paymentMethod.firstInstallmentDate || new Date().toISOString().split('T')[0];
-    
-    console.log(`🔄 Creating ${installments} checks for sale ${saleId}`);
-    
+
+    // Check if using custom values
+    const useCustomValues = paymentMethod.useCustomValues && paymentMethod.customInstallmentValues && paymentMethod.customInstallmentValues.length === installments;
+
+    console.log(`🔄 Creating ${installments} checks for sale ${saleId}${useCustomValues ? ' with custom values' : ''}`);
+
     for (let i = 1; i <= installments; i++) {
       const dueDate = addDays(startDate, (i - 1) * interval);
-      
+
+      // Use custom value if available, otherwise use default installment value
+      const checkValue = useCustomValues
+        ? safeNumber(paymentMethod.customInstallmentValues[i - 1], 0)
+        : safeNumber(paymentMethod.installmentValue, paymentMethod.amount);
+
       const checkData = {
         id: UUIDManager.generateUUID(),
         saleId,
         client,
-        value: installmentValue,
+        value: checkValue,
         dueDate,
         status: 'pendente',
         isOwnCheck: paymentMethod.isOwnCheck || false,
@@ -50,22 +57,29 @@ export class InstallmentService {
   // Create boletos for sale payment method
   static async createBoletosForSale(saleId: string, client: string, paymentMethod: any): Promise<void> {
     if (paymentMethod.type !== 'boleto') return;
-    
+
     const installments = safeNumber(paymentMethod.installments, 1);
-    const installmentValue = safeNumber(paymentMethod.installmentValue, paymentMethod.amount);
     const interval = safeNumber(paymentMethod.installmentInterval, 30);
     const startDate = paymentMethod.firstInstallmentDate || new Date().toISOString().split('T')[0];
+
+    // Check if using custom values
+    const useCustomValues = paymentMethod.useCustomValues && paymentMethod.customInstallmentValues && paymentMethod.customInstallmentValues.length === installments;
     
-    console.log(`🔄 Creating ${installments} boletos for sale ${saleId}`);
-    
+    console.log(`🔄 Creating ${installments} boletos for sale ${saleId}${useCustomValues ? ' with custom values' : ''}`);
+
     for (let i = 1; i <= installments; i++) {
       const dueDate = addDays(startDate, (i - 1) * interval);
-      
+
+      // Use custom value if available, otherwise use default installment value
+      const boletoValue = useCustomValues
+        ? safeNumber(paymentMethod.customInstallmentValues[i - 1], 0)
+        : safeNumber(paymentMethod.installmentValue, paymentMethod.amount);
+
       const boletoData = {
         id: UUIDManager.generateUUID(),
         saleId,
         client,
-        value: installmentValue,
+        value: boletoValue,
         dueDate,
         status: 'pendente',
         installmentNumber: i,
@@ -138,22 +152,29 @@ export class InstallmentService {
   // Create checks for debt payment method
   static async createChecksForDebt(debtId: string, company: string, paymentMethod: any): Promise<void> {
     if (paymentMethod.type !== 'cheque') return;
-    
+
     const installments = safeNumber(paymentMethod.installments, 1);
-    const installmentValue = safeNumber(paymentMethod.installmentValue, paymentMethod.amount);
     const interval = safeNumber(paymentMethod.installmentInterval, 30);
     const startDate = paymentMethod.firstInstallmentDate || new Date().toISOString().split('T')[0];
-    
-    console.log(`🔄 Creating ${installments} checks for debt ${debtId}`);
-    
+
+    // Check if using custom values
+    const useCustomValues = paymentMethod.useCustomValues && paymentMethod.customInstallmentValues && paymentMethod.customInstallmentValues.length === installments;
+
+    console.log(`🔄 Creating ${installments} checks for debt ${debtId}${useCustomValues ? ' with custom values' : ''}`);
+
     for (let i = 1; i <= installments; i++) {
       const dueDate = addDays(startDate, (i - 1) * interval);
-      
+
+      // Use custom value if available, otherwise use default installment value
+      const checkValue = useCustomValues
+        ? safeNumber(paymentMethod.customInstallmentValues[i - 1], 0)
+        : safeNumber(paymentMethod.installmentValue, paymentMethod.amount);
+
       const checkData = {
         id: UUIDManager.generateUUID(),
         debtId,
         client: company,
-        value: installmentValue,
+        value: checkValue,
         dueDate,
         status: 'pendente',
         isOwnCheck: true,
@@ -180,22 +201,29 @@ export class InstallmentService {
   // Create boletos for debt payment method
   static async createBoletosForDebt(debtId: string, company: string, paymentMethod: any): Promise<void> {
     if (paymentMethod.type !== 'boleto') return;
-    
+
     const installments = safeNumber(paymentMethod.installments, 1);
-    const installmentValue = safeNumber(paymentMethod.installmentValue, paymentMethod.amount);
     const interval = safeNumber(paymentMethod.installmentInterval, 30);
     const startDate = paymentMethod.firstInstallmentDate || new Date().toISOString().split('T')[0];
-    
-    console.log(`🔄 Creating ${installments} boletos for debt ${debtId}`);
-    
+
+    // Check if using custom values
+    const useCustomValues = paymentMethod.useCustomValues && paymentMethod.customInstallmentValues && paymentMethod.customInstallmentValues.length === installments;
+
+    console.log(`🔄 Creating ${installments} boletos for debt ${debtId}${useCustomValues ? ' with custom values' : ''}`);
+
     for (let i = 1; i <= installments; i++) {
       const dueDate = addDays(startDate, (i - 1) * interval);
-      
+
+      // Use custom value if available, otherwise use default installment value
+      const boletoValue = useCustomValues
+        ? safeNumber(paymentMethod.customInstallmentValues[i - 1], 0)
+        : safeNumber(paymentMethod.installmentValue, paymentMethod.amount);
+
       const boletoData = {
         id: UUIDManager.generateUUID(),
         debtId,
         client: company,
-        value: installmentValue,
+        value: boletoValue,
         dueDate,
         status: 'pendente',
         installmentNumber: i,
@@ -320,18 +348,39 @@ export class InstallmentService {
   // Process all installments for a debt
   static async processInstallmentsForDebt(debtId: string, company: string, paymentMethods: any[]): Promise<void> {
     console.log(`🔄 Processing installments for debt ${debtId}, company: ${company}`);
-    
+
     for (const method of paymentMethods) {
       try {
         // Handle cheques (both single and multiple installments)
         if (method.type === 'cheque') {
-          if (method.installments && method.installments > 1) {
+          // First, handle selected checks from sales
+          if (method.selectedChecks && method.selectedChecks.length > 0) {
+            console.log(`🔄 Updating ${method.selectedChecks.length} selected checks for debt ${debtId}`);
+            for (const checkId of method.selectedChecks) {
+              try {
+                // Update the check to mark it as used in this debt
+                await supabaseServices.checks.update({
+                  id: checkId,
+                  debtId: debtId,
+                  used_in_debt: debtId,
+                  usedFor: `Pagamento de dívida - ${company}`,
+                  updatedAt: new Date().toISOString()
+                });
+                console.log(`✅ Check ${checkId} marked as used for debt ${debtId}`);
+              } catch (error) {
+                console.error(`❌ Error updating check ${checkId}:`, error);
+              }
+            }
+          }
+
+          // Then create new checks if needed (for installments not covered by selected checks)
+          if (method.installments && method.installments > 1 && !method.selectedChecks) {
             await this.createChecksForDebt(debtId, company, method);
-          } else {
+          } else if (!method.selectedChecks || method.selectedChecks.length === 0) {
             // Single check
-            await this.createChecksForDebt(debtId, company, { 
-              ...method, 
-              installments: 1, 
+            await this.createChecksForDebt(debtId, company, {
+              ...method,
+              installments: 1,
               installmentValue: method.amount,
               firstInstallmentDate: method.firstInstallmentDate || new Date().toISOString().split('T')[0]
             });
