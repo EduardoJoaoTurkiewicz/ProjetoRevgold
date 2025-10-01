@@ -661,7 +661,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                 </p>
                               </div>
 
-                              {!method.useCustomValues && (
+                              {!method.useCustomValues && safeNumber(method.installments, 1) > 1 && (
                                 <div>
                                   <label className="form-label">Valor por Parcela</label>
                                   <input

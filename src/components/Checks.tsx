@@ -291,7 +291,17 @@ export function Checks() {
                                   Status: {getStatusLabel(check.status)}
                                   {check.status === 'compensado' && ' ✓'}
                                 </div>
-                               {check.usedFor && (
+                               {check.usedInDebt && (
+                                 <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+                                   <div className="text-xs text-red-900 font-bold">
+                                     USADO PARA PAGAMENTO DE DÍVIDAS
+                                   </div>
+                                   <div className="text-xs text-red-700">
+                                     Dívida: {debts.find(d => d.id === check.usedInDebt)?.company || check.usedInDebt}
+                                   </div>
+                                 </div>
+                               )}
+                               {check.usedFor && !check.usedInDebt && (
                                  <div className="text-sm text-blue-600 font-semibold">
                                    Usado para: {check.usedFor}
                                  </div>
@@ -301,15 +311,15 @@ export function Checks() {
                                 <span className="font-medium text-yellow-600">
                                   R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </span>
-                                {check.status === 'pendente' && (
+                                {check.status === 'pendente' && !check.usedInDebt && (
                                   <div className="mt-2">
                                     <button
                                       onClick={() => {
                                         const confirmMessage = `Marcar este cheque como compensado?\n\nValor: R$ ${check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\nEste valor será adicionado ao caixa da empresa.`;
-                                        
+
                                         if (window.confirm(confirmMessage)) {
-                                          const updatedCheck = { 
-                                            ...check, 
+                                          const updatedCheck = {
+                                            ...check,
                                             status: 'compensado' as const,
                                             paymentDate: new Date().toISOString().split('T')[0],
                                             updatedAt: new Date().toISOString()
@@ -323,6 +333,13 @@ export function Checks() {
                                     >
                                       Marcar como Compensado
                                     </button>
+                                  </div>
+                                )}
+                                {check.usedInDebt && (
+                                  <div className="mt-2">
+                                    <div className="px-3 py-1 bg-gray-200 text-gray-600 rounded-lg font-bold text-xs text-center">
+                                      Cheque já usado em dívida
+                                    </div>
                                   </div>
                                 )}
                               </div>

@@ -164,12 +164,19 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
       if (method.type === 'cartao_credito' && safeNumber(method.installments, 1) === 1) {
         return sum + methodAmount;
       }
+      if (method.type === 'cheque' && method.selectedChecks && method.selectedChecks.length > 0) {
+        const totalSelectedChecks = method.selectedChecks.reduce((checkSum, checkId) => {
+          const check = availableChecks.find(c => c.id === checkId);
+          return checkSum + (check ? check.value : 0);
+        }, 0);
+        return sum + totalSelectedChecks;
+      }
       return sum;
     }, 0);
-    
+
     const totalValue = safeNumber(formData.totalValue, 0);
     const pending = totalValue - totalPaid;
-    
+
     return {
       paidAmount: totalPaid,
       pendingAmount: Math.max(0, pending),
@@ -457,7 +464,7 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
                                </p>
                              </div>
 
-                             {!method.useCustomValues && (
+                             {!method.useCustomValues && safeNumber(method.installments, 1) > 1 && (
                                <div>
                                  <label className="form-label">Valor por Parcela</label>
                                  <input
