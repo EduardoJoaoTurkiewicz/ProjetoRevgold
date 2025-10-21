@@ -754,6 +754,170 @@ export interface Database {
           updated_at?: string
         }
       }
+      credit_card_sales: {
+        Row: {
+          id: string
+          sale_id: string | null
+          client_name: string
+          total_amount: number
+          remaining_amount: number
+          installments: number
+          sale_date: string
+          first_due_date: string
+          status: string
+          anticipated: boolean
+          anticipated_date: string | null
+          anticipated_fee: number | null
+          anticipated_amount: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          sale_id?: string | null
+          client_name: string
+          total_amount?: number
+          remaining_amount?: number
+          installments?: number
+          sale_date?: string
+          first_due_date: string
+          status?: string
+          anticipated?: boolean
+          anticipated_date?: string | null
+          anticipated_fee?: number | null
+          anticipated_amount?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          sale_id?: string | null
+          client_name?: string
+          total_amount?: number
+          remaining_amount?: number
+          installments?: number
+          sale_date?: string
+          first_due_date?: string
+          status?: string
+          anticipated?: boolean
+          anticipated_date?: string | null
+          anticipated_fee?: number | null
+          anticipated_amount?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      credit_card_sale_installments: {
+        Row: {
+          id: string
+          credit_card_sale_id: string
+          installment_number: number
+          amount: number
+          due_date: string
+          status: string
+          received_date: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          credit_card_sale_id: string
+          installment_number: number
+          amount: number
+          due_date: string
+          status?: string
+          received_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          credit_card_sale_id?: string
+          installment_number?: number
+          amount?: number
+          due_date?: string
+          status?: string
+          received_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      credit_card_debts: {
+        Row: {
+          id: string
+          debt_id: string | null
+          supplier_name: string
+          total_amount: number
+          remaining_amount: number
+          installments: number
+          purchase_date: string
+          first_due_date: string
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          debt_id?: string | null
+          supplier_name: string
+          total_amount?: number
+          remaining_amount?: number
+          installments?: number
+          purchase_date?: string
+          first_due_date: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          debt_id?: string | null
+          supplier_name?: string
+          total_amount?: number
+          remaining_amount?: number
+          installments?: number
+          purchase_date?: string
+          first_due_date?: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      credit_card_debt_installments: {
+        Row: {
+          id: string
+          credit_card_debt_id: string
+          installment_number: number
+          amount: number
+          due_date: string
+          status: string
+          paid_date: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          credit_card_debt_id: string
+          installment_number: number
+          amount: number
+          due_date: string
+          status?: string
+          paid_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          credit_card_debt_id?: string
+          installment_number?: number
+          amount?: number
+          due_date?: string
+          status?: string
+          paid_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

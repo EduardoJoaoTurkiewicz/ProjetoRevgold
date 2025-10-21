@@ -147,7 +147,7 @@ export function normalizeDate(date: string | Date): string {
 // Helper to convert database date to display format safely
 export function dbDateToDisplay(dbDate: string): string {
   if (!dbDate) return '';
-  
+
   // Database dates are stored as YYYY-MM-DD
   // Parse in local timezone to prevent shifting
   const parts = dbDate.split('T')[0].split('-'); // Remove time part if present
@@ -155,6 +155,43 @@ export function dbDateToDisplay(dbDate: string): string {
     const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     return date.toLocaleDateString('pt-BR');
   }
-  
+
   return dbDate;
+}
+
+export function formatDate(date: Date): string {
+  if (!date || isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('pt-BR');
+}
+
+export function formatDateISO(date: Date): string {
+  if (!date || isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function addMonthsToDate(date: Date, months: number): Date {
+  const result = new Date(date);
+  result.setMonth(result.getMonth() + months);
+  return result;
+}
+
+export function getMonthStart(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}-01`;
+}
+
+export function getMonthEnd(date: Date): string {
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const lastDay = new Date(year, month, 0).getDate();
+  return `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+}
+
+export function isDateInRange(date: Date, start: Date, end: Date): boolean {
+  const time = date.getTime();
+  return time >= start.getTime() && time <= end.getTime();
 }

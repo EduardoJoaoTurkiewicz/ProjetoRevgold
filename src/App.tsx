@@ -31,6 +31,7 @@ import { Taxes } from './components/Taxes';
 import { Acertos } from './components/Acertos';
 import { PrintReportPage } from './components/reports/PrintReportPage';
 import { Permutas } from './components/Permutas';
+import CreditCard from './components/CreditCard';
 
 function App() {
   return (
@@ -92,6 +93,8 @@ function renderPage(currentPage: string) {
       return <Sales />;
     case 'debts':
       return <Debts />;
+    case 'credit-card':
+      return <CreditCard />;
     case 'checks':
       return <Checks />;
     case 'boletos':
