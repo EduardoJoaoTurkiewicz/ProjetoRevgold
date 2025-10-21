@@ -3,6 +3,7 @@ import { Plus, CreditCard as Edit, Trash2, Eye, Zap, DollarSign, Calendar, Alert
 import { useAppContext } from '../context/AppContext';
 import { PixFee } from '../types';
 import { PixFeeForm } from './forms/PixFeeForm';
+import { getCurrentDateString } from '../utils/dateUtils';
 
 export function PixFees() {
   const { pixFees, isLoading, error, createPixFee, updatePixFee, deletePixFee } = useAppContext();
@@ -10,7 +11,7 @@ export function PixFees() {
   const [editingPixFee, setEditingPixFee] = useState<PixFee | null>(null);
   const [viewingPixFee, setViewingPixFee] = useState<PixFee | null>(null);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getCurrentDateString();
   const thisMonth = new Date().getMonth();
   const thisYear = new Date().getFullYear();
 

@@ -5,7 +5,7 @@ import { Employee } from '../types';
 import { EmployeeForm } from './forms/EmployeeForm';
 import { EmployeeAdvanceForm } from './forms/EmployeeAdvanceForm';
 import { EmployeeOvertimeForm } from './forms/EmployeeOvertimeForm';
-import { formatDateForDisplay } from '../utils/dateUtils';
+import { formatDateForDisplay, getCurrentDateString } from '../utils/dateUtils';
 import { safeCurrency } from '../utils/numberUtils';
 
 export function Employees() {
@@ -83,7 +83,7 @@ export function Employees() {
       const paymentData = {
         employeeId: employee.id,
         amount: employee.salary,
-        paymentDate: new Date().toISOString().split('T')[0],
+        paymentDate: getCurrentDateString(),
         isPaid: true,
         observations: `Pagamento de salário - ${new Date().toLocaleDateString('pt-BR')}`
       };

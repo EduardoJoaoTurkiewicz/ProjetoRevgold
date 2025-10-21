@@ -3,6 +3,7 @@ import { X, DollarSign, FileText, CreditCard, Receipt, Plus, Trash2 } from 'luci
 import { useAppContext } from '../../context/AppContext';
 import { Acerto } from '../../types';
 import { CashBalanceService } from '../../lib/cashBalanceService';
+import { getCurrentDateString } from '../../utils/dateUtils';
 
 interface CompanyPaymentNegotiationFormProps {
   acerto: Acerto;
@@ -26,7 +27,7 @@ export function CompanyPaymentNegotiationForm({ acerto, onSubmit, onCancel }: Co
   
   const [formData, setFormData] = useState({
     paymentAmount: acerto.pendingAmount,
-    paymentDate: new Date().toISOString().split('T')[0],
+    paymentDate: getCurrentDateString(),
     paymentMethod: 'dinheiro' as const,
     paymentInstallments: 1,
     paymentInstallmentValue: acerto.pendingAmount,

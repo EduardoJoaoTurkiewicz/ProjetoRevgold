@@ -19,7 +19,7 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
     paymentDay: employee?.paymentDay || 5,
     nextPaymentDate: employee?.nextPaymentDate || '',
     isActive: employee?.isActive !== undefined ? employee.isActive : true,
-    hireDate: employee?.hireDate || new Date().toISOString().split('T')[0],
+    hireDate: employee?.hireDate || getCurrentDateString(),
     observations: employee?.observations || ''
   });
 

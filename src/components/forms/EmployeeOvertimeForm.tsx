@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { EmployeeOvertime } from '../../types';
 import { useAppContext } from '../../context/AppContext';
+import { getCurrentDateString } from '../../utils/dateUtils';
 
 interface EmployeeOvertimeFormProps {
   employeeId?: string;
@@ -17,7 +18,7 @@ export function EmployeeOvertimeForm({ employeeId, employeeName, onSubmit, onCan
     hours: 0,
     hourlyRate: 0,
     totalAmount: 0,
-    date: new Date().toISOString().split('T')[0],
+    date: getCurrentDateString(),
     description: '',
     status: 'pendente' as const
   });

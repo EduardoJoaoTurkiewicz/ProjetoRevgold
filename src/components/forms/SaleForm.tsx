@@ -30,7 +30,7 @@ const INSTALLMENT_TYPES = ['cartao_credito', 'cheque', 'boleto'];
 export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   const { employees, permutas } = useAppContext();
   const [formData, setFormData] = useState({
-    date: sale?.date || new Date().toISOString().split('T')[0],
+    date: sale?.date || getCurrentDateString(),
     deliveryDate: sale?.deliveryDate || '',
     client: sale?.client || '',
     sellerId: sale?.sellerId || '',
@@ -741,7 +741,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                               <label className="form-label">Data de Vencimento/Pagamento *</label>
                               <input
                                 type="date"
-                                value={method.firstInstallmentDate || new Date().toISOString().split('T')[0]}
+                                value={method.firstInstallmentDate || getCurrentDateString()}
                                 onChange={(e) => updatePaymentMethod(index, 'firstInstallmentDate', e.target.value)}
                                 className="input-field"
                                 required

@@ -16,7 +16,7 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
     debtId: check?.debtId || null,
     client: check?.client || '',
     value: check?.value || 0,
-    dueDate: check?.dueDate || new Date().toISOString().split('T')[0],
+    dueDate: check?.dueDate || getCurrentDateString(),
     isOwnCheck: check?.isOwnCheck || false,
     observations: check?.observations || '',
     usedFor: check?.usedFor || '',

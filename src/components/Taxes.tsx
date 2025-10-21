@@ -3,6 +3,7 @@ import { Plus, CreditCard as Edit, Trash2, Eye, FileText, DollarSign, Calendar, 
 import { useAppContext } from '../context/AppContext';
 import { Tax } from '../types';
 import { TaxForm } from './forms/TaxForm';
+import { getCurrentDateString } from '../utils/dateUtils';
 
 export function Taxes() {
   const { taxes, isLoading, error, createTax, updateTax, deleteTax } = useAppContext();
@@ -10,7 +11,7 @@ export function Taxes() {
   const [editingTax, setEditingTax] = useState<Tax | null>(null);
   const [viewingTax, setViewingTax] = useState<Tax | null>(null);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getCurrentDateString();
   const thisMonth = new Date().getMonth();
   const thisYear = new Date().getFullYear();
 

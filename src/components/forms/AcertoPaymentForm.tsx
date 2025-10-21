@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, DollarSign, Calendar, CreditCard } from 'lucide-react';
 import { Acerto } from '../../types';
 import { CashBalanceService } from '../../lib/cashBalanceService';
+import { getCurrentDateString } from '../../utils/dateUtils';
 
 interface AcertoPaymentFormProps {
   acerto: Acerto;
@@ -22,7 +23,7 @@ const PAYMENT_METHODS = [
 export function AcertoPaymentForm({ acerto, onSubmit, onCancel }: AcertoPaymentFormProps) {
   const [formData, setFormData] = useState({
     paymentAmount: 0,
-    paymentDate: new Date().toISOString().split('T')[0],
+    paymentDate: getCurrentDateString(),
     paymentMethod: 'dinheiro' as const,
     paymentInstallments: 1,
     paymentInstallmentValue: 0,

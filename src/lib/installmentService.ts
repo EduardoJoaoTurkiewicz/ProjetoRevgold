@@ -1,6 +1,6 @@
 // Service to handle installment creation and management
 import { supabaseServices } from './supabaseServices';
-import { formatDateForInput, addDays } from '../utils/dateUtils';
+import { formatDateForInput, addDays, getCurrentDateString } from '../utils/dateUtils';
 import { safeNumber } from '../utils/numberUtils';
 import { UUIDManager } from './uuidManager';
 
@@ -11,7 +11,7 @@ export class InstallmentService {
 
     const installments = safeNumber(paymentMethod.installments, 1);
     const interval = safeNumber(paymentMethod.installmentInterval, 30);
-    const startDate = paymentMethod.firstInstallmentDate || new Date().toISOString().split('T')[0];
+    const startDate = paymentMethod.firstInstallmentDate || getCurrentDateString();
 
     // Check if using custom values
     const useCustomValues = paymentMethod.useCustomValues && paymentMethod.customInstallmentValues && paymentMethod.customInstallmentValues.length === installments;
@@ -60,7 +60,7 @@ export class InstallmentService {
 
     const installments = safeNumber(paymentMethod.installments, 1);
     const interval = safeNumber(paymentMethod.installmentInterval, 30);
-    const startDate = paymentMethod.firstInstallmentDate || new Date().toISOString().split('T')[0];
+    const startDate = paymentMethod.firstInstallmentDate || getCurrentDateString();
 
     // Check if using custom values
     const useCustomValues = paymentMethod.useCustomValues && paymentMethod.customInstallmentValues && paymentMethod.customInstallmentValues.length === installments;
@@ -155,7 +155,7 @@ export class InstallmentService {
 
     const installments = safeNumber(paymentMethod.installments, 1);
     const interval = safeNumber(paymentMethod.installmentInterval, 30);
-    const startDate = paymentMethod.firstInstallmentDate || new Date().toISOString().split('T')[0];
+    const startDate = paymentMethod.firstInstallmentDate || getCurrentDateString();
 
     // Check if using custom values
     const useCustomValues = paymentMethod.useCustomValues && paymentMethod.customInstallmentValues && paymentMethod.customInstallmentValues.length === installments;
@@ -204,7 +204,7 @@ export class InstallmentService {
 
     const installments = safeNumber(paymentMethod.installments, 1);
     const interval = safeNumber(paymentMethod.installmentInterval, 30);
-    const startDate = paymentMethod.firstInstallmentDate || new Date().toISOString().split('T')[0];
+    const startDate = paymentMethod.firstInstallmentDate || getCurrentDateString();
 
     // Check if using custom values
     const useCustomValues = paymentMethod.useCustomValues && paymentMethod.customInstallmentValues && paymentMethod.customInstallmentValues.length === installments;
@@ -312,7 +312,7 @@ export class InstallmentService {
               ...method, 
               installments: 1, 
               installmentValue: method.amount,
-              firstInstallmentDate: method.firstInstallmentDate || new Date().toISOString().split('T')[0]
+              firstInstallmentDate: method.firstInstallmentDate || getCurrentDateString()
             });
           }
         }
@@ -327,7 +327,7 @@ export class InstallmentService {
               ...method, 
               installments: 1, 
               installmentValue: method.amount,
-              firstInstallmentDate: method.firstInstallmentDate || new Date().toISOString().split('T')[0]
+              firstInstallmentDate: method.firstInstallmentDate || getCurrentDateString()
             });
           }
         }
@@ -382,7 +382,7 @@ export class InstallmentService {
               ...method,
               installments: 1,
               installmentValue: method.amount,
-              firstInstallmentDate: method.firstInstallmentDate || new Date().toISOString().split('T')[0]
+              firstInstallmentDate: method.firstInstallmentDate || getCurrentDateString()
             });
           }
         }
@@ -397,7 +397,7 @@ export class InstallmentService {
               ...method, 
               installments: 1, 
               installmentValue: method.amount,
-              firstInstallmentDate: method.firstInstallmentDate || new Date().toISOString().split('T')[0]
+              firstInstallmentDate: method.firstInstallmentDate || getCurrentDateString()
             });
           }
         }

@@ -4,6 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import { Check } from '../types';
 import { CheckForm } from './forms/CheckForm';
 import { ImageUpload } from './ImageUpload';
+import { getCurrentDateString } from '../utils/dateUtils';
 
 export function Checks() {
   const { checks, sales, debts, isLoading, error, createCheck, updateCheck, deleteCheck } = useAppContext();
@@ -13,7 +14,7 @@ export function Checks() {
   const [expandedSales, setExpandedSales] = useState<Set<string>>(new Set());
   const [expandedDebts, setExpandedDebts] = useState<Set<string>>(new Set());
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getCurrentDateString();
   const dueToday = checks.filter(check => check.dueDate === today && check.status === 'pendente');
   const overdue = checks.filter(check => check.dueDate < today && check.status === 'pendente');
   
@@ -321,7 +322,7 @@ export function Checks() {
                                           const updatedCheck = {
                                             ...check,
                                             status: 'compensado' as const,
-                                            paymentDate: new Date().toISOString().split('T')[0],
+                                            paymentDate: getCurrentDateString(),
                                             updatedAt: new Date().toISOString()
                                           };
                                           updateCheck({ ...updatedCheck, id: check.id }).catch(error => {
@@ -453,7 +454,7 @@ export function Checks() {
                                           const updatedCheck = { 
                                             ...check, 
                                             status: 'compensado' as const,
-                                            paymentDate: new Date().toISOString().split('T')[0],
+                                            paymentDate: getCurrentDateString(),
                                             updatedAt: new Date().toISOString()
                                           };
                                           updateCheck({ ...updatedCheck, id: check.id }).catch(error => {

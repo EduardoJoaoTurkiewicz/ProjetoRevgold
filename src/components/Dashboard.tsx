@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { 
-  DollarSign, 
-  TrendingUp, 
-  TrendingDown, 
-  Users, 
-  CreditCard, 
+import { getCurrentDateString } from '../utils/dateUtils';
+import {
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  Users,
+  CreditCard,
   Calendar,
   AlertTriangle,
   CheckCircle,
@@ -66,7 +67,7 @@ const Dashboard: React.FC = () => {
   
   const [isRecalculating, setIsRecalculating] = useState(false);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getCurrentDateString();
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   

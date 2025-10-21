@@ -35,7 +35,7 @@ export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
   );
 
   const [formData, setFormData] = useState({
-    date: debt?.date || new Date().toISOString().split('T')[0],
+    date: debt?.date || getCurrentDateString(),
     description: debt?.description || '',
     company: debt?.company || '',
     totalValue: safeNumber(debt?.totalValue, 0),

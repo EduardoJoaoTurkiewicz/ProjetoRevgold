@@ -38,7 +38,7 @@ const PAYMENT_METHODS = [
 
 export function TaxForm({ tax, onSubmit, onCancel }: TaxFormProps) {
   const [formData, setFormData] = useState({
-    date: tax?.date || new Date().toISOString().split('T')[0],
+    date: tax?.date || getCurrentDateString(),
     taxType: tax?.taxType || 'outros' as const,
     description: tax?.description || '',
     amount: tax?.amount || 0,

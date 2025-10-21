@@ -4,6 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import { Boleto } from '../types';
 import { BoletoForm } from './forms/BoletoForm';
 import { OverdueBoletoForm } from './forms/OverdueBoletoForm';
+import { getCurrentDateString } from '../utils/dateUtils';
 
 export function Boletos() {
   const { boletos, sales, debts, isLoading, error, createBoleto, updateBoleto, deleteBoleto } = useAppContext();
@@ -14,7 +15,7 @@ export function Boletos() {
   const [expandedSales, setExpandedSales] = useState<Set<string>>(new Set());
   const [expandedDebts, setExpandedDebts] = useState<Set<string>>(new Set());
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getCurrentDateString();
   const dueToday = boletos.filter(boleto => boleto.dueDate === today && boleto.status === 'pendente');
   const overdue = boletos.filter(boleto => boleto.dueDate < today && boleto.status === 'pendente');
   
@@ -329,7 +330,7 @@ export function Boletos() {
                                           const updatedBoleto = { 
                                             ...boleto, 
                                             status: 'compensado' as const,
-                                            paymentDate: new Date().toISOString().split('T')[0],
+                                            paymentDate: getCurrentDateString(),
                                             updatedAt: new Date().toISOString()
                                           };
                                           updateBoleto({ ...updatedBoleto, id: boleto.id }).catch(error => {
@@ -459,7 +460,7 @@ export function Boletos() {
                                           const updatedBoleto = { 
                                             ...boleto, 
                                             status: 'compensado' as const,
-                                            paymentDate: new Date().toISOString().split('T')[0],
+                                            paymentDate: getCurrentDateString(),
                                             updatedAt: new Date().toISOString()
                                           };
                                           updateBoleto({ ...updatedBoleto, id: boleto.id }).catch(error => {

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { EmployeeAdvance } from '../../types';
 import { useAppContext } from '../../context/AppContext';
+import { getCurrentDateString } from '../../utils/dateUtils';
 
 interface EmployeeAdvanceFormProps {
   employeeId?: string;
@@ -22,7 +23,7 @@ export function EmployeeAdvanceForm({ employeeId, employeeName, onSubmit, onCanc
   const [formData, setFormData] = useState({
     employeeId: employeeId || '',
     amount: 0,
-    date: new Date().toISOString().split('T')[0],
+    date: getCurrentDateString(),
     description: '',
     paymentMethod: 'dinheiro' as const,
     status: 'pendente' as const

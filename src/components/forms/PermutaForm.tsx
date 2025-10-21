@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Car } from 'lucide-react';
 import { Permuta } from '../../types';
+import { getCurrentDateString } from '../../utils/dateUtils';
 
 interface PermutaFormProps {
   permuta?: Permuta | null;
@@ -34,7 +35,7 @@ export function PermutaForm({ permuta, onSubmit, onCancel }: PermutaFormProps) {
     remainingValue: permuta?.remainingValue || 0,
     status: permuta?.status || 'ativo' as const,
     notes: permuta?.notes || '',
-    registrationDate: permuta?.registrationDate || new Date().toISOString().split('T')[0]
+    registrationDate: permuta?.registrationDate || getCurrentDateString()
   });
 
   // Auto-calculate remaining value
