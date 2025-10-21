@@ -42,55 +42,73 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
 // Função para testar conexão
 export async function testSupabaseConnection(): Promise<{ success: boolean; error?: string }> {
   if (!isSupabaseConfigured()) {
-    return { 
-      success: false, 
-      error: 'Supabase não configurado. Configure o arquivo .env com suas credenciais.' 
+    return {
+      success: false,
+      error: 'Supabase não configurado. Configure o arquivo .env com suas credenciais.'
     };
   }
-  
+
   try {
-    // Apenas log detalhado em desenvolvimento
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 Testando conexão com Supabase...');
-    }
-    
+    // Primeiro, testar se a URL do Supabase está acessível
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    // Testar com uma query simples na tabela employees
     const { data, error } = await supabase
       .from('employees')
       .select('id')
       .limit(1)
       .abortSignal(controller.signal);
-    
+
     clearTimeout(timeoutId);
-    
+
     if (error) {
-      // Silenciar erros repetitivos de conexão
-      return { 
-        success: false, 
-        error: `Conexão indisponível. Tentando reconectar...` 
+      console.error('Erro ao conectar ao Supabase:', error.message);
+
+      // Verificar tipos específicos de erro
+      if (error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
+        return {
+          success: false,
+          error: 'Não foi possível conectar ao servidor Supabase. Verifique sua conexão de internet.'
+        };
+      }
+
+      if (error.message.includes('JWT') || error.message.includes('auth')) {
+        return {
+          success: false,
+          error: 'Erro de autenticação. Verifique suas credenciais no arquivo .env.'
+        };
+      }
+
+      return {
+        success: false,
+        error: `Erro: ${error.message}`
       };
     }
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('✅ Conexão com Supabase estabelecida');
-    }
+
+    console.log('✅ Conexão com Supabase estabelecida com sucesso');
     return { success: true };
-    
-  } catch (error) {
-    // Silenciar erros de timeout e conexão
-    
+
+  } catch (error: any) {
+    console.error('Exceção ao testar conexão:', error);
+
     if (error.name === 'AbortError') {
-      return { 
-        success: false, 
-        error: 'Timeout na conexão. Tentando reconectar...' 
+      return {
+        success: false,
+        error: 'Timeout: O servidor não respondeu em 8 segundos. Verifique sua conexão.'
       };
     }
-    
-    return { 
-      success: false, 
-      error: `Reconectando...` 
+
+    if (error.message?.includes('fetch') || error.message?.includes('NetworkError')) {
+      return {
+        success: false,
+        error: 'Erro de rede. Verifique sua conexão com a internet.'
+      };
+    }
+
+    return {
+      success: false,
+      error: error.message || 'Erro desconhecido ao conectar'
     };
   }
 }

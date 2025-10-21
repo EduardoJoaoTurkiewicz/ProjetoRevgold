@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Wifi, WifiOff, Cloud, CloudOff, Loader2, RefreshCw, Database, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Wifi, WifiOff, Cloud, CloudOff, Loader2, RefreshCw, Database, CheckCircle, AlertTriangle, Bug } from 'lucide-react';
 import { connectionManager, ConnectionStatus as ConnStatus } from '../lib/connectionManager';
 import { enhancedSyncManager } from '../lib/enhancedSyncManager';
 import { getOfflineStatsEnhanced } from '../lib/enhancedOfflineStorage';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { runConnectionDiagnostic } from '../lib/connectionTest';
 import toast from 'react-hot-toast';
 
 export function ConnectionStatus() {
@@ -44,7 +45,41 @@ export function ConnectionStatus() {
   };
 
   const handleForceCheck = async () => {
-    await connectionManager.forceCheck();
+    const loadingToast = toast.loading('Verificando conexão...');
+    try {
+      const result = await connectionManager.forceCheck();
+      toast.dismiss(loadingToast);
+
+      if (result) {
+        toast.success('Conexão estabelecida com sucesso!');
+      } else {
+        toast.error('Não foi possível conectar ao servidor. Verifique sua internet.');
+      }
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      toast.error('Erro ao verificar conexão: ' + (error?.message ?? 'Erro desconhecido'));
+    }
+  };
+
+  const handleDiagnostic = async () => {
+    const loadingToast = toast.loading('Executando diagnóstico...');
+    try {
+      const diagnosis = await runConnectionDiagnostic();
+      toast.dismiss(loadingToast);
+
+      // Mostrar resultado no console
+      console.log(diagnosis);
+
+      // Mostrar mensagem resumida
+      if (diagnosis.includes('✅ Tudo funcionando')) {
+        toast.success('Diagnóstico completo: Tudo OK! Veja o console para detalhes.');
+      } else {
+        toast.error('Diagnóstico completo: Problemas detectados. Veja o console para detalhes.');
+      }
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      toast.error('Erro ao executar diagnóstico');
+    }
   };
 
   // Verificar se Supabase está configurado
@@ -214,24 +249,38 @@ export function ConnectionStatus() {
             )}
 
             {/* Actions */}
-            <div className="flex gap-2">
-              <button
-                onClick={handleForceCheck}
-                className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold flex items-center justify-center gap-2"
-                disabled={syncStatus.isSyncing}
-              >
-                <RefreshCw className="w-4 h-4" />
-                Verificar
-              </button>
-              
-              {supabaseConfigured && (offlineStats.offlineCount > 0 || offlineStats.syncQueueCount > 0) && (
+            <div className="space-y-2">
+              <div className="flex gap-2">
                 <button
-                  onClick={handleForceSync}
-                  className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold flex items-center justify-center gap-2"
-                  disabled={syncStatus.isSyncing || !status.isSupabaseReachable}
+                  onClick={handleForceCheck}
+                  className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold flex items-center justify-center gap-2"
+                  disabled={syncStatus.isSyncing}
                 >
-                  <Database className="w-4 h-4" />
-                  Sincronizar
+                  <RefreshCw className="w-4 h-4" />
+                  Verificar
+                </button>
+
+                {supabaseConfigured && (offlineStats.offlineCount > 0 || offlineStats.syncQueueCount > 0) && (
+                  <button
+                    onClick={handleForceSync}
+                    className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold flex items-center justify-center gap-2"
+                    disabled={syncStatus.isSyncing || !status.isSupabaseReachable}
+                  >
+                    <Database className="w-4 h-4" />
+                    Sincronizar
+                  </button>
+                )}
+              </div>
+
+              {/* Botão de diagnóstico */}
+              {!status.isSupabaseReachable && supabaseConfigured && (
+                <button
+                  onClick={handleDiagnostic}
+                  className="w-full px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-semibold flex items-center justify-center gap-2"
+                  disabled={syncStatus.isSyncing}
+                >
+                  <Bug className="w-4 h-4" />
+                  Executar Diagnóstico
                 </button>
               )}
             </div>
