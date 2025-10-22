@@ -26,12 +26,13 @@ const PAYMENT_TYPES = [
 export function DebtForm({ debt, onSubmit, onCancel }: DebtFormProps) {
   const { checks } = useAppContext();
 
-  // Get available checks (from sales, not used in debts, and status is pending or compensado)
+  // Get available checks (from sales, not used in debts, not discounted, and status is pending)
   const availableChecks = checks.filter(check =>
     check.saleId &&
     !check.debtId &&
-    !check.used_in_debt &&
-    (check.status === 'pendente' || check.status === 'compensado')
+    !check.usedInDebt &&
+    !check.is_discounted &&
+    check.status === 'pendente'
   );
 
   const [formData, setFormData] = useState({

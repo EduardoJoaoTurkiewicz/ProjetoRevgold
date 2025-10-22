@@ -219,6 +219,9 @@ export interface Database {
           selected_available_checks: Json | null
           used_in_debt: string | null
           discount_date: string | null
+          discounted_amount: number | null
+          discount_fee: number | null
+          is_discounted: boolean | null
           created_at: string
           updated_at: string
         }
@@ -243,6 +246,9 @@ export interface Database {
           selected_available_checks?: Json | null
           used_in_debt?: string | null
           discount_date?: string | null
+          discounted_amount?: number | null
+          discount_fee?: number | null
+          is_discounted?: boolean | null
           created_at?: string
           updated_at?: string
         }
@@ -267,6 +273,9 @@ export interface Database {
           selected_available_checks?: Json | null
           used_in_debt?: string | null
           discount_date?: string | null
+          discounted_amount?: number | null
+          discount_fee?: number | null
+          is_discounted?: boolean | null
           created_at?: string
           updated_at?: string
         }

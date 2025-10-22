@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Plus, CreditCard as Edit, Trash2, Eye, FileText, DollarSign, Calendar, AlertCircle, X, Building2, CreditCard, Clock, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Eye, FileText, DollarSign, Calendar, AlertCircle, X, Building2, CreditCard, Clock, CheckCircle, ChevronDown, ChevronRight, Zap } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Check } from '../types';
 import { CheckForm } from './forms/CheckForm';
 import { ImageUpload } from './ImageUpload';
 import { getCurrentDateString } from '../utils/dateUtils';
+import { DiscountChecksForm } from './forms/DiscountChecksForm';
 
 export function Checks() {
   const { checks, sales, debts, isLoading, error, createCheck, updateCheck, deleteCheck } = useAppContext();
@@ -13,6 +14,8 @@ export function Checks() {
   const [viewingCheck, setViewingCheck] = useState<Check | null>(null);
   const [expandedSales, setExpandedSales] = useState<Set<string>>(new Set());
   const [expandedDebts, setExpandedDebts] = useState<Set<string>>(new Set());
+  const [showDiscountForm, setShowDiscountForm] = useState(false);
+  const [expandedDiscounted, setExpandedDiscounted] = useState<Set<string>>(new Set());
 
   const today = getCurrentDateString();
   const dueToday = checks.filter(check => check.dueDate === today && check.status === 'pendente');
@@ -22,6 +25,10 @@ export function Checks() {
   const notDueYet = checks.filter(check => check.dueDate > today && check.status === 'pendente');
   const totalNotDueYet = notDueYet.reduce((sum, check) => sum + check.value, 0);
   const totalOverdue = overdue.reduce((sum, check) => sum + check.value, 0);
+
+  const discountedChecks = checks.filter(check => check.is_discounted || check.discount_date);
+  const totalDiscountedOriginalValue = discountedChecks.reduce((sum, check) => sum + check.value, 0);
+  const totalDiscountedReceivedValue = discountedChecks.reduce((sum, check) => sum + (check.discounted_amount || 0), 0);
   
   // Cheques que a empresa tem para pagar
   const companyPayableChecks = checks.filter(check => 
@@ -225,11 +232,32 @@ export function Checks() {
 
       {/* Cheques a Receber (de Vendas) */}
       <div className="card modern-shadow-xl">
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
           <div className="p-3 rounded-xl bg-green-600">
             <FileText className="w-6 h-6 text-white" />
           </div>
           <h3 className="text-xl font-bold text-slate-900">Cheques a Receber (de Vendas)</h3>
+          </div>
+          <button
+            onClick={() => {
+              const availableChecks = checks.filter(check =>
+                check.saleId &&
+                !check.usedInDebt &&
+                !check.is_discounted &&
+                check.status === 'pendente'
+              );
+              if (availableChecks.length === 0) {
+                alert('Não há cheques disponíveis para antecipar');
+                return;
+              }
+              setShowDiscountForm(true);
+            }}
+            className="btn-primary flex items-center gap-2 modern-shadow-xl hover:modern-shadow-lg"
+          >
+            <Zap className="w-5 h-5" />
+            Antecipar Cheques
+          </button>
         </div>
         
         {salesWithChecks.length > 0 ? (
@@ -490,6 +518,124 @@ export function Checks() {
         )}
       </div>
 
+      {/* Cheques Depositados ou Antecipados */}
+      <div className="card modern-shadow-xl">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="p-3 rounded-xl bg-emerald-600">
+            <CheckCircle className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-slate-900">Cheques Depositados ou Antecipados</h3>
+            <p className="text-sm text-slate-600">
+              Total Original: R$ {totalDiscountedOriginalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} •
+              Total Recebido: R$ {totalDiscountedReceivedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+        </div>
+
+        {discountedChecks.length > 0 ? (
+          <div className="space-y-4">
+            {salesWithChecks
+              .filter(sale => sale.checks.some(check => check.is_discounted || check.discount_date))
+              .map(sale => (
+                <div key={sale.id} className="border border-slate-200 rounded-2xl overflow-hidden">
+                  <div
+                    className="p-6 bg-gradient-to-r from-emerald-50 to-transparent hover:from-emerald-100 cursor-pointer transition-modern"
+                    onClick={() => {
+                      const newExpanded = new Set(expandedDiscounted);
+                      if (newExpanded.has(sale.id)) {
+                        newExpanded.delete(sale.id);
+                      } else {
+                        newExpanded.add(sale.id);
+                      }
+                      setExpandedDiscounted(newExpanded);
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <button className="p-2 rounded-lg bg-emerald-600 text-white modern-shadow">
+                          {expandedDiscounted.has(sale.id) ?
+                            <ChevronDown className="w-5 h-5" /> :
+                            <ChevronRight className="w-5 h-5" />
+                          }
+                        </button>
+                        <div>
+                          <h3 className="text-lg font-bold text-slate-900">{sale.client}</h3>
+                          <p className="text-sm text-slate-600">
+                            Data: {new Date(sale.date).toLocaleDateString('pt-BR')} •
+                            {sale.checks.filter(c => c.is_discounted || c.discount_date).length} cheque(s) antecipado(s)
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {expandedDiscounted.has(sale.id) && (
+                    <div className="border-t border-slate-200 bg-white">
+                      <div className="p-6">
+                        <h4 className="font-semibold text-slate-900 mb-4">Cheques Antecipados</h4>
+                        <div className="space-y-3">
+                          {sale.checks
+                            .filter(check => check.is_discounted || check.discount_date)
+                            .map(check => (
+                              <div key={check.id} className="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <span className="font-medium text-slate-900">{check.client}</span>
+                                    <div className="text-sm text-slate-600 mt-1">
+                                      Parcela {check.installmentNumber}/{check.totalInstallments}
+                                    </div>
+                                    <div className="text-sm text-slate-600">
+                                      Vencimento Original: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
+                                    </div>
+                                    {check.discount_date && (
+                                      <div className="text-sm text-emerald-600 font-semibold">
+                                        Antecipado em: {new Date(check.discount_date).toLocaleDateString('pt-BR')}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-sm text-slate-600">Valor Original:</div>
+                                    <span className="font-medium text-slate-900">
+                                      R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                    {check.discounted_amount && (
+                                      <>
+                                        <div className="text-sm text-emerald-600 font-bold mt-1">Valor Recebido:</div>
+                                        <span className="font-bold text-emerald-600">
+                                          R$ {check.discounted_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </span>
+                                      </>
+                                    )}
+                                    {check.discount_fee && check.discount_fee > 0 && (
+                                      <div className="text-xs text-red-600 mt-1">
+                                        Taxa: R$ {check.discount_fee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            }
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <CheckCircle className="w-16 h-16 mx-auto mb-4 text-emerald-300" />
+            <p className="text-emerald-600 font-medium">Nenhum cheque antecipado ainda</p>
+            <p className="text-emerald-500 text-sm mt-2">
+              Cheques antecipados aparecerão aqui
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* Cheques Avulsos */}
       <div className="card modern-shadow-xl">
         <div className="flex items-center gap-4 mb-6">
@@ -714,6 +860,23 @@ export function Checks() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Discount Checks Form Modal */}
+      {showDiscountForm && (
+        <DiscountChecksForm
+          checks={checks.filter(check =>
+            check.saleId &&
+            !check.usedInDebt &&
+            !check.is_discounted &&
+            check.status === 'pendente'
+          )}
+          onClose={() => setShowDiscountForm(false)}
+          onSuccess={() => {
+            setShowDiscountForm(false);
+            window.location.reload();
+          }}
+        />
       )}
     </div>
   );

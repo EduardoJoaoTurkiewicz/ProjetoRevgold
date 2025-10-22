@@ -104,6 +104,9 @@ export interface Check {
   selectedAvailableChecks?: string[] | null;
   usedInDebt?: string | null;
   discountDate?: string | null;
+  discounted_amount?: number | null;
+  discount_fee?: number | null;
+  is_discounted?: boolean;
   createdAt: string;
   updatedAt?: string | null;
   // Campos para cheques da empresa
