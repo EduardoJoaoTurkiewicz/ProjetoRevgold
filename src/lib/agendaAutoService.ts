@@ -7,10 +7,25 @@ export class AgendaAutoService {
     description: string;
     date: string;
     type: 'vencimento' | 'entrega' | 'pagamento' | 'importante';
-    relatedType?: 'boleto' | 'cheque' | 'venda' | 'divida' | 'cartao' | 'acerto';
+    relatedType?: 'boleto' | 'cheque' | 'venda' | 'divida' | 'cartao' | 'acerto' | 'imposto';
     relatedId?: string;
   }): Promise<void> {
     try {
+      // Check if an event already exists for this specific item
+      if (eventData.relatedId) {
+        const { data: existingEvent } = await supabase
+          .from('agenda_events')
+          .select('id')
+          .eq('related_id', eventData.relatedId)
+          .eq('date', eventData.date)
+          .maybeSingle();
+
+        if (existingEvent) {
+          console.log('ℹ️ Agenda event already exists for this item and date');
+          return;
+        }
+      }
+
       const { error } = await supabase
         .from('agenda_events')
         .insert({
@@ -105,8 +120,34 @@ export class AgendaAutoService {
       description: `${taxName} - R$ ${amount.toFixed(2)}`,
       date: dueDate,
       type: 'vencimento',
-      relatedType: 'divida',
+      relatedType: 'imposto',
       relatedId: taxId,
     });
+  }
+
+  static async registerSaleInstallments(saleId: string, clientName: string, installments: Array<{date: string, amount: number, type: string, number: number, total: number}>): Promise<void> {
+    for (const installment of installments) {
+      await this.registerEvent({
+        title: `Vencimento Parcela ${installment.number}/${installment.total}`,
+        description: `Cliente: ${clientName} - ${installment.type} - R$ ${installment.amount.toFixed(2)}`,
+        date: installment.date,
+        type: 'vencimento',
+        relatedType: 'venda',
+        relatedId: saleId,
+      });
+    }
+  }
+
+  static async registerDebtInstallments(debtId: string, supplierName: string, installments: Array<{date: string, amount: number, type: string, number: number, total: number}>): Promise<void> {
+    for (const installment of installments) {
+      await this.registerEvent({
+        title: `Pagamento Parcela ${installment.number}/${installment.total}`,
+        description: `Fornecedor: ${supplierName} - ${installment.type} - R$ ${installment.amount.toFixed(2)}`,
+        date: installment.date,
+        type: 'pagamento',
+        relatedType: 'divida',
+        relatedId: debtId,
+      });
+    }
   }
 }

@@ -54,12 +54,11 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   // Filtrar apenas vendedores ativos
   const sellers = employees.filter(emp => emp.isActive && emp.isSeller);
 
-  // Filtrar permutas ativas do cliente atual
+  // Filtrar permutas com crédito disponível
+  // Não precisa ser do mesmo cliente - qualquer permuta com crédito disponível pode ser usada
   const availablePermutas = permutas.filter(permuta =>
     permuta.status === 'ativo' &&
-    permuta.remainingValue > 0 &&
-    formData.client &&
-    permuta.clientName.toLowerCase().trim() === formData.client.toLowerCase().trim()
+    permuta.remainingValue > 0
   );
 
   const addPaymentMethod = () => {
@@ -830,10 +829,10 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                 ) : (
                                   <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
                                     <p className="text-sm text-yellow-800 font-semibold">
-                                      ⚠️ Nenhum veículo disponível para permuta com este cliente
+                                      ⚠️ Nenhum veículo disponível para permuta
                                     </p>
                                     <p className="text-xs text-yellow-700 mt-1">
-                                      Registre primeiro um veículo na aba "Permutas" para este cliente: "{formData.client}"
+                                      Registre primeiro um veículo na aba "Permutas" com crédito disponível
                                     </p>
                                   </div>
                                 )}

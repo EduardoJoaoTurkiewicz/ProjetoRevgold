@@ -359,14 +359,14 @@ export class InstallmentService {
             for (const checkId of method.selectedChecks) {
               try {
                 // Update the check to mark it as used in this debt
-                await supabaseServices.checks.update({
-                  id: checkId,
+                await supabaseServices.checks.update(checkId, {
                   debtId: debtId,
-                  used_in_debt: debtId,
+                  usedInDebt: debtId,
+                  supplierName: company,
                   usedFor: `Pagamento de dívida - ${company}`,
                   updatedAt: new Date().toISOString()
                 });
-                console.log(`✅ Check ${checkId} marked as used for debt ${debtId}`);
+                console.log(`✅ Check ${checkId} marked as used for debt ${debtId} - Supplier: ${company}`);
               } catch (error) {
                 console.error(`❌ Error updating check ${checkId}:`, error);
               }

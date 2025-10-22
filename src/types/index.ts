@@ -103,6 +103,7 @@ export interface Check {
   backImage?: string | null;
   selectedAvailableChecks?: string[] | null;
   usedInDebt?: string | null;
+  supplierName?: string | null;
   discountDate?: string | null;
   discounted_amount?: number | null;
   discount_fee?: number | null;

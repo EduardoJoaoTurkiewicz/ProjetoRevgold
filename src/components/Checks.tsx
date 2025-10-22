@@ -518,6 +518,111 @@ export function Checks() {
         )}
       </div>
 
+      {/* Cheques Usados para Pagamento de Dívidas */}
+      <div className="card modern-shadow-xl">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="p-3 rounded-xl bg-blue-600">
+            <Building2 className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-slate-900">Cheques Usados para Pagamento de Dívidas</h3>
+            <p className="text-sm text-slate-600">
+              Total: R$ {checks.filter(c => c.usedInDebt).reduce((sum, c) => sum + c.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} •
+              {checks.filter(c => c.usedInDebt).length} cheque(s)
+            </p>
+          </div>
+        </div>
+
+        {checks.filter(c => c.usedInDebt).length > 0 ? (
+          <div className="space-y-4">
+            {salesWithChecks
+              .filter(sale => sale.checks.some(check => check.usedInDebt))
+              .map(sale => (
+                <div key={sale.id} className="border border-slate-200 rounded-2xl overflow-hidden">
+                  <div
+                    className="p-6 bg-gradient-to-r from-blue-50 to-transparent hover:from-blue-100 cursor-pointer transition-modern"
+                    onClick={() => {
+                      const newExpanded = new Set(expandedSales);
+                      if (newExpanded.has(sale.id)) {
+                        newExpanded.delete(sale.id);
+                      } else {
+                        newExpanded.add(sale.id);
+                      }
+                      setExpandedSales(newExpanded);
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <button className="p-2 rounded-lg bg-blue-600 text-white modern-shadow">
+                          {expandedSales.has(sale.id) ?
+                            <ChevronDown className="w-5 h-5" /> :
+                            <ChevronRight className="w-5 h-5" />
+                          }
+                        </button>
+                        <div>
+                          <h3 className="text-lg font-bold text-slate-900">{sale.client}</h3>
+                          <p className="text-sm text-slate-600">
+                            Data: {new Date(sale.date).toLocaleDateString('pt-BR')} •
+                            {sale.checks.filter(c => c.usedInDebt).length} cheque(s) usado(s) em dívidas
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {expandedSales.has(sale.id) && (
+                    <div className="border-t border-slate-200 bg-white">
+                      <div className="p-6">
+                        <h4 className="font-semibold text-slate-900 mb-4">Cheques Usados em Dívidas</h4>
+                        <div className="space-y-3">
+                          {sale.checks
+                            .filter(check => check.usedInDebt)
+                            .map(check => (
+                              <div key={check.id} className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <span className="font-medium text-slate-900">{check.client}</span>
+                                    <div className="text-sm text-slate-600 mt-1">
+                                      Parcela {check.installmentNumber}/{check.totalInstallments}
+                                    </div>
+                                    <div className="text-sm text-slate-600">
+                                      Vencimento Original: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
+                                    </div>
+                                    {check.supplierName && (
+                                      <div className="text-sm text-blue-600 font-semibold mt-2">
+                                        Fornecedor Pago: {check.supplierName}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="font-medium text-blue-600">
+                                      R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                    <div className="text-xs text-blue-500 mt-1">Usado em dívida</div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            }
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <Building2 className="w-16 h-16 mx-auto mb-4 text-blue-300" />
+            <p className="text-blue-600 font-medium">Nenhum cheque usado em pagamento de dívidas ainda</p>
+            <p className="text-blue-500 text-sm mt-2">
+              Quando você usar cheques de clientes para pagar fornecedores, eles aparecerão aqui
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* Cheques Depositados ou Antecipados */}
       <div className="card modern-shadow-xl">
         <div className="flex items-center gap-4 mb-6">

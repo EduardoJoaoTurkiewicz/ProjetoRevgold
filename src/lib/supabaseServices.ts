@@ -192,23 +192,46 @@ export const salesService = {
 
         // Register payment due dates for installments
         if (sanitizedSale.paymentMethods) {
+          const installmentsToRegister: Array<{date: string, amount: number, type: string, number: number, total: number}> = [];
+
           for (const method of sanitizedSale.paymentMethods) {
+            // Handle installment-based payment methods
             if (method.firstInstallmentDate && method.installments && method.installments > 1) {
               const dueDate = new Date(method.firstInstallmentDate);
+              const useCustomValues = method.useCustomValues && method.customInstallmentValues && method.customInstallmentValues.length === method.installments;
+
               for (let i = 0; i < method.installments; i++) {
                 const installmentDate = new Date(dueDate);
                 installmentDate.setDate(dueDate.getDate() + (i * (method.installmentInterval || 30)));
                 const dateStr = installmentDate.toISOString().split('T')[0];
-                await AgendaAutoService.registerEvent({
-                  title: `Vencimento Parcela ${i + 1}/${method.installments}`,
-                  description: `Cliente: ${sanitizedSale.client} - ${method.type}`,
+
+                const amount = useCustomValues
+                  ? safeNumber(method.customInstallmentValues[i], 0)
+                  : safeNumber(method.installmentValue, method.amount / method.installments);
+
+                installmentsToRegister.push({
                   date: dateStr,
-                  type: 'vencimento',
-                  relatedType: 'venda',
-                  relatedId: saleId,
+                  amount: amount,
+                  type: method.type,
+                  number: i + 1,
+                  total: method.installments
                 });
               }
             }
+            // Handle single payment methods with due date (like single boleto or single check)
+            else if (method.firstInstallmentDate && (method.type === 'boleto' || method.type === 'cheque')) {
+              installmentsToRegister.push({
+                date: method.firstInstallmentDate,
+                amount: safeNumber(method.amount, 0),
+                type: method.type,
+                number: 1,
+                total: 1
+              });
+            }
+          }
+
+          if (installmentsToRegister.length > 0) {
+            await AgendaAutoService.registerSaleInstallments(saleId, sanitizedSale.client, installmentsToRegister);
           }
         }
       } catch (agendaError) {
@@ -589,7 +612,7 @@ export const debtsService = {
       .single();
     
     if (error) throw error;
-    
+
     // Process installments after debt creation
     try {
       const { InstallmentService } = await import('./installmentService');
@@ -599,7 +622,59 @@ export const debtsService = {
       console.error('❌ Error processing installments for debt:', installmentError);
       // Don't throw here - debt was created successfully, installments are secondary
     }
-    
+
+    // Register agenda events automatically
+    try {
+      const { AgendaAutoService } = await import('./agendaAutoService');
+
+      // Register payment due dates for installments
+      if (sanitizedDebt.paymentMethods) {
+        const installmentsToRegister: Array<{date: string, amount: number, type: string, number: number, total: number}> = [];
+
+        for (const method of sanitizedDebt.paymentMethods) {
+          // Handle installment-based payment methods
+          if (method.firstInstallmentDate && method.installments && method.installments > 1) {
+            const dueDate = new Date(method.firstInstallmentDate);
+            const useCustomValues = method.useCustomValues && method.customInstallmentValues && method.customInstallmentValues.length === method.installments;
+
+            for (let i = 0; i < method.installments; i++) {
+              const installmentDate = new Date(dueDate);
+              installmentDate.setDate(dueDate.getDate() + (i * (method.installmentInterval || 30)));
+              const dateStr = installmentDate.toISOString().split('T')[0];
+
+              const amount = useCustomValues
+                ? safeNumber(method.customInstallmentValues[i], 0)
+                : safeNumber(method.installmentValue, method.amount / method.installments);
+
+              installmentsToRegister.push({
+                date: dateStr,
+                amount: amount,
+                type: method.type,
+                number: i + 1,
+                total: method.installments
+              });
+            }
+          }
+          // Handle single payment methods with due date (like single boleto or single check)
+          else if (method.firstInstallmentDate && (method.type === 'boleto' || method.type === 'cheque')) {
+            installmentsToRegister.push({
+              date: method.firstInstallmentDate,
+              amount: safeNumber(method.amount, 0),
+              type: method.type,
+              number: 1,
+              total: 1
+            });
+          }
+        }
+
+        if (installmentsToRegister.length > 0) {
+          await AgendaAutoService.registerDebtInstallments(data.id, sanitizedDebt.company, installmentsToRegister);
+        }
+      }
+    } catch (agendaError) {
+      console.error('❌ Error registering agenda events for debt:', agendaError);
+    }
+
     return data.id;
   },
 
