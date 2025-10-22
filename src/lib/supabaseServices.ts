@@ -179,9 +179,42 @@ export const salesService = {
         console.log('✅ Installments processed successfully for sale:', saleId);
       } catch (installmentError) {
         console.error('❌ Error processing installments for sale:', installmentError);
-        // Don't throw here - sale was created successfully, installments are secondary
       }
-      
+
+      // Register agenda events automatically
+      try {
+        const { AgendaAutoService } = await import('./agendaAutoService');
+
+        // Register delivery date if provided
+        if (sanitizedSale.deliveryDate) {
+          await AgendaAutoService.registerSaleDelivery(saleId, sanitizedSale.deliveryDate, sanitizedSale.client);
+        }
+
+        // Register payment due dates for installments
+        if (sanitizedSale.paymentMethods) {
+          for (const method of sanitizedSale.paymentMethods) {
+            if (method.firstInstallmentDate && method.installments && method.installments > 1) {
+              const dueDate = new Date(method.firstInstallmentDate);
+              for (let i = 0; i < method.installments; i++) {
+                const installmentDate = new Date(dueDate);
+                installmentDate.setDate(dueDate.getDate() + (i * (method.installmentInterval || 30)));
+                const dateStr = installmentDate.toISOString().split('T')[0];
+                await AgendaAutoService.registerEvent({
+                  title: `Vencimento Parcela ${i + 1}/${method.installments}`,
+                  description: `Cliente: ${sanitizedSale.client} - ${method.type}`,
+                  date: dateStr,
+                  type: 'vencimento',
+                  relatedType: 'venda',
+                  relatedId: saleId,
+                });
+              }
+            }
+          }
+        }
+      } catch (agendaError) {
+        console.error('❌ Error registering agenda events:', agendaError);
+      }
+
       return saleId;
     } catch (error) {
       console.error('❌ Error creating sale:', error);

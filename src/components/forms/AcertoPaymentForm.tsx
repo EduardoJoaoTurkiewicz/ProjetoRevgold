@@ -41,24 +41,24 @@ export function AcertoPaymentForm({ acerto, onSubmit, onCancel }: AcertoPaymentF
     }
   }, [formData.paymentAmount, formData.paymentInstallments]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.paymentAmount || formData.paymentAmount <= 0) {
       alert('O valor do pagamento deve ser maior que zero.');
       return;
     }
-    
+
     if (formData.paymentAmount > acerto.pendingAmount) {
       alert('O valor do pagamento não pode ser maior que o valor pendente.');
       return;
     }
-    
+
     // Calculate new amounts
     const newPaidAmount = acerto.paidAmount + formData.paymentAmount;
     const newPendingAmount = acerto.totalAmount - newPaidAmount;
     const newStatus = newPendingAmount <= 0 ? 'pago' : 'parcial';
-    
+
     const paymentData = {
       paidAmount: newPaidAmount,
       pendingAmount: Math.max(0, newPendingAmount),
@@ -70,18 +70,20 @@ export function AcertoPaymentForm({ acerto, onSubmit, onCancel }: AcertoPaymentF
       paymentInterval: formData.paymentInstallments > 1 ? formData.paymentInterval : undefined,
       observations: formData.observations || acerto.observations
     };
-    
-    // Process payment through cash balance service
-    CashBalanceService.handleAcertoPayment(acerto, { ...paymentData, paymentAmount: formData.paymentAmount })
-      .then(() => {
-        console.log('✅ Acerto payment processed through cash service');
-      })
-      .catch(error => {
-        console.error('❌ Error processing acerto payment:', error);
-      });
-    
+
     console.log('📝 Enviando pagamento de acerto:', paymentData);
-    onSubmit(paymentData);
+
+    try {
+      // Process payment through cash balance service first
+      await CashBalanceService.handleAcertoPayment(acerto, { ...paymentData, paymentAmount: formData.paymentAmount });
+      console.log('✅ Acerto payment processed through cash service');
+
+      // Then submit the payment data to update the acerto
+      onSubmit(paymentData);
+    } catch (error: any) {
+      console.error('❌ Error processing acerto payment:', error);
+      alert('Erro ao processar pagamento: ' + (error.message || 'Erro desconhecido'));
+    }
   };
 
   return (

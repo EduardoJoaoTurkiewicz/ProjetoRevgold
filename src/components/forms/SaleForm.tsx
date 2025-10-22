@@ -55,10 +55,11 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   const sellers = employees.filter(emp => emp.isActive && emp.isSeller);
 
   // Filtrar permutas ativas do cliente atual
-  const availablePermutas = permutas.filter(permuta => 
-    permuta.status === 'ativo' && 
+  const availablePermutas = permutas.filter(permuta =>
+    permuta.status === 'ativo' &&
     permuta.remainingValue > 0 &&
-    formData.client && permuta.clientName.toLowerCase() === formData.client.toLowerCase()
+    formData.client &&
+    permuta.clientName.toLowerCase().trim() === formData.client.toLowerCase().trim()
   );
 
   const addPaymentMethod = () => {

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { X, Users, Building2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Users, Building2, Calculator } from 'lucide-react';
 import { Acerto } from '../../types';
+import { useAppContext } from '../../context/AppContext';
 
 interface AcertoFormProps {
   acerto?: Acerto | null;
@@ -9,6 +10,7 @@ interface AcertoFormProps {
 }
 
 export function AcertoForm({ acerto, onSubmit, onCancel }: AcertoFormProps) {
+  const { sales, debts } = useAppContext();
   const [formData, setFormData] = useState({
     clientName: acerto?.clientName || '',
     companyName: acerto?.companyName || '',
@@ -19,6 +21,41 @@ export function AcertoForm({ acerto, onSubmit, onCancel }: AcertoFormProps) {
     status: acerto?.status || 'pendente' as const,
     observations: acerto?.observations || ''
   });
+
+  // Auto-calculate total amount based on sales/debts with "acerto" payment method
+  useEffect(() => {
+    if (!acerto) {
+      let calculatedTotal = 0;
+
+      if (formData.type === 'cliente' && formData.clientName) {
+        const relatedSales = sales.filter(sale =>
+          sale.client.toLowerCase().trim() === formData.clientName.toLowerCase().trim() &&
+          sale.paymentMethods?.some(method => method.type === 'acerto')
+        );
+
+        calculatedTotal = relatedSales.reduce((sum, sale) => {
+          const acertoMethods = sale.paymentMethods?.filter(method => method.type === 'acerto') || [];
+          const acertoAmount = acertoMethods.reduce((methodSum, method) => methodSum + (method.amount || 0), 0);
+          return sum + acertoAmount;
+        }, 0);
+      } else if (formData.type === 'empresa' && formData.companyName) {
+        const relatedDebts = debts.filter(debt =>
+          debt.company.toLowerCase().trim() === formData.companyName.toLowerCase().trim() &&
+          debt.paymentMethods?.some(method => method.type === 'acerto')
+        );
+
+        calculatedTotal = relatedDebts.reduce((sum, debt) => {
+          const acertoMethods = debt.paymentMethods?.filter(method => method.type === 'acerto') || [];
+          const acertoAmount = acertoMethods.reduce((methodSum, method) => methodSum + (method.amount || 0), 0);
+          return sum + acertoAmount;
+        }, 0);
+      }
+
+      if (calculatedTotal > 0) {
+        setFormData(prev => ({ ...prev, totalAmount: calculatedTotal }));
+      }
+    }
+  }, [formData.type, formData.clientName, formData.companyName, sales, debts, acerto]);
 
   // Auto-calculate pending amount
   React.useEffect(() => {
@@ -177,10 +214,24 @@ export function AcertoForm({ acerto, onSubmit, onCancel }: AcertoFormProps) {
                   min="0"
                   value={formData.totalAmount}
                   onChange={(e) => setFormData(prev => ({ ...prev, totalAmount: parseFloat(e.target.value) || 0 }))}
-                  className="input-field"
+                  className="input-field bg-gray-50"
                   placeholder="0,00"
                   required
+                  readOnly={!acerto}
                 />
+                {!acerto && formData.totalAmount > 0 && (
+                  <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2">
+                    <Calculator className="w-4 h-4 text-green-600" />
+                    <p className="text-xs text-green-700 font-semibold">
+                      Valor calculado automaticamente com base nas vendas/dívidas em acerto
+                    </p>
+                  </div>
+                )}
+                {!acerto && formData.totalAmount === 0 && (formData.clientName || formData.companyName) && (
+                  <p className="text-xs text-yellow-600 mt-1 font-semibold">
+                    Nenhuma venda/dívida em acerto encontrada para este {formData.type === 'cliente' ? 'cliente' : 'fornecedor'}
+                  </p>
+                )}
               </div>
 
               <div className="form-group">
