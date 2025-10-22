@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, Info } from 'lucide-react';
 import { Sale, PaymentMethod } from '../../types';
 import { ThirdPartyCheckDetails } from '../../types';
@@ -28,7 +28,7 @@ const PAYMENT_TYPES = [
 const INSTALLMENT_TYPES = ['cartao_credito', 'cheque', 'boleto'];
 
 export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
-  const { employees, permutas } = useAppContext();
+  const { employees, permutas, acertos } = useAppContext();
   const [formData, setFormData] = useState({
     date: sale?.date || getCurrentDateString(),
     deliveryDate: sale?.deliveryDate || '',
@@ -60,6 +60,15 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     permuta.status === 'ativo' &&
     permuta.remainingValue > 0
   );
+
+  // Obter lista de clientes com acerto ativo
+  const clientesComAcerto = useMemo(() => {
+    const clientSet = new Set<string>();
+    acertos.filter(acerto => acerto.type === 'cliente').forEach(acerto => {
+      clientSet.add(acerto.clientName);
+    });
+    return Array.from(clientSet).sort();
+  }, [acertos]);
 
   const addPaymentMethod = () => {
     setFormData(prev => ({
@@ -755,12 +764,67 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                          {method.type === 'acerto' && (
                            <div className="md:col-span-2">
                              <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
-                               <p className="text-sm text-blue-800 font-semibold">
-                                 💡 Acerto: Este valor será adicionado ao acerto mensal do cliente "{formData.client}"
-                               </p>
-                               <p className="text-xs text-blue-600 mt-1">
-                                 O cliente pagará este valor junto com outras vendas em acerto no final do mês
-                               </p>
+                               <h4 className="font-semibold text-blue-900 mb-3">
+                                 💡 Acerto: Selecione o cliente ou informe um novo
+                               </h4>
+
+                               {clientesComAcerto.length > 0 ? (
+                                 <div className="space-y-3">
+                                   <div>
+                                     <label className="form-label">Cliente com Acerto</label>
+                                     <select
+                                       value={method.acertoClientName || ''}
+                                       onChange={(e) => {
+                                         updatePaymentMethod(index, 'acertoClientName', e.target.value);
+                                         // Sincronizar o nome do cliente principal se estiver vazio
+                                         if (!formData.client || formData.client.trim() === '') {
+                                           setFormData(prev => ({ ...prev, client: e.target.value }));
+                                         }
+                                       }}
+                                       className="input-field"
+                                     >
+                                       <option value="">Selecione um cliente...</option>
+                                       {clientesComAcerto.map(cliente => (
+                                         <option key={cliente} value={cliente}>
+                                           {cliente}
+                                         </option>
+                                       ))}
+                                       <option value="__novo__">+ Novo Cliente (usar o nome informado acima)</option>
+                                     </select>
+                                   </div>
+
+                                   {method.acertoClientName && method.acertoClientName !== '__novo__' && (
+                                     <div className="p-3 bg-white rounded-lg border border-blue-100">
+                                       <p className="text-sm text-blue-800 font-semibold">
+                                         ✓ Este valor será adicionado ao acerto do cliente "{method.acertoClientName}"
+                                       </p>
+                                       <p className="text-xs text-blue-600 mt-1">
+                                         O cliente pagará junto com outras vendas em acerto
+                                       </p>
+                                     </div>
+                                   )}
+
+                                   {method.acertoClientName === '__novo__' && (
+                                     <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                       <p className="text-sm text-green-800 font-semibold">
+                                         ✓ Um novo acerto será criado para o cliente "{formData.client}"
+                                       </p>
+                                       <p className="text-xs text-green-600 mt-1">
+                                         Certifique-se de que o nome do cliente está correto acima
+                                       </p>
+                                     </div>
+                                   )}
+                                 </div>
+                               ) : (
+                                 <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                   <p className="text-sm text-green-800 font-semibold">
+                                     ✓ Um novo acerto será criado para o cliente "{formData.client}"
+                                   </p>
+                                   <p className="text-xs text-green-600 mt-1">
+                                     Este é o primeiro acerto. Certifique-se de que o nome do cliente está correto.
+                                   </p>
+                                 </div>
+                               )}
                              </div>
                            </div>
                          )}

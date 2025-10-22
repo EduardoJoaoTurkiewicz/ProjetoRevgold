@@ -29,6 +29,9 @@ export interface PaymentMethod {
   customInstallmentValues?: number[];
   selectedChecks?: string[];
   vehicleId?: string;
+  acertoClientName?: string;
+  relatedEntityId?: string;
+  relatedEntityType?: 'sale' | 'debt' | 'check' | 'boleto' | 'credit_card';
 }
 
 // Third party check details
@@ -276,11 +279,13 @@ export interface AgendaEvent {
   description?: string;
   date: string;
   time?: string;
-  type: 'evento' | 'reuniao' | 'pagamento' | 'cobranca' | 'entrega' | 'outros';
+  type: 'evento' | 'reuniao' | 'pagamento' | 'cobranca' | 'entrega' | 'vencimento' | 'importante' | 'outros';
   priority: 'baixa' | 'media' | 'alta' | 'urgente';
   status: 'pendente' | 'concluido' | 'cancelado' | 'adiado';
   reminderDate?: string;
   observations?: string;
+  relatedType?: 'boleto' | 'cheque' | 'venda' | 'divida' | 'cartao' | 'acerto' | 'imposto';
+  relatedId?: string;
   createdAt?: string;
   updatedAt?: string;
 }

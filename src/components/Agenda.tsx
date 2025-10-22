@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Calendar, Plus, CreditCard as Edit, Trash2, Eye, ChevronLeft, ChevronRight, Clock, AlertTriangle, CheckCircle, X, MapPin, User, Bell, FileText } from 'lucide-react';
+import { Calendar, Plus, CreditCard as Edit, Trash2, Eye, ChevronLeft, ChevronRight, Clock, AlertTriangle, CheckCircle, X, MapPin, User, Bell, FileText, ExternalLink } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { AgendaEvent } from '../types';
 import { AgendaEventForm } from './forms/AgendaEventForm';
@@ -111,6 +111,34 @@ export default function Agenda() {
       deleteAgendaEvent(id).catch(error => {
         alert('Erro ao excluir evento: ' + error.message);
       });
+    }
+  };
+
+  const handleNavigateToRelated = (event: AgendaEvent) => {
+    if (!event.relatedType || !event.relatedId) return;
+
+    // Mapear tipo de relacionamento para a rota correspondente
+    const routeMap: Record<string, string> = {
+      'boleto': 'boletos',
+      'cheque': 'checks',
+      'venda': 'sales',
+      'divida': 'debts',
+      'cartao': 'credit-cards',
+      'acerto': 'acertos',
+      'imposto': 'taxes'
+    };
+
+    const route = routeMap[event.relatedType];
+    if (route) {
+      // Usar o sistema de navegação do React Router ou hash navigation
+      window.location.hash = route;
+
+      // Opcional: Emitir um evento customizado para filtrar pelo ID específico
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('filterByRelatedId', {
+          detail: { type: event.relatedType, id: event.relatedId }
+        }));
+      }, 100);
     }
   };
 
@@ -403,6 +431,16 @@ export default function Agenda() {
                           <span className="px-2 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
                             {event.type.toUpperCase()}
                           </span>
+                          {event.relatedType && event.relatedId && (
+                            <button
+                              onClick={() => handleNavigateToRelated(event)}
+                              className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200 hover:bg-green-200 transition-colors flex items-center gap-1"
+                              title="Ir para o registro relacionado"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              ABRIR {event.relatedType.toUpperCase()}
+                            </button>
+                          )}
                         </div>
                       </div>
                     );

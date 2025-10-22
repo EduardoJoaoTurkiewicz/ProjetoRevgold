@@ -150,4 +150,44 @@ export class AgendaAutoService {
       });
     }
   }
+
+  static async removeEventsByRelatedId(relatedType: string, relatedId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('agenda_events')
+        .delete()
+        .eq('related_type', relatedType)
+        .eq('related_id', relatedId);
+
+      if (error) {
+        console.error('Error removing agenda events:', error);
+      } else {
+        console.log(`✅ Removed agenda events for ${relatedType}:${relatedId}`);
+      }
+    } catch (error) {
+      console.error('Error in removeEventsByRelatedId:', error);
+    }
+  }
+
+  static async removeCheckEvents(checkId: string): Promise<void> {
+    await this.removeEventsByRelatedId('cheque', checkId);
+  }
+
+  static async updateEventStatus(relatedType: string, relatedId: string, status: 'concluido' | 'cancelado'): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('agenda_events')
+        .update({ status: status })
+        .eq('related_type', relatedType)
+        .eq('related_id', relatedId);
+
+      if (error) {
+        console.error('Error updating agenda event status:', error);
+      } else {
+        console.log(`✅ Updated agenda events status for ${relatedType}:${relatedId} to ${status}`);
+      }
+    } catch (error) {
+      console.error('Error in updateEventStatus:', error);
+    }
+  }
 }
