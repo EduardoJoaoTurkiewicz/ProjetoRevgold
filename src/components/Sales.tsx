@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, CreditCard as Edit, Trash2, Eye, ShoppingCart, FileText, AlertCircle, X, DollarSign, Calendar, User, Package, TrendingUp, CheckCircle, Clock } from 'lucide-react';
+import { formatDateForDisplay } from '../utils/dateUtils';
 import { useAppContext } from '../context/AppContext';
 import { Sale } from '../types';
 import { SaleForm } from './forms/SaleForm';
@@ -289,7 +290,7 @@ export default function Sales() {
                       <div className="flex items-center gap-4 text-sm text-slate-600">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
-                          {new Date(sale.date).toLocaleDateString('pt-BR')}
+                          {formatDateForDisplay(sale.date)}
                         </span>
                         {sale.sellerId && (
                           <span className="flex items-center gap-1">
@@ -300,7 +301,7 @@ export default function Sales() {
                         {sale.deliveryDate && (
                           <span className="flex items-center gap-1">
                             <Package className="w-4 h-4" />
-                            Entrega: {new Date(sale.deliveryDate).toLocaleDateString('pt-BR')}
+                            Entrega: {formatDateForDisplay(sale.deliveryDate)}
                           </span>
                         )}
                       </div>
@@ -364,7 +365,11 @@ export default function Sales() {
                             <div className="flex justify-between">
                               <span className="text-green-700">Parcelas:</span>
                               <span className="font-bold text-green-800">
-                                {method.installments}x de R$ {method.installmentValue?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                {method.installments}x de R$ {
+                                  method.useCustomValues && method.customInstallmentValues && method.customInstallmentValues.length > 0
+                                    ? (method.customInstallmentValues.reduce((sum, v) => sum + v, 0) / method.installments).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+                                    : (method.installmentValue || (method.amount / method.installments)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+                                }
                               </span>
                             </div>
                             {method.installmentInterval && (
@@ -377,7 +382,7 @@ export default function Sales() {
                               <div className="flex justify-between">
                                 <span className="text-green-700">Primeira parcela:</span>
                                 <span className="font-bold text-green-800">
-                                  {new Date(method.firstInstallmentDate).toLocaleDateString('pt-BR')}
+                                  {formatDateForDisplay(method.firstInstallmentDate)}
                                 </span>
                               </div>
                             )}
@@ -527,9 +532,9 @@ export default function Sales() {
                     <h4 className="font-bold text-green-900 mb-2">Informações Básicas</h4>
                     <div className="space-y-2 text-sm">
                       <p><strong>Cliente:</strong> {viewingSale.client}</p>
-                      <p><strong>Data:</strong> {new Date(viewingSale.date).toLocaleDateString('pt-BR')}</p>
+                      <p><strong>Data:</strong> {formatDateForDisplay(viewingSale.date)}</p>
                       {viewingSale.deliveryDate && (
-                        <p><strong>Entrega:</strong> {new Date(viewingSale.deliveryDate).toLocaleDateString('pt-BR')}</p>
+                        <p><strong>Entrega:</strong> {formatDateForDisplay(viewingSale.deliveryDate)}</p>
                       )}
                       <p><strong>Status:</strong> 
                         <span className={`ml-2 px-2 py-1 rounded-full text-xs font-bold border ${
@@ -607,12 +612,16 @@ export default function Sales() {
                           <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                             <div>
                               <p><strong className="text-green-800">Parcelas:</strong> {method.installments}x</p>
-                              <p><strong className="text-green-800">Valor por parcela:</strong> R$ {method.installmentValue?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                              <p><strong className="text-green-800">Valor por parcela:</strong> R$ {
+                                method.useCustomValues && method.customInstallmentValues && method.customInstallmentValues.length > 0
+                                  ? (method.customInstallmentValues.reduce((sum, v) => sum + v, 0) / method.installments).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+                                  : (method.installmentValue || (method.amount / method.installments)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+                              }</p>
                             </div>
                             <div>
                               <p><strong className="text-green-800">Intervalo:</strong> {method.installmentInterval} dias</p>
                               {method.firstInstallmentDate && (
-                                <p><strong className="text-green-800">Primeira parcela:</strong> {new Date(method.firstInstallmentDate).toLocaleDateString('pt-BR')}</p>
+                                <p><strong className="text-green-800">Primeira parcela:</strong> {formatDateForDisplay(method.firstInstallmentDate)}</p>
                               )}
                             </div>
                           </div>
