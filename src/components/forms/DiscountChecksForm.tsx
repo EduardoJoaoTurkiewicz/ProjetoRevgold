@@ -93,6 +93,18 @@ export function DiscountChecksForm({ checks, onClose, onSuccess }: DiscountCheck
 
       if (transactionError) throw transactionError;
 
+      // Remover eventos da agenda para os cheques antecipados
+      try {
+        const { AgendaAutoService } = await import('../../lib/agendaAutoService');
+        for (const checkId of selectedChecks) {
+          await AgendaAutoService.removeCheckEvents(checkId);
+        }
+        console.log('✅ Removed agenda events for discounted checks');
+      } catch (agendaError) {
+        console.error('❌ Error removing agenda events:', agendaError);
+        // Não falha a operação se não conseguir remover eventos da agenda
+      }
+
       toast.success(`${selectedChecks.size} cheque(s) antecipado(s) com sucesso!`);
       onSuccess();
       onClose();

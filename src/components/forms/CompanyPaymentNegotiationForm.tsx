@@ -4,6 +4,7 @@ import { useAppContext } from '../../context/AppContext';
 import { Acerto } from '../../types';
 import { CashBalanceService } from '../../lib/cashBalanceService';
 import { getCurrentDateString } from '../../utils/dateUtils';
+import { supabase } from '../../lib/supabase';
 
 interface CompanyPaymentNegotiationFormProps {
   acerto: Acerto;
@@ -132,7 +133,28 @@ export function CompanyPaymentNegotiationForm({ acerto, onSubmit, onCancel }: Co
 
       // Marcar cheques selecionados como usados
       if (formData.paymentMethod === 'cheque_disponivel' && formData.selectedChecks.length > 0) {
-        // TODO: Implementar marcação de cheques como usados
+        // Marcar cheques como usados em dívida e remover da agenda
+        try {
+          const { AgendaAutoService } = await import('../../lib/agendaAutoService');
+          for (const checkId of formData.selectedChecks) {
+            // Atualizar status do cheque no banco
+            await supabase
+              .from('checks')
+              .update({
+                used_in_debt: true,
+                status: 'usado',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', checkId);
+
+            // Remover evento da agenda
+            await AgendaAutoService.removeCheckEvents(checkId);
+          }
+          console.log('✅ Marked checks as used and removed from agenda');
+        } catch (error) {
+          console.error('❌ Error marking checks as used:', error);
+          // Não falha a operação se não conseguir atualizar os cheques
+        }
       }
 
       // Calculate new amounts

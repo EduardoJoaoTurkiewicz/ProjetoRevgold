@@ -56,10 +56,12 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
 
   // Filtrar permutas com crédito disponível
   // Não precisa ser do mesmo cliente - qualquer permuta com crédito disponível pode ser usada
-  const availablePermutas = permutas.filter(permuta =>
-    permuta.status === 'ativo' &&
-    permuta.remainingValue > 0
-  );
+  const availablePermutas = React.useMemo(() => {
+    return permutas.filter(permuta =>
+      permuta.status === 'ativo' &&
+      permuta.remainingValue > 0
+    );
+  }, [permutas]);
 
   // Obter lista de clientes com acerto ativo
   const clientesComAcerto = useMemo(() => {
@@ -835,7 +837,12 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                 <h4 className="font-semibold text-purple-900 mb-3">
                                   🚗 Permuta: Selecione o veículo para usar como pagamento
                                 </h4>
-                                
+
+                                <div className="mb-2 p-2 bg-blue-50 rounded text-xs">
+                                  <p>📄 Total de permutas: {permutas.length}</p>
+                                  <p>✅ Permutas disponíveis: {availablePermutas.length}</p>
+                                </div>
+
                                 {availablePermutas.length > 0 ? (
                                   <div className="space-y-3">
                                     <select
