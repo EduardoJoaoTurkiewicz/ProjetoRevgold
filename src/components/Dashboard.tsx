@@ -209,13 +209,21 @@ const Dashboard: React.FC = () => {
     return debts.filter(debt => !debt.isPaid);
   }, [debts]);
 
-  // Valores a receber
+  // Valores a receber - NOVO CÁLCULO CORRETO
   const valuesToReceive = useMemo(() => {
     const toReceive = [];
-    
-    // Cheques pendentes
+
+    // Cheques pendentes que ainda não foram usados, antecipados ou compensados
     checks.forEach(check => {
-      if (check.status === 'pendente' && !check.isOwnCheck) {
+      // Só adiciona em "Valores a Receber" se:
+      // - Não é cheque próprio (isOwnCheck = false)
+      // - Status ainda está pendente
+      // - NÃO foi usado em dívida (usedInDebt = null)
+      // - NÃO foi antecipado (is_discounted = false)
+      if (!check.isOwnCheck &&
+          check.status === 'pendente' &&
+          !check.usedInDebt &&
+          !check.is_discounted) {
         toReceive.push({
           id: check.id,
           type: 'Cheque',
@@ -227,10 +235,10 @@ const Dashboard: React.FC = () => {
         });
       }
     });
-    
-    // Boletos pendentes
+
+    // Boletos pendentes que ainda não foram depositados
     boletos.forEach(boleto => {
-      if (boleto.status === 'pendente') {
+      if (boleto.status === 'pendente' && !boleto.isCompanyPayable) {
         toReceive.push({
           id: boleto.id,
           type: 'Boleto',
@@ -242,22 +250,63 @@ const Dashboard: React.FC = () => {
         });
       }
     });
-    
-    // Vendas com valores pendentes
+
+    // Vendas com valores pendentes - calculado dinamicamente
     sales.forEach(sale => {
-      if (sale.pendingAmount > 0) {
+      // Calcular quanto já foi efetivamente recebido desta venda
+      let receivedAmount = 0;
+
+      // 1. Pagamentos instantâneos (já recebidos no momento da venda)
+      (sale.paymentMethods || []).forEach(method => {
+        if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type)) {
+          receivedAmount += method.amount;
+        }
+        // Crédito à vista também é recebido imediatamente
+        if (method.type === 'cartao_credito' && (!method.installments || method.installments === 1)) {
+          receivedAmount += method.amount;
+        }
+      });
+
+      // 2. Cheques desta venda que foram compensados, antecipados ou usados em dívidas
+      checks.forEach(check => {
+        if (check.saleId === sale.id) {
+          if (check.status === 'compensado') {
+            // Compensado = valor total recebido
+            receivedAmount += check.value;
+          } else if (check.is_discounted && check.discounted_amount) {
+            // Antecipado = valor líquido recebido (já descontado dos juros)
+            receivedAmount += check.discounted_amount;
+          } else if (check.usedInDebt) {
+            // Usado em dívida = considera como recebido
+            receivedAmount += check.value;
+          }
+        }
+      });
+
+      // 3. Boletos desta venda que foram depositados
+      boletos.forEach(boleto => {
+        if (boleto.saleId === sale.id && boleto.status === 'compensado') {
+          receivedAmount += boleto.value;
+        }
+      });
+
+      // Calcular quanto ainda está pendente
+      const pendingAmount = Math.max(sale.totalValue - receivedAmount, 0);
+
+      // Só adiciona se houver valor pendente real
+      if (pendingAmount > 0) {
         toReceive.push({
           id: sale.id,
           type: 'Venda',
           client: sale.client,
-          amount: sale.pendingAmount,
+          amount: pendingAmount,
           dueDate: sale.date,
-          description: `Venda pendente`,
+          description: `Venda pendente - R$ ${receivedAmount.toFixed(2)} já recebido`,
           status: sale.status
         });
       }
     });
-    
+
     return toReceive.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
   }, [checks, boletos, sales]);
 

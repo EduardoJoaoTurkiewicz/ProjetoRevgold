@@ -65,15 +65,32 @@ export default function AnticipateSaleForm({ sale, onClose, onSuccess }: Props) 
 
       if (installmentsError) throw installmentsError;
 
+      // Registrar taxa de antecipação como saída
+      if (anticipatedFee > 0) {
+        const { error: feeError } = await supabase
+          .from('cash_transactions')
+          .insert({
+            date: formData.anticipated_date,
+            type: 'saida',
+            amount: anticipatedFee,
+            description: `Taxa de antecipação de cartão - ${sale.client_name}`,
+            category: 'venda',
+            payment_method: 'cartao_credito'
+          });
+
+        if (feeError) throw feeError;
+      }
+
+      // Registrar valor recebido como entrada no caixa
       const { error: cashError } = await supabase
         .from('cash_transactions')
         .insert({
           date: formData.anticipated_date,
-          type: 'income',
+          type: 'entrada',
           amount: anticipatedAmount,
-          description: `Antecipação de venda - ${sale.client_name}`,
-          category: 'Vendas',
-          payment_method: 'Cartão de Crédito (Antecipado)',
+          description: `Antecipação de venda (cartão) - ${sale.client_name}`,
+          category: 'venda',
+          payment_method: 'cartao_credito'
         });
 
       if (cashError) throw cashError;

@@ -80,13 +80,30 @@ export function DiscountChecksForm({ checks, onClose, onSuccess }: DiscountCheck
         if (error) throw error;
       }
 
+      // Registrar taxa de antecipação como saída
+      if (discountFee > 0) {
+        const { error: feeError } = await supabase
+          .from('cash_transactions')
+          .insert({
+            date: discountDate,
+            type: 'saida',
+            amount: discountFee,
+            description: `Taxa de antecipação de ${selectedChecks.size} cheque(s)`,
+            category: 'cheque',
+            payment_method: 'cheque'
+          });
+
+        if (feeError) throw feeError;
+      }
+
+      // Registrar valor recebido como entrada no caixa
       const { error: transactionError } = await supabase
         .from('cash_transactions')
         .insert({
           date: discountDate,
           type: 'entrada',
           amount: received,
-          description: `Antecipação de ${selectedChecks.size} cheque(s) - Taxa: R$ ${discountFee.toFixed(2)}`,
+          description: `Antecipação de ${selectedChecks.size} cheque(s) (líquido)`,
           category: 'cheque',
           payment_method: 'cheque'
         });
