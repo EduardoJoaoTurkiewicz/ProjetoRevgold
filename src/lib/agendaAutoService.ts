@@ -59,12 +59,12 @@ export class AgendaAutoService {
     });
   }
 
-  static async registerCheckVencimento(checkId: string, dueDate: string, description: string): Promise<void> {
+  static async registerCheckVencimento(checkId: string, dueDate: string, description: string, isOwnCheck: boolean = false): Promise<void> {
     await this.registerEvent({
-      title: `Vencimento de Cheque`,
+      title: isOwnCheck ? `Pagamento de Cheque Próprio` : `Vencimento de Cheque`,
       description: `Cheque: ${description}`,
       date: dueDate,
-      type: 'vencimento',
+      type: isOwnCheck ? 'pagamento' : 'vencimento',
       relatedType: 'cheque',
       relatedId: checkId,
     });

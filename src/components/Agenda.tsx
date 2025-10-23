@@ -72,17 +72,29 @@ export default function Agenda() {
     return getEventsForDate(date).length > 0;
   };
 
-  // Obter eventos do dia selecionado
+  // Obter eventos do dia selecionado, agrupados por tipo
   const selectedDateEvents = useMemo(() => {
     if (!selectedDate) return [];
     return getEventsForDate(selectedDate).sort((a, b) => {
-      // Ordenar por horário, depois por prioridade
+      // Primeiro ordenar por tipo de evento (cobrança, pagamento, entrega, etc)
+      if (a.type !== b.type) {
+        const typeOrder = { 'cobranca': 0, 'pagamento': 1, 'entrega': 2, 'vencimento': 3, 'importante': 4, 'reuniao': 5, 'evento': 6, 'outros': 7 };
+        return (typeOrder[a.type] || 99) - (typeOrder[b.type] || 99);
+      }
+
+      // Depois ordenar por forma de pagamento (dentro do tipo)
+      if (a.relatedType !== b.relatedType) {
+        return (a.relatedType || '').localeCompare(b.relatedType || '');
+      }
+
+      // Depois por horário se tiver
       if (a.time && b.time) {
         return a.time.localeCompare(b.time);
       }
       if (a.time && !b.time) return -1;
       if (!a.time && b.time) return 1;
-      
+
+      // Por último, por prioridade
       const priorityOrder = { 'urgente': 0, 'alta': 1, 'media': 2, 'baixa': 3 };
       return priorityOrder[a.priority] - priorityOrder[b.priority];
     });
@@ -133,12 +145,16 @@ export default function Agenda() {
       // Usar o sistema de navegação do React Router ou hash navigation
       window.location.hash = route;
 
-      // Opcional: Emitir um evento customizado para filtrar pelo ID específico
+      // Emitir um evento customizado para filtrar pelo ID específico
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('filterByRelatedId', {
           detail: { type: event.relatedType, id: event.relatedId }
         }));
       }, 100);
+
+      // Fechar os modais
+      setViewingEvent(null);
+      setSelectedDate(null);
     }
   };
 
