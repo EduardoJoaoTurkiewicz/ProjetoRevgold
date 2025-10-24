@@ -121,18 +121,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
           })}
         </nav>
 
-        {/* Footer */}
-        <div className="absolute bottom-8 left-4 right-4">
-          <div className="bg-green-800/50 backdrop-blur-xl rounded-2xl p-6 border border-green-600/30">
-            <p className="text-green-200 text-sm font-semibold mb-2">Sistema RevGold</p>
-            <p className="text-green-300 text-xs">Gestão Empresarial Profissional</p>
-            <div className="mt-4 flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-green-300 text-xs font-bold">Sistema Ativo</span>
-            </div>
-          </div>
-        </div>
-      </div>
+       
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
