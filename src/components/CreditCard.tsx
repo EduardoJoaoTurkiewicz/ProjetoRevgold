@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { CreditCard as CreditCardIcon, Plus, ChevronDown, ChevronUp, Zap, AlertCircle } from 'lucide-react';
+import { CreditCard as CreditCardIcon, Plus, ChevronDown, ChevronUp, Zap, AlertCircle, TrendingDown, Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { formatDate, getMonthStart, getMonthEnd, isDateInRange } from '../utils/dateUtils';
+import { formatDate, getMonthStart, getMonthEnd } from '../utils/dateUtils';
 import toast from 'react-hot-toast';
 import CreditCardSaleForm from './forms/CreditCardSaleForm';
 import CreditCardDebtForm from './forms/CreditCardDebtForm';
 import AnticipateSaleForm from './forms/AnticipateSaleForm';
+import { CreditCardService } from '../lib/creditCardService';
 
 interface CreditCardSale {
   id: string;
@@ -75,16 +76,42 @@ export default function CreditCard() {
     start: getMonthStart(new Date()),
     end: getMonthEnd(new Date())
   });
+  const [monthlyBillsCount, setMonthlyBillsCount] = useState(0);
 
   useEffect(() => {
     loadSales();
     loadDebts();
+    processAutomaticPayments();
   }, []);
 
   useEffect(() => {
     loadSales();
     loadDebts();
+    calculateMonthlyBills();
   }, [dateRange]);
+
+  const processAutomaticPayments = async () => {
+    try {
+      await CreditCardService.checkAndProcessDueInstallments();
+    } catch (error: any) {
+      console.error('Erro ao processar pagamentos automáticos:', error);
+    }
+  };
+
+  const calculateMonthlyBills = async () => {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+
+    const { data, error } = await supabase
+      .from('credit_card_debt_installments')
+      .select('*')
+      .gte('due_date', `${currentMonth}-01`)
+      .lt('due_date', `${currentMonth}-32`)
+      .eq('status', 'pending');
+
+    if (!error && data) {
+      setMonthlyBillsCount(data.length);
+    }
+  };
 
   const loadSales = async () => {
     try {
@@ -96,7 +123,7 @@ export default function CreditCard() {
       if (error) throw error;
       setSales(data || []);
     } catch (error: any) {
-      console.error('Error loading credit card sales:', error);
+      console.error('Erro ao carregar vendas no cartão:', error);
       toast.error('Erro ao carregar vendas no cartão: ' + error.message);
     }
   };
@@ -111,7 +138,7 @@ export default function CreditCard() {
       if (error) throw error;
       setDebts(data || []);
     } catch (error: any) {
-      console.error('Error loading credit card debts:', error);
+      console.error('Erro ao carregar dívidas no cartão:', error);
       toast.error('Erro ao carregar dívidas no cartão: ' + error.message);
     }
   };
@@ -267,6 +294,9 @@ export default function CreditCard() {
                 <p className="text-4xl font-black text-green-800">
                   R$ {calculateTotalToReceive().toFixed(2)}
                 </p>
+                <p className="text-sm text-green-600 font-medium mt-2">
+                  {sales.filter(s => s.status === 'active' && s.sale_date >= dateRange.start && s.sale_date <= dateRange.end).length} vendas ativas
+                </p>
               </div>
               <button
                 onClick={() => setShowSaleForm(true)}
@@ -293,7 +323,8 @@ export default function CreditCard() {
                       <div className="flex items-center gap-3">
                         <h3 className="font-semibold text-gray-900">{sale.client_name}</h3>
                         {sale.anticipated && (
-                          <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded">
+                          <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded flex items-center gap-1">
+                            <Zap className="w-3 h-3" />
                             Antecipada
                           </span>
                         )}
@@ -348,7 +379,10 @@ export default function CreditCard() {
 
                 {expandedSales.has(sale.id) && saleInstallments[sale.id] && (
                   <div className="border-t border-gray-200 p-4 bg-gray-50">
-                    <h4 className="font-semibold text-gray-900 mb-3">Parcelas</h4>
+                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      Parcelas
+                    </h4>
                     <div className="space-y-2">
                       {saleInstallments[sale.id].map((installment) => (
                         <div
@@ -362,6 +396,11 @@ export default function CreditCard() {
                             <span className="text-gray-600">
                               Vencimento: {formatDate(new Date(installment.due_date))}
                             </span>
+                            {installment.received_date && (
+                              <span className="text-green-600 text-sm">
+                                Recebida em: {formatDate(new Date(installment.received_date))}
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-4">
                             <span className="font-semibold text-gray-900">
@@ -404,6 +443,9 @@ export default function CreditCard() {
                 <p className="text-sm text-red-700 font-semibold mb-1 uppercase tracking-wide">Total a Pagar (Período Filtrado)</p>
                 <p className="text-4xl font-black text-red-800">
                   R$ {calculateTotalToPay().toFixed(2)}
+                </p>
+                <p className="text-sm text-red-600 font-medium mt-2">
+                  {monthlyBillsCount} faturas a pagar este mês
                 </p>
               </div>
               <button
@@ -469,7 +511,10 @@ export default function CreditCard() {
 
                 {expandedDebts.has(debt.id) && debtInstallments[debt.id] && (
                   <div className="border-t border-gray-200 p-4 bg-gray-50">
-                    <h4 className="font-semibold text-gray-900 mb-3">Parcelas</h4>
+                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      Parcelas
+                    </h4>
                     <div className="space-y-2">
                       {debtInstallments[debt.id].map((installment) => (
                         <div
@@ -483,6 +528,11 @@ export default function CreditCard() {
                             <span className="text-gray-600">
                               Vencimento: {formatDate(new Date(installment.due_date))}
                             </span>
+                            {installment.paid_date && (
+                              <span className="text-green-600 text-sm">
+                                Paga em: {formatDate(new Date(installment.paid_date))}
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-4">
                             <span className="font-semibold text-gray-900">

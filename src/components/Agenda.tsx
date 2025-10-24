@@ -3,6 +3,7 @@ import { Calendar, Plus, CreditCard as Edit, Trash2, Eye, ChevronLeft, ChevronRi
 import { useAppContext } from '../context/AppContext';
 import { AgendaEvent } from '../types';
 import { AgendaEventForm } from './forms/AgendaEventForm';
+import toast from 'react-hot-toast';
 
 export default function Agenda() {
   const { 
@@ -126,10 +127,9 @@ export default function Agenda() {
     }
   };
 
-  const handleNavigateToRelated = (event: AgendaEvent) => {
+  const handleNavigateToRelated = async (event: AgendaEvent) => {
     if (!event.relatedType || !event.relatedId) return;
 
-    // Mapear tipo de relacionamento para a rota correspondente
     const routeMap: Record<string, string> = {
       'boleto': 'boletos',
       'cheque': 'checks',
@@ -142,19 +142,18 @@ export default function Agenda() {
 
     const route = routeMap[event.relatedType];
     if (route) {
-      // Usar o sistema de navegação do React Router ou hash navigation
       window.location.hash = route;
 
-      // Emitir um evento customizado para filtrar pelo ID específico
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('filterByRelatedId', {
           detail: { type: event.relatedType, id: event.relatedId }
         }));
       }, 100);
 
-      // Fechar os modais
       setViewingEvent(null);
       setSelectedDate(null);
+
+      toast.success(`Navegando para ${event.relatedType}`);
     }
   };
 

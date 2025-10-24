@@ -190,4 +190,12 @@ export class AgendaAutoService {
       console.error('Error in updateEventStatus:', error);
     }
   }
+
+  static async removeSaleInstallmentsFromAgenda(saleId: string): Promise<void> {
+    await this.removeEventsByRelatedId('venda', saleId);
+  }
+
+  static async removeDebtInstallmentsFromAgenda(debtId: string): Promise<void> {
+    await this.removeEventsByRelatedId('divida', debtId);
+  }
 }
