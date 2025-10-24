@@ -79,6 +79,11 @@ export default function CreditCard() {
   useEffect(() => {
     loadSales();
     loadDebts();
+  }, []);
+
+  useEffect(() => {
+    loadSales();
+    loadDebts();
   }, [dateRange]);
 
   const loadSales = async () => {
@@ -86,13 +91,12 @@ export default function CreditCard() {
       const { data, error } = await supabase
         .from('credit_card_sales')
         .select('*')
-        .gte('sale_date', dateRange.start)
-        .lte('sale_date', dateRange.end)
         .order('sale_date', { ascending: false });
 
       if (error) throw error;
       setSales(data || []);
     } catch (error: any) {
+      console.error('Error loading credit card sales:', error);
       toast.error('Erro ao carregar vendas no cartão: ' + error.message);
     }
   };
@@ -102,13 +106,12 @@ export default function CreditCard() {
       const { data, error } = await supabase
         .from('credit_card_debts')
         .select('*')
-        .gte('purchase_date', dateRange.start)
-        .lte('purchase_date', dateRange.end)
         .order('purchase_date', { ascending: false });
 
       if (error) throw error;
       setDebts(data || []);
     } catch (error: any) {
+      console.error('Error loading credit card debts:', error);
       toast.error('Erro ao carregar dívidas no cartão: ' + error.message);
     }
   };
@@ -176,23 +179,18 @@ export default function CreditCard() {
 
   const calculateTotalToReceive = () => {
     return sales
-      .filter(sale => sale.status === 'active')
+      .filter(sale => sale.status === 'active' &&
+        sale.sale_date >= dateRange.start &&
+        sale.sale_date <= dateRange.end)
       .reduce((sum, sale) => sum + sale.remaining_amount, 0);
   };
 
-  const calculateMonthlyInvoices = () => {
-    const now = new Date();
-    const monthStart = getMonthStart(now);
-    const monthEnd = getMonthEnd(now);
-
-    return debts.reduce((sum, debt) => {
-      const installments = debtInstallments[debt.id] || [];
-      const monthlyAmount = installments
-        .filter(inst => inst.status === 'pending' &&
-          isDateInRange(new Date(inst.due_date), new Date(monthStart), new Date(monthEnd)))
-        .reduce((acc, inst) => acc + inst.amount, 0);
-      return sum + monthlyAmount;
-    }, 0);
+  const calculateTotalToPay = () => {
+    return debts
+      .filter(debt => debt.status === 'active' &&
+        debt.purchase_date >= dateRange.start &&
+        debt.purchase_date <= dateRange.end)
+      .reduce((sum, debt) => sum + debt.remaining_amount, 0);
   };
 
   return (
@@ -209,20 +207,31 @@ export default function CreditCard() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <div className="flex gap-2 mb-4">
-          <input
-            type="date"
-            value={dateRange.start}
-            onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <input
-            type="date"
-            value={dateRange.end}
-            onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-200 p-6">
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-semibold text-blue-900 mb-2">Filtrar por Período</label>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-xs text-blue-700 mb-1">Data Inicial</label>
+                <input
+                  type="date"
+                  value={dateRange.start}
+                  onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                  className="w-full px-4 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs text-blue-700 mb-1">Data Final</label>
+                <input
+                  type="date"
+                  value={dateRange.end}
+                  onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                  className="w-full px-4 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -251,11 +260,11 @@ export default function CreditCard() {
 
       {activeTab === 'sales' && (
         <div className="space-y-4">
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg shadow-sm border border-green-200 p-6">
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-lg border-2 border-green-300 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-green-600 font-medium mb-1">Total a Receber (Período Filtrado)</p>
-                <p className="text-3xl font-bold text-green-700">
+                <p className="text-sm text-green-700 font-semibold mb-1 uppercase tracking-wide">Total a Receber (Período Filtrado)</p>
+                <p className="text-4xl font-black text-green-800">
                   R$ {calculateTotalToReceive().toFixed(2)}
                 </p>
               </div>
@@ -270,7 +279,10 @@ export default function CreditCard() {
           </div>
 
           <div className="space-y-3">
-            {sales.map((sale) => (
+            {sales.filter(sale =>
+              sale.sale_date >= dateRange.start &&
+              sale.sale_date <= dateRange.end
+            ).map((sale) => (
               <div key={sale.id} className="bg-white rounded-lg shadow-sm border border-gray-200">
                 <div
                   className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
@@ -371,7 +383,10 @@ export default function CreditCard() {
               </div>
             ))}
 
-            {sales.length === 0 && (
+            {sales.filter(sale =>
+              sale.sale_date >= dateRange.start &&
+              sale.sale_date <= dateRange.end
+            ).length === 0 && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
                 <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                 <p className="text-gray-500">Nenhuma venda encontrada no período</p>
@@ -383,12 +398,12 @@ export default function CreditCard() {
 
       {activeTab === 'debts' && (
         <div className="space-y-4">
-          <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-lg shadow-sm border border-red-200 p-6">
+          <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-xl shadow-lg border-2 border-red-300 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-red-600 font-medium mb-1">Faturas a Pagar Este Mês</p>
-                <p className="text-3xl font-bold text-red-700">
-                  R$ {calculateMonthlyInvoices().toFixed(2)}
+                <p className="text-sm text-red-700 font-semibold mb-1 uppercase tracking-wide">Total a Pagar (Período Filtrado)</p>
+                <p className="text-4xl font-black text-red-800">
+                  R$ {calculateTotalToPay().toFixed(2)}
                 </p>
               </div>
               <button
@@ -402,7 +417,10 @@ export default function CreditCard() {
           </div>
 
           <div className="space-y-3">
-            {debts.map((debt) => (
+            {debts.filter(debt =>
+              debt.purchase_date >= dateRange.start &&
+              debt.purchase_date <= dateRange.end
+            ).map((debt) => (
               <div key={debt.id} className="bg-white rounded-lg shadow-sm border border-gray-200">
                 <div
                   className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
@@ -486,7 +504,10 @@ export default function CreditCard() {
               </div>
             ))}
 
-            {debts.length === 0 && (
+            {debts.filter(debt =>
+              debt.purchase_date >= dateRange.start &&
+              debt.purchase_date <= dateRange.end
+            ).length === 0 && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
                 <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                 <p className="text-gray-500">Nenhuma dívida encontrada no período</p>

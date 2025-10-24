@@ -30,7 +30,7 @@ import {
   Cell
 } from 'recharts';
 import { ExportButtons } from './reports/ExportButtons';
-import { ReceivablesReport } from './reports/ReceivablesReport';
+import { EnhancedReceivablesReport } from './reports/EnhancedReceivablesReport';
 import { PayablesReport } from './reports/PayablesReport';
 import { ComprehensiveReport } from './reports/ComprehensiveReport';
 
@@ -577,7 +577,7 @@ export default function Reports() {
           </div>
 
           {/* Valores a Receber */}
-          <ReceivablesReport />
+          <EnhancedReceivablesReport />
 
           {/* Valores a Pagar */}
           <PayablesReport />
