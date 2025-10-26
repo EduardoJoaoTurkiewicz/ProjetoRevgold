@@ -552,9 +552,36 @@ body {
   .revgold-card-premium {
     @apply shadow-none border border-gray-300;
   }
-  
+
   .revgold-btn-primary,
   .revgold-btn-secondary {
     @apply shadow-none;
   }
+}
+
+/* Due Dates Section Animations */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.3s ease-out forwards;
+}
+
+/* Form Input Utility */
+.form-input {
+  @apply w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 text-slate-700 placeholder-slate-400 font-medium;
+}
+
+.form-input:focus {
+  @apply outline-none;
 }

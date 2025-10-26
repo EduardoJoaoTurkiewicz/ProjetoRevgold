@@ -3,6 +3,7 @@ import { Calendar, Plus, CreditCard as Edit, Trash2, Eye, ChevronLeft, ChevronRi
 import { useAppContext } from '../context/AppContext';
 import { AgendaEvent } from '../types';
 import { AgendaEventForm } from './forms/AgendaEventForm';
+import DueDatesSection from './duedates/DueDatesSection';
 import toast from 'react-hot-toast';
 
 export default function Agenda() {
@@ -655,11 +656,11 @@ export default function Agenda() {
                   <div>
                     <h2 className="text-3xl font-bold text-slate-900">{viewingEvent.title}</h2>
                     <p className="text-slate-600">
-                      {new Date(viewingEvent.date + 'T00:00:00').toLocaleDateString('pt-BR', { 
-                        weekday: 'long', 
-                        day: 'numeric', 
-                        month: 'long', 
-                        year: 'numeric' 
+                      {new Date(viewingEvent.date + 'T00:00:00').toLocaleDateString('pt-BR', {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
                       })}
                     </p>
                   </div>
@@ -671,7 +672,7 @@ export default function Agenda() {
                   <X className="w-6 h-6" />
                 </button>
               </div>
-              
+
               <div className="space-y-6">
                 {/* Informações Básicas */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -757,6 +758,9 @@ export default function Agenda() {
           </div>
         </div>
       )}
+
+      {/* Due Dates Section */}
+      <DueDatesSection />
     </div>
   );
 }
