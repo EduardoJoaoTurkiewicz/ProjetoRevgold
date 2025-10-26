@@ -209,53 +209,14 @@ const Dashboard: React.FC = () => {
     return debts.filter(debt => !debt.isPaid);
   }, [debts]);
 
-  // Valores a receber - CÁLCULO CORRIGIDO
+  // Valores a receber - MOSTRA SOMENTE VENDAS COM VALORES PENDENTES
   const valuesToReceive = useMemo(() => {
     const toReceive = [];
 
-    // Cheques pendentes que ainda não foram usados, antecipados ou compensados
-    checks.forEach(check => {
-      // Só adiciona em "Valores a Receber" se:
-      // - Não é cheque próprio (isOwnCheck = false)
-      // - Status ainda está pendente
-      // - NÃO foi usado em dívida (usedInDebt = null)
-      // - NÃO foi antecipado (is_discounted = false)
-      if (!check.isOwnCheck &&
-          check.status === 'pendente' &&
-          !check.usedInDebt &&
-          !check.is_discounted) {
-        toReceive.push({
-          id: check.id,
-          type: 'Cheque',
-          client: check.client,
-          amount: check.value,
-          dueDate: check.dueDate,
-          description: `Cheque - Parcela ${check.installmentNumber}/${check.totalInstallments}`,
-          status: check.status
-        });
-      }
-    });
-
-    // Boletos pendentes que ainda não foram depositados
-    boletos.forEach(boleto => {
-      if (boleto.status === 'pendente' && !boleto.isCompanyPayable) {
-        toReceive.push({
-          id: boleto.id,
-          type: 'Boleto',
-          client: boleto.client,
-          amount: boleto.value,
-          dueDate: boleto.dueDate,
-          description: `Boleto - Parcela ${boleto.installmentNumber}/${boleto.totalInstallments}`,
-          status: boleto.status
-        });
-      }
-    });
-
-    // Vendas com valores pendentes - CÁLCULO APRIMORADO
+    // Processar SOMENTE vendas com valores pendentes
     sales.forEach(sale => {
-      // Calcular quanto já foi efetivamente recebido ou está em forma de recebível (cheques/boletos)
+      // Calcular quanto já foi efetivamente recebido desta venda
       let receivedAmount = 0;
-      let receivableAmount = 0; // Cheques e boletos pendentes
 
       // 1. Pagamentos instantâneos (já recebidos no momento da venda)
       (sale.paymentMethods || []).forEach(method => {
@@ -268,56 +229,104 @@ const Dashboard: React.FC = () => {
         }
       });
 
-      // 2. Cheques desta venda
+      // 2. Cheques desta venda que foram EFETIVAMENTE RECEBIDOS (não pendentes)
       checks.forEach(check => {
         if (check.saleId === sale.id) {
           if (check.status === 'compensado') {
-            // Compensado = valor total recebido
+            // Compensado = valor recebido
             receivedAmount += check.value;
           } else if (check.is_discounted && check.discounted_amount) {
-            // Antecipado = valor líquido recebido (já descontado dos juros)
+            // Antecipado = valor líquido recebido (descontado juros)
             receivedAmount += check.discounted_amount;
           } else if (check.usedInDebt) {
             // Usado em dívida = considera como recebido
             receivedAmount += check.value;
-          } else if (check.status === 'pendente' && !check.isOwnCheck) {
-            // Cheque pendente = está em "Valores a Receber", então não mostra na venda
-            receivableAmount += check.value;
           }
+          // NÃO conta cheques pendentes - eles ainda não foram recebidos!
         }
       });
 
-      // 3. Boletos desta venda
+      // 3. Boletos desta venda que foram EFETIVAMENTE RECEBIDOS (não pendentes)
       boletos.forEach(boleto => {
-        if (boleto.saleId === sale.id) {
-          if (boleto.status === 'compensado') {
-            // Depositado = valor recebido
-            receivedAmount += boleto.value;
-          } else if (boleto.status === 'pendente' && !boleto.isCompanyPayable) {
-            // Boleto pendente = está em "Valores a Receber", então não mostra na venda
-            receivableAmount += boleto.value;
-          }
+        if (boleto.saleId === sale.id && boleto.status === 'compensado') {
+          // Depositado = valor recebido
+          receivedAmount += boleto.value;
         }
+        // NÃO conta boletos pendentes - eles ainda não foram recebidos!
       });
 
-      // Calcular quanto ainda está pendente (sem contar cheques/boletos que já aparecerão separadamente)
-      const totalAccountedFor = receivedAmount + receivableAmount;
-      const pendingAmount = Math.max(sale.totalValue - totalAccountedFor, 0);
+      // Calcular quanto ainda falta receber (valor total - valor já recebido)
+      const pendingAmount = Math.max(sale.totalValue - receivedAmount, 0);
 
-      // Só adiciona a venda se houver valor pendente REAL (não coberto por cheques/boletos)
-      if (pendingAmount > 0) {
+      // Só adiciona a venda se ainda houver valor pendente para receber
+      if (pendingAmount > 0.01) { // Usa 0.01 para evitar problemas de arredondamento
+        // Identificar data de vencimento mais próxima dos recebíveis pendentes desta venda
+        let nextDueDate = sale.date;
+        let pendingReceivables = [];
+
+        // Verificar cheques pendentes
+        checks.forEach(check => {
+          if (check.saleId === sale.id &&
+              check.status === 'pendente' &&
+              !check.isOwnCheck &&
+              !check.usedInDebt &&
+              !check.is_discounted) {
+            pendingReceivables.push({
+              type: 'Cheque',
+              date: check.dueDate,
+              value: check.value,
+              number: check.installmentNumber,
+              total: check.totalInstallments
+            });
+          }
+        });
+
+        // Verificar boletos pendentes
+        boletos.forEach(boleto => {
+          if (boleto.saleId === sale.id &&
+              boleto.status === 'pendente' &&
+              !boleto.isCompanyPayable) {
+            pendingReceivables.push({
+              type: 'Boleto',
+              date: boleto.dueDate,
+              value: boleto.value,
+              number: boleto.installmentNumber,
+              total: boleto.totalInstallments
+            });
+          }
+        });
+
+        // Ordenar recebíveis por data e pegar a próxima data
+        if (pendingReceivables.length > 0) {
+          pendingReceivables.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+          nextDueDate = pendingReceivables[0].date;
+        }
+
+        // Criar descrição detalhada
+        let description = `Venda total: R$ ${sale.totalValue.toFixed(2)} | Recebido: R$ ${receivedAmount.toFixed(2)}`;
+
+        if (pendingReceivables.length > 0) {
+          const receivablesSummary = pendingReceivables
+            .map(r => `${r.type} ${r.number}/${r.total} (R$ ${r.value.toFixed(2)})`)
+            .join(', ');
+          description += ` | Pendente: ${receivablesSummary}`;
+        }
+
         toReceive.push({
           id: sale.id,
           type: 'Venda',
           client: sale.client,
           amount: pendingAmount,
-          dueDate: sale.date,
-          description: `Venda pendente - R$ ${receivedAmount.toFixed(2)} já recebido`,
-          status: sale.status
+          dueDate: nextDueDate,
+          description: description,
+          status: sale.status,
+          totalValue: sale.totalValue,
+          receivedAmount: receivedAmount
         });
       }
     });
 
+    // Ordenar por data de vencimento
     return toReceive.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
   }, [checks, boletos, sales]);
 
@@ -781,36 +790,45 @@ const Dashboard: React.FC = () => {
           <div className="space-y-3 max-h-80 overflow-y-auto modern-scrollbar">
             {valuesToReceive.slice(0, 10).map(item => (
               <div key={item.id} className="p-4 bg-green-50 rounded-xl border border-green-200">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                        item.type === 'Cheque' ? 'bg-yellow-100 text-yellow-800' :
-                        item.type === 'Boleto' ? 'bg-blue-100 text-blue-800' :
-                        'bg-purple-100 text-purple-800'
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">
+                        Venda
+                      </span>
+                      <span className={`text-xs px-2 py-1 rounded-full font-bold ${
+                        new Date(item.dueDate) < new Date() ? 'bg-red-100 text-red-800' :
+                        new Date(item.dueDate).toDateString() === new Date().toDateString() ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
                       }`}>
-                        {item.type}
+                        {new Date(item.dueDate) < new Date() ? 'Vencido' :
+                         new Date(item.dueDate).toDateString() === new Date().toDateString() ? 'Hoje' :
+                         'Pendente'}
                       </span>
                     </div>
-                    <h4 className="font-bold text-green-900">{item.client}</h4>
-                    <p className="text-sm text-green-700">{item.description}</p>
-                    <p className="text-xs text-green-600">
-                      Vencimento: {new Date(item.dueDate).toLocaleDateString('pt-BR')}
+                    <h4 className="font-bold text-green-900 text-lg mb-1">{item.client}</h4>
+                    <div className="text-sm text-green-700 space-y-1">
+                      <p className="font-semibold">
+                        Valor da venda: R$ {item.totalValue?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      <p>
+                        Já recebido: R$ {item.receivedAmount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      <p className="font-bold text-green-800">
+                        Falta receber: R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <p className="text-xs text-green-600 mt-2">
+                      Próximo vencimento: {new Date(item.dueDate).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-lg font-black text-green-600">
+                  <div className="text-right ml-4">
+                    <p className="text-2xl font-black text-green-600">
                       R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
-                    <span className={`text-xs px-2 py-1 rounded-full font-bold ${
-                      new Date(item.dueDate) < new Date() ? 'bg-red-100 text-red-800' :
-                      new Date(item.dueDate).toDateString() === new Date().toDateString() ? 'bg-blue-100 text-blue-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {new Date(item.dueDate) < new Date() ? 'Vencido' :
-                       new Date(item.dueDate).toDateString() === new Date().toDateString() ? 'Hoje' :
-                       'Pendente'}
-                    </span>
+                    <p className="text-xs text-green-700 mt-1">
+                      A receber
+                    </p>
                   </div>
                 </div>
               </div>
