@@ -209,7 +209,7 @@ const Dashboard: React.FC = () => {
     return debts.filter(debt => !debt.isPaid);
   }, [debts]);
 
-  // Valores a receber - NOVO CÁLCULO CORRETO
+  // Valores a receber - CÁLCULO CORRIGIDO
   const valuesToReceive = useMemo(() => {
     const toReceive = [];
 
@@ -251,10 +251,11 @@ const Dashboard: React.FC = () => {
       }
     });
 
-    // Vendas com valores pendentes - calculado dinamicamente
+    // Vendas com valores pendentes - CÁLCULO APRIMORADO
     sales.forEach(sale => {
-      // Calcular quanto já foi efetivamente recebido desta venda
+      // Calcular quanto já foi efetivamente recebido ou está em forma de recebível (cheques/boletos)
       let receivedAmount = 0;
+      let receivableAmount = 0; // Cheques e boletos pendentes
 
       // 1. Pagamentos instantâneos (já recebidos no momento da venda)
       (sale.paymentMethods || []).forEach(method => {
@@ -267,7 +268,7 @@ const Dashboard: React.FC = () => {
         }
       });
 
-      // 2. Cheques desta venda que foram compensados, antecipados ou usados em dívidas
+      // 2. Cheques desta venda
       checks.forEach(check => {
         if (check.saleId === sale.id) {
           if (check.status === 'compensado') {
@@ -279,21 +280,31 @@ const Dashboard: React.FC = () => {
           } else if (check.usedInDebt) {
             // Usado em dívida = considera como recebido
             receivedAmount += check.value;
+          } else if (check.status === 'pendente' && !check.isOwnCheck) {
+            // Cheque pendente = está em "Valores a Receber", então não mostra na venda
+            receivableAmount += check.value;
           }
         }
       });
 
-      // 3. Boletos desta venda que foram depositados
+      // 3. Boletos desta venda
       boletos.forEach(boleto => {
-        if (boleto.saleId === sale.id && boleto.status === 'compensado') {
-          receivedAmount += boleto.value;
+        if (boleto.saleId === sale.id) {
+          if (boleto.status === 'compensado') {
+            // Depositado = valor recebido
+            receivedAmount += boleto.value;
+          } else if (boleto.status === 'pendente' && !boleto.isCompanyPayable) {
+            // Boleto pendente = está em "Valores a Receber", então não mostra na venda
+            receivableAmount += boleto.value;
+          }
         }
       });
 
-      // Calcular quanto ainda está pendente
-      const pendingAmount = Math.max(sale.totalValue - receivedAmount, 0);
+      // Calcular quanto ainda está pendente (sem contar cheques/boletos que já aparecerão separadamente)
+      const totalAccountedFor = receivedAmount + receivableAmount;
+      const pendingAmount = Math.max(sale.totalValue - totalAccountedFor, 0);
 
-      // Só adiciona se houver valor pendente real
+      // Só adiciona a venda se houver valor pendente REAL (não coberto por cheques/boletos)
       if (pendingAmount > 0) {
         toReceive.push({
           id: sale.id,
