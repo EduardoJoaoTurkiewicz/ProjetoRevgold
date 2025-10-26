@@ -316,7 +316,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
           alert(`Você deve adicionar ${requiredChecks} cheque(s) de terceiros para este método de pagamento.`);
           return;
         }
-        
+
         // Validar dados de cada cheque de terceiros
         for (let i = 0; i < method.thirdPartyDetails.length; i++) {
           const check = method.thirdPartyDetails[i];
@@ -324,6 +324,33 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
             alert(`Por favor, preencha todos os campos obrigatórios do cheque ${i + 1}.`);
             return;
           }
+        }
+      }
+
+      // Validar permuta - veículo selecionado e crédito disponível
+      if (method.type === 'permuta') {
+        if (!method.vehicleId) {
+          alert('Por favor, selecione um veículo para a permuta.');
+          return;
+        }
+
+        const selectedVehicle = availablePermutas.find(p => p.id === method.vehicleId);
+        if (!selectedVehicle) {
+          alert('Veículo selecionado não encontrado. Por favor, selecione outro veículo.');
+          return;
+        }
+
+        if (methodAmount > selectedVehicle.remainingValue) {
+          alert(`O valor da permuta (R$ ${methodAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) excede o crédito disponível no veículo (R$ ${selectedVehicle.remainingValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}). Por favor, ajuste o valor ou selecione outro veículo.`);
+          return;
+        }
+      }
+
+      // Validar acerto - cliente selecionado
+      if (method.type === 'acerto') {
+        if (!method.acertoClientName && !formData.client.trim()) {
+          alert('Por favor, informe o nome do cliente para criar o acerto.');
+          return;
         }
       }
     }
@@ -765,15 +792,25 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                          
                          {method.type === 'acerto' && (
                            <div className="md:col-span-2">
-                             <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
-                               <h4 className="font-semibold text-blue-900 mb-3">
-                                 💡 Acerto: Selecione o cliente ou informe um novo
-                               </h4>
+                             <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-100 rounded-xl border-2 border-blue-300 shadow-lg">
+                               <div className="flex items-center gap-3 mb-4">
+                                 <div className="p-2 bg-blue-600 rounded-lg">
+                                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                                   </svg>
+                                 </div>
+                                 <div>
+                                   <h4 className="font-bold text-blue-900 text-lg">
+                                     Acerto (Pagamento Mensal)
+                                   </h4>
+                                   <p className="text-sm text-blue-700">Selecione o grupo de acerto deste cliente</p>
+                                 </div>
+                               </div>
 
                                {clientesComAcerto.length > 0 ? (
                                  <div className="space-y-3">
                                    <div>
-                                     <label className="form-label">Cliente com Acerto</label>
+                                     <label className="form-label text-blue-800 font-semibold mb-2">Selecione o Grupo de Acerto *</label>
                                      <select
                                        value={method.acertoClientName || ''}
                                        onChange={(e) => {
@@ -783,48 +820,85 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                            setFormData(prev => ({ ...prev, client: e.target.value }));
                                          }
                                        }}
-                                       className="input-field"
+                                       className="input-field bg-white border-2 border-blue-300 focus:border-blue-500 text-lg font-medium"
+                                       required
                                      >
-                                       <option value="">Selecione um cliente...</option>
+                                       <option value="">🔍 Selecione um cliente com acerto...</option>
                                        {clientesComAcerto.map(cliente => (
                                          <option key={cliente} value={cliente}>
-                                           {cliente}
+                                           👤 {cliente}
                                          </option>
                                        ))}
-                                       <option value="__novo__">+ Novo Cliente (usar o nome informado acima)</option>
+                                       <option value="__novo__">➕ Novo Cliente (usar o nome informado acima)</option>
                                      </select>
                                    </div>
 
                                    {method.acertoClientName && method.acertoClientName !== '__novo__' && (
-                                     <div className="p-3 bg-white rounded-lg border border-blue-100">
-                                       <p className="text-sm text-blue-800 font-semibold">
-                                         ✓ Este valor será adicionado ao acerto do cliente "{method.acertoClientName}"
-                                       </p>
-                                       <p className="text-xs text-blue-600 mt-1">
-                                         O cliente pagará junto com outras vendas em acerto
-                                       </p>
+                                     <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border-2 border-green-300 shadow-md">
+                                       <div className="flex items-start gap-3">
+                                         <div className="p-2 bg-green-600 rounded-full mt-0.5">
+                                           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                           </svg>
+                                         </div>
+                                         <div className="flex-1">
+                                           <p className="text-base text-green-900 font-bold">
+                                             Venda será adicionada ao acerto do cliente "{method.acertoClientName}"
+                                           </p>
+                                           <p className="text-sm text-green-700 mt-1">
+                                             💰 Valor de R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} será adicionado ao saldo pendente
+                                           </p>
+                                           <p className="text-xs text-green-600 mt-2">
+                                             📋 O cliente pagará este valor junto com outras vendas na aba "Acertos"
+                                           </p>
+                                         </div>
+                                       </div>
                                      </div>
                                    )}
 
                                    {method.acertoClientName === '__novo__' && (
-                                     <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                                       <p className="text-sm text-green-800 font-semibold">
-                                         ✓ Um novo acerto será criado para o cliente "{formData.client}"
-                                       </p>
-                                       <p className="text-xs text-green-600 mt-1">
-                                         Certifique-se de que o nome do cliente está correto acima
-                                       </p>
+                                     <div className="p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border-2 border-amber-300 shadow-md">
+                                       <div className="flex items-start gap-3">
+                                         <div className="p-2 bg-amber-600 rounded-full mt-0.5">
+                                           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                           </svg>
+                                         </div>
+                                         <div className="flex-1">
+                                           <p className="text-base text-amber-900 font-bold">
+                                             Novo grupo de acerto será criado para "{formData.client}"
+                                           </p>
+                                           <p className="text-sm text-amber-700 mt-1">
+                                             💰 Valor inicial: R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                           </p>
+                                           <p className="text-xs text-amber-600 mt-2">
+                                             ⚠️ Certifique-se de que o nome do cliente "{formData.client}" está correto
+                                           </p>
+                                         </div>
+                                       </div>
                                      </div>
                                    )}
                                  </div>
                                ) : (
-                                 <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                                   <p className="text-sm text-green-800 font-semibold">
-                                     ✓ Um novo acerto será criado para o cliente "{formData.client}"
-                                   </p>
-                                   <p className="text-xs text-green-600 mt-1">
-                                     Este é o primeiro acerto. Certifique-se de que o nome do cliente está correto.
-                                   </p>
+                                 <div className="p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border-2 border-amber-300 shadow-md">
+                                   <div className="flex items-start gap-3">
+                                     <div className="p-2 bg-amber-600 rounded-full mt-0.5">
+                                       <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                       </svg>
+                                     </div>
+                                     <div className="flex-1">
+                                       <p className="text-base text-amber-900 font-bold">
+                                         Primeiro acerto será criado para o cliente "{formData.client}"
+                                       </p>
+                                       <p className="text-sm text-amber-700 mt-1">
+                                         💰 Valor inicial: R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                       </p>
+                                       <p className="text-xs text-amber-600 mt-2">
+                                         ⚠️ Este é o primeiro acerto. Certifique-se de que o nome do cliente está correto.
+                                       </p>
+                                     </div>
+                                   </div>
                                  </div>
                                )}
                              </div>
@@ -833,62 +907,135 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                           
                           {method.type === 'permuta' && (
                             <div className="md:col-span-2">
-                              <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
-                                <h4 className="font-semibold text-purple-900 mb-3">
-                                  🚗 Permuta: Selecione o veículo para usar como pagamento
-                                </h4>
+                              <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-100 rounded-xl border-2 border-purple-300 shadow-lg">
+                                <div className="flex items-center gap-3 mb-4">
+                                  <div className="p-2 bg-purple-600 rounded-lg">
+                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                    </svg>
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold text-purple-900 text-lg">
+                                      Permuta (Troca de Veículo)
+                                    </h4>
+                                    <p className="text-sm text-purple-700">Selecione o veículo com crédito disponível</p>
+                                  </div>
+                                </div>
 
-                                <div className="mb-2 p-2 bg-blue-50 rounded text-xs">
-                                  <p>📄 Total de permutas: {permutas.length}</p>
-                                  <p>✅ Permutas disponíveis: {availablePermutas.length}</p>
+                                <div className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="font-semibold text-blue-900">📄 Total de permutas:</span>
+                                    <span className="font-bold text-blue-700">{permutas.length}</span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-sm mt-1">
+                                    <span className="font-semibold text-green-900">✅ Com crédito disponível:</span>
+                                    <span className="font-bold text-green-700">{availablePermutas.length}</span>
+                                  </div>
                                 </div>
 
                                 {availablePermutas.length > 0 ? (
                                   <div className="space-y-3">
-                                    <select
-                                      value={method.vehicleId || ''}
-                                      onChange={(e) => updatePaymentMethod(index, 'vehicleId', e.target.value)}
-                                      className="input-field"
-                                      required
-                                    >
-                                      <option value="">Selecione o veículo...</option>
-                                      {availablePermutas.map(permuta => (
-                                        <option key={permuta.id} value={permuta.id}>
-                                          {permuta.vehicleMake} {permuta.vehicleModel} {permuta.vehicleYear} - 
-                                          Disponível: R$ {permuta.remainingValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                        </option>
-                                      ))}
-                                    </select>
+                                    <div>
+                                      <label className="form-label text-purple-800 font-semibold mb-2">Selecione o Veículo *</label>
+                                      <select
+                                        value={method.vehicleId || ''}
+                                        onChange={(e) => updatePaymentMethod(index, 'vehicleId', e.target.value)}
+                                        className="input-field bg-white border-2 border-purple-300 focus:border-purple-500 text-lg font-medium"
+                                        required
+                                      >
+                                        <option value="">🚗 Selecione um veículo com crédito...</option>
+                                        {availablePermutas.map(permuta => (
+                                          <option key={permuta.id} value={permuta.id}>
+                                            🚙 {permuta.vehicleMake} {permuta.vehicleModel} {permuta.vehicleYear} ({permuta.vehiclePlate}) -
+                                            Disponível: R$ {permuta.remainingValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
                                     
                                     {method.vehicleId && (
-                                      <div className="p-3 bg-white rounded-lg border border-purple-100">
+                                      <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border-2 border-purple-200 shadow-md">
                                         {(() => {
                                           const selectedVehicle = availablePermutas.find(p => p.id === method.vehicleId);
                                           if (!selectedVehicle) return null;
-                                          
+
+                                          const percentUsed = (method.amount / selectedVehicle.remainingValue) * 100;
+                                          const isExceeding = method.amount > selectedVehicle.remainingValue;
+
                                           return (
                                             <div>
-                                              <p className="font-bold text-purple-900 mb-2">
-                                                {selectedVehicle.vehicleMake} {selectedVehicle.vehicleModel} {selectedVehicle.vehicleYear}
-                                              </p>
-                                              <div className="grid grid-cols-2 gap-4 text-sm">
-                                                <div>
-                                                  <span className="text-purple-600">Placa:</span>
-                                                  <span className="font-bold text-purple-800 ml-2">{selectedVehicle.vehiclePlate}</span>
+                                              <div className="flex items-center gap-2 mb-3">
+                                                <div className="p-2 bg-purple-600 rounded">
+                                                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                  </svg>
                                                 </div>
-                                                <div>
-                                                  <span className="text-purple-600">Disponível:</span>
-                                                  <span className="font-bold text-green-600 ml-2">
-                                                    R$ {selectedVehicle.remainingValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                  </span>
+                                                <p className="font-bold text-purple-900 text-lg">
+                                                  {selectedVehicle.vehicleMake} {selectedVehicle.vehicleModel} {selectedVehicle.vehicleYear}
+                                                </p>
+                                              </div>
+                                              <div className="grid grid-cols-2 gap-4 mb-3">
+                                                <div className="p-2 bg-white rounded border border-purple-100">
+                                                  <span className="text-xs text-purple-600 block">Placa</span>
+                                                  <span className="font-bold text-purple-900">{selectedVehicle.vehiclePlate}</span>
+                                                </div>
+                                                <div className="p-2 bg-white rounded border border-purple-100">
+                                                  <span className="text-xs text-purple-600 block">Cliente</span>
+                                                  <span className="font-bold text-purple-900">{selectedVehicle.clientName}</span>
                                                 </div>
                                               </div>
-                                              
-                                              {method.amount > selectedVehicle.remainingValue && (
-                                                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
-                                                  <p className="text-xs text-red-700 font-semibold">
-                                                    ⚠️ Valor excede o disponível na permuta
-                                                  </p>
+                                              <div className="grid grid-cols-3 gap-3 mb-3 text-sm">
+                                                <div className="text-center p-2 bg-blue-50 rounded border border-blue-200">
+                                                  <span className="text-xs text-blue-600 block mb-1">Valor Total</span>
+                                                  <span className="font-bold text-blue-900">R$ {selectedVehicle.vehicleValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                                <div className="text-center p-2 bg-orange-50 rounded border border-orange-200">
+                                                  <span className="text-xs text-orange-600 block mb-1">Já Usado</span>
+                                                  <span className="font-bold text-orange-900">R$ {selectedVehicle.consumedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                                <div className="text-center p-2 bg-green-50 rounded border border-green-200">
+                                                  <span className="text-xs text-green-600 block mb-1">Disponível</span>
+                                                  <span className="font-bold text-green-900">R$ {selectedVehicle.remainingValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                              </div>
+
+                                              {!isExceeding && method.amount > 0 && (
+                                                <div className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded border-2 border-green-300">
+                                                  <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-sm font-semibold text-green-800">Usando desta permuta:</span>
+                                                    <span className="text-lg font-bold text-green-900">R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                  </div>
+                                                  <div className="flex justify-between items-center text-xs">
+                                                    <span className="text-green-700">Restará após esta venda:</span>
+                                                    <span className="font-bold text-green-800">R$ {(selectedVehicle.remainingValue - method.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                  </div>
+                                                  <div className="mt-2">
+                                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                                      <div className="bg-gradient-to-r from-green-500 to-emerald-600 h-2 rounded-full transition-all" style={{ width: `${Math.min(100, percentUsed)}%` }}></div>
+                                                    </div>
+                                                    <p className="text-xs text-center text-green-700 mt-1">{percentUsed.toFixed(1)}% do crédito disponível</p>
+                                                  </div>
+                                                </div>
+                                              )}
+
+                                              {isExceeding && (
+                                                <div className="p-3 bg-gradient-to-r from-red-50 to-red-100 rounded border-2 border-red-300">
+                                                  <div className="flex items-start gap-2">
+                                                    <svg className="w-5 h-5 text-red-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                    </svg>
+                                                    <div className="flex-1">
+                                                      <p className="text-sm text-red-900 font-bold">
+                                                        Valor excede o crédito disponível!
+                                                      </p>
+                                                      <p className="text-xs text-red-700 mt-1">
+                                                        Você está tentando usar R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}, mas o veículo tem apenas R$ {selectedVehicle.remainingValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} disponível.
+                                                      </p>
+                                                      <p className="text-xs text-red-600 mt-1 font-semibold">
+                                                        Excesso: R$ {(method.amount - selectedVehicle.remainingValue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                      </p>
+                                                    </div>
+                                                  </div>
                                                 </div>
                                               )}
                                             </div>
@@ -898,13 +1045,27 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                     )}
                                   </div>
                                 ) : (
-                                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-                                    <p className="text-sm text-yellow-800 font-semibold">
-                                      ⚠️ Nenhum veículo disponível para permuta
-                                    </p>
-                                    <p className="text-xs text-yellow-700 mt-1">
-                                      Registre primeiro um veículo na aba "Permutas" com crédito disponível
-                                    </p>
+                                  <div className="p-4 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl border-2 border-yellow-300 shadow-md">
+                                    <div className="flex items-start gap-3">
+                                      <div className="p-2 bg-yellow-600 rounded-full mt-0.5">
+                                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                      </div>
+                                      <div className="flex-1">
+                                        <p className="text-base text-yellow-900 font-bold">
+                                          Nenhum veículo disponível para permuta
+                                        </p>
+                                        <p className="text-sm text-yellow-700 mt-2">
+                                          Para usar permuta como pagamento, você precisa:
+                                        </p>
+                                        <ol className="text-sm text-yellow-700 mt-2 ml-4 list-decimal space-y-1">
+                                          <li>Ir na aba "Permutas"</li>
+                                          <li>Registrar um veículo recebido em troca</li>
+                                          <li>Garantir que o veículo tenha crédito disponível</li>
+                                        </ol>
+                                      </div>
+                                    </div>
                                   </div>
                                 )}
                               </div>

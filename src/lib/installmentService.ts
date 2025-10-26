@@ -296,10 +296,52 @@ export class InstallmentService {
     }
   }
 
+  // Update permuta consumed value for sale payment method
+  static async updatePermutaForSale(vehicleId: string, amount: number): Promise<void> {
+    const usedAmount = safeNumber(amount, 0);
+    if (usedAmount <= 0) return;
+
+    console.log(`🔄 Updating permuta ${vehicleId}, adding consumed value: ${usedAmount}`);
+
+    try {
+      const permutas = await supabaseServices.permutas.getPermutas();
+      const permuta = permutas.find(p => p.id === vehicleId);
+
+      if (!permuta) {
+        console.error(`❌ Permuta ${vehicleId} not found`);
+        throw new Error(`Permuta ${vehicleId} não encontrada`);
+      }
+
+      // Calculate new values
+      const newConsumedValue = permuta.consumedValue + usedAmount;
+      const newRemainingValue = permuta.vehicleValue - newConsumedValue;
+
+      // Determine new status
+      let newStatus = permuta.status;
+      if (newRemainingValue <= 0) {
+        newStatus = 'finalizado';
+      }
+
+      const updatedPermuta = {
+        ...permuta,
+        consumedValue: newConsumedValue,
+        remainingValue: Math.max(0, newRemainingValue),
+        status: newStatus,
+        updatedAt: new Date().toISOString()
+      };
+
+      await supabaseServices.permutas.update(vehicleId, updatedPermuta);
+      console.log(`✅ Permuta ${vehicleId} updated - Consumed: R$ ${newConsumedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}, Remaining: R$ ${newRemainingValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}, Status: ${newStatus}`);
+    } catch (error) {
+      console.error(`❌ Error updating permuta ${vehicleId}:`, error);
+      throw error;
+    }
+  }
+
   // Process all installments for a sale
   static async processInstallmentsForSale(saleId: string, client: string, paymentMethods: any[]): Promise<void> {
     console.log(`🔄 Processing installments for sale ${saleId}, client: ${client}`);
-    
+
     for (const method of paymentMethods) {
       try {
         // Handle cheques (both single and multiple installments)
@@ -308,40 +350,45 @@ export class InstallmentService {
             await this.createChecksForSale(saleId, client, method);
           } else {
             // Single check
-            await this.createChecksForSale(saleId, client, { 
-              ...method, 
-              installments: 1, 
+            await this.createChecksForSale(saleId, client, {
+              ...method,
+              installments: 1,
               installmentValue: method.amount,
               firstInstallmentDate: method.firstInstallmentDate || getCurrentDateString()
             });
           }
         }
-        
+
         // Handle boletos (both single and multiple installments)
         if (method.type === 'boleto') {
           if (method.installments && method.installments > 1) {
             await this.createBoletosForSale(saleId, client, method);
           } else {
             // Single boleto
-            await this.createBoletosForSale(saleId, client, { 
-              ...method, 
-              installments: 1, 
+            await this.createBoletosForSale(saleId, client, {
+              ...method,
+              installments: 1,
               installmentValue: method.amount,
               firstInstallmentDate: method.firstInstallmentDate || getCurrentDateString()
             });
           }
         }
-        
+
         // Handle acertos
         if (method.type === 'acerto') {
           await this.createAcertoForSale(client, method);
+        }
+
+        // Handle permutas - update consumed value
+        if (method.type === 'permuta' && method.vehicleId) {
+          await this.updatePermutaForSale(method.vehicleId, method.amount);
         }
       } catch (error) {
         console.error(`❌ Error processing payment method ${method.type} for sale:`, error);
         // Continue with other methods even if one fails
       }
     }
-    
+
     console.log(`✅ All installments processed for sale ${saleId}`);
   }
 
