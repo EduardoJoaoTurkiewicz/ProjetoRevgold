@@ -127,26 +127,38 @@ export class AgendaAutoService {
 
   static async registerSaleInstallments(saleId: string, clientName: string, installments: Array<{date: string, amount: number, type: string, number: number, total: number}>): Promise<void> {
     for (const installment of installments) {
+      const typeLabel = installment.type === 'cheque' ? 'Cheque' :
+                        installment.type === 'boleto' ? 'Boleto' :
+                        installment.type === 'cartao_credito' ? 'Cartão' : installment.type;
+
       await this.registerEvent({
-        title: `Vencimento Parcela ${installment.number}/${installment.total}`,
-        description: `Cliente: ${clientName} - ${installment.type} - R$ ${installment.amount.toFixed(2)}`,
+        title: `Vencimento Parcela ${installment.number}/${installment.total} - ${typeLabel}`,
+        description: `Cliente: ${clientName} - ${typeLabel} - R$ ${installment.amount.toFixed(2)}`,
         date: installment.date,
         type: 'vencimento',
         relatedType: 'venda',
         relatedId: saleId,
+        priority: 'media',
+        status: 'pendente'
       });
     }
   }
 
   static async registerDebtInstallments(debtId: string, supplierName: string, installments: Array<{date: string, amount: number, type: string, number: number, total: number}>): Promise<void> {
     for (const installment of installments) {
+      const typeLabel = installment.type === 'cheque' ? 'Cheque' :
+                        installment.type === 'boleto' ? 'Boleto' :
+                        installment.type === 'cartao_credito' ? 'Cartão' : installment.type;
+
       await this.registerEvent({
-        title: `Pagamento Parcela ${installment.number}/${installment.total}`,
-        description: `Fornecedor: ${supplierName} - ${installment.type} - R$ ${installment.amount.toFixed(2)}`,
+        title: `Pagamento Parcela ${installment.number}/${installment.total} - ${typeLabel}`,
+        description: `Fornecedor: ${supplierName} - ${typeLabel} - R$ ${installment.amount.toFixed(2)}`,
         date: installment.date,
         type: 'pagamento',
         relatedType: 'divida',
         relatedId: debtId,
+        priority: 'alta',
+        status: 'pendente'
       });
     }
   }

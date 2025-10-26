@@ -628,10 +628,19 @@ export const debtsService = {
       const { AgendaAutoService } = await import('./agendaAutoService');
 
       // Register payment due dates for installments
+      // ONLY for payment methods that come out of company's cash (dinheiro, pix, transferencia, cheque, boleto)
       if (sanitizedDebt.paymentMethods) {
         const installmentsToRegister: Array<{date: string, amount: number, type: string, number: number, total: number}> = [];
 
+        // Payment methods that come out of cash
+        const cashPaymentMethods = ['dinheiro', 'pix', 'transferencia', 'cheque', 'boleto', 'cartao_debito'];
+
         for (const method of sanitizedDebt.paymentMethods) {
+          // Only register if it's a payment method that comes out of cash
+          if (!cashPaymentMethods.includes(method.type)) {
+            continue;
+          }
+
           // Handle installment-based payment methods
           if (method.firstInstallmentDate && method.installments && method.installments > 1) {
             const dueDate = new Date(method.firstInstallmentDate);

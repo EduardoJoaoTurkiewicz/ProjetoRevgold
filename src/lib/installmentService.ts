@@ -367,6 +367,15 @@ export class InstallmentService {
                   updatedAt: new Date().toISOString()
                 });
                 console.log(`✅ Check ${checkId} marked as used for debt ${debtId} - Supplier: ${company}`);
+
+                // Remove check from agenda since it's now being used for a debt
+                try {
+                  const { AgendaAutoService } = await import('./agendaAutoService');
+                  await AgendaAutoService.removeCheckEvents(checkId);
+                  console.log(`✅ Removed check ${checkId} from agenda`);
+                } catch (agendaError) {
+                  console.error(`❌ Error removing check ${checkId} from agenda:`, agendaError);
+                }
               } catch (error) {
                 console.error(`❌ Error updating check ${checkId}:`, error);
               }
