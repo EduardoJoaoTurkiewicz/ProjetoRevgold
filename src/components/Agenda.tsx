@@ -77,15 +77,22 @@ export default function Agenda() {
   const selectedDateEvents = useMemo(() => {
     if (!selectedDate) return [];
     return getEventsForDate(selectedDate).sort((a, b) => {
-      // Primeiro ordenar por tipo de evento (cobrança, pagamento, entrega, etc)
+      // Primeiro ordenar por prioridade (mais urgente primeiro)
+      const priorityOrder = { 'urgente': 0, 'alta': 1, 'media': 2, 'baixa': 3 };
+      if (a.priority !== b.priority) {
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      }
+
+      // Depois ordenar por tipo de evento (vencimento e pagamento primeiro)
       if (a.type !== b.type) {
-        const typeOrder = { 'cobranca': 0, 'pagamento': 1, 'entrega': 2, 'vencimento': 3, 'importante': 4, 'reuniao': 5, 'evento': 6, 'outros': 7 };
+        const typeOrder = { 'vencimento': 0, 'pagamento': 1, 'cobranca': 2, 'entrega': 3, 'importante': 4, 'reuniao': 5, 'evento': 6, 'outros': 7 };
         return (typeOrder[a.type] || 99) - (typeOrder[b.type] || 99);
       }
 
-      // Depois ordenar por forma de pagamento (dentro do tipo)
+      // Depois ordenar por forma de pagamento relacionada
       if (a.relatedType !== b.relatedType) {
-        return (a.relatedType || '').localeCompare(b.relatedType || '');
+        const relatedOrder = { 'boleto': 0, 'cheque': 1, 'cartao': 2, 'divida': 3, 'venda': 4, 'acerto': 5, 'imposto': 6 };
+        return (relatedOrder[a.relatedType || ''] || 99) - (relatedOrder[b.relatedType || ''] || 99);
       }
 
       // Depois por horário se tiver
@@ -95,9 +102,7 @@ export default function Agenda() {
       if (a.time && !b.time) return -1;
       if (!a.time && b.time) return 1;
 
-      // Por último, por prioridade
-      const priorityOrder = { 'urgente': 0, 'alta': 1, 'media': 2, 'baixa': 3 };
-      return priorityOrder[a.priority] - priorityOrder[b.priority];
+      return 0;
     });
   }, [selectedDate, agendaEvents]);
 
@@ -182,7 +187,22 @@ export default function Agenda() {
       case 'pagamento': return FileText;
       case 'cobranca': return AlertTriangle;
       case 'entrega': return MapPin;
+      case 'vencimento': return Bell;
+      case 'importante': return AlertTriangle;
       default: return Calendar;
+    }
+  };
+
+  const getRelatedTypeLabel = (relatedType?: string) => {
+    switch (relatedType) {
+      case 'boleto': return 'Boleto';
+      case 'cheque': return 'Cheque';
+      case 'venda': return 'Venda';
+      case 'divida': return 'Dívida';
+      case 'cartao': return 'Cartão';
+      case 'acerto': return 'Acerto';
+      case 'imposto': return 'Imposto';
+      default: return '';
     }
   };
 
@@ -326,24 +346,30 @@ export default function Agenda() {
                     {/* Indicadores de Eventos */}
                     {dayEvents.length > 0 && (
                       <div className="space-y-1">
-                        {dayEvents.slice(0, 2).map((event, eventIndex) => (
-                          <div
-                            key={event.id}
-                            className={`
-                              text-xs px-2 py-1 rounded-full font-semibold truncate
-                              ${event.priority === 'urgente' ? 'bg-red-500 text-white' :
-                                event.priority === 'alta' ? 'bg-orange-500 text-white' :
-                                event.priority === 'media' ? 'bg-yellow-500 text-white' :
-                                'bg-green-500 text-white'
-                              }
-                            `}
-                            title={event.title}
-                          >
-                            {event.time && `${event.time} - `}{event.title}
-                          </div>
-                        ))}
+                        {dayEvents.slice(0, 2).map((event, eventIndex) => {
+                          const TypeIcon = getTypeIcon(event.type);
+                          return (
+                            <div
+                              key={event.id}
+                              className={`
+                                text-[10px] px-2 py-1 rounded-md font-bold truncate flex items-center gap-1
+                                ${event.status === 'concluido' ? 'bg-green-600 text-white line-through' :
+                                  event.status === 'cancelado' ? 'bg-gray-500 text-white line-through' :
+                                  event.priority === 'urgente' ? 'bg-red-600 text-white shadow-md' :
+                                  event.priority === 'alta' ? 'bg-orange-600 text-white shadow-sm' :
+                                  event.priority === 'media' ? 'bg-yellow-600 text-white' :
+                                  'bg-blue-600 text-white'
+                                }
+                              `}
+                              title={`${event.title}${event.description ? ' - ' + event.description : ''}`}
+                            >
+                              <TypeIcon className="w-2.5 h-2.5 flex-shrink-0" />
+                              <span className="truncate">{event.time && `${event.time} `}{event.title}</span>
+                            </div>
+                          );
+                        })}
                         {dayEvents.length > 2 && (
-                          <div className="text-xs text-slate-500 font-semibold text-center">
+                          <div className="text-[10px] text-slate-600 font-bold text-center bg-slate-200 rounded-md py-1 px-2">
                             +{dayEvents.length - 2} mais
                           </div>
                         )}
@@ -381,28 +407,45 @@ export default function Agenda() {
 
             {selectedDate ? (
               selectedDateEvents.length > 0 ? (
-                <div className="space-y-4 max-h-96 overflow-y-auto modern-scrollbar">
+                <div className="space-y-3 max-h-[600px] overflow-y-auto modern-scrollbar pr-2">
                   {selectedDateEvents.map(event => {
                     const TypeIcon = getTypeIcon(event.type);
-                    
+                    const isAutoGenerated = event.relatedType && event.relatedId;
+
                     return (
-                      <div key={event.id} className="p-4 bg-slate-50 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
+                      <div key={event.id} className={`p-4 rounded-xl border-2 transition-all duration-200 ${
+                        event.status === 'concluido' ? 'bg-green-50 border-green-300 opacity-75' :
+                        event.status === 'cancelado' ? 'bg-gray-50 border-gray-300 opacity-60' :
+                        event.priority === 'urgente' ? 'bg-red-50 border-red-400 shadow-lg' :
+                        event.priority === 'alta' ? 'bg-orange-50 border-orange-400 shadow-md' :
+                        event.priority === 'media' ? 'bg-yellow-50 border-yellow-300' :
+                        'bg-blue-50 border-blue-200'
+                      } hover:shadow-xl hover:scale-[1.02]`}>
                         <div className="flex justify-between items-start mb-3">
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${
+                          <div className="flex items-start gap-3 flex-1">
+                            <div className={`p-2.5 rounded-xl shadow-md ${
+                              event.status === 'concluido' ? 'bg-green-600' :
+                              event.status === 'cancelado' ? 'bg-gray-600' :
                               event.priority === 'urgente' ? 'bg-red-600' :
                               event.priority === 'alta' ? 'bg-orange-600' :
                               event.priority === 'media' ? 'bg-yellow-600' :
-                              'bg-green-600'
+                              'bg-blue-600'
                             }`}>
-                              <TypeIcon className="w-4 h-4 text-white" />
+                              <TypeIcon className="w-5 h-5 text-white" />
                             </div>
-                            <div>
-                              <h4 className="font-bold text-slate-900">{event.title}</h4>
+                            <div className="flex-1">
+                              <div className="flex items-start gap-2">
+                                <h4 className="font-bold text-slate-900 text-base leading-tight">{event.title}</h4>
+                                {isAutoGenerated && (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200" title="Criado automaticamente">
+                                    AUTO
+                                  </span>
+                                )}
+                              </div>
                               {event.time && (
-                                <p className="text-sm text-slate-600 flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  {event.time}
+                                <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
+                                  <Clock className="w-3.5 h-3.5" />
+                                  <span className="font-semibold">{event.time}</span>
                                 </p>
                               )}
                             </div>
@@ -410,50 +453,64 @@ export default function Agenda() {
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => setViewingEvent(event)}
-                              className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                              className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-lg transition-colors"
                               title="Ver detalhes"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
-                            <button
-                              onClick={() => setEditingEvent(event)}
-                              className="p-1 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded transition-colors"
-                              title="Editar"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteEvent(event.id!)}
-                              className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
-                              title="Excluir"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {!isAutoGenerated && (
+                              <>
+                                <button
+                                  onClick={() => setEditingEvent(event)}
+                                  className="p-1.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 rounded-lg transition-colors"
+                                  title="Editar"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteEvent(event.id!)}
+                                  className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-lg transition-colors"
+                                  title="Excluir"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
 
                         {event.description && (
-                          <p className="text-sm text-slate-700 mb-3">{event.description}</p>
+                          <p className="text-sm text-slate-700 mb-3 pl-[52px] leading-relaxed">{event.description}</p>
                         )}
 
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getPriorityColor(event.priority)}`}>
+                        <div className="flex items-center gap-2 flex-wrap pl-[52px]">
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold border-2 shadow-sm ${
+                            event.priority === 'urgente' ? 'bg-red-100 text-red-800 border-red-300' :
+                            event.priority === 'alta' ? 'bg-orange-100 text-orange-800 border-orange-300' :
+                            event.priority === 'media' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                            'bg-green-100 text-green-800 border-green-300'
+                          }`}>
                             {event.priority.toUpperCase()}
                           </span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getStatusColor(event.status)}`}>
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold border-2 shadow-sm ${
+                            event.status === 'concluido' ? 'bg-green-100 text-green-800 border-green-300' :
+                            event.status === 'cancelado' ? 'bg-red-100 text-red-800 border-red-300' :
+                            event.status === 'adiado' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                            'bg-blue-100 text-blue-800 border-blue-300'
+                          }`}>
                             {event.status.toUpperCase()}
                           </span>
-                          <span className="px-2 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                          <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border-2 border-slate-300 shadow-sm">
                             {event.type.toUpperCase()}
                           </span>
                           {event.relatedType && event.relatedId && (
                             <button
                               onClick={() => handleNavigateToRelated(event)}
-                              className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200 hover:bg-green-200 transition-colors flex items-center gap-1"
+                              className="px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border-2 border-purple-300 hover:bg-purple-200 transition-all flex items-center gap-1 shadow-sm hover:shadow-md"
                               title="Ir para o registro relacionado"
                             >
                               <ExternalLink className="w-3 h-3" />
-                              ABRIR {event.relatedType.toUpperCase()}
+                              VER {event.relatedType.toUpperCase()}
                             </button>
                           )}
                         </div>
@@ -497,23 +554,53 @@ export default function Agenda() {
       </div>
 
       {/* Resumo de Eventos */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 modern-shadow-xl hover:shadow-2xl transition-shadow">
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-blue-600">
+            <div className="p-3 rounded-xl bg-blue-600 shadow-lg">
               <Calendar className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-blue-900 text-lg">Total de Eventos</h3>
+              <h3 className="font-bold text-blue-900 text-lg">Total</h3>
               <p className="text-3xl font-black text-blue-700">{agendaEvents.length}</p>
-              <p className="text-sm text-blue-600 font-semibold">Este mês</p>
+              <p className="text-xs text-blue-600 font-semibold">Eventos</p>
             </div>
           </div>
         </div>
 
-        <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl">
+        <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 modern-shadow-xl hover:shadow-2xl transition-shadow">
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-green-600">
+            <div className="p-3 rounded-xl bg-purple-600 shadow-lg">
+              <Bell className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-purple-900 text-lg">Vencimentos</h3>
+              <p className="text-3xl font-black text-purple-700">
+                {agendaEvents.filter(e => e.type === 'vencimento' && e.status === 'pendente').length}
+              </p>
+              <p className="text-xs text-purple-600 font-semibold">A receber</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 modern-shadow-xl hover:shadow-2xl transition-shadow">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-orange-600 shadow-lg">
+              <FileText className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-orange-900 text-lg">Pagamentos</h3>
+              <p className="text-3xl font-black text-orange-700">
+                {agendaEvents.filter(e => e.type === 'pagamento' && e.status === 'pendente').length}
+              </p>
+              <p className="text-xs text-orange-600 font-semibold">A pagar</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl hover:shadow-2xl transition-shadow">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-green-600 shadow-lg">
               <CheckCircle className="w-8 h-8 text-white" />
             </div>
             <div>
@@ -521,29 +608,14 @@ export default function Agenda() {
               <p className="text-3xl font-black text-green-700">
                 {agendaEvents.filter(e => e.status === 'concluido').length}
               </p>
-              <p className="text-sm text-green-600 font-semibold">Finalizados</p>
+              <p className="text-xs text-green-600 font-semibold">Finalizados</p>
             </div>
           </div>
         </div>
 
-        <div className="card bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200 modern-shadow-xl">
+        <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 modern-shadow-xl hover:shadow-2xl transition-shadow">
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-yellow-600">
-              <Clock className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-yellow-900 text-lg">Pendentes</h3>
-              <p className="text-3xl font-black text-yellow-700">
-                {agendaEvents.filter(e => e.status === 'pendente').length}
-              </p>
-              <p className="text-sm text-yellow-600 font-semibold">Aguardando</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200 modern-shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-red-600">
+            <div className="p-3 rounded-xl bg-red-600 shadow-lg">
               <AlertTriangle className="w-8 h-8 text-white" />
             </div>
             <div>
@@ -551,7 +623,7 @@ export default function Agenda() {
               <p className="text-3xl font-black text-red-700">
                 {agendaEvents.filter(e => e.priority === 'urgente' && e.status === 'pendente').length}
               </p>
-              <p className="text-sm text-red-600 font-semibold">Prioridade alta</p>
+              <p className="text-xs text-red-600 font-semibold">Atenção</p>
             </div>
           </div>
         </div>

@@ -9,6 +9,8 @@ export class AgendaAutoService {
     type: 'vencimento' | 'entrega' | 'pagamento' | 'importante';
     relatedType?: 'boleto' | 'cheque' | 'venda' | 'divida' | 'cartao' | 'acerto' | 'imposto';
     relatedId?: string;
+    priority?: 'baixa' | 'media' | 'alta' | 'urgente';
+    status?: 'pendente' | 'concluido' | 'cancelado' | 'adiado';
   }): Promise<void> {
     try {
       // Check if an event already exists for this specific item
@@ -33,7 +35,8 @@ export class AgendaAutoService {
           description: eventData.description,
           date: eventData.date,
           type: eventData.type,
-          completed: false,
+          priority: eventData.priority || 'media',
+          status: eventData.status || 'pendente',
           related_type: eventData.relatedType,
           related_id: eventData.relatedId,
         });
