@@ -57,10 +57,18 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   // Filtrar permutas com crédito disponível
   // Não precisa ser do mesmo cliente - qualquer permuta com crédito disponível pode ser usada
   const availablePermutas = React.useMemo(() => {
-    return permutas.filter(permuta =>
+    console.log('🔍 SaleForm - Total permutas from context:', permutas.length);
+    console.log('🔍 SaleForm - Permutas details:', permutas);
+
+    const filtered = permutas.filter(permuta =>
       permuta.status === 'ativo' &&
       permuta.remainingValue > 0
     );
+
+    console.log('🔍 SaleForm - Available permutas after filter:', filtered.length);
+    console.log('🔍 SaleForm - Available permutas details:', filtered);
+
+    return filtered;
   }, [permutas]);
 
   // Obter lista de clientes com acerto ativo
@@ -625,7 +633,12 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
               </div>
 
               <div className="space-y-4">
-                {formData.paymentMethods.map((method, index) => (
+                {formData.paymentMethods.map((method, index) => {
+                  console.log(`🔍 Rendering payment method ${index + 1}:`, method);
+                  console.log(`🔍 Payment method type: "${method.type}"`);
+                  console.log(`🔍 Is type === 'permuta'?`, method.type === 'permuta');
+
+                  return (
                   <div key={index} className="p-4 border rounded-lg">
                     <div className="flex justify-between items-start mb-4">
                       <h4 className="font-medium">Método {index + 1}</h4>
@@ -789,7 +802,12 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                               </p>
                             </div>
                           )}
-                         
+
+                         {(() => {
+                           console.log(`🔍 Checking if should render permuta widget for method ${index}:`, method.type === 'permuta');
+                           return null;
+                         })()}
+
                          {method.type === 'acerto' && (
                            <div className="md:col-span-2">
                              <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-100 rounded-xl border-2 border-blue-300 shadow-lg">
@@ -1232,7 +1250,8 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                       )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
