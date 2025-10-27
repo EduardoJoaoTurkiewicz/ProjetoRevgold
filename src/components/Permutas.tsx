@@ -38,12 +38,13 @@ export function Permutas() {
     };
   }, [permutas]);
 
-  // Obter vendas relacionadas a uma permuta
-  const getRelatedSales = (clientName: string) => {
+  // Obter vendas relacionadas a uma permuta específica (usando vehicleId)
+  const getRelatedSales = (permutaId: string) => {
     return sales.filter(sale => {
-      // Verificar se a venda tem método de pagamento "permuta" e é do mesmo cliente
-      return sale.paymentMethods?.some(method => method.type === 'permuta') &&
-             sale.client && sale.client.toLowerCase() === clientName.toLowerCase();
+      // Verificar se a venda usa este veículo específico de permuta
+      return sale.paymentMethods?.some(method =>
+        method.type === 'permuta' && method.vehicleId === permutaId
+      );
     });
   };
 
@@ -216,7 +217,7 @@ export function Permutas() {
       <div className="space-y-6">
         {permutas.length > 0 ? (
           permutas.map((permuta) => {
-            const relatedSales = getRelatedSales(permuta.clientName);
+            const relatedSales = getRelatedSales(permuta.id!);
             const progressPercentage = getProgressPercentage(permuta);
             
             return (
@@ -455,7 +456,7 @@ export function Permutas() {
       {viewingPermuta && (
         <PermutaDetails
           permuta={viewingPermuta}
-          relatedSales={getRelatedSales(viewingPermuta.clientName)}
+          relatedSales={getRelatedSales(viewingPermuta.id!)}
           onClose={() => setViewingPermuta(null)}
         />
       )}

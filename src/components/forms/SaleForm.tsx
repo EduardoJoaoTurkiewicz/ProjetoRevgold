@@ -237,13 +237,21 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       if (method.type === 'cartao_credito' && safeNumber(method.installments, 1) === 1) {
         return sum + methodAmount;
       }
+      // Permuta é tratada como "recebida" (troca de produto, não dinheiro a receber)
+      if (method.type === 'permuta') {
+        return sum + methodAmount;
+      }
+      // Acerto também é tratado como recebido (será cobrado depois no acerto mensal)
+      if (method.type === 'acerto') {
+        return sum + methodAmount;
+      }
       // Cheques, boletos e cartão parcelado são sempre pendentes até serem compensados
       return sum;
     }, 0);
-    
+
     const totalValue = safeNumber(formData.totalValue, 0);
     const pending = totalValue - totalPaid;
-    
+
     return {
       receivedAmount: totalPaid,
       pendingAmount: Math.max(0, pending),

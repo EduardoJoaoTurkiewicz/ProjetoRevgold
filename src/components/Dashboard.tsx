@@ -93,10 +93,12 @@ const Dashboard: React.FC = () => {
     // Vendas com pagamento instantâneo
     todaySales.forEach(sale => {
       (sale.paymentMethods || []).forEach(method => {
-        if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) || 
+        if (['dinheiro', 'pix', 'cartao_debito'].includes(method.type) ||
             (method.type === 'cartao_credito' && (!method.installments || method.installments === 1))) {
           totalReceivedToday += method.amount;
         }
+        // Permuta não conta como dinheiro recebido (é troca de produto)
+        // Acerto não conta como dinheiro recebido (será cobrado depois)
       });
     });
     
@@ -225,6 +227,14 @@ const Dashboard: React.FC = () => {
         }
         // Crédito à vista também é recebido imediatamente
         if (method.type === 'cartao_credito' && (!method.installments || method.installments === 1)) {
+          receivedAmount += method.amount;
+        }
+        // Permuta é tratada como recebida (troca de produto, não dinheiro)
+        if (method.type === 'permuta') {
+          receivedAmount += method.amount;
+        }
+        // Acerto também é tratado como recebido (será cobrado no acerto mensal)
+        if (method.type === 'acerto') {
           receivedAmount += method.amount;
         }
       });

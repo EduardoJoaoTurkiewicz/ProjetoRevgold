@@ -11,7 +11,7 @@ import { TestSaleCreation } from './TestSaleCreation';
 import { OfflineDataViewer } from './OfflineDataViewer';
 
 export default function Sales() {
-  const { sales, employees, isLoading, error, createSale, updateSale, deleteSale } = useAppContext();
+  const { sales, employees, permutas, isLoading, error, createSale, updateSale, deleteSale } = useAppContext();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [viewingSale, setViewingSale] = useState<Sale | null>(null);
@@ -339,57 +339,70 @@ export default function Sales() {
                 <div className="mb-6">
                   <h4 className="font-bold text-slate-900 mb-4">Métodos de Pagamento</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {(sale.paymentMethods || []).map((method, index) => (
-                      <div key={index} className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
-                        <div className="flex justify-between items-center mb-3">
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                            method.type === 'dinheiro' ? 'bg-green-100 text-green-800 border-green-200' :
-                            method.type === 'pix' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                            method.type === 'cartao_credito' ? 'bg-purple-100 text-purple-800 border-purple-200' :
-                            method.type === 'cartao_debito' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' :
-                            method.type === 'cheque' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                            method.type === 'boleto' ? 'bg-cyan-100 text-cyan-800 border-cyan-200' :
-                            method.type === 'acerto' ? 'bg-purple-100 text-purple-800 border-purple-200' :
-                            method.type === 'permuta' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' :
-                            'bg-slate-100 text-slate-800 border-slate-200'
-                          }`}>
-                            {method.type.replace('_', ' ').toUpperCase()}
-                          </span>
-                          <span className="text-xl font-black text-green-600">
-                            R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                        
-                        {method.installments && method.installments > 1 && (
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-green-700">Parcelas:</span>
-                              <span className="font-bold text-green-800">
-                                {method.installments}x de R$ {
-                                  method.useCustomValues && method.customInstallmentValues && method.customInstallmentValues.length > 0
-                                    ? (method.customInstallmentValues.reduce((sum, v) => sum + v, 0) / method.installments).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-                                    : (method.installmentValue || (method.amount / method.installments)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-                                }
+                    {(sale.paymentMethods || []).map((method, index) => {
+                      const permutaVehicle = method.type === 'permuta' && method.vehicleId
+                        ? permutas.find(p => p.id === method.vehicleId)
+                        : null;
+
+                      return (
+                        <div key={index} className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex flex-col gap-1">
+                              <span className={`px-3 py-1 rounded-full text-xs font-bold border w-fit ${
+                                method.type === 'dinheiro' ? 'bg-green-100 text-green-800 border-green-200' :
+                                method.type === 'pix' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                                method.type === 'cartao_credito' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                                method.type === 'cartao_debito' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' :
+                                method.type === 'cheque' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                                method.type === 'boleto' ? 'bg-cyan-100 text-cyan-800 border-cyan-200' :
+                                method.type === 'acerto' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                                method.type === 'permuta' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' :
+                                'bg-slate-100 text-slate-800 border-slate-200'
+                              }`}>
+                                {method.type === 'permuta' ? 'PERMUTA' : method.type.replace('_', ' ').toUpperCase()}
                               </span>
+                              {permutaVehicle && (
+                                <span className="text-sm font-semibold text-indigo-700">
+                                  {permutaVehicle.vehicleMake} {permutaVehicle.vehicleModel} {permutaVehicle.vehicleYear}
+                                </span>
+                              )}
                             </div>
-                            {method.installmentInterval && (
+                            <span className="text-xl font-black text-green-600">
+                              R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+
+                          {method.installments && method.installments > 1 && (
+                            <div className="space-y-2 text-sm">
                               <div className="flex justify-between">
-                                <span className="text-green-700">Intervalo:</span>
-                                <span className="font-bold text-green-800">{method.installmentInterval} dias</span>
-                              </div>
-                            )}
-                            {method.firstInstallmentDate && (
-                              <div className="flex justify-between">
-                                <span className="text-green-700">Primeira parcela:</span>
+                                <span className="text-green-700">Parcelas:</span>
                                 <span className="font-bold text-green-800">
-                                  {formatDateForDisplay(method.firstInstallmentDate)}
+                                  {method.installments}x de R$ {
+                                    method.useCustomValues && method.customInstallmentValues && method.customInstallmentValues.length > 0
+                                      ? (method.customInstallmentValues.reduce((sum, v) => sum + v, 0) / method.installments).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+                                      : (method.installmentValue || (method.amount / method.installments)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+                                  }
                                 </span>
                               </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                              {method.installmentInterval && (
+                                <div className="flex justify-between">
+                                  <span className="text-green-700">Intervalo:</span>
+                                  <span className="font-bold text-green-800">{method.installmentInterval} dias</span>
+                                </div>
+                              )}
+                              {method.firstInstallmentDate && (
+                                <div className="flex justify-between">
+                                  <span className="text-green-700">Primeira parcela:</span>
+                                  <span className="font-bold text-green-800">
+                                    {formatDateForDisplay(method.firstInstallmentDate)}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -587,26 +600,38 @@ export default function Sales() {
                 <div className="p-6 bg-green-50 rounded-2xl border border-green-200">
                   <h4 className="font-bold text-green-900 mb-4">Métodos de Pagamento Detalhados</h4>
                   <div className="space-y-4">
-                    {(viewingSale.paymentMethods || []).map((method, index) => (
-                      <div key={index} className="p-4 bg-white rounded-xl border border-green-100 shadow-sm">
-                        <div className="flex justify-between items-center mb-3">
-                          <span className={`px-3 py-1 rounded-full text-sm font-bold border ${
-                            method.type === 'dinheiro' ? 'bg-green-100 text-green-800 border-green-200' :
-                            method.type === 'pix' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                            method.type === 'cartao_credito' ? 'bg-purple-100 text-purple-800 border-purple-200' :
-                            method.type === 'cartao_debito' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' :
-                            method.type === 'cheque' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                            method.type === 'boleto' ? 'bg-cyan-100 text-cyan-800 border-cyan-200' :
-                            method.type === 'acerto' ? 'bg-purple-100 text-purple-800 border-purple-200' :
-                            method.type === 'permuta' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' :
-                            'bg-slate-100 text-slate-800 border-slate-200'
-                          }`}>
-                            {method.type.replace('_', ' ').toUpperCase()}
-                          </span>
-                          <span className="text-2xl font-black text-green-600">
-                            R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
+                    {(viewingSale.paymentMethods || []).map((method, index) => {
+                      const permutaVehicle = method.type === 'permuta' && method.vehicleId
+                        ? permutas.find(p => p.id === method.vehicleId)
+                        : null;
+
+                      return (
+                        <div key={index} className="p-4 bg-white rounded-xl border border-green-100 shadow-sm">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex flex-col gap-1">
+                              <span className={`px-3 py-1 rounded-full text-sm font-bold border w-fit ${
+                                method.type === 'dinheiro' ? 'bg-green-100 text-green-800 border-green-200' :
+                                method.type === 'pix' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                                method.type === 'cartao_credito' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                                method.type === 'cartao_debito' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' :
+                                method.type === 'cheque' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                                method.type === 'boleto' ? 'bg-cyan-100 text-cyan-800 border-cyan-200' :
+                                method.type === 'acerto' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                                method.type === 'permuta' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' :
+                                'bg-slate-100 text-slate-800 border-slate-200'
+                              }`}>
+                                {method.type === 'permuta' ? 'PERMUTA' : method.type.replace('_', ' ').toUpperCase()}
+                              </span>
+                              {permutaVehicle && (
+                                <span className="text-base font-semibold text-indigo-700">
+                                  {permutaVehicle.vehicleMake} {permutaVehicle.vehicleModel} {permutaVehicle.vehicleYear}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-2xl font-black text-green-600">
+                              R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
                         
                         {method.installments && method.installments > 1 && (
                           <div className="grid grid-cols-2 gap-4 text-sm mb-3">
@@ -650,8 +675,9 @@ export default function Sales() {
                             </div>
                           </div>
                         )}
-                      </div>
-                    ))}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 

@@ -9,15 +9,18 @@ interface PermutaDetailsProps {
 }
 
 export function PermutaDetails({ permuta, relatedSales, onClose }: PermutaDetailsProps) {
-  // Calcular total consumido pelas vendas relacionadas
+  // Calcular total consumido pelas vendas relacionadas (usando vehicleId específico)
   const totalConsumedBySales = relatedSales.reduce((sum, sale) => {
     const permutaAmount = sale.paymentMethods
-      ?.filter(method => method.type === 'permuta')
+      ?.filter(method => method.type === 'permuta' && method.vehicleId === permuta.id)
       .reduce((methodSum, method) => methodSum + method.amount, 0) || 0;
     return sum + permutaAmount;
   }, 0);
 
-  const progressPercentage = permuta.vehicleValue > 0 
+  // Detectar discrepâncias entre o valor registrado e o valor das vendas
+  const hasDiscrepancy = Math.abs(permuta.consumedValue - totalConsumedBySales) > 0.01;
+
+  const progressPercentage = permuta.vehicleValue > 0
     ? Math.min(100, (permuta.consumedValue / permuta.vehicleValue) * 100)
     : 0;
 
@@ -254,7 +257,7 @@ export function PermutaDetails({ permuta, relatedSales, onClose }: PermutaDetail
                 <div className="space-y-4">
                   {relatedSales.map(sale => {
                     const permutaAmount = sale.paymentMethods
-                      ?.filter(method => method.type === 'permuta')
+                      ?.filter(method => method.type === 'permuta' && method.vehicleId === permuta.id)
                       .reduce((sum, method) => sum + method.amount, 0) || 0;
                     
                     return (
