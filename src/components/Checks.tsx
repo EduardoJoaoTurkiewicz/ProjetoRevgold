@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, CreditCard as Edit, Trash2, Eye, FileText, DollarSign, Calendar, AlertCircle, X, Building2, CreditCard, Clock, CheckCircle, ChevronDown, ChevronRight, Zap } from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Eye, FileText, DollarSign, Calendar, AlertCircle, X, Building2, CreditCard, Clock, CheckCircle, ChevronDown, ChevronRight, Zap, Filter } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Check } from '../types';
 import { CheckForm } from './forms/CheckForm';
@@ -16,6 +16,30 @@ export function Checks() {
   const [expandedDebts, setExpandedDebts] = useState<Set<string>>(new Set());
   const [showDiscountForm, setShowDiscountForm] = useState(false);
   const [expandedDiscounted, setExpandedDiscounted] = useState<Set<string>>(new Set());
+  const [showReceivableFilters, setShowReceivableFilters] = useState(false);
+  const [showPayableFilters, setShowPayableFilters] = useState(false);
+  const [showUsedFilters, setShowUsedFilters] = useState(false);
+  const [receivableFilters, setReceivableFilters] = useState({
+    client: '',
+    dateFrom: '',
+    dateTo: '',
+    minValue: '',
+    maxValue: ''
+  });
+  const [payableFilters, setPayableFilters] = useState({
+    supplier: '',
+    dateFrom: '',
+    dateTo: '',
+    minValue: '',
+    maxValue: ''
+  });
+  const [usedFilters, setUsedFilters] = useState({
+    name: '',
+    dateFrom: '',
+    dateTo: '',
+    minValue: '',
+    maxValue: ''
+  });
 
   const today = getCurrentDateString();
   const dueToday = checks.filter(check => check.dueDate === today && check.status === 'pendente');
@@ -36,20 +60,85 @@ export function Checks() {
   );
   const totalCompanyPayableChecks = companyPayableChecks.reduce((sum, check) => sum + check.value, 0);
 
-  // Group checks by sales and debts
-  const salesWithChecks = sales.filter(sale => 
-    checks.some(check => check.saleId === sale.id)
-  ).map(sale => ({
+  // Group checks by sales and debts with filters
+  const salesWithChecks = sales.filter(sale => {
+    const saleChecks = checks.filter(check => check.saleId === sale.id);
+    if (saleChecks.length === 0) return false;
+
+    // Apply receivable filters
+    if (receivableFilters.client && !sale.client.toLowerCase().includes(receivableFilters.client.toLowerCase())) {
+      return false;
+    }
+    if (receivableFilters.dateFrom && sale.date < receivableFilters.dateFrom) {
+      return false;
+    }
+    if (receivableFilters.dateTo && sale.date > receivableFilters.dateTo) {
+      return false;
+    }
+    const totalValue = saleChecks.reduce((sum, check) => sum + check.value, 0);
+    if (receivableFilters.minValue && totalValue < parseFloat(receivableFilters.minValue)) {
+      return false;
+    }
+    if (receivableFilters.maxValue && totalValue > parseFloat(receivableFilters.maxValue)) {
+      return false;
+    }
+    return true;
+  }).map(sale => ({
     ...sale,
     checks: checks.filter(check => check.saleId === sale.id)
   }));
 
-  const debtsWithChecks = debts.filter(debt => 
-    checks.some(check => check.debtId === debt.id)
-  ).map(debt => ({
+  const debtsWithChecks = debts.filter(debt => {
+    const debtChecks = checks.filter(check => check.debtId === debt.id);
+    if (debtChecks.length === 0) return false;
+
+    // Apply payable filters
+    if (payableFilters.supplier && !debt.company.toLowerCase().includes(payableFilters.supplier.toLowerCase())) {
+      return false;
+    }
+    if (payableFilters.dateFrom && debt.date < payableFilters.dateFrom) {
+      return false;
+    }
+    if (payableFilters.dateTo && debt.date > payableFilters.dateTo) {
+      return false;
+    }
+    const totalValue = debtChecks.reduce((sum, check) => sum + check.value, 0);
+    if (payableFilters.minValue && totalValue < parseFloat(payableFilters.minValue)) {
+      return false;
+    }
+    if (payableFilters.maxValue && totalValue > parseFloat(payableFilters.maxValue)) {
+      return false;
+    }
+    return true;
+  }).map(debt => ({
     ...debt,
     checks: checks.filter(check => check.debtId === debt.id)
   }));
+
+  // Filter used checks
+  const usedChecksSales = salesWithChecks.filter(sale => {
+    const usedChecks = sale.checks.filter(check => check.usedInDebt);
+    if (usedChecks.length === 0) return false;
+
+    // Apply used filters
+    if (usedFilters.name && !sale.client.toLowerCase().includes(usedFilters.name.toLowerCase())) {
+      return false;
+    }
+    if (usedFilters.dateFrom && sale.date < usedFilters.dateFrom) {
+      return false;
+    }
+    if (usedFilters.dateTo && sale.date > usedFilters.dateTo) {
+      return false;
+    }
+    const totalValue = usedChecks.reduce((sum, check) => sum + check.value, 0);
+    if (usedFilters.minValue && totalValue < parseFloat(usedFilters.minValue)) {
+      return false;
+    }
+    if (usedFilters.maxValue && totalValue > parseFloat(usedFilters.maxValue)) {
+      return false;
+    }
+    return true;
+  });
 
   const handleAddCheck = (check: Omit<Check, 'id' | 'createdAt'>) => {
     createCheck(check).then(() => {
@@ -239,26 +328,109 @@ export function Checks() {
           </div>
           <h3 className="text-xl font-bold text-slate-900">Cheques a Receber (de Vendas)</h3>
           </div>
-          <button
-            onClick={() => {
-              const availableChecks = checks.filter(check =>
-                check.saleId &&
-                !check.usedInDebt &&
-                !check.is_discounted &&
-                check.status === 'pendente'
-              );
-              if (availableChecks.length === 0) {
-                alert('Não há cheques disponíveis para antecipar');
-                return;
-              }
-              setShowDiscountForm(true);
-            }}
-            className="btn-primary flex items-center gap-2 modern-shadow-xl hover:modern-shadow-lg"
-          >
-            <Zap className="w-5 h-5" />
-            Antecipar Cheques
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowReceivableFilters(!showReceivableFilters)}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <Filter className="w-5 h-5" />
+              Filtros
+            </button>
+            <button
+              onClick={() => {
+                const availableChecks = checks.filter(check =>
+                  check.saleId &&
+                  !check.usedInDebt &&
+                  !check.is_discounted &&
+                  check.status === 'pendente'
+                );
+                if (availableChecks.length === 0) {
+                  alert('Não há cheques disponíveis para antecipar');
+                  return;
+                }
+                setShowDiscountForm(true);
+              }}
+              className="btn-primary flex items-center gap-2 modern-shadow-xl hover:modern-shadow-lg"
+            >
+              <Zap className="w-5 h-5" />
+              Antecipar Cheques
+            </button>
+          </div>
         </div>
+
+        {showReceivableFilters && (
+          <div className="mb-6 p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-200">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="font-bold text-slate-900">Filtros de Cheques a Receber</h4>
+              <button
+                onClick={() => {
+                  setReceivableFilters({
+                    client: '',
+                    dateFrom: '',
+                    dateTo: '',
+                    minValue: '',
+                    maxValue: ''
+                  });
+                }}
+                className="text-sm text-green-600 hover:text-green-800 font-semibold"
+              >
+                Limpar Filtros
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="form-label">Cliente</label>
+                <input
+                  type="text"
+                  value={receivableFilters.client}
+                  onChange={(e) => setReceivableFilters(prev => ({ ...prev, client: e.target.value }))}
+                  placeholder="Nome do cliente"
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="form-label">Data Início</label>
+                <input
+                  type="date"
+                  value={receivableFilters.dateFrom}
+                  onChange={(e) => setReceivableFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="form-label">Data Fim</label>
+                <input
+                  type="date"
+                  value={receivableFilters.dateTo}
+                  onChange={(e) => setReceivableFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="form-label">Valor Mínimo</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={receivableFilters.minValue}
+                  onChange={(e) => setReceivableFilters(prev => ({ ...prev, minValue: e.target.value }))}
+                  placeholder="0,00"
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="form-label">Valor Máximo</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={receivableFilters.maxValue}
+                  onChange={(e) => setReceivableFilters(prev => ({ ...prev, maxValue: e.target.value }))}
+                  placeholder="0,00"
+                  className="input-field"
+                />
+              </div>
+            </div>
+          </div>
+        )}
         
         {salesWithChecks.length > 0 ? (
           <div className="space-y-4">
@@ -395,15 +567,100 @@ export function Checks() {
 
       {/* Cheques a Pagar (de Dívidas) */}
       <div className="card modern-shadow-xl">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 rounded-xl bg-orange-600">
-            <CreditCard className="w-6 h-6 text-white" />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-orange-600">
+              <CreditCard className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-orange-900">Cheques a Pagar (de Dívidas)</h3>
+              <span className="text-orange-600 font-semibold text-sm">
+                Total: R$ {totalCompanyPayableChecks.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
           </div>
-          <h3 className="text-xl font-bold text-orange-900">Cheques a Pagar (de Dívidas)</h3>
-          <span className="text-orange-600 font-semibold">
-            Total: R$ {totalCompanyPayableChecks.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </span>
+          <button
+            onClick={() => setShowPayableFilters(!showPayableFilters)}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <Filter className="w-5 h-5" />
+            Filtros
+          </button>
         </div>
+
+        {showPayableFilters && (
+          <div className="mb-6 p-4 bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl border border-orange-200">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="font-bold text-slate-900">Filtros de Cheques a Pagar</h4>
+              <button
+                onClick={() => {
+                  setPayableFilters({
+                    supplier: '',
+                    dateFrom: '',
+                    dateTo: '',
+                    minValue: '',
+                    maxValue: ''
+                  });
+                }}
+                className="text-sm text-orange-600 hover:text-orange-800 font-semibold"
+              >
+                Limpar Filtros
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="form-label">Fornecedor</label>
+                <input
+                  type="text"
+                  value={payableFilters.supplier}
+                  onChange={(e) => setPayableFilters(prev => ({ ...prev, supplier: e.target.value }))}
+                  placeholder="Nome do fornecedor"
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="form-label">Data Início</label>
+                <input
+                  type="date"
+                  value={payableFilters.dateFrom}
+                  onChange={(e) => setPayableFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="form-label">Data Fim</label>
+                <input
+                  type="date"
+                  value={payableFilters.dateTo}
+                  onChange={(e) => setPayableFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="form-label">Valor Mínimo</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={payableFilters.minValue}
+                  onChange={(e) => setPayableFilters(prev => ({ ...prev, minValue: e.target.value }))}
+                  placeholder="0,00"
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="form-label">Valor Máximo</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={payableFilters.maxValue}
+                  onChange={(e) => setPayableFilters(prev => ({ ...prev, maxValue: e.target.value }))}
+                  placeholder="0,00"
+                  className="input-field"
+                />
+              </div>
+            </div>
+          </div>
+        )}
         
         {debtsWithChecks.length > 0 ? (
           <div className="space-y-4">
@@ -520,24 +777,105 @@ export function Checks() {
 
       {/* Cheques Usados para Pagamento de Dívidas */}
       <div className="card modern-shadow-xl">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 rounded-xl bg-blue-600">
-            <Building2 className="w-6 h-6 text-white" />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-blue-600">
+              <Building2 className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-900">Cheques Usados para Pagamento de Dívidas</h3>
+              <p className="text-sm text-slate-600">
+                Total: R$ {checks.filter(c => c.usedInDebt).reduce((sum, c) => sum + c.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} •
+                {checks.filter(c => c.usedInDebt).length} cheque(s)
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">Cheques Usados para Pagamento de Dívidas</h3>
-            <p className="text-sm text-slate-600">
-              Total: R$ {checks.filter(c => c.usedInDebt).reduce((sum, c) => sum + c.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} •
-              {checks.filter(c => c.usedInDebt).length} cheque(s)
-            </p>
-          </div>
+          <button
+            onClick={() => setShowUsedFilters(!showUsedFilters)}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <Filter className="w-5 h-5" />
+            Filtros
+          </button>
         </div>
+
+        {showUsedFilters && (
+          <div className="mb-6 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="font-bold text-slate-900">Filtros de Cheques Usados</h4>
+              <button
+                onClick={() => {
+                  setUsedFilters({
+                    name: '',
+                    dateFrom: '',
+                    dateTo: '',
+                    minValue: '',
+                    maxValue: ''
+                  });
+                }}
+                className="text-sm text-blue-600 hover:text-blue-800 font-semibold"
+              >
+                Limpar Filtros
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="form-label">Nome</label>
+                <input
+                  type="text"
+                  value={usedFilters.name}
+                  onChange={(e) => setUsedFilters(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Nome do cliente"
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="form-label">Data Início</label>
+                <input
+                  type="date"
+                  value={usedFilters.dateFrom}
+                  onChange={(e) => setUsedFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="form-label">Data Fim</label>
+                <input
+                  type="date"
+                  value={usedFilters.dateTo}
+                  onChange={(e) => setUsedFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="form-label">Valor Mínimo</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={usedFilters.minValue}
+                  onChange={(e) => setUsedFilters(prev => ({ ...prev, minValue: e.target.value }))}
+                  placeholder="0,00"
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="form-label">Valor Máximo</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={usedFilters.maxValue}
+                  onChange={(e) => setUsedFilters(prev => ({ ...prev, maxValue: e.target.value }))}
+                  placeholder="0,00"
+                  className="input-field"
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {checks.filter(c => c.usedInDebt).length > 0 ? (
           <div className="space-y-4">
-            {salesWithChecks
-              .filter(sale => sale.checks.some(check => check.usedInDebt))
-              .map(sale => (
+            {usedChecksSales.map(sale => (
                 <div key={sale.id} className="border border-slate-200 rounded-2xl overflow-hidden">
                   <div
                     className="p-6 bg-gradient-to-r from-blue-50 to-transparent hover:from-blue-100 cursor-pointer transition-modern"
