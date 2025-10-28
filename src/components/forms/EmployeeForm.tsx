@@ -23,6 +23,14 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
     observations: employee?.observations || ''
   });
 
+  const handleSellerChange = (checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      isSeller: checked,
+      salary: checked ? 0 : prev.salary
+    }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -108,7 +116,11 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
                   className="input-field"
                   placeholder="0,00"
                   required
+                  disabled={formData.isSeller}
                 />
+                {formData.isSeller && (
+                  <p className="text-xs text-slate-500 mt-1">Vendedores não recebem salário fixo</p>
+                )}
               </div>
 
               <div className="form-group">
@@ -151,7 +163,7 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
                   <input
                     type="checkbox"
                     checked={formData.isSeller}
-                    onChange={(e) => setFormData(prev => ({ ...prev, isSeller: e.target.checked }))}
+                    onChange={(e) => handleSellerChange(e.target.checked)}
                     className="rounded"
                   />
                   <span className="form-label mb-0">É Vendedor</span>

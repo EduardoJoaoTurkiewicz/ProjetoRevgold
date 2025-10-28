@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, CreditCard as Edit, Trash2, Eye, CreditCard, FileText, AlertCircle, X } from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Eye, CreditCard, FileText, AlertCircle, X, Filter } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Debt } from '../types';
 import { DebtForm } from './forms/DebtForm';
@@ -11,11 +11,59 @@ export function Debts() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
   const [viewingDebt, setViewingDebt] = useState<Debt | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    company: '',
+    dateFrom: '',
+    dateTo: '',
+    minValue: '',
+    maxValue: '',
+    paymentMethod: ''
+  });
 
   // Ensure debts data is deduplicated in the UI
   const deduplicatedDebts = React.useMemo(() => {
-    return DeduplicationService.removeDuplicatesById(debts || []);
-  }, [debts]);
+    let filteredDebts = DeduplicationService.removeDuplicatesById(debts || []);
+
+    // Apply filters
+    if (filters.company) {
+      filteredDebts = filteredDebts.filter(debt =>
+        debt.company.toLowerCase().includes(filters.company.toLowerCase())
+      );
+    }
+
+    if (filters.dateFrom) {
+      filteredDebts = filteredDebts.filter(debt =>
+        debt.date >= filters.dateFrom
+      );
+    }
+
+    if (filters.dateTo) {
+      filteredDebts = filteredDebts.filter(debt =>
+        debt.date <= filters.dateTo
+      );
+    }
+
+    if (filters.minValue) {
+      filteredDebts = filteredDebts.filter(debt =>
+        debt.totalValue >= parseFloat(filters.minValue)
+      );
+    }
+
+    if (filters.maxValue) {
+      filteredDebts = filteredDebts.filter(debt =>
+        debt.totalValue <= parseFloat(filters.maxValue)
+      );
+    }
+
+    if (filters.paymentMethod) {
+      filteredDebts = filteredDebts.filter(debt =>
+        debt.paymentMethods?.some(method => method.type === filters.paymentMethod)
+      );
+    }
+
+    return filteredDebts;
+  }, [debts, filters]);
   const handleAddDebt = (debt: Omit<Debt, 'id' | 'createdAt'>) => {
     console.log('🔄 Adicionando nova dívida:', debt);
     
@@ -160,14 +208,116 @@ export function Debts() {
             <p className="text-slate-600 text-lg">Controle completo de despesas e pagamentos</p>
           </div>
         </div>
-        <button
-          onClick={() => setIsFormOpen(true)}
-          className="btn-primary flex items-center gap-2 modern-shadow-xl hover:modern-shadow-lg"
-        >
-          <Plus className="w-5 h-5" />
-          Nova Dívida
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <Filter className="w-5 h-5" />
+            Filtros
+          </button>
+          <button
+            onClick={() => setIsFormOpen(true)}
+            className="btn-primary flex items-center gap-2 modern-shadow-xl hover:modern-shadow-lg"
+          >
+            <Plus className="w-5 h-5" />
+            Nova Dívida
+          </button>
+        </div>
       </div>
+
+      {/* Filters Panel */}
+      {showFilters && (
+        <div className="card modern-shadow-xl bg-gradient-to-br from-red-50 to-rose-50">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-slate-900">Filtros de Dívidas</h3>
+            <button
+              onClick={() => {
+                setFilters({
+                  company: '',
+                  dateFrom: '',
+                  dateTo: '',
+                  minValue: '',
+                  maxValue: '',
+                  paymentMethod: ''
+                });
+              }}
+              className="text-sm text-red-600 hover:text-red-800 font-semibold"
+            >
+              Limpar Filtros
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="form-label">Fornecedor</label>
+              <input
+                type="text"
+                value={filters.company}
+                onChange={(e) => setFilters(prev => ({ ...prev, company: e.target.value }))}
+                placeholder="Nome do fornecedor"
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="form-label">Data Início</label>
+              <input
+                type="date"
+                value={filters.dateFrom}
+                onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="form-label">Data Fim</label>
+              <input
+                type="date"
+                value={filters.dateTo}
+                onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="form-label">Valor Mínimo</label>
+              <input
+                type="number"
+                step="0.01"
+                value={filters.minValue}
+                onChange={(e) => setFilters(prev => ({ ...prev, minValue: e.target.value }))}
+                placeholder="0,00"
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="form-label">Valor Máximo</label>
+              <input
+                type="number"
+                step="0.01"
+                value={filters.maxValue}
+                onChange={(e) => setFilters(prev => ({ ...prev, maxValue: e.target.value }))}
+                placeholder="0,00"
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="form-label">Método de Pagamento</label>
+              <select
+                value={filters.paymentMethod}
+                onChange={(e) => setFilters(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                className="input-field"
+              >
+                <option value="">Todos</option>
+                <option value="dinheiro">Dinheiro</option>
+                <option value="pix">PIX</option>
+                <option value="cartao_credito">Cartão de Crédito</option>
+                <option value="cartao_debito">Cartão de Débito</option>
+                <option value="cheque">Cheque</option>
+                <option value="boleto">Boleto</option>
+                <option value="acerto">Acerto</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Error Display */}
       {error && (

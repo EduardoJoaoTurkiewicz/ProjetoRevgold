@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, CreditCard as Edit, Trash2, Eye, ShoppingCart, FileText, AlertCircle, X, DollarSign, Calendar, User, Package, TrendingUp, CheckCircle, Clock } from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Eye, ShoppingCart, FileText, AlertCircle, X, DollarSign, Calendar, User, Package, TrendingUp, CheckCircle, Clock, Filter } from 'lucide-react';
 import { formatDateForDisplay } from '../utils/dateUtils';
 import { useAppContext } from '../context/AppContext';
 import { Sale } from '../types';
@@ -18,11 +18,59 @@ export default function Sales() {
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [showTestPanel, setShowTestPanel] = useState(false);
   const [showOfflineViewer, setShowOfflineViewer] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    client: '',
+    dateFrom: '',
+    dateTo: '',
+    minValue: '',
+    maxValue: '',
+    paymentMethod: ''
+  });
 
   // Ensure sales data is deduplicated in the UI
   const deduplicatedSales = React.useMemo(() => {
-    return DeduplicationService.removeDuplicatesById(sales || []);
-  }, [sales]);
+    let filteredSales = DeduplicationService.removeDuplicatesById(sales || []);
+
+    // Apply filters
+    if (filters.client) {
+      filteredSales = filteredSales.filter(sale =>
+        sale.client.toLowerCase().includes(filters.client.toLowerCase())
+      );
+    }
+
+    if (filters.dateFrom) {
+      filteredSales = filteredSales.filter(sale =>
+        sale.date >= filters.dateFrom
+      );
+    }
+
+    if (filters.dateTo) {
+      filteredSales = filteredSales.filter(sale =>
+        sale.date <= filters.dateTo
+      );
+    }
+
+    if (filters.minValue) {
+      filteredSales = filteredSales.filter(sale =>
+        sale.totalValue >= parseFloat(filters.minValue)
+      );
+    }
+
+    if (filters.maxValue) {
+      filteredSales = filteredSales.filter(sale =>
+        sale.totalValue <= parseFloat(filters.maxValue)
+      );
+    }
+
+    if (filters.paymentMethod) {
+      filteredSales = filteredSales.filter(sale =>
+        sale.paymentMethods?.some(method => method.type === filters.paymentMethod)
+      );
+    }
+
+    return filteredSales;
+  }, [sales, filters]);
 
   // Calculate totals
   const totals = React.useMemo(() => {
@@ -153,6 +201,13 @@ export default function Sales() {
         </div>
         <div className="flex items-center gap-4">
           <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <Filter className="w-5 h-5" />
+            Filtros
+          </button>
+          <button
             onClick={() => setShowDebugPanel(true)}
             className="btn-secondary flex items-center gap-2"
           >
@@ -182,6 +237,100 @@ export default function Sales() {
           </button>
         </div>
       </div>
+
+      {/* Filters Panel */}
+      {showFilters && (
+        <div className="card modern-shadow-xl bg-gradient-to-br from-green-50 to-emerald-50">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-slate-900">Filtros de Vendas</h3>
+            <button
+              onClick={() => {
+                setFilters({
+                  client: '',
+                  dateFrom: '',
+                  dateTo: '',
+                  minValue: '',
+                  maxValue: '',
+                  paymentMethod: ''
+                });
+              }}
+              className="text-sm text-green-600 hover:text-green-800 font-semibold"
+            >
+              Limpar Filtros
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="form-label">Cliente</label>
+              <input
+                type="text"
+                value={filters.client}
+                onChange={(e) => setFilters(prev => ({ ...prev, client: e.target.value }))}
+                placeholder="Nome do cliente"
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="form-label">Data Início</label>
+              <input
+                type="date"
+                value={filters.dateFrom}
+                onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="form-label">Data Fim</label>
+              <input
+                type="date"
+                value={filters.dateTo}
+                onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="form-label">Valor Mínimo</label>
+              <input
+                type="number"
+                step="0.01"
+                value={filters.minValue}
+                onChange={(e) => setFilters(prev => ({ ...prev, minValue: e.target.value }))}
+                placeholder="0,00"
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="form-label">Valor Máximo</label>
+              <input
+                type="number"
+                step="0.01"
+                value={filters.maxValue}
+                onChange={(e) => setFilters(prev => ({ ...prev, maxValue: e.target.value }))}
+                placeholder="0,00"
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="form-label">Método de Pagamento</label>
+              <select
+                value={filters.paymentMethod}
+                onChange={(e) => setFilters(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                className="input-field"
+              >
+                <option value="">Todos</option>
+                <option value="dinheiro">Dinheiro</option>
+                <option value="pix">PIX</option>
+                <option value="cartao_credito">Cartão de Crédito</option>
+                <option value="cartao_debito">Cartão de Débito</option>
+                <option value="cheque">Cheque</option>
+                <option value="boleto">Boleto</option>
+                <option value="acerto">Acerto</option>
+                <option value="permuta">Permuta</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Error Display */}
       {error && (
