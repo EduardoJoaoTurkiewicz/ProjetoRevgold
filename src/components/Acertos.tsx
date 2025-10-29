@@ -98,13 +98,27 @@ export function Acertos() {
     }
   };
 
-  const handlePaymentSubmit = (paymentData: Partial<Acerto>) => {
+  const handlePaymentSubmit = async (paymentData: any) => {
     if (paymentAcerto) {
-      updateAcerto({ ...paymentAcerto, ...paymentData, id: paymentAcerto.id, updatedAt: new Date().toISOString() }).then(() => {
+      try {
+        // Usar o serviço especializado para processar o pagamento
+        const { AcertoPaymentService } = await import('../lib/acertoPaymentService');
+        await AcertoPaymentService.processClientPayment(
+          paymentAcerto,
+          paymentData.selectedSaleIds || [],
+          paymentData.paymentAmount,
+          paymentData.paymentMethods || []
+        );
+
+        console.log('✅ Acerto payment processed successfully');
+        alert('Pagamento registrado com sucesso!');
         setPaymentAcerto(null);
-      }).catch(error => {
-        alert('Erro ao registrar pagamento: ' + error.message);
-      });
+
+        // Recarregar dados (isso será feito automaticamente pelo context)
+      } catch (error: any) {
+        console.error('❌ Error processing acerto payment:', error);
+        alert('Erro ao registrar pagamento: ' + (error.message || 'Erro desconhecido'));
+      }
     }
   };
 

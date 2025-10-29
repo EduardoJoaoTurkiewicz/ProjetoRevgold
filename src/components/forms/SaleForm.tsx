@@ -241,11 +241,8 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       if (method.type === 'permuta') {
         return sum + methodAmount;
       }
-      // Acerto também é tratado como recebido (será cobrado depois no acerto mensal)
-      if (method.type === 'acerto') {
-        return sum + methodAmount;
-      }
-      // Cheques, boletos e cartão parcelado são sempre pendentes até serem compensados
+      // ACERTO NÃO é recebido - fica como pendente até ser efetivamente pago
+      // Cheques, boletos, cartão parcelado e acertos são sempre pendentes até serem compensados
       return sum;
     }, 0);
 
@@ -826,37 +823,40 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                  </div>
                                </div>
 
-                               {clientesComAcerto.length > 0 ? (
-                                 <div className="space-y-3">
-                                   <div>
-                                     <label className="form-label text-blue-800 font-semibold mb-2">
-                                       Selecione o Grupo de Acerto *
-                                       <span className="text-red-600 ml-1">(Obrigatório)</span>
-                                     </label>
-                                     <select
-                                       value={method.acertoClientName || ''}
-                                       onChange={(e) => {
-                                         updatePaymentMethod(index, 'acertoClientName', e.target.value);
-                                         // Sincronizar o nome do cliente principal se estiver vazio e um cliente existente for selecionado
-                                         if (e.target.value !== '__novo__' && e.target.value !== '' && (!formData.client || formData.client.trim() === '')) {
-                                           setFormData(prev => ({ ...prev, client: e.target.value }));
-                                         }
-                                       }}
-                                       className="input-field bg-white border-2 border-blue-300 focus:border-blue-500 text-lg font-medium"
-                                       required
-                                     >
-                                       <option value="">🔍 Selecione um cliente com acerto...</option>
-                                       {clientesComAcerto.map(cliente => (
-                                         <option key={cliente} value={cliente}>
-                                           👤 {cliente}
-                                         </option>
-                                       ))}
-                                       <option value="__novo__">➕ Novo Cliente (usar o nome informado acima)</option>
-                                     </select>
-                                     <p className="text-xs text-blue-600 mt-2 font-semibold">
-                                       ⚠️ Atenção: Selecione o grupo existente para adicionar esta venda ao acerto daquele cliente. Não será criado um novo grupo se você selecionar um existente.
-                                     </p>
-                                   </div>
+                               <div className="space-y-3">
+                                 <div>
+                                   <label className="form-label text-blue-800 font-semibold mb-2">
+                                     Selecione o Grupo de Acerto *
+                                     <span className="text-red-600 ml-1">(Obrigatório)</span>
+                                   </label>
+                                   <select
+                                     value={method.acertoClientName || ''}
+                                     onChange={(e) => {
+                                       updatePaymentMethod(index, 'acertoClientName', e.target.value);
+                                       // Sincronizar o nome do cliente principal se estiver vazio e um cliente existente for selecionado
+                                       if (e.target.value !== '__novo__' && e.target.value !== '' && (!formData.client || formData.client.trim() === '')) {
+                                         setFormData(prev => ({ ...prev, client: e.target.value }));
+                                       }
+                                     }}
+                                     className="input-field bg-white border-2 border-blue-300 focus:border-blue-500 text-lg font-medium"
+                                     required
+                                   >
+                                     <option value="">🔍 Selecione uma opção...</option>
+                                     {clientesComAcerto.length > 0 && (
+                                       <optgroup label="Clientes Existentes">
+                                         {clientesComAcerto.map(cliente => (
+                                           <option key={cliente} value={cliente}>
+                                             👤 {cliente}
+                                           </option>
+                                         ))}
+                                       </optgroup>
+                                     )}
+                                     <option value="__novo__">➕ Novo Cliente (criar novo grupo)</option>
+                                   </select>
+                                   <p className="text-xs text-blue-600 mt-2 font-semibold">
+                                     ⚠️ Atenção: Selecione um cliente existente para adicionar ao seu grupo, ou "Novo Cliente" para criar um novo grupo.
+                                   </p>
+                                 </div>
 
                                    {method.acertoClientName && method.acertoClientName !== '__novo__' && (
                                      <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border-2 border-green-300 shadow-md">
@@ -903,29 +903,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                        </div>
                                      </div>
                                    )}
-                                 </div>
-                               ) : (
-                                 <div className="p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border-2 border-amber-300 shadow-md">
-                                   <div className="flex items-start gap-3">
-                                     <div className="p-2 bg-amber-600 rounded-full mt-0.5">
-                                       <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                       </svg>
-                                     </div>
-                                     <div className="flex-1">
-                                       <p className="text-base text-amber-900 font-bold">
-                                         Primeiro acerto será criado para o cliente "{formData.client}"
-                                       </p>
-                                       <p className="text-sm text-amber-700 mt-1">
-                                         💰 Valor inicial: R$ {method.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                       </p>
-                                       <p className="text-xs text-amber-600 mt-2">
-                                         ⚠️ Este é o primeiro acerto. Certifique-se de que o nome do cliente está correto.
-                                       </p>
-                                     </div>
-                                   </div>
-                                 </div>
-                               )}
+                               </div>
                              </div>
                            </div>
                          )}
