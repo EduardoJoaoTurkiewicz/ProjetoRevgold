@@ -59,6 +59,107 @@ export interface CreditCardDebtInstallment {
 }
 
 export const CreditCardService = {
+  async createFromSale(params: {
+    saleId: string;
+    clientName: string;
+    totalAmount: number;
+    installments: number;
+    saleDate: string;
+    firstDueDate: string;
+  }): Promise<string> {
+    const { saleId, clientName, totalAmount, installments, saleDate, firstDueDate } = params;
+    const installmentAmount = totalAmount / installments;
+
+    const { data: sale, error: saleError } = await supabase
+      .from('credit_card_sales')
+      .insert({
+        sale_id: saleId,
+        client_name: clientName,
+        total_amount: totalAmount,
+        remaining_amount: totalAmount,
+        installments: installments,
+        sale_date: saleDate,
+        first_due_date: firstDueDate,
+        status: 'active',
+        anticipated: false,
+      })
+      .select()
+      .single();
+
+    if (saleError) throw saleError;
+
+    const installmentsData = [];
+    for (let i = 0; i < installments; i++) {
+      const dueDate = new Date(firstDueDate);
+      dueDate.setMonth(dueDate.getMonth() + i);
+      installmentsData.push({
+        credit_card_sale_id: sale.id,
+        installment_number: i + 1,
+        amount: installmentAmount,
+        due_date: dueDate.toISOString().split('T')[0],
+        status: 'pending',
+      });
+    }
+
+    const { error: installmentsError } = await supabase
+      .from('credit_card_sale_installments')
+      .insert(installmentsData);
+
+    if (installmentsError) throw installmentsError;
+
+    return sale.id;
+  },
+
+  async createFromDebt(params: {
+    debtId: string;
+    supplierName: string;
+    totalAmount: number;
+    installments: number;
+    purchaseDate: string;
+    firstDueDate: string;
+  }): Promise<string> {
+    const { debtId, supplierName, totalAmount, installments, purchaseDate, firstDueDate } = params;
+    const installmentAmount = totalAmount / installments;
+
+    const { data: debt, error: debtError } = await supabase
+      .from('credit_card_debts')
+      .insert({
+        debt_id: debtId,
+        supplier_name: supplierName,
+        total_amount: totalAmount,
+        remaining_amount: totalAmount,
+        installments: installments,
+        purchase_date: purchaseDate,
+        first_due_date: firstDueDate,
+        status: 'active',
+      })
+      .select()
+      .single();
+
+    if (debtError) throw debtError;
+
+    const installmentsData = [];
+    for (let i = 0; i < installments; i++) {
+      const dueDate = new Date(firstDueDate);
+      dueDate.setMonth(dueDate.getMonth() + i);
+      installmentsData.push({
+        credit_card_debt_id: debt.id,
+        installment_number: i + 1,
+        amount: installmentAmount,
+        due_date: dueDate.toISOString().split('T')[0],
+        status: 'pending',
+      });
+    }
+
+    const { error: installmentsError } = await supabase
+      .from('credit_card_debt_installments')
+      .insert(installmentsData);
+
+    if (installmentsError) throw installmentsError;
+
+    return debt.id;
+  },
+
   async anticipateSale(saleId: string, anticipationFee: number): Promise<void> {
     const { data: sale, error: saleError } = await supabase
       .from('credit_card_sales')

@@ -115,12 +115,12 @@ export const salesService = {
 
   async create(sale: Omit<Sale, 'id' | 'createdAt'>): Promise<string> {
     console.log('🔄 salesService.create - Input sale:', sale);
-    
+
     // Generate UUID and clean data
     const saleId = UUIDManager.generateUUID();
     const saleWithId = { ...sale, id: saleId };
     const cleanedSale = UUIDManager.cleanObjectUUIDs(saleWithId);
-    
+
     // Sanitize all monetary values before sending
     const sanitizedSale = {
       ...cleanedSale,
@@ -136,9 +136,9 @@ export const salesService = {
         installmentInterval: safeNumber(method.installmentInterval, 30)
       }))
     };
-    
+
     logMonetaryValues(sanitizedSale, 'Create Sale Input');
-    
+
     if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
       console.log('💾 Saving sale offline');
       return await saveOfflineEnhanced('sales', sanitizedSale);
@@ -146,15 +146,15 @@ export const salesService = {
 
     try {
       console.log('🔄 salesService.create - Calling Supabase RPC...');
-      const { data, error } = await supabase.rpc('create_sale', { 
-        payload: transformToSnakeCase(sanitizedSale) 
+      const { data, error } = await supabase.rpc('create_sale', {
+        payload: transformToSnakeCase(sanitizedSale)
       });
-      
+
       if (error) {
         console.error('❌ Supabase RPC error:', error);
         throw error;
       }
-      
+
       // Parse the RPC response to extract the actual sale ID
       let saleId: string;
       if (typeof data === 'string') {
@@ -169,9 +169,9 @@ export const salesService = {
       } else {
         saleId = data;
       }
-      
+
       console.log('✅ salesService.create - Sale created with ID:', saleId);
-      
+
       // Process installments after sale creation
       try {
         const { InstallmentService } = await import('./installmentService');
@@ -179,6 +179,89 @@ export const salesService = {
         console.log('✅ Installments processed successfully for sale:', saleId);
       } catch (installmentError) {
         console.error('❌ Error processing installments for sale:', installmentError);
+      }
+
+      // Process credit card sales - create records in credit_card_sales table
+      try {
+        for (const method of sanitizedSale.paymentMethods || []) {
+          if (method.type === 'cartao_credito' && safeNumber(method.installments, 1) > 1) {
+            console.log('💳 Creating credit card sale for method:', method);
+            const { CreditCardService } = await import('./creditCardService');
+            await CreditCardService.createFromSale({
+              saleId: saleId,
+              clientName: sanitizedSale.client,
+              totalAmount: safeNumber(method.amount, 0),
+              installments: safeNumber(method.installments, 1),
+              saleDate: sanitizedSale.date,
+              firstDueDate: method.firstInstallmentDate || sanitizedSale.date
+            });
+            console.log('✅ Credit card sale created successfully');
+          }
+        }
+      } catch (creditCardError) {
+        console.error('❌ Error creating credit card sale:', creditCardError);
+      }
+
+      // Process acertos - add to existing acerto group if specified
+      try {
+        for (const method of sanitizedSale.paymentMethods || []) {
+          if (method.type === 'acerto') {
+            console.log('🔄 Processing acerto for method:', method);
+            const clientName = method.acertoClientName === '__novo__' || !method.acertoClientName
+              ? sanitizedSale.client
+              : method.acertoClientName;
+
+            // Find existing acerto for this client
+            const { data: existingAcertos, error: acertosError } = await supabase
+              .from('acertos')
+              .select('*')
+              .eq('client_name', clientName)
+              .eq('type', 'cliente')
+              .maybeSingle();
+
+            if (acertosError && acertosError.code !== 'PGRST116') {
+              console.error('❌ Error finding existing acerto:', acertosError);
+            }
+
+            if (existingAcertos) {
+              // Update existing acerto
+              console.log('✅ Found existing acerto, updating:', existingAcertos.id);
+              const newTotal = safeNumber(existingAcertos.total_amount, 0) + safeNumber(method.amount, 0);
+              const newPending = safeNumber(existingAcertos.pending_amount, 0) + safeNumber(method.amount, 0);
+
+              await supabase
+                .from('acertos')
+                .update({
+                  total_amount: newTotal,
+                  pending_amount: newPending,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', existingAcertos.id);
+
+              console.log('✅ Acerto updated successfully');
+            } else if (!method.acertoClientName || method.acertoClientName === '__novo__') {
+              // Only create new acerto if explicitly requested
+              console.log('✅ Creating new acerto for client:', clientName);
+              await supabase
+                .from('acertos')
+                .insert({
+                  client_name: clientName,
+                  type: 'cliente',
+                  total_amount: safeNumber(method.amount, 0),
+                  paid_amount: 0,
+                  pending_amount: safeNumber(method.amount, 0),
+                  payment_installments: 1,
+                  payment_installment_value: safeNumber(method.amount, 0),
+                  payment_interval: 30,
+                  status: 'pendente'
+                });
+
+              console.log('✅ New acerto created successfully');
+            }
+          }
+        }
+      } catch (acertoError) {
+        console.error('❌ Error processing acerto:', acertoError);
       }
 
       // Register agenda events automatically
@@ -241,13 +324,13 @@ export const salesService = {
       return saleId;
     } catch (error) {
       console.error('❌ Error creating sale:', error);
-      
+
       // Save offline if network error
       if (error?.message?.includes('Failed to fetch') || error?.message?.includes('Network error')) {
         console.log('💾 Saving sale offline due to network error');
         return await saveOfflineEnhanced('sales', sanitizedSale);
       }
-      
+
       throw error;
     }
   },
@@ -586,7 +669,7 @@ export const debtsService = {
     const debtId = UUIDManager.generateUUID();
     const debtWithId = { ...debt, id: debtId };
     const cleanedDebt = UUIDManager.cleanObjectUUIDs(debtWithId);
-    
+
     const sanitizedDebt = {
       ...cleanedDebt,
       totalValue: safeNumber(cleanedDebt.totalValue, 0),
@@ -598,9 +681,9 @@ export const debtsService = {
         installmentValue: safeNumber(method.installmentValue, 0)
       }))
     };
-    
+
     logMonetaryValues(sanitizedDebt, 'Create Debt');
-    
+
     if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
       return await saveOfflineEnhanced('debts', sanitizedDebt);
     }
@@ -610,7 +693,7 @@ export const debtsService = {
       .insert([transformToSnakeCase(sanitizedDebt)])
       .select()
       .single();
-    
+
     if (error) throw error;
 
     // Process installments after debt creation
@@ -620,7 +703,27 @@ export const debtsService = {
       console.log('✅ Installments processed successfully for debt:', data.id);
     } catch (installmentError) {
       console.error('❌ Error processing installments for debt:', installmentError);
-      // Don't throw here - debt was created successfully, installments are secondary
+    }
+
+    // Process credit card debts - create records in credit_card_debts table
+    try {
+      for (const method of sanitizedDebt.paymentMethods || []) {
+        if (method.type === 'cartao_credito' && safeNumber(method.installments, 1) > 1) {
+          console.log('💳 Creating credit card debt for method:', method);
+          const { CreditCardService } = await import('./creditCardService');
+          await CreditCardService.createFromDebt({
+            debtId: data.id,
+            supplierName: sanitizedDebt.company,
+            totalAmount: safeNumber(method.amount, 0),
+            installments: safeNumber(method.installments, 1),
+            purchaseDate: sanitizedDebt.date,
+            firstDueDate: method.firstInstallmentDate || sanitizedDebt.date
+          });
+          console.log('✅ Credit card debt created successfully');
+        }
+      }
+    } catch (creditCardError) {
+      console.error('❌ Error creating credit card debt:', creditCardError);
     }
 
     // Register agenda events automatically
