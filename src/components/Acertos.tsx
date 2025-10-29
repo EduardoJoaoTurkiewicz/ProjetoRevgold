@@ -400,13 +400,21 @@ export function Acertos() {
                                <FileText className="w-5 h-5 text-purple-600" />
                                <span className="font-semibold text-purple-800">Ver Vendas Relacionadas</span>
                              </button>
-                              
+
                               <button
                                 onClick={() => setEditingAcerto(acerto)}
                                 className="w-full p-4 bg-yellow-50 rounded-xl border border-yellow-200 hover:bg-yellow-100 transition-colors flex items-center gap-3"
                               >
                                 <Edit className="w-5 h-5 text-yellow-600" />
                                 <span className="font-semibold text-yellow-800">Editar Acerto</span>
+                              </button>
+
+                              <button
+                                onClick={() => handleDeleteAcerto(acerto.id)}
+                                className="w-full p-4 bg-red-50 rounded-xl border border-red-200 hover:bg-red-100 transition-colors flex items-center gap-3"
+                              >
+                                <Trash2 className="w-5 h-5 text-red-600" />
+                                <span className="font-semibold text-red-800">Excluir Acerto</span>
                               </button>
                             </div>
                           </div>
@@ -572,6 +580,14 @@ export function Acertos() {
                               >
                                 <Edit className="w-5 h-5 text-yellow-600" />
                                 <span className="font-semibold text-yellow-800">Editar Acerto</span>
+                              </button>
+
+                              <button
+                                onClick={() => handleDeleteAcerto(acerto.id)}
+                                className="w-full p-4 bg-red-50 rounded-xl border border-red-200 hover:bg-red-100 transition-colors flex items-center gap-3"
+                              >
+                                <Trash2 className="w-5 h-5 text-red-600" />
+                                <span className="font-semibold text-red-800">Excluir Acerto</span>
                               </button>
                             </div>
                           </div>
