@@ -102,19 +102,45 @@ export class InstallmentService {
   // Create acerto for sale payment method
   static async createAcertoForSale(client: string, paymentMethod: any): Promise<void> {
     if (paymentMethod.type !== 'acerto') return;
-    
+
     const amount = safeNumber(paymentMethod.amount, 0);
     if (amount <= 0) return;
-    
-    console.log(`🔄 Creating/updating acerto for client ${client}, amount: ${amount}`);
-    
+
+    // Determine the target client name for the acerto
+    // If acertoClientName is '__novo__' or empty, use the client parameter
+    // Otherwise, use the selected acertoClientName
+    let targetClientName = client;
+
+    if (paymentMethod.acertoClientName) {
+      if (paymentMethod.acertoClientName === '__novo__') {
+        // User explicitly wants to create a new acerto with the client's name
+        targetClientName = client;
+        console.log(`🔄 User selected to create NEW acerto for client: ${client}, amount: ${amount}`);
+      } else {
+        // User selected an existing acerto group
+        targetClientName = paymentMethod.acertoClientName;
+        console.log(`🔄 User selected EXISTING acerto group: ${targetClientName}, adding amount: ${amount}`);
+      }
+    } else {
+      // No acertoClientName provided (shouldn't happen with validation, but fallback to client)
+      console.warn(`⚠️ No acertoClientName provided, using client name: ${client}`);
+    }
+
+    // Normalize the target client name for comparison (trim and lowercase)
+    const normalizedTarget = targetClientName.trim().toLowerCase();
+
+    console.log(`🔄 Processing acerto for target: "${targetClientName}" (normalized: "${normalizedTarget}"), amount: ${amount}`);
+
     // Check if acerto already exists for this client
     try {
       const existingAcertos = await supabaseServices.acertos.getAcertos();
-      const existingAcerto = existingAcertos.find(a => 
-        a.clientName === client && a.type === 'cliente'
-      );
-    
+
+      // Find existing acerto by normalized name comparison
+      const existingAcerto = existingAcertos.find(a => {
+        const normalizedAcertoName = a.clientName.trim().toLowerCase();
+        return normalizedAcertoName === normalizedTarget && a.type === 'cliente';
+      });
+
       if (existingAcerto) {
         // Update existing acerto
         const updatedAcerto = {
@@ -124,27 +150,27 @@ export class InstallmentService {
           status: 'pendente' as const,
           updatedAt: new Date().toISOString()
         };
-      
+
         await supabaseServices.acertos.update(existingAcerto.id!, updatedAcerto);
-        console.log(`✅ Acerto updated for client ${client}`);
+        console.log(`✅ Acerto UPDATED for client "${existingAcerto.clientName}" - New total: R$ ${updatedAcerto.totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}, Pending: R$ ${updatedAcerto.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
       } else {
-        // Create new acerto
+        // Create new acerto (only when __novo__ is selected or no acerto exists)
         const acertoData = {
           id: UUIDManager.generateUUID(),
-          clientName: client,
+          clientName: targetClientName,
           type: 'cliente' as const,
           totalAmount: amount,
           paidAmount: 0,
           pendingAmount: amount,
           status: 'pendente' as const,
-          observations: `Acerto criado automaticamente para vendas de ${client}`
+          observations: `Acerto criado automaticamente para vendas de ${targetClientName}`
         };
-      
+
         await supabaseServices.acertos.create(acertoData);
-        console.log(`✅ New acerto created for client ${client}`);
+        console.log(`✅ NEW acerto CREATED for client "${targetClientName}" - Total: R$ ${amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
       }
     } catch (error) {
-      console.error(`❌ Error creating/updating acerto for client ${client}:`, error);
+      console.error(`❌ Error creating/updating acerto for client ${targetClientName}:`, error);
       throw error;
     }
   }

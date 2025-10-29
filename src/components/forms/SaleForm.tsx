@@ -356,9 +356,17 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
 
       // Validar acerto - cliente selecionado
       if (method.type === 'acerto') {
-        if (!method.acertoClientName && !formData.client.trim()) {
-          alert('Por favor, informe o nome do cliente para criar o acerto.');
+        if (!method.acertoClientName || method.acertoClientName.trim() === '') {
+          alert('Por favor, selecione um grupo de acerto ou escolha "Novo Cliente" para criar um novo grupo.');
           return;
+        }
+
+        // Se escolheu criar novo acerto, validar nome do cliente
+        if (method.acertoClientName === '__novo__') {
+          if (!formData.client || formData.client.trim() === '') {
+            alert('Por favor, informe o nome do cliente no campo "Cliente" para criar um novo grupo de acerto.');
+            return;
+          }
         }
       }
     }
@@ -821,13 +829,16 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                {clientesComAcerto.length > 0 ? (
                                  <div className="space-y-3">
                                    <div>
-                                     <label className="form-label text-blue-800 font-semibold mb-2">Selecione o Grupo de Acerto *</label>
+                                     <label className="form-label text-blue-800 font-semibold mb-2">
+                                       Selecione o Grupo de Acerto *
+                                       <span className="text-red-600 ml-1">(Obrigatório)</span>
+                                     </label>
                                      <select
                                        value={method.acertoClientName || ''}
                                        onChange={(e) => {
                                          updatePaymentMethod(index, 'acertoClientName', e.target.value);
-                                         // Sincronizar o nome do cliente principal se estiver vazio
-                                         if (!formData.client || formData.client.trim() === '') {
+                                         // Sincronizar o nome do cliente principal se estiver vazio e um cliente existente for selecionado
+                                         if (e.target.value !== '__novo__' && e.target.value !== '' && (!formData.client || formData.client.trim() === '')) {
                                            setFormData(prev => ({ ...prev, client: e.target.value }));
                                          }
                                        }}
@@ -842,6 +853,9 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                        ))}
                                        <option value="__novo__">➕ Novo Cliente (usar o nome informado acima)</option>
                                      </select>
+                                     <p className="text-xs text-blue-600 mt-2 font-semibold">
+                                       ⚠️ Atenção: Selecione o grupo existente para adicionar esta venda ao acerto daquele cliente. Não será criado um novo grupo se você selecionar um existente.
+                                     </p>
                                    </div>
 
                                    {method.acertoClientName && method.acertoClientName !== '__novo__' && (
