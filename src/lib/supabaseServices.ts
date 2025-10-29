@@ -184,18 +184,19 @@ export const salesService = {
       // Process credit card sales - create records in credit_card_sales table
       try {
         for (const method of sanitizedSale.paymentMethods || []) {
-          if (method.type === 'cartao_credito' && safeNumber(method.installments, 1) > 1) {
+          if (method.type === 'cartao_credito') {
             console.log('💳 Creating credit card sale for method:', method);
             const { CreditCardService } = await import('./creditCardService');
+            const installments = safeNumber(method.installments, 1);
             await CreditCardService.createFromSale({
               saleId: saleId,
               clientName: sanitizedSale.client,
               totalAmount: safeNumber(method.amount, 0),
-              installments: safeNumber(method.installments, 1),
+              installments: installments,
               saleDate: sanitizedSale.date,
               firstDueDate: method.firstInstallmentDate || sanitizedSale.date
             });
-            console.log('✅ Credit card sale created successfully');
+            console.log('✅ Credit card sale created successfully with', installments, 'installment(s)');
           }
         }
       } catch (creditCardError) {
@@ -212,7 +213,7 @@ export const salesService = {
               : method.acertoClientName;
 
             // Find existing acerto for this client
-            const { data: existingAcertos, error: acertosError } = await supabase
+            const { data: existingAcerto, error: acertosError } = await supabase
               .from('acertos')
               .select('*')
               .eq('client_name', clientName)
@@ -223,11 +224,11 @@ export const salesService = {
               console.error('❌ Error finding existing acerto:', acertosError);
             }
 
-            if (existingAcertos) {
-              // Update existing acerto
-              console.log('✅ Found existing acerto, updating:', existingAcertos.id);
-              const newTotal = safeNumber(existingAcertos.total_amount, 0) + safeNumber(method.amount, 0);
-              const newPending = safeNumber(existingAcertos.pending_amount, 0) + safeNumber(method.amount, 0);
+            if (existingAcerto) {
+              // Update existing acerto - ALWAYS use existing when client is selected
+              console.log('✅ Found existing acerto, updating:', existingAcerto.id);
+              const newTotal = safeNumber(existingAcerto.total_amount, 0) + safeNumber(method.amount, 0);
+              const newPending = safeNumber(existingAcerto.pending_amount, 0) + safeNumber(method.amount, 0);
 
               await supabase
                 .from('acertos')
@@ -236,12 +237,12 @@ export const salesService = {
                   pending_amount: newPending,
                   updated_at: new Date().toISOString()
                 })
-                .eq('id', existingAcertos.id);
+                .eq('id', existingAcerto.id);
 
-              console.log('✅ Acerto updated successfully');
-            } else if (!method.acertoClientName || method.acertoClientName === '__novo__') {
-              // Only create new acerto if explicitly requested
-              console.log('✅ Creating new acerto for client:', clientName);
+              console.log('✅ Acerto updated successfully - Total:', newTotal, 'Pending:', newPending);
+            } else {
+              // Only create new acerto if no existing one found for this client
+              console.log('✅ No existing acerto found - Creating new acerto for client:', clientName);
               await supabase
                 .from('acertos')
                 .insert({
@@ -256,7 +257,7 @@ export const salesService = {
                   status: 'pendente'
                 });
 
-              console.log('✅ New acerto created successfully');
+              console.log('✅ New acerto created successfully for:', clientName);
             }
           }
         }
@@ -708,18 +709,19 @@ export const debtsService = {
     // Process credit card debts - create records in credit_card_debts table
     try {
       for (const method of sanitizedDebt.paymentMethods || []) {
-        if (method.type === 'cartao_credito' && safeNumber(method.installments, 1) > 1) {
+        if (method.type === 'cartao_credito') {
           console.log('💳 Creating credit card debt for method:', method);
           const { CreditCardService } = await import('./creditCardService');
+          const installments = safeNumber(method.installments, 1);
           await CreditCardService.createFromDebt({
             debtId: data.id,
             supplierName: sanitizedDebt.company,
             totalAmount: safeNumber(method.amount, 0),
-            installments: safeNumber(method.installments, 1),
+            installments: installments,
             purchaseDate: sanitizedDebt.date,
             firstDueDate: method.firstInstallmentDate || sanitizedDebt.date
           });
-          console.log('✅ Credit card debt created successfully');
+          console.log('✅ Credit card debt created successfully with', installments, 'installment(s)');
         }
       }
     } catch (creditCardError) {
