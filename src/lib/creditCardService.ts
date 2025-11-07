@@ -215,6 +215,132 @@ export const CreditCardService = {
     await AgendaAutoService.removeSaleInstallmentsFromAgenda(saleId);
   },
 
+  async registerSaleInstallmentPayment(
+    installmentId: string,
+    receivedDate: string,
+    observations?: string
+  ): Promise<void> {
+    const { data: installment, error: installmentError } = await supabase
+      .from('credit_card_sale_installments')
+      .select('*, credit_card_sales(*)')
+      .eq('id', installmentId)
+      .maybeSingle();
+
+    if (installmentError) throw installmentError;
+    if (!installment) throw new Error('Parcela não encontrada');
+
+    const sale = (installment as any).credit_card_sales;
+
+    await supabase
+      .from('credit_card_sale_installments')
+      .update({
+        status: 'received',
+        received_date: receivedDate
+      })
+      .eq('id', installmentId);
+
+    await supabase
+      .from('cash_transactions')
+      .insert([{
+        date: receivedDate,
+        type: 'entrada',
+        amount: installment.amount,
+        description: `Recebimento parcela ${installment.installment_number}/${sale.installments} - ${sale.client_name} (Cartão de Crédito)${observations ? ` - ${observations}` : ''}`,
+        category: 'recebimento_cartao',
+        related_id: sale.id,
+        payment_method: 'cartao_credito'
+      }]);
+
+    const { data: allInstallments } = await supabase
+      .from('credit_card_sale_installments')
+      .select('*')
+      .eq('credit_card_sale_id', sale.id);
+
+    const allReceived = allInstallments?.every(i => i.status === 'received');
+
+    if (allReceived) {
+      await supabase
+        .from('credit_card_sales')
+        .update({
+          remaining_amount: 0,
+          status: 'completed'
+        })
+        .eq('id', sale.id);
+    } else {
+      const remainingAmount = allInstallments
+        ?.filter(i => i.status === 'pending')
+        .reduce((sum, i) => sum + i.amount, 0) || 0;
+
+      await supabase
+        .from('credit_card_sales')
+        .update({ remaining_amount: remainingAmount })
+        .eq('id', sale.id);
+    }
+  },
+
+  async registerDebtInstallmentPayment(
+    installmentId: string,
+    paidDate: string,
+    observations?: string
+  ): Promise<void> {
+    const { data: installment, error: installmentError } = await supabase
+      .from('credit_card_debt_installments')
+      .select('*, credit_card_debts(*)')
+      .eq('id', installmentId)
+      .maybeSingle();
+
+    if (installmentError) throw installmentError;
+    if (!installment) throw new Error('Parcela não encontrada');
+
+    const debt = (installment as any).credit_card_debts;
+
+    await supabase
+      .from('credit_card_debt_installments')
+      .update({
+        status: 'paid',
+        paid_date: paidDate
+      })
+      .eq('id', installmentId);
+
+    await supabase
+      .from('cash_transactions')
+      .insert([{
+        date: paidDate,
+        type: 'saida',
+        amount: installment.amount,
+        description: `Pagamento parcela ${installment.installment_number}/${debt.installments} - ${debt.supplier_name} (Cartão de Crédito)${observations ? ` - ${observations}` : ''}`,
+        category: 'pagamento_cartao',
+        related_id: debt.id,
+        payment_method: 'cartao_credito'
+      }]);
+
+    const { data: allDebtInstallments } = await supabase
+      .from('credit_card_debt_installments')
+      .select('*')
+      .eq('credit_card_debt_id', debt.id);
+
+    const allPaid = allDebtInstallments?.every(i => i.status === 'paid');
+
+    if (allPaid) {
+      await supabase
+        .from('credit_card_debts')
+        .update({
+          remaining_amount: 0,
+          status: 'completed'
+        })
+        .eq('id', debt.id);
+    } else {
+      const remainingAmount = allDebtInstallments
+        ?.filter(i => i.status === 'pending')
+        .reduce((sum, i) => sum + i.amount, 0) || 0;
+
+      await supabase
+        .from('credit_card_debts')
+        .update({ remaining_amount: remainingAmount })
+        .eq('id', debt.id);
+    }
+  },
+
   async checkAndProcessDueInstallments(): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
 

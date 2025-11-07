@@ -6,6 +6,8 @@ import toast from 'react-hot-toast';
 import CreditCardSaleForm from './forms/CreditCardSaleForm';
 import CreditCardDebtForm from './forms/CreditCardDebtForm';
 import AnticipateSaleForm from './forms/AnticipateSaleForm';
+import SalesInstallmentsList from './credit-card/SalesInstallmentsList';
+import DebtsInstallmentsList from './credit-card/DebtsInstallmentsList';
 import { CreditCardService } from '../lib/creditCardService';
 
 interface CreditCardSale {
@@ -61,7 +63,7 @@ interface CreditCardDebtInstallment {
 }
 
 export default function CreditCard() {
-  const [activeTab, setActiveTab] = useState<'sales' | 'debts'>('sales');
+  const [activeTab, setActiveTab] = useState<'sales' | 'debts' | 'sales-installments' | 'debts-installments'>('sales');
   const [sales, setSales] = useState<CreditCardSale[]>([]);
   const [debts, setDebts] = useState<CreditCardDebt[]>([]);
   const [expandedSales, setExpandedSales] = useState<Set<string>>(new Set());
@@ -262,10 +264,10 @@ export default function CreditCard() {
         </div>
       </div>
 
-      <div className="flex gap-2 border-b border-gray-200">
+      <div className="flex gap-2 border-b border-gray-200 overflow-x-auto">
         <button
           onClick={() => setActiveTab('sales')}
-          className={`px-6 py-3 font-medium transition-colors ${
+          className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
             activeTab === 'sales'
               ? 'text-blue-600 border-b-2 border-blue-600'
               : 'text-gray-500 hover:text-gray-700'
@@ -274,14 +276,34 @@ export default function CreditCard() {
           Vendas
         </button>
         <button
+          onClick={() => setActiveTab('sales-installments')}
+          className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
+            activeTab === 'sales-installments'
+              ? 'text-cyan-600 border-b-2 border-cyan-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Parcelas a Receber
+        </button>
+        <button
           onClick={() => setActiveTab('debts')}
-          className={`px-6 py-3 font-medium transition-colors ${
+          className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
             activeTab === 'debts'
-              ? 'text-blue-600 border-b-2 border-blue-600'
+              ? 'text-red-600 border-b-2 border-red-600'
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
           Dívidas
+        </button>
+        <button
+          onClick={() => setActiveTab('debts-installments')}
+          className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
+            activeTab === 'debts-installments'
+              ? 'text-rose-600 border-b-2 border-rose-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Parcelas a Pagar
         </button>
       </div>
 
@@ -565,6 +587,26 @@ export default function CreditCard() {
             )}
           </div>
         </div>
+      )}
+
+      {activeTab === 'sales-installments' && (
+        <SalesInstallmentsList
+          dateRange={dateRange}
+          onPaymentSuccess={() => {
+            loadSales();
+            loadDebts();
+          }}
+        />
+      )}
+
+      {activeTab === 'debts-installments' && (
+        <DebtsInstallmentsList
+          dateRange={dateRange}
+          onPaymentSuccess={() => {
+            loadSales();
+            loadDebts();
+          }}
+        />
       )}
 
       {showSaleForm && (
