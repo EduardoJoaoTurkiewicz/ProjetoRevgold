@@ -1,23 +1,65 @@
 import React, { useState } from 'react';
-import { X, Upload, FileSpreadsheet } from 'lucide-react';
+import { X, Upload, FileSpreadsheet, AlertCircle } from 'lucide-react';
 
 interface BulkSalesImportModalProps {
   onClose: () => void;
 }
 
+const XLSX_MIME_TYPES = [
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+];
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
 export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isValidXlsxFile = (file: File): boolean => {
+    const hasValidExtension = file.name.toLowerCase().endsWith('.xlsx');
+    const hasValidMimeType = XLSX_MIME_TYPES.includes(file.type);
+    return hasValidExtension && hasValidMimeType;
+  };
+
+  const validateFile = (file: File): { valid: boolean; error?: string } => {
+    if (!file.name.toLowerCase().endsWith('.xlsx')) {
+      return {
+        valid: false,
+        error: 'Arquivo inválido. Por favor, selecione um arquivo .xlsx',
+      };
+    }
+
+    if (!XLSX_MIME_TYPES.includes(file.type)) {
+      return {
+        valid: false,
+        error: 'Tipo de arquivo inválido. O arquivo deve ser um Excel válido (.xlsx)',
+      };
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      return {
+        valid: false,
+        error: `Arquivo muito grande. O tamanho máximo permitido é ${(MAX_FILE_SIZE / 1024 / 1024).toFixed(0)}MB`,
+      };
+    }
+
+    return { valid: true };
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       const file = files[0];
-      if (file.name.endsWith('.xlsx')) {
+      const validation = validateFile(file);
+
+      if (validation.valid) {
         setSelectedFile(file);
+        setError(null);
       } else {
-        alert('Por favor, selecione um arquivo .xlsx válido.');
         setSelectedFile(null);
+        setError(validation.error || 'Erro ao validar arquivo');
       }
     }
   };
@@ -40,17 +82,21 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
       const file = files[0];
-      if (file.name.endsWith('.xlsx')) {
+      const validation = validateFile(file);
+
+      if (validation.valid) {
         setSelectedFile(file);
+        setError(null);
       } else {
-        alert('Por favor, selecione um arquivo .xlsx válido.');
         setSelectedFile(null);
+        setError(validation.error || 'Erro ao validar arquivo');
       }
     }
   };
 
   const clearFile = () => {
     setSelectedFile(null);
+    setError(null);
   };
 
   return (
@@ -84,7 +130,9 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
               onDragOver={handleDrag}
               onDrop={handleDrop}
               className={`relative border-2 border-dashed rounded-2xl p-12 text-center transition-all ${
-                dragActive
+                error
+                  ? 'border-red-300 bg-red-50'
+                  : dragActive
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50'
               }`}
@@ -99,15 +147,15 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
 
               {!selectedFile ? (
                 <div className="flex flex-col items-center gap-4">
-                  <div className="p-4 rounded-full bg-blue-100">
-                    <FileSpreadsheet className="w-8 h-8 text-blue-600" />
+                  <div className={`p-4 rounded-full ${error ? 'bg-red-100' : 'bg-blue-100'}`}>
+                    <FileSpreadsheet className={`w-8 h-8 ${error ? 'text-red-600' : 'text-blue-600'}`} />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-slate-900 mb-2">
                       Selecione ou arraste um arquivo .xlsx
                     </h3>
                     <p className="text-sm text-slate-600">
-                      Apenas arquivos Excel (.xlsx) são suportados
+                      Apenas arquivos Excel (.xlsx) são suportados. Máximo 10MB.
                     </p>
                   </div>
                   <button
@@ -152,11 +200,23 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
               )}
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="mt-4 p-4 bg-red-50 rounded-xl border border-red-200 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-red-900">Erro na validação</h4>
+                  <p className="text-sm text-red-800 mt-1">{error}</p>
+                </div>
+              </div>
+            )}
+
             {/* Instructions */}
             <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
               <h4 className="font-bold text-blue-900 mb-3">Instruções de Formato</h4>
               <ul className="text-sm text-blue-800 space-y-2 list-disc list-inside">
                 <li>O arquivo deve estar em formato .xlsx (Excel)</li>
+                <li>Tamanho máximo: 10MB</li>
                 <li>A primeira linha deve conter os cabeçalhos das colunas</li>
                 <li>Colunas obrigatórias: Data, Cliente, Valor Total, Método de Pagamento</li>
                 <li>As datas devem estar no formato DD/MM/YYYY</li>
