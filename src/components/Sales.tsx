@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Plus, CreditCard as Edit, Trash2, Eye, ShoppingCart, FileText, AlertCircle, X, DollarSign, Calendar, User, Package, TrendingUp, CheckCircle, Clock, Filter } from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Eye, ShoppingCart, FileText, AlertCircle, X, DollarSign, Calendar, User, Package, TrendingUp, CheckCircle, Clock, Filter, Upload } from 'lucide-react';
 import { formatDateForDisplay } from '../utils/dateUtils';
 import { useAppContext } from '../context/AppContext';
 import { Sale } from '../types';
 import { SaleForm } from './forms/SaleForm';
+import { BulkSalesImportModal } from './forms/BulkSalesImportModal';
 import { DeduplicationService } from '../lib/deduplicationService';
 import { UUIDManager } from '../lib/uuidManager';
 import { DebugPanel } from './DebugPanel';
@@ -18,6 +19,7 @@ export default function Sales() {
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [showTestPanel, setShowTestPanel] = useState(false);
   const [showOfflineViewer, setShowOfflineViewer] = useState(false);
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     client: '',
@@ -227,6 +229,13 @@ export default function Sales() {
           >
             <Package className="w-5 h-5" />
             Dados Offline
+          </button>
+          <button
+            onClick={() => setShowBulkImportModal(true)}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <Upload className="w-5 h-5" />
+            Vendas em Massa
           </button>
           <button
             onClick={() => setIsFormOpen(true)}
@@ -884,10 +893,17 @@ export default function Sales() {
       />
 
       {/* Offline Data Viewer */}
-      <OfflineDataViewer 
-        isOpen={showOfflineViewer} 
-        onClose={() => setShowOfflineViewer(false)} 
+      <OfflineDataViewer
+        isOpen={showOfflineViewer}
+        onClose={() => setShowOfflineViewer(false)}
       />
+
+      {/* Bulk Sales Import Modal */}
+      {showBulkImportModal && (
+        <BulkSalesImportModal
+          onClose={() => setShowBulkImportModal(false)}
+        />
+      )}
     </div>
   );
 }
