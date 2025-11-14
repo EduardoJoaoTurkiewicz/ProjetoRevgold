@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { X, Upload, FileSpreadsheet, AlertCircle } from 'lucide-react';
+import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { validateBulkSalesRows, hasAnyInvalidRows, getValidationSummary, ValidatedRow } from '../../lib/bulkSalesValidator';
 
 interface BulkSalesImportModalProps {
   onClose: () => void;
@@ -16,6 +18,8 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validatedRows, setValidatedRows] = useState<ValidatedRow[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const isValidXlsxFile = (file: File): boolean => {
     const hasValidExtension = file.name.toLowerCase().endsWith('.xlsx');
@@ -97,6 +101,46 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
   const clearFile = () => {
     setSelectedFile(null);
     setError(null);
+    setValidatedRows([]);
+  };
+
+  const processExcelFile = async (file: File) => {
+    try {
+      setIsProcessing(true);
+      setError(null);
+
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+
+      if (!worksheet) {
+        setError('Arquivo não contém dados válidos');
+        setIsProcessing(false);
+        return;
+      }
+
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      if (jsonData.length === 0) {
+        setError('O arquivo não contém linhas de dados');
+        setIsProcessing(false);
+        return;
+      }
+
+      const validated = validateBulkSalesRows(jsonData);
+      setValidatedRows(validated);
+    } catch (err) {
+      setError('Erro ao processar arquivo: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
+      setValidatedRows([]);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleProcessClick = async () => {
+    if (selectedFile) {
+      await processExcelFile(selectedFile);
+    }
   };
 
   return (
@@ -225,27 +269,140 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
             </div>
           </div>
 
+          {/* Preview Table */}
+          {validatedRows.length > 0 && (
+            <div className="mb-8">
+              {(() => {
+                const summary = getValidationSummary(validatedRows);
+                return (
+                  <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <h4 className="font-bold text-slate-900 mb-3">Resumo de Validação</h4>
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <p className="text-slate-600">Total de Linhas</p>
+                        <p className="text-2xl font-bold text-slate-900">{summary.totalRows}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-600">Válidas</p>
+                        <p className="text-2xl font-bold text-green-600">{summary.validRows}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-600">Inválidas</p>
+                        <p className="text-2xl font-bold text-red-600">{summary.invalidRows}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <h4 className="font-bold text-slate-900 mb-4">Prévia dos Dados</h4>
+              <div className="max-h-96 overflow-y-auto border border-slate-200 rounded-xl">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-slate-100 border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-700">#</th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Cliente</th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Data Venda</th>
+                      <th className="px-4 py-3 text-right font-semibold text-slate-700">Valor</th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Pagamento</th>
+                      <th className="px-4 py-3 text-center font-semibold text-slate-700">Parcelas</th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Vencimento</th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Vendedor</th>
+                      <th className="px-4 py-3 text-center font-semibold text-slate-700">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {validatedRows.map((row) => (
+                      <React.Fragment key={row.rowNumber}>
+                        <tr
+                          className={`border-b border-slate-200 transition-colors ${
+                            row.isValid ? 'bg-green-50 hover:bg-green-100' : 'bg-red-50 hover:bg-red-100'
+                          }`}
+                        >
+                          <td className="px-4 py-3 font-semibold text-slate-700">{row.rowNumber}</td>
+                          <td className="px-4 py-3 text-slate-700">{row.data.cliente}</td>
+                          <td className="px-4 py-3 text-slate-700">{row.data.data_da_venda}</td>
+                          <td className="px-4 py-3 text-right text-slate-700">
+                            R$ {row.data.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="px-4 py-3 text-slate-700">{row.data.forma_de_pagamento}</td>
+                          <td className="px-4 py-3 text-center text-slate-700">{row.data.parcelas}</td>
+                          <td className="px-4 py-3 text-slate-700">{row.data.vencimento_inicial}</td>
+                          <td className="px-4 py-3 text-slate-700">{row.data.vendedor}</td>
+                          <td className="px-4 py-3 text-center">
+                            {row.isValid ? (
+                              <CheckCircle2 className="w-5 h-5 text-green-600 mx-auto" />
+                            ) : (
+                              <XCircle className="w-5 h-5 text-red-600 mx-auto" />
+                            )}
+                          </td>
+                        </tr>
+                        {!row.isValid && row.errors.length > 0 && (
+                          <tr className="bg-red-50 border-b border-red-200">
+                            <td colSpan={9} className="px-4 py-3">
+                              <div className="flex items-start gap-2">
+                                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                  <p className="font-semibold text-red-900 mb-2">Erros encontrados:</p>
+                                  <ul className="space-y-1 text-sm text-red-800">
+                                    {row.errors.map((err, idx) => (
+                                      <li key={idx} className="flex items-start gap-2">
+                                        <span className="text-red-600">•</span>
+                                        <span>
+                                          <strong>{err.field}:</strong> {err.message}
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {hasAnyInvalidRows(validatedRows) && (
+                <div className="mt-4 p-4 bg-red-50 rounded-xl border border-red-200 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-red-900">Validação não passou</h4>
+                    <p className="text-sm text-red-800 mt-1">
+                      Corrija os erros acima antes de criar as vendas. O botão "Criar vendas" será ativado quando todos os
+                      dados forem válidos.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Buttons */}
           <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
-            <button
-              onClick={onClose}
-              className="btn-secondary"
-            >
+            <button onClick={onClose} className="btn-secondary">
               Fechar
             </button>
             <button
-              disabled={!selectedFile}
+              onClick={handleProcessClick}
+              disabled={!selectedFile || isProcessing}
               className={`px-6 py-2 rounded-xl font-semibold transition-all ${
-                selectedFile
+                selectedFile && !isProcessing
                   ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer modern-shadow-lg'
                   : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
               }`}
             >
-              Processar arquivo
+              {isProcessing ? 'Processando...' : 'Processar arquivo'}
             </button>
             <button
-              disabled
-              className="px-6 py-2 rounded-xl font-semibold bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+              disabled={validatedRows.length === 0 || hasAnyInvalidRows(validatedRows)}
+              className={`px-6 py-2 rounded-xl font-semibold transition-all ${
+                validatedRows.length > 0 && !hasAnyInvalidRows(validatedRows)
+                  ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer modern-shadow-lg'
+                  : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
+              }`}
             >
               Criar vendas
             </button>

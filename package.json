@@ -23,7 +23,8 @@
     "react-router-dom": "^6.28.0",
     "recharts": "^3.1.0",
     "three": "^0.158.0",
-    "uuid": "^12.0.0"
+    "uuid": "^12.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
