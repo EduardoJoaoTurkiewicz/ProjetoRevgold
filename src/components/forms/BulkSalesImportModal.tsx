@@ -13,9 +13,13 @@ interface BulkSalesImportModalProps {
 
 interface CreationResult {
   rowNumber: number;
+  clientName: string;
+  paymentType: string;
+  totalValue: number;
   success: boolean;
   saleId?: string;
   error?: string;
+  timestamp: number;
 }
 
 interface BulkCreationStats {
@@ -23,6 +27,8 @@ interface BulkCreationStats {
   successCount: number;
   failureCount: number;
   results: CreationResult[];
+  totalValueProcessed: number;
+  processingTimeMs: number;
 }
 
 const XLSX_MIME_TYPES = [
@@ -251,14 +257,14 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
       return;
     }
 
+    const totalValue = validRowsOnly.reduce((sum, row) => sum + row.data.valor_total, 0);
     const proceed = window.confirm(
-      `Você está prestes a criar ${validRowsOnly.length} venda(s) totalizando R$ ${validRowsOnly
-        .reduce((sum, row) => sum + row.data.valor_total, 0)
-        .toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.\n\nDeseja continuar?`
+      `Você está prestes a criar ${validRowsOnly.length} venda(s) totalizando R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.\n\nDeseja continuar?`
     );
 
     if (!proceed) return;
 
+    const startTime = Date.now();
     setIsCreating(true);
     setCreationProgress({ current: 0, total: validRowsOnly.length });
     const results: CreationResult[] = [];
@@ -268,30 +274,49 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
       setCreationProgress({ current: i + 1, total: validRowsOnly.length });
 
       try {
+        console.log(`📝 Processing row ${row.rowNumber}: ${row.data.cliente} - ${row.data.forma_de_pagamento}`);
         const saleData = mapValidatedRowToSale(row);
         const result = await createSale(saleData);
 
-        results.push({
+        const createdResult: CreationResult = {
           rowNumber: row.rowNumber,
+          clientName: row.data.cliente,
+          paymentType: row.data.forma_de_pagamento,
+          totalValue: row.data.valor_total,
           success: true,
-          saleId: result?.id,
-        });
+          saleId: typeof result === 'string' ? result : result?.id,
+          timestamp: Date.now(),
+        };
+
+        results.push(createdResult);
+        console.log(`✅ Sale created successfully (row ${row.rowNumber}): ${createdResult.saleId}`);
       } catch (err) {
-        console.error(`Erro ao criar venda da linha ${row.rowNumber}:`, err);
+        const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+        console.error(`❌ Error creating sale for row ${row.rowNumber} (${row.data.cliente}):`, err);
+
         results.push({
           rowNumber: row.rowNumber,
+          clientName: row.data.cliente,
+          paymentType: row.data.forma_de_pagamento,
+          totalValue: row.data.valor_total,
           success: false,
-          error: err instanceof Error ? err.message : 'Erro desconhecido',
+          error: errorMessage,
+          timestamp: Date.now(),
         });
       }
     }
 
+    const processingTimeMs = Date.now() - startTime;
     setIsCreating(false);
+
+    const successfulResults = results.filter(r => r.success);
     const stats: BulkCreationStats = {
       totalRows: validRowsOnly.length,
-      successCount: results.filter(r => r.success).length,
+      successCount: successfulResults.length,
       failureCount: results.filter(r => !r.success).length,
       results,
+      totalValueProcessed: successfulResults.reduce((sum, r) => sum + r.totalValue, 0),
+      processingTimeMs,
     };
     setCreationStats(stats);
   };
@@ -558,32 +583,87 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
           {creationStats && !isCreating && (
             <div className="mb-8 p-6 bg-slate-50 rounded-xl border border-slate-200">
               <div className="mb-6">
-                <h4 className="text-xl font-bold text-slate-900 mb-4">Resultado da Criação em Massa</h4>
-                <div className="grid grid-cols-3 gap-4 mb-6">
+                <h4 className="text-2xl font-bold text-slate-900 mb-6">Resumo da Criação em Massa</h4>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                   <div className="p-4 bg-white rounded-lg border border-slate-200 text-center">
-                    <p className="text-slate-600 text-sm font-semibold mb-1">Total Processado</p>
+                    <p className="text-slate-600 text-xs font-semibold mb-2 uppercase">Total Processado</p>
                     <p className="text-3xl font-bold text-slate-900">{creationStats.totalRows}</p>
                   </div>
                   <div className="p-4 bg-green-50 rounded-lg border border-green-200 text-center">
-                    <p className="text-green-700 text-sm font-semibold mb-1">Bem-sucedidas</p>
+                    <p className="text-green-700 text-xs font-semibold mb-2 uppercase">Bem-sucedidas</p>
                     <p className="text-3xl font-bold text-green-600">{creationStats.successCount}</p>
                   </div>
                   <div className="p-4 bg-red-50 rounded-lg border border-red-200 text-center">
-                    <p className="text-red-700 text-sm font-semibold mb-1">Falhas</p>
+                    <p className="text-red-700 text-xs font-semibold mb-2 uppercase">Falhas</p>
                     <p className="text-3xl font-bold text-red-600">{creationStats.failureCount}</p>
+                  </div>
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 text-center">
+                    <p className="text-blue-700 text-xs font-semibold mb-2 uppercase">Taxa Sucesso</p>
+                    <p className="text-3xl font-bold text-blue-600">
+                      {((creationStats.successCount / creationStats.totalRows) * 100).toFixed(0)}%
+                    </p>
                   </div>
                 </div>
 
+                <div className="mb-6 p-4 bg-white rounded-lg border border-slate-200">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-slate-600 font-semibold mb-1">Valor Total Criado:</p>
+                      <p className="text-lg font-bold text-green-700">
+                        R$ {creationStats.totalValueProcessed.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-slate-600 font-semibold mb-1">Tempo de Processamento:</p>
+                      <p className="text-lg font-bold text-slate-900">
+                        {(creationStats.processingTimeMs / 1000).toFixed(1)}s
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {creationStats.successCount > 0 && (
+                  <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200 max-h-64 overflow-y-auto">
+                    <h5 className="font-bold text-green-900 mb-3 flex items-center gap-2">
+                      <span className="text-lg">✓</span> Vendas Criadas com Sucesso:
+                    </h5>
+                    <ul className="space-y-2 text-sm">
+                      {creationStats.results
+                        .filter(r => r.success)
+                        .map((result, idx) => (
+                          <li key={idx} className="text-green-800 flex items-start gap-3">
+                            <span className="font-bold flex-shrink-0 text-green-600">#{result.rowNumber}</span>
+                            <div className="flex-1">
+                              <p className="font-semibold">{result.clientName}</p>
+                              <p className="text-xs text-green-700">
+                                {result.paymentType} - R$ {result.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} - ID: {result.saleId}
+                              </p>
+                            </div>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                )}
+
                 {creationStats.failureCount > 0 && (
                   <div className="p-4 bg-red-50 rounded-lg border border-red-200 max-h-64 overflow-y-auto">
-                    <h5 className="font-bold text-red-900 mb-3">Erros Detectados:</h5>
-                    <ul className="space-y-2 text-sm">
+                    <h5 className="font-bold text-red-900 mb-3 flex items-center gap-2">
+                      <span className="text-lg">✕</span> Erros Detectados:
+                    </h5>
+                    <ul className="space-y-3 text-sm">
                       {creationStats.results
                         .filter(r => !r.success)
                         .map((result, idx) => (
-                          <li key={idx} className="text-red-800 flex items-start gap-2">
-                            <span className="font-bold">Linha {result.rowNumber}:</span>
-                            <span>{result.error}</span>
+                          <li key={idx} className="text-red-800 flex items-start gap-3 p-3 bg-white rounded border border-red-200">
+                            <span className="font-bold flex-shrink-0 text-red-600">#{result.rowNumber}</span>
+                            <div className="flex-1">
+                              <p className="font-semibold">{result.clientName}</p>
+                              <p className="text-xs text-red-700 mt-1">{result.paymentType}</p>
+                              <p className="text-xs text-red-600 mt-1 font-mono bg-red-100 p-2 rounded mt-2 break-words">
+                                {result.error}
+                              </p>
+                            </div>
                           </li>
                         ))}
                     </ul>
