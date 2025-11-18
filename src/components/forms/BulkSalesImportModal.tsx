@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, XCircle, Loader } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { v4 as uuidv4 } from 'uuid';
 import { validateBulkSalesRows, hasAnyInvalidRows, getValidationSummary, ValidatedRow } from '../../lib/bulkSalesValidator';
 import { useAppContext } from '../../context/AppContext';
 import { Sale, PaymentMethod } from '../../types';
@@ -197,7 +198,7 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
     return seller?.id || null;
   };
 
-  const mapValidatedRowToSale = (row: ValidatedRow): Omit<Sale, 'id' | 'createdAt'> => {
+  const mapValidatedRowToSale = (row: ValidatedRow, bulkMetadata?: { bulk_insert_id: string; origin_file_name: string }): Omit<Sale, 'id' | 'createdAt'> & { bulk_insert_id?: string; origin_file_name?: string } => {
     const totalValue = safeNumber(row.data.valor_total, 0);
     const sellerId = findSellerIdByName(row.data.vendedor);
     const saleDate = convertExcelDateToISOString(row.data.data_da_venda);
@@ -228,7 +229,7 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
 
     const pendingAmount = totalValue - receivedAmount;
 
-    const sale: Omit<Sale, 'id' | 'createdAt'> = {
+    const sale: Omit<Sale, 'id' | 'createdAt'> & { bulk_insert_id?: string; origin_file_name?: string } = {
       date: saleDate,
       client: row.data.cliente,
       sellerId: sellerId,
@@ -241,6 +242,11 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
       status: pendingAmount <= 0.01 ? 'pago' : receivedAmount > 0 ? 'parcial' : 'pendente',
       custom_commission_rate: 5,
     };
+
+    if (bulkMetadata) {
+      sale.bulk_insert_id = bulkMetadata.bulk_insert_id;
+      sale.origin_file_name = bulkMetadata.origin_file_name;
+    }
 
     return sale;
   };
@@ -269,13 +275,19 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
     setCreationProgress({ current: 0, total: validRowsOnly.length });
     const results: CreationResult[] = [];
 
+    const bulkInsertId = uuidv4();
+    const originFileName = selectedFile?.name || 'arquivo_importacao';
+    const bulkMetadata = { bulk_insert_id: bulkInsertId, origin_file_name: originFileName };
+
+    console.log(`🔄 Starting bulk import with batch ID: ${bulkInsertId} from file: ${originFileName}`);
+
     for (let i = 0; i < validRowsOnly.length; i++) {
       const row = validRowsOnly[i];
       setCreationProgress({ current: i + 1, total: validRowsOnly.length });
 
       try {
-        console.log(`📝 Processing row ${row.rowNumber}: ${row.data.cliente} - ${row.data.forma_de_pagamento}`);
-        const saleData = mapValidatedRowToSale(row);
+        console.log(`📝 Processing row ${row.rowNumber}: ${row.data.cliente} - ${row.data.forma_de_pagamento} [Batch: ${bulkInsertId}]`);
+        const saleData = mapValidatedRowToSale(row, bulkMetadata);
         const result = await createSale(saleData);
 
         const createdResult: CreationResult = {
@@ -318,6 +330,8 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
       totalValueProcessed: successfulResults.reduce((sum, r) => sum + r.totalValue, 0),
       processingTimeMs,
     };
+
+    console.log(`✅ Bulk import completed with batch ID: ${bulkInsertId} - ${successfulResults.length}/${validRowsOnly.length} successful`);
     setCreationStats(stats);
   };
 

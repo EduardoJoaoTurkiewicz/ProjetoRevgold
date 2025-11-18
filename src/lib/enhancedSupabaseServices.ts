@@ -99,16 +99,24 @@ export const enhancedSalesService = {
     return DeduplicationService.removeDuplicatesById(salesData);
   },
 
-  async create(sale: Omit<Sale, 'id' | 'createdAt'>): Promise<string> {
+  async create(sale: Omit<Sale, 'id' | 'createdAt'> & { bulk_insert_id?: string; origin_file_name?: string }): Promise<string> {
     console.log('🔄 Enhanced sales service - creating sale:', sale.client);
-    
+
+    // Extract optional bulk metadata
+    const bulkInsertId = (sale as any).bulk_insert_id;
+    const originFileName = (sale as any).origin_file_name;
+
+    if (bulkInsertId) {
+      console.log(`📦 Sale belongs to batch: ${bulkInsertId} from file: ${originFileName}`);
+    }
+
     // Generate UUID for the sale
     const saleId = UUIDManager.generateUUID();
     const saleWithId = { ...sale, id: saleId };
-    
+
     // Clean UUID fields
     const cleanedSale = UUIDManager.cleanObjectUUIDs(saleWithId);
-    
+
     // Sanitize monetary values
     const sanitizedSale = {
       ...cleanedSale,
@@ -124,9 +132,9 @@ export const enhancedSalesService = {
         installmentInterval: safeNumber(method.installmentInterval, 30)
       }))
     };
-    
+
     logMonetaryValues(sanitizedSale, 'Enhanced Create Sale');
-    
+
     if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
       console.log('💾 Saving sale offline with enhanced storage');
       return await saveOfflineEnhanced('sales', sanitizedSale);
@@ -141,52 +149,59 @@ export const enhancedSalesService = {
       }
 
       console.log('🔄 Creating sale in Supabase with RPC...');
-      const { data, error } = await supabase.rpc('create_sale', { 
-        payload: transformToSnakeCase(sanitizedSale) 
-      });
-      
+      const payload = transformToSnakeCase(sanitizedSale);
+
+      // Add optional bulk metadata if provided
+      if (bulkInsertId) {
+        (payload as any).bulk_insert_id = bulkInsertId;
+      }
+      if (originFileName) {
+        (payload as any).origin_file_name = originFileName;
+      }
+
+      const { data, error } = await supabase.rpc('create_sale', { payload });
+
       if (error) {
         console.error('❌ Supabase RPC error:', error);
         throw error;
       }
-      
+
       // Parse the RPC response to extract the actual sale ID
-      let saleId: string;
+      let returnedSaleId: string;
       if (typeof data === 'string') {
         try {
           const parsedData = JSON.parse(data);
-          saleId = parsedData.sale_id || data;
+          returnedSaleId = parsedData.sale_id || data;
         } catch {
-          saleId = data;
+          returnedSaleId = data;
         }
       } else if (data && typeof data === 'object' && data.sale_id) {
-        saleId = data.sale_id;
+        returnedSaleId = data.sale_id;
       } else {
-        saleId = data;
+        returnedSaleId = data;
       }
-      
-      console.log('✅ Enhanced sale created with ID:', saleId);
-      
+
+      console.log('✅ Enhanced sale created with ID:', returnedSaleId);
+
       // Process installments after sale creation
       try {
         const { InstallmentService } = await import('./installmentService');
-        await InstallmentService.processInstallmentsForSale(saleId, sanitizedSale.client, sanitizedSale.paymentMethods || []);
-        console.log('✅ Installments processed successfully for sale:', saleId);
+        await InstallmentService.processInstallmentsForSale(returnedSaleId, sanitizedSale.client, sanitizedSale.paymentMethods || []);
+        console.log('✅ Installments processed successfully for sale:', returnedSaleId);
       } catch (installmentError) {
         console.error('❌ Error processing installments for sale:', installmentError);
-        // Don't throw here - sale was created successfully, installments are secondary
       }
-      
-      return saleId;
+
+      return returnedSaleId;
     } catch (error) {
       console.error('❌ Error creating sale:', error);
-      
+
       // Save offline if network error
       if (error?.message?.includes('Failed to fetch') || error?.message?.includes('Network error')) {
         console.log('💾 Saving sale offline due to network error');
         return await saveOfflineEnhanced('sales', sanitizedSale);
       }
-      
+
       throw error;
     }
   },

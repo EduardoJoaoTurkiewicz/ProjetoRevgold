@@ -107,7 +107,7 @@ CREATE POLICY "Allow all operations" ON create_sale_errors
   USING (true)
   WITH CHECK (true);
 
--- RPC function to create sale with error handling
+-- RPC function to create sale with error handling and optional bulk metadata
 CREATE OR REPLACE FUNCTION create_sale(payload jsonb)
 RETURNS uuid AS $$
 DECLARE
@@ -119,10 +119,14 @@ DECLARE
   installment_interval integer;
   current_due_date date;
   i integer;
+  bulk_insert_id_val text;
+  origin_file_name_val text;
+  insert_query text;
+  has_bulk_columns boolean := false;
 BEGIN
   -- Generate new UUID for the sale
   sale_id := uuid_generate_v4();
-  
+
   -- Validate and convert seller_id
   IF payload->>'seller_id' IS NOT NULL AND payload->>'seller_id' != '' THEN
     BEGIN
@@ -133,44 +137,100 @@ BEGIN
   ELSE
     seller_uuid := NULL;
   END IF;
-  
-  -- Insert the sale
-  INSERT INTO sales (
-    id,
-    date,
-    delivery_date,
-    client,
-    seller_id,
-    products,
-    observations,
-    total_value,
-    payment_methods,
-    received_amount,
-    pending_amount,
-    status,
-    payment_description,
-    payment_observations,
-    custom_commission_rate
-  ) VALUES (
-    sale_id,
-    COALESCE((payload->>'date')::date, CURRENT_DATE),
-    CASE WHEN payload->>'delivery_date' IS NOT NULL AND payload->>'delivery_date' != '' 
-         THEN (payload->>'delivery_date')::date 
-         ELSE NULL END,
-    payload->>'client',
-    seller_uuid,
-    COALESCE(payload->'products', '[]'::jsonb),
-    payload->>'observations',
-    COALESCE((payload->>'total_value')::numeric, 0),
-    COALESCE(payload->'payment_methods', '[]'::jsonb),
-    COALESCE((payload->>'received_amount')::numeric, 0),
-    COALESCE((payload->>'pending_amount')::numeric, 0),
-    COALESCE(payload->>'status', 'pendente'),
-    payload->>'payment_description',
-    payload->>'payment_observations',
-    COALESCE((payload->>'custom_commission_rate')::numeric, 5.00)
-  );
-  
+
+  -- Extract optional bulk metadata
+  bulk_insert_id_val := payload->>'bulk_insert_id';
+  origin_file_name_val := payload->>'origin_file_name';
+
+  -- Check if bulk metadata columns exist (graceful degradation)
+  BEGIN
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'sales' AND column_name = 'bulk_insert_id'
+    ) INTO has_bulk_columns;
+  EXCEPTION WHEN OTHERS THEN
+    has_bulk_columns := false;
+  END;
+
+  -- Insert the sale with optional bulk metadata fields
+  IF has_bulk_columns AND (bulk_insert_id_val IS NOT NULL OR origin_file_name_val IS NOT NULL) THEN
+    INSERT INTO sales (
+      id,
+      date,
+      delivery_date,
+      client,
+      seller_id,
+      products,
+      observations,
+      total_value,
+      payment_methods,
+      received_amount,
+      pending_amount,
+      status,
+      payment_description,
+      payment_observations,
+      custom_commission_rate,
+      bulk_insert_id,
+      origin_file_name
+    ) VALUES (
+      sale_id,
+      COALESCE((payload->>'date')::date, CURRENT_DATE),
+      CASE WHEN payload->>'delivery_date' IS NOT NULL AND payload->>'delivery_date' != ''
+           THEN (payload->>'delivery_date')::date
+           ELSE NULL END,
+      payload->>'client',
+      seller_uuid,
+      COALESCE(payload->'products', '[]'::jsonb),
+      payload->>'observations',
+      COALESCE((payload->>'total_value')::numeric, 0),
+      COALESCE(payload->'payment_methods', '[]'::jsonb),
+      COALESCE((payload->>'received_amount')::numeric, 0),
+      COALESCE((payload->>'pending_amount')::numeric, 0),
+      COALESCE(payload->>'status', 'pendente'),
+      payload->>'payment_description',
+      payload->>'payment_observations',
+      COALESCE((payload->>'custom_commission_rate')::numeric, 5.00),
+      bulk_insert_id_val,
+      origin_file_name_val
+    );
+  ELSE
+    INSERT INTO sales (
+      id,
+      date,
+      delivery_date,
+      client,
+      seller_id,
+      products,
+      observations,
+      total_value,
+      payment_methods,
+      received_amount,
+      pending_amount,
+      status,
+      payment_description,
+      payment_observations,
+      custom_commission_rate
+    ) VALUES (
+      sale_id,
+      COALESCE((payload->>'date')::date, CURRENT_DATE),
+      CASE WHEN payload->>'delivery_date' IS NOT NULL AND payload->>'delivery_date' != ''
+           THEN (payload->>'delivery_date')::date
+           ELSE NULL END,
+      payload->>'client',
+      seller_uuid,
+      COALESCE(payload->'products', '[]'::jsonb),
+      payload->>'observations',
+      COALESCE((payload->>'total_value')::numeric, 0),
+      COALESCE(payload->'payment_methods', '[]'::jsonb),
+      COALESCE((payload->>'received_amount')::numeric, 0),
+      COALESCE((payload->>'pending_amount')::numeric, 0),
+      COALESCE(payload->>'status', 'pendente'),
+      payload->>'payment_description',
+      payload->>'payment_observations',
+      COALESCE((payload->>'custom_commission_rate')::numeric, 5.00)
+    );
+  END IF;
+
   -- Process payment methods for installments
   FOR payment_method IN SELECT jsonb_array_elements(COALESCE(payload->'payment_methods', '[]'::jsonb))
   LOOP
@@ -178,12 +238,12 @@ BEGIN
     installment_value := COALESCE((payment_method->>'installment_value')::numeric, 0);
     installment_interval := COALESCE((payment_method->>'installment_interval')::integer, 30);
     current_due_date := COALESCE((payload->>'date')::date, CURRENT_DATE);
-    
+
     -- Create checks for check payments
     IF (payment_method->>'method') = 'cheque' AND installment_count > 0 AND installment_value > 0 THEN
       FOR i IN 1..installment_count LOOP
         current_due_date := COALESCE((payload->>'date')::date, CURRENT_DATE) + (i * installment_interval);
-        
+
         INSERT INTO checks (
           sale_id,
           client,
@@ -205,12 +265,12 @@ BEGIN
         );
       END LOOP;
     END IF;
-    
+
     -- Create boletos for boleto payments
     IF (payment_method->>'method') = 'boleto' AND installment_count > 0 AND installment_value > 0 THEN
       FOR i IN 1..installment_count LOOP
         current_due_date := COALESCE((payload->>'date')::date, CURRENT_DATE) + (i * installment_interval);
-        
+
         INSERT INTO boletos (
           sale_id,
           client,
@@ -231,14 +291,14 @@ BEGIN
       END LOOP;
     END IF;
   END LOOP;
-  
+
   RETURN sale_id;
-  
+
 EXCEPTION WHEN OTHERS THEN
   -- Log the error
   INSERT INTO create_sale_errors (error_message, payload)
   VALUES (SQLERRM, payload);
-  
+
   -- Re-raise the error
   RAISE;
 END;
