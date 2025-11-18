@@ -336,7 +336,7 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm revgold-animate-fade-in">
       <div className="bg-white rounded-3xl max-w-2xl w-full modern-shadow-xl">
         <div className="p-8">
           {/* Header */}
@@ -365,12 +365,12 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
               onDragLeave={handleDrag}
               onDragOver={handleDrag}
               onDrop={handleDrop}
-              className={`relative border-2 border-dashed rounded-2xl p-12 text-center transition-all ${
+              className={`relative border-2 border-dashed rounded-3xl p-12 text-center transition-all duration-300 ${
                 error
-                  ? 'border-red-300 bg-red-50'
+                  ? 'border-red-300 bg-red-50 shadow-lg shadow-red-100'
                   : dragActive
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50'
+                  ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-100'
+                  : 'border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50 shadow-md hover:shadow-lg'
               }`}
             >
               <input
@@ -438,7 +438,7 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
 
             {/* Error Message */}
             {error && (
-              <div className="mt-4 p-4 bg-red-50 rounded-xl border border-red-200 flex items-start gap-3">
+              <div className="mt-4 p-4 bg-red-50 rounded-2xl border border-red-200 flex items-start gap-3 shadow-md revgold-animate-slide-up">
                 <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <h4 className="font-semibold text-red-900">Erro na validação</h4>
@@ -447,8 +447,18 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
               </div>
             )}
 
+            {isProcessing && (
+              <div className="mt-4 p-4 bg-blue-50 rounded-2xl border border-blue-200 flex items-center gap-3 shadow-md revgold-animate-slide-up">
+                <Loader className="w-5 h-5 text-blue-600 animate-spin" />
+                <div>
+                  <h4 className="font-semibold text-blue-900">Processando arquivo</h4>
+                  <p className="text-sm text-blue-800">Lendo e validando os dados...</p>
+                </div>
+              </div>
+            )}
+
             {/* Instructions */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
+            <div className="mt-6 p-5 bg-blue-50 rounded-2xl border border-blue-200 shadow-md">
               <h4 className="font-bold text-blue-900 mb-3">Instruções de Formato</h4>
               <ul className="text-sm text-blue-800 space-y-2 list-disc list-inside">
                 <li>O arquivo deve estar em formato .xlsx (Excel)</li>
@@ -463,24 +473,24 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
 
           {/* Preview Table */}
           {validatedRows.length > 0 && (
-            <div className="mb-8">
+            <div className="mb-8 revgold-animate-slide-up">
               {(() => {
                 const summary = getValidationSummary(validatedRows);
                 return (
-                  <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                    <h4 className="font-bold text-slate-900 mb-3">Resumo de Validação</h4>
+                  <div className="mb-6 p-6 bg-slate-50 rounded-2xl border border-slate-200 shadow-md">
+                    <h4 className="font-bold text-slate-900 mb-4">Resumo de Validação</h4>
                     <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div>
+                      <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
                         <p className="text-slate-600">Total de Linhas</p>
-                        <p className="text-2xl font-bold text-slate-900">{summary.totalRows}</p>
+                        <p className="text-2xl font-bold text-slate-900 mt-2">{summary.totalRows}</p>
                       </div>
-                      <div>
-                        <p className="text-slate-600">Válidas</p>
-                        <p className="text-2xl font-bold text-green-600">{summary.validRows}</p>
+                      <div className="p-4 bg-green-50 rounded-xl border border-green-200 shadow-sm">
+                        <p className="text-green-700">Válidas</p>
+                        <p className="text-2xl font-bold text-green-600 mt-2">{summary.validRows}</p>
                       </div>
-                      <div>
-                        <p className="text-slate-600">Inválidas</p>
-                        <p className="text-2xl font-bold text-red-600">{summary.invalidRows}</p>
+                      <div className="p-4 bg-red-50 rounded-xl border border-red-200 shadow-sm">
+                        <p className="text-red-700">Inválidas</p>
+                        <p className="text-2xl font-bold text-red-600 mt-2">{summary.invalidRows}</p>
                       </div>
                     </div>
                   </div>
@@ -488,9 +498,9 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
               })()}
 
               <h4 className="font-bold text-slate-900 mb-4">Prévia dos Dados</h4>
-              <div className="max-h-96 overflow-y-auto border border-slate-200 rounded-xl">
+              <div className="max-h-96 overflow-y-auto border border-slate-200 rounded-2xl shadow-md revgold-scrollbar">
                 <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-slate-100 border-b border-slate-200">
+                  <thead className="sticky top-0 bg-gradient-to-r from-slate-100 to-slate-50 border-b border-slate-200">
                     <tr>
                       <th className="px-4 py-3 text-left font-semibold text-slate-700">#</th>
                       <th className="px-4 py-3 text-left font-semibold text-slate-700">Cliente</th>
@@ -504,12 +514,15 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {validatedRows.map((row) => (
+                    {validatedRows.map((row, idx) => (
                       <React.Fragment key={row.rowNumber}>
                         <tr
-                          className={`border-b border-slate-200 transition-colors ${
-                            row.isValid ? 'bg-green-50 hover:bg-green-100' : 'bg-red-50 hover:bg-red-100'
+                          className={`border-b border-slate-100 transition-all duration-300 hover:shadow-md ${
+                            row.isValid
+                              ? 'bg-green-50 hover:bg-green-100'
+                              : 'bg-red-50 hover:bg-red-100'
                           }`}
+                          style={{ animationDelay: `${idx * 0.05}s` }}
                         >
                           <td className="px-4 py-3 font-semibold text-slate-700">{row.rowNumber}</td>
                           <td className="px-4 py-3 text-slate-700">{row.data.cliente}</td>
@@ -530,16 +543,16 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
                           </td>
                         </tr>
                         {!row.isValid && row.errors.length > 0 && (
-                          <tr className="bg-red-50 border-b border-red-200">
-                            <td colSpan={9} className="px-4 py-3">
+                          <tr className="bg-red-100 border-b border-red-300">
+                            <td colSpan={9} className="px-4 py-4">
                               <div className="flex items-start gap-2">
-                                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                                <AlertCircle className="w-5 h-5 text-red-700 flex-shrink-0 mt-0.5" />
                                 <div className="flex-1">
                                   <p className="font-semibold text-red-900 mb-2">Erros encontrados:</p>
                                   <ul className="space-y-1 text-sm text-red-800">
                                     {row.errors.map((err, idx) => (
                                       <li key={idx} className="flex items-start gap-2">
-                                        <span className="text-red-600">•</span>
+                                        <span className="text-red-700 font-bold">•</span>
                                         <span>
                                           <strong>{err.field}:</strong> {err.message}
                                         </span>
@@ -558,7 +571,7 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
               </div>
 
               {hasAnyInvalidRows(validatedRows) && (
-                <div className="mt-4 p-4 bg-red-50 rounded-xl border border-red-200 flex items-start gap-3">
+                <div className="mt-4 p-5 bg-red-50 rounded-2xl border border-red-200 flex items-start gap-3 shadow-md revgold-animate-slide-up">
                   <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <h4 className="font-semibold text-red-900">Validação não passou</h4>
@@ -574,7 +587,7 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
 
           {/* Creation Progress */}
           {isCreating && (
-            <div className="mb-8 p-6 bg-blue-50 rounded-xl border border-blue-200">
+            <div className="mb-8 p-6 bg-blue-50 rounded-2xl border border-blue-200 shadow-md revgold-animate-slide-up">
               <div className="flex items-center gap-4 mb-4">
                 <Loader className="w-6 h-6 text-blue-600 animate-spin" />
                 <div>
@@ -584,9 +597,9 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
                   </p>
                 </div>
               </div>
-              <div className="w-full bg-blue-200 rounded-full h-2">
+              <div className="w-full bg-blue-200 rounded-full h-3 overflow-hidden shadow-sm">
                 <div
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all"
+                  className="bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 h-3 rounded-full transition-all duration-500"
                   style={{ width: `${(creationProgress.current / creationProgress.total) * 100}%` }}
                 ></div>
               </div>
@@ -595,24 +608,24 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
 
           {/* Results Modal */}
           {creationStats && !isCreating && (
-            <div className="mb-8 p-6 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="mb-8 p-6 bg-slate-50 rounded-2xl border border-slate-200 shadow-md revgold-animate-scale-in">
               <div className="mb-6">
                 <h4 className="text-2xl font-bold text-slate-900 mb-6">Resumo da Criação em Massa</h4>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                  <div className="p-4 bg-white rounded-lg border border-slate-200 text-center">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm text-center hover:shadow-md transition-shadow duration-300">
                     <p className="text-slate-600 text-xs font-semibold mb-2 uppercase">Total Processado</p>
                     <p className="text-3xl font-bold text-slate-900">{creationStats.totalRows}</p>
                   </div>
-                  <div className="p-4 bg-green-50 rounded-lg border border-green-200 text-center">
+                  <div className="p-5 bg-green-50 rounded-2xl border border-green-200 shadow-sm text-center hover:shadow-md transition-shadow duration-300">
                     <p className="text-green-700 text-xs font-semibold mb-2 uppercase">Bem-sucedidas</p>
                     <p className="text-3xl font-bold text-green-600">{creationStats.successCount}</p>
                   </div>
-                  <div className="p-4 bg-red-50 rounded-lg border border-red-200 text-center">
+                  <div className="p-5 bg-red-50 rounded-2xl border border-red-200 shadow-sm text-center hover:shadow-md transition-shadow duration-300">
                     <p className="text-red-700 text-xs font-semibold mb-2 uppercase">Falhas</p>
                     <p className="text-3xl font-bold text-red-600">{creationStats.failureCount}</p>
                   </div>
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 text-center">
+                  <div className="p-5 bg-blue-50 rounded-2xl border border-blue-200 shadow-sm text-center hover:shadow-md transition-shadow duration-300">
                     <p className="text-blue-700 text-xs font-semibold mb-2 uppercase">Taxa Sucesso</p>
                     <p className="text-3xl font-bold text-blue-600">
                       {((creationStats.successCount / creationStats.totalRows) * 100).toFixed(0)}%
@@ -620,7 +633,7 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
                   </div>
                 </div>
 
-                <div className="mb-6 p-4 bg-white rounded-lg border border-slate-200">
+                <div className="mb-6 p-5 bg-white rounded-2xl border border-slate-200 shadow-sm">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-slate-600 font-semibold mb-1">Valor Total Criado:</p>
@@ -638,16 +651,16 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
                 </div>
 
                 {creationStats.successCount > 0 && (
-                  <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200 max-h-64 overflow-y-auto">
+                  <div className="mb-6 p-5 bg-green-50 rounded-2xl border border-green-200 shadow-md max-h-64 overflow-y-auto revgold-scrollbar">
                     <h5 className="font-bold text-green-900 mb-3 flex items-center gap-2">
-                      <span className="text-lg">✓</span> Vendas Criadas com Sucesso:
+                      <span className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm">✓</span> Vendas Criadas com Sucesso:
                     </h5>
                     <ul className="space-y-2 text-sm">
                       {creationStats.results
                         .filter(r => r.success)
                         .map((result, idx) => (
-                          <li key={idx} className="text-green-800 flex items-start gap-3">
-                            <span className="font-bold flex-shrink-0 text-green-600">#{result.rowNumber}</span>
+                          <li key={idx} className="text-green-800 flex items-start gap-3 p-3 bg-white rounded-xl border border-green-200 hover:shadow-sm transition-shadow duration-300">
+                            <span className="font-bold flex-shrink-0 text-green-600 bg-green-100 w-6 h-6 rounded-full flex items-center justify-center text-xs">#{result.rowNumber}</span>
                             <div className="flex-1">
                               <p className="font-semibold">{result.clientName}</p>
                               <p className="text-xs text-green-700">
@@ -661,20 +674,20 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
                 )}
 
                 {creationStats.failureCount > 0 && (
-                  <div className="p-4 bg-red-50 rounded-lg border border-red-200 max-h-64 overflow-y-auto">
+                  <div className="p-5 bg-red-50 rounded-2xl border border-red-200 shadow-md max-h-64 overflow-y-auto revgold-scrollbar">
                     <h5 className="font-bold text-red-900 mb-3 flex items-center gap-2">
-                      <span className="text-lg">✕</span> Erros Detectados:
+                      <span className="w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm">✕</span> Erros Detectados:
                     </h5>
                     <ul className="space-y-3 text-sm">
                       {creationStats.results
                         .filter(r => !r.success)
                         .map((result, idx) => (
-                          <li key={idx} className="text-red-800 flex items-start gap-3 p-3 bg-white rounded border border-red-200">
-                            <span className="font-bold flex-shrink-0 text-red-600">#{result.rowNumber}</span>
+                          <li key={idx} className="text-red-800 flex items-start gap-3 p-3 bg-white rounded-xl border border-red-200 hover:shadow-sm transition-shadow duration-300">
+                            <span className="font-bold flex-shrink-0 text-red-600 bg-red-100 w-6 h-6 rounded-full flex items-center justify-center text-xs">#{result.rowNumber}</span>
                             <div className="flex-1">
                               <p className="font-semibold">{result.clientName}</p>
                               <p className="text-xs text-red-700 mt-1">{result.paymentType}</p>
-                              <p className="text-xs text-red-600 mt-1 font-mono bg-red-100 p-2 rounded mt-2 break-words">
+                              <p className="text-xs text-red-600 mt-1 font-mono bg-red-100 p-2 rounded-lg break-words">
                                 {result.error}
                               </p>
                             </div>
@@ -700,7 +713,7 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
                   setError(null);
                 }
               }}
-              className="btn-secondary"
+              className="btn-secondary rounded-2xl transition-all duration-300 hover:shadow-md"
               disabled={isCreating}
             >
               {creationStats?.successCount === creationStats?.totalRows ? 'Fechar' : 'Começar Novamente'}
@@ -708,20 +721,21 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
             <button
               onClick={handleProcessClick}
               disabled={!selectedFile || isProcessing || isCreating || creationStats !== null}
-              className={`px-6 py-2 rounded-xl font-semibold transition-all ${
+              className={`px-6 py-3 rounded-2xl font-semibold transition-all duration-300 flex items-center gap-2 ${
                 selectedFile && !isProcessing && !isCreating && creationStats === null
-                  ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer modern-shadow-lg'
+                  ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer modern-shadow-lg hover:shadow-xl hover:scale-105'
                   : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
               }`}
             >
+              {isProcessing && <Loader className="w-4 h-4 animate-spin" />}
               {isProcessing ? 'Processando...' : 'Processar arquivo'}
             </button>
             <button
               onClick={handleBulkCreateSales}
               disabled={validatedRows.length === 0 || hasAnyInvalidRows(validatedRows) || isCreating || creationStats !== null}
-              className={`px-6 py-2 rounded-xl font-semibold transition-all flex items-center gap-2 ${
+              className={`px-6 py-3 rounded-2xl font-semibold transition-all duration-300 flex items-center gap-2 ${
                 validatedRows.length > 0 && !hasAnyInvalidRows(validatedRows) && !isCreating && creationStats === null
-                  ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer modern-shadow-lg'
+                  ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer modern-shadow-lg hover:shadow-xl hover:scale-105'
                   : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
               }`}
             >
