@@ -1,10 +1,28 @@
 import React, { useState } from 'react';
-import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, XCircle, Loader } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { validateBulkSalesRows, hasAnyInvalidRows, getValidationSummary, ValidatedRow } from '../../lib/bulkSalesValidator';
+import { useAppContext } from '../../context/AppContext';
+import { Sale, PaymentMethod } from '../../types';
+import { parseInputDate } from '../../utils/dateUtils';
+import { safeNumber } from '../../utils/numberUtils';
 
 interface BulkSalesImportModalProps {
   onClose: () => void;
+}
+
+interface CreationResult {
+  rowNumber: number;
+  success: boolean;
+  saleId?: string;
+  error?: string;
+}
+
+interface BulkCreationStats {
+  totalRows: number;
+  successCount: number;
+  failureCount: number;
+  results: CreationResult[];
 }
 
 const XLSX_MIME_TYPES = [
@@ -15,11 +33,15 @@ const XLSX_MIME_TYPES = [
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
+  const { createSale, employees } = useAppContext();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validatedRows, setValidatedRows] = useState<ValidatedRow[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [creationProgress, setCreationProgress] = useState({ current: 0, total: 0 });
+  const [creationStats, setCreationStats] = useState<BulkCreationStats | null>(null);
 
   const isValidXlsxFile = (file: File): boolean => {
     const hasValidExtension = file.name.toLowerCase().endsWith('.xlsx');
@@ -141,6 +163,137 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
     if (selectedFile) {
       await processExcelFile(selectedFile);
     }
+  };
+
+  const convertExcelDateToISOString = (excelDateStr: string): string => {
+    const trimmed = excelDateStr.trim();
+
+    const ddmmyyyyMatch = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(trimmed);
+    if (ddmmyyyyMatch) {
+      const [, day, month, year] = ddmmyyyyMatch;
+      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+
+    const yyyymmddMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(trimmed);
+    if (yyyymmddMatch) {
+      const [, year, month, day] = yyyymmddMatch;
+      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+
+    return trimmed;
+  };
+
+  const findSellerIdByName = (sellerName: string): string | null => {
+    if (!sellerName || !sellerName.trim()) return null;
+    const seller = employees.find(
+      emp => emp.isActive && emp.isSeller && emp.name.toLowerCase() === sellerName.toLowerCase().trim()
+    );
+    return seller?.id || null;
+  };
+
+  const mapValidatedRowToSale = (row: ValidatedRow): Omit<Sale, 'id' | 'createdAt'> => {
+    const totalValue = safeNumber(row.data.valor_total, 0);
+    const sellerId = findSellerIdByName(row.data.vendedor);
+    const saleDate = convertExcelDateToISOString(row.data.data_da_venda);
+    const firstInstallmentDate = convertExcelDateToISOString(row.data.vencimento_inicial);
+    const parcelas = safeNumber(row.data.parcelas, 1);
+    const installmentInterval = 30;
+
+    const paymentMethod: PaymentMethod = {
+      type: row.data.forma_de_pagamento as PaymentMethod['type'],
+      amount: totalValue,
+      installments: parcelas,
+      installmentInterval: installmentInterval,
+      firstInstallmentDate: firstInstallmentDate,
+    };
+
+    if (parcelas > 1) {
+      paymentMethod.installmentValue = totalValue / parcelas;
+    }
+
+    const receivedAmount =
+      row.data.forma_de_pagamento === 'dinheiro' ||
+      row.data.forma_de_pagamento === 'pix' ||
+      row.data.forma_de_pagamento === 'cartao_debito'
+        ? totalValue
+        : row.data.forma_de_pagamento === 'cartao_credito' && parcelas === 1
+          ? totalValue
+          : 0;
+
+    const pendingAmount = totalValue - receivedAmount;
+
+    const sale: Omit<Sale, 'id' | 'createdAt'> = {
+      date: saleDate,
+      client: row.data.cliente,
+      sellerId: sellerId,
+      products: 'Produtos vendidos',
+      observations: null,
+      totalValue: totalValue,
+      paymentMethods: [paymentMethod],
+      receivedAmount: receivedAmount,
+      pendingAmount: pendingAmount,
+      status: pendingAmount <= 0.01 ? 'pago' : receivedAmount > 0 ? 'parcial' : 'pendente',
+      custom_commission_rate: 5,
+    };
+
+    return sale;
+  };
+
+  const handleBulkCreateSales = async () => {
+    if (validatedRows.length === 0 || hasAnyInvalidRows(validatedRows)) {
+      alert('Selecione apenas linhas válidas para criar as vendas.');
+      return;
+    }
+
+    const validRowsOnly = validatedRows.filter(row => row.isValid);
+    if (validRowsOnly.length === 0) {
+      alert('Nenhuma linha válida encontrada.');
+      return;
+    }
+
+    const proceed = window.confirm(
+      `Você está prestes a criar ${validRowsOnly.length} venda(s) totalizando R$ ${validRowsOnly
+        .reduce((sum, row) => sum + row.data.valor_total, 0)
+        .toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.\n\nDeseja continuar?`
+    );
+
+    if (!proceed) return;
+
+    setIsCreating(true);
+    setCreationProgress({ current: 0, total: validRowsOnly.length });
+    const results: CreationResult[] = [];
+
+    for (let i = 0; i < validRowsOnly.length; i++) {
+      const row = validRowsOnly[i];
+      setCreationProgress({ current: i + 1, total: validRowsOnly.length });
+
+      try {
+        const saleData = mapValidatedRowToSale(row);
+        const result = await createSale(saleData);
+
+        results.push({
+          rowNumber: row.rowNumber,
+          success: true,
+          saleId: result?.id,
+        });
+      } catch (err) {
+        console.error(`Erro ao criar venda da linha ${row.rowNumber}:`, err);
+        results.push({
+          rowNumber: row.rowNumber,
+          success: false,
+          error: err instanceof Error ? err.message : 'Erro desconhecido',
+        });
+      }
+    }
+
+    setIsCreating(false);
+    const stats: BulkCreationStats = {
+      totalRows: validRowsOnly.length,
+      successCount: results.filter(r => r.success).length,
+      failureCount: results.filter(r => !r.success).length,
+      results,
+    };
+    setCreationStats(stats);
   };
 
   return (
@@ -380,16 +533,89 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
             </div>
           )}
 
+          {/* Creation Progress */}
+          {isCreating && (
+            <div className="mb-8 p-6 bg-blue-50 rounded-xl border border-blue-200">
+              <div className="flex items-center gap-4 mb-4">
+                <Loader className="w-6 h-6 text-blue-600 animate-spin" />
+                <div>
+                  <h4 className="font-bold text-blue-900">Criando vendas...</h4>
+                  <p className="text-sm text-blue-700">
+                    Venda {creationProgress.current} de {creationProgress.total}
+                  </p>
+                </div>
+              </div>
+              <div className="w-full bg-blue-200 rounded-full h-2">
+                <div
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all"
+                  style={{ width: `${(creationProgress.current / creationProgress.total) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
+
+          {/* Results Modal */}
+          {creationStats && !isCreating && (
+            <div className="mb-8 p-6 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="mb-6">
+                <h4 className="text-xl font-bold text-slate-900 mb-4">Resultado da Criação em Massa</h4>
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="p-4 bg-white rounded-lg border border-slate-200 text-center">
+                    <p className="text-slate-600 text-sm font-semibold mb-1">Total Processado</p>
+                    <p className="text-3xl font-bold text-slate-900">{creationStats.totalRows}</p>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-200 text-center">
+                    <p className="text-green-700 text-sm font-semibold mb-1">Bem-sucedidas</p>
+                    <p className="text-3xl font-bold text-green-600">{creationStats.successCount}</p>
+                  </div>
+                  <div className="p-4 bg-red-50 rounded-lg border border-red-200 text-center">
+                    <p className="text-red-700 text-sm font-semibold mb-1">Falhas</p>
+                    <p className="text-3xl font-bold text-red-600">{creationStats.failureCount}</p>
+                  </div>
+                </div>
+
+                {creationStats.failureCount > 0 && (
+                  <div className="p-4 bg-red-50 rounded-lg border border-red-200 max-h-64 overflow-y-auto">
+                    <h5 className="font-bold text-red-900 mb-3">Erros Detectados:</h5>
+                    <ul className="space-y-2 text-sm">
+                      {creationStats.results
+                        .filter(r => !r.success)
+                        .map((result, idx) => (
+                          <li key={idx} className="text-red-800 flex items-start gap-2">
+                            <span className="font-bold">Linha {result.rowNumber}:</span>
+                            <span>{result.error}</span>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Buttons */}
           <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
-            <button onClick={onClose} className="btn-secondary">
-              Fechar
+            <button
+              onClick={() => {
+                if (creationStats?.successCount === creationStats?.totalRows) {
+                  onClose();
+                } else {
+                  setCreationStats(null);
+                  setValidatedRows([]);
+                  setSelectedFile(null);
+                  setError(null);
+                }
+              }}
+              className="btn-secondary"
+              disabled={isCreating}
+            >
+              {creationStats?.successCount === creationStats?.totalRows ? 'Fechar' : 'Começar Novamente'}
             </button>
             <button
               onClick={handleProcessClick}
-              disabled={!selectedFile || isProcessing}
+              disabled={!selectedFile || isProcessing || isCreating || creationStats !== null}
               className={`px-6 py-2 rounded-xl font-semibold transition-all ${
-                selectedFile && !isProcessing
+                selectedFile && !isProcessing && !isCreating && creationStats === null
                   ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer modern-shadow-lg'
                   : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
               }`}
@@ -397,13 +623,15 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
               {isProcessing ? 'Processando...' : 'Processar arquivo'}
             </button>
             <button
-              disabled={validatedRows.length === 0 || hasAnyInvalidRows(validatedRows)}
-              className={`px-6 py-2 rounded-xl font-semibold transition-all ${
-                validatedRows.length > 0 && !hasAnyInvalidRows(validatedRows)
+              onClick={handleBulkCreateSales}
+              disabled={validatedRows.length === 0 || hasAnyInvalidRows(validatedRows) || isCreating || creationStats !== null}
+              className={`px-6 py-2 rounded-xl font-semibold transition-all flex items-center gap-2 ${
+                validatedRows.length > 0 && !hasAnyInvalidRows(validatedRows) && !isCreating && creationStats === null
                   ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer modern-shadow-lg'
                   : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
               }`}
             >
+              {isCreating && <Loader className="w-4 h-4 animate-spin" />}
               Criar vendas
             </button>
           </div>
