@@ -1,35 +1,13 @@
 import React, { useState } from 'react';
-import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, XCircle, Loader, Download } from 'lucide-react';
+import { X, Upload, FileSpreadsheet, AlertCircle, Download, ChevronDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { v4 as uuidv4 } from 'uuid';
-import { validateBulkSalesRows, hasAnyInvalidRows, getValidationSummary, ValidatedRow } from '../../lib/bulkSalesValidator';
-import { useAppContext } from '../../context/AppContext';
-import { Sale, PaymentMethod } from '../../types';
-import { parseInputDate } from '../../utils/dateUtils';
-import { safeNumber } from '../../utils/numberUtils';
 
 interface BulkSalesImportModalProps {
   onClose: () => void;
 }
 
-interface CreationResult {
-  rowNumber: number;
-  clientName: string;
-  paymentType: string;
-  totalValue: number;
-  success: boolean;
-  saleId?: string;
-  error?: string;
-  timestamp: number;
-}
-
-interface BulkCreationStats {
-  totalRows: number;
-  successCount: number;
-  failureCount: number;
-  results: CreationResult[];
-  totalValueProcessed: number;
-  processingTimeMs: number;
+interface RawRowData {
+  [key: string]: any;
 }
 
 const XLSX_MIME_TYPES = [
@@ -39,21 +17,47 @@ const XLSX_MIME_TYPES = [
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
+const REQUIRED_FIELDS = ['cliente', 'data_da_venda', 'valor_total', 'forma_de_pagamento', 'parcelas', 'vencimento_inicial', 'vendedor'];
+
+const SUGGESTED_COLUMNS = [
+  { name: 'descricao', description: 'Product or service description' },
+  { name: 'observacoes', description: 'General observations or notes' },
+  { name: 'telefone', description: 'Customer phone number' },
+  { name: 'email', description: 'Customer email address' },
+  { name: 'cpf_cnpj', description: 'Customer tax ID' },
+  { name: 'endereco', description: 'Customer address' },
+  { name: 'comissao_customizada', description: 'Custom commission rate override' },
+  { name: 'data_entrega', description: 'Expected delivery date' },
+  { name: 'numero_pedido', description: 'Order number or reference' },
+  { name: 'categoria_produto', description: 'Product category for reporting' },
+  { name: 'desconto', description: 'Discount amount or percentage' },
+  { name: 'taxa_adicional', description: 'Additional fees or charges' },
+];
+
 export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
-  const { createSale, employees } = useAppContext();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [validatedRows, setValidatedRows] = useState<ValidatedRow[]>([]);
+  const [rawData, setRawData] = useState<RawRowData[]>([]);
+  const [columns, setColumns] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [creationProgress, setCreationProgress] = useState({ current: 0, total: 0 });
-  const [creationStats, setCreationStats] = useState<BulkCreationStats | null>(null);
+  const [uploadedAt, setUploadedAt] = useState<Date | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const isValidXlsxFile = (file: File): boolean => {
-    const hasValidExtension = file.name.toLowerCase().endsWith('.xlsx');
-    const hasValidMimeType = XLSX_MIME_TYPES.includes(file.type);
-    return hasValidExtension && hasValidMimeType;
+  const isEmptyCell = (value: any): boolean => {
+    if (value === null || value === undefined) return true;
+    if (typeof value === 'string' && !value.trim()) return true;
+    return false;
+  };
+
+  const isRequiredField = (columnName: string): boolean => {
+    const normalizedName = columnName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return REQUIRED_FIELDS.some(field => {
+      const normalizedField = field.toLowerCase();
+      return normalizedName === normalizedField ||
+             normalizedName.includes(normalizedField) ||
+             normalizedField.includes(normalizedName);
+    });
   };
 
   const validateFile = (file: File): { valid: boolean; error?: string } => {
@@ -90,9 +94,12 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
       if (validation.valid) {
         setSelectedFile(file);
         setError(null);
+        processExcelFile(file);
       } else {
         setSelectedFile(null);
         setError(validation.error || 'Erro ao validar arquivo');
+        setRawData([]);
+        setColumns([]);
       }
     }
   };
@@ -120,9 +127,12 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
       if (validation.valid) {
         setSelectedFile(file);
         setError(null);
+        processExcelFile(file);
       } else {
         setSelectedFile(null);
         setError(validation.error || 'Erro ao validar arquivo');
+        setRawData([]);
+        setColumns([]);
       }
     }
   };
@@ -130,7 +140,9 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
   const clearFile = () => {
     setSelectedFile(null);
     setError(null);
-    setValidatedRows([]);
+    setRawData([]);
+    setColumns([]);
+    setUploadedAt(null);
   };
 
   const processExcelFile = async (file: File) => {
@@ -156,46 +168,17 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
         return;
       }
 
-      const validated = validateBulkSalesRows(jsonData);
-      setValidatedRows(validated);
+      const extractedColumns = Object.keys(jsonData[0] || {});
+      setColumns(extractedColumns);
+      setRawData(jsonData);
+      setUploadedAt(new Date());
     } catch (err) {
       setError('Erro ao processar arquivo: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
-      setValidatedRows([]);
+      setRawData([]);
+      setColumns([]);
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const handleProcessClick = async () => {
-    if (selectedFile) {
-      await processExcelFile(selectedFile);
-    }
-  };
-
-  const convertExcelDateToISOString = (excelDateStr: string): string => {
-    const trimmed = excelDateStr.trim();
-
-    const ddmmyyyyMatch = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(trimmed);
-    if (ddmmyyyyMatch) {
-      const [, day, month, year] = ddmmyyyyMatch;
-      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    }
-
-    const yyyymmddMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(trimmed);
-    if (yyyymmddMatch) {
-      const [, year, month, day] = yyyymmddMatch;
-      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    }
-
-    return trimmed;
-  };
-
-  const findSellerIdByName = (sellerName: string): string | null => {
-    if (!sellerName || !sellerName.trim()) return null;
-    const seller = employees.find(
-      emp => emp.isActive && emp.isSeller && emp.name.toLowerCase() === sellerName.toLowerCase().trim()
-    );
-    return seller?.id || null;
   };
 
   const handleDownloadTemplate = () => {
@@ -254,146 +237,9 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
     XLSX.writeFile(workbook, 'modelo_vendas.xlsx');
   };
 
-  const mapValidatedRowToSale = (row: ValidatedRow, bulkMetadata?: { bulk_insert_id: string; origin_file_name: string }): Omit<Sale, 'id' | 'createdAt'> & { bulk_insert_id?: string; origin_file_name?: string } => {
-    const totalValue = safeNumber(row.data.valor_total, 0);
-    const sellerId = findSellerIdByName(row.data.vendedor);
-    const saleDate = convertExcelDateToISOString(row.data.data_da_venda);
-    const firstInstallmentDate = convertExcelDateToISOString(row.data.vencimento_inicial);
-    const parcelas = safeNumber(row.data.parcelas, 1);
-    const installmentInterval = 30;
-
-    const paymentMethod: PaymentMethod = {
-      type: row.data.forma_de_pagamento as PaymentMethod['type'],
-      amount: totalValue,
-      installments: parcelas,
-      installmentInterval: installmentInterval,
-      firstInstallmentDate: firstInstallmentDate,
-    };
-
-    if (parcelas > 1) {
-      paymentMethod.installmentValue = totalValue / parcelas;
-    }
-
-    const receivedAmount =
-      row.data.forma_de_pagamento === 'dinheiro' ||
-      row.data.forma_de_pagamento === 'pix' ||
-      row.data.forma_de_pagamento === 'cartao_debito'
-        ? totalValue
-        : row.data.forma_de_pagamento === 'cartao_credito' && parcelas === 1
-          ? totalValue
-          : 0;
-
-    const pendingAmount = totalValue - receivedAmount;
-
-    const sale: Omit<Sale, 'id' | 'createdAt'> & { bulk_insert_id?: string; origin_file_name?: string } = {
-      date: saleDate,
-      client: row.data.cliente,
-      sellerId: sellerId,
-      products: 'Produtos vendidos',
-      observations: null,
-      totalValue: totalValue,
-      paymentMethods: [paymentMethod],
-      receivedAmount: receivedAmount,
-      pendingAmount: pendingAmount,
-      status: pendingAmount <= 0.01 ? 'pago' : receivedAmount > 0 ? 'parcial' : 'pendente',
-      custom_commission_rate: 5,
-    };
-
-    if (bulkMetadata) {
-      sale.bulk_insert_id = bulkMetadata.bulk_insert_id;
-      sale.origin_file_name = bulkMetadata.origin_file_name;
-    }
-
-    return sale;
-  };
-
-  const handleBulkCreateSales = async () => {
-    if (validatedRows.length === 0 || hasAnyInvalidRows(validatedRows)) {
-      alert('Selecione apenas linhas válidas para criar as vendas.');
-      return;
-    }
-
-    const validRowsOnly = validatedRows.filter(row => row.isValid);
-    if (validRowsOnly.length === 0) {
-      alert('Nenhuma linha válida encontrada.');
-      return;
-    }
-
-    const totalValue = validRowsOnly.reduce((sum, row) => sum + row.data.valor_total, 0);
-    const proceed = window.confirm(
-      `Você está prestes a criar ${validRowsOnly.length} venda(s) totalizando R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.\n\nDeseja continuar?`
-    );
-
-    if (!proceed) return;
-
-    const startTime = Date.now();
-    setIsCreating(true);
-    setCreationProgress({ current: 0, total: validRowsOnly.length });
-    const results: CreationResult[] = [];
-
-    const bulkInsertId = uuidv4();
-    const originFileName = selectedFile?.name || 'arquivo_importacao';
-    const bulkMetadata = { bulk_insert_id: bulkInsertId, origin_file_name: originFileName };
-
-    console.log(`🔄 Starting bulk import with batch ID: ${bulkInsertId} from file: ${originFileName}`);
-
-    for (let i = 0; i < validRowsOnly.length; i++) {
-      const row = validRowsOnly[i];
-      setCreationProgress({ current: i + 1, total: validRowsOnly.length });
-
-      try {
-        console.log(`📝 Processing row ${row.rowNumber}: ${row.data.cliente} - ${row.data.forma_de_pagamento} [Batch: ${bulkInsertId}]`);
-        const saleData = mapValidatedRowToSale(row, bulkMetadata);
-        const result = await createSale(saleData);
-
-        const createdResult: CreationResult = {
-          rowNumber: row.rowNumber,
-          clientName: row.data.cliente,
-          paymentType: row.data.forma_de_pagamento,
-          totalValue: row.data.valor_total,
-          success: true,
-          saleId: typeof result === 'string' ? result : result?.id,
-          timestamp: Date.now(),
-        };
-
-        results.push(createdResult);
-        console.log(`✅ Sale created successfully (row ${row.rowNumber}): ${createdResult.saleId}`);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
-        console.error(`❌ Error creating sale for row ${row.rowNumber} (${row.data.cliente}):`, err);
-
-        results.push({
-          rowNumber: row.rowNumber,
-          clientName: row.data.cliente,
-          paymentType: row.data.forma_de_pagamento,
-          totalValue: row.data.valor_total,
-          success: false,
-          error: errorMessage,
-          timestamp: Date.now(),
-        });
-      }
-    }
-
-    const processingTimeMs = Date.now() - startTime;
-    setIsCreating(false);
-
-    const successfulResults = results.filter(r => r.success);
-    const stats: BulkCreationStats = {
-      totalRows: validRowsOnly.length,
-      successCount: successfulResults.length,
-      failureCount: results.filter(r => !r.success).length,
-      results,
-      totalValueProcessed: successfulResults.reduce((sum, r) => sum + r.totalValue, 0),
-      processingTimeMs,
-    };
-
-    console.log(`✅ Bulk import completed with batch ID: ${bulkInsertId} - ${successfulResults.length}/${validRowsOnly.length} successful`);
-    setCreationStats(stats);
-  };
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm revgold-animate-fade-in">
-      <div className="bg-white rounded-3xl max-w-2xl w-full modern-shadow-xl">
+      <div className="bg-white rounded-3xl max-w-6xl w-full modern-shadow-xl">
         <div className="p-8">
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
@@ -403,7 +249,7 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
               </div>
               <div>
                 <h2 className="text-3xl font-bold text-slate-900">Importação de Vendas em Massa</h2>
-                <p className="text-slate-600 text-sm mt-1">Importe múltiplas vendas de uma vez usando um arquivo Excel</p>
+                <p className="text-slate-600 text-sm mt-1">Visualize múltiplas vendas de uma vez usando um arquivo Excel</p>
               </div>
             </div>
             <button
@@ -412,6 +258,15 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
             >
               <X className="w-6 h-6 text-slate-600" />
             </button>
+          </div>
+
+          {/* Display-Only Mode Notice */}
+          <div className="mb-6 p-4 bg-blue-50 rounded-2xl border border-blue-200 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-blue-900">Modo de Visualização</h4>
+              <p className="text-sm text-blue-800">Este painel é apenas para visualizar seus dados. Nenhum dado será salvo no banco de dados. Para proceder com a criação de vendas, entre em contato com a equipe de administração.</p>
+            </div>
           </div>
 
           {/* File Upload Area */}
@@ -480,6 +335,11 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
                     <p className="text-xs text-slate-500 mt-1">
                       {(selectedFile.size / 1024).toFixed(2)} KB
                     </p>
+                    {uploadedAt && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Carregado em: {uploadedAt.toLocaleTimeString('pt-BR')}
+                      </p>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -497,7 +357,7 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
               <div className="mt-4 p-4 bg-red-50 rounded-2xl border border-red-200 flex items-start gap-3 shadow-md revgold-animate-slide-up">
                 <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="font-semibold text-red-900">Erro na validação</h4>
+                  <h4 className="font-semibold text-red-900">Erro na leitura do arquivo</h4>
                   <p className="text-sm text-red-800 mt-1">{error}</p>
                 </div>
               </div>
@@ -505,10 +365,12 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
 
             {isProcessing && (
               <div className="mt-4 p-4 bg-blue-50 rounded-2xl border border-blue-200 flex items-center gap-3 shadow-md revgold-animate-slide-up">
-                <Loader className="w-5 h-5 text-blue-600 animate-spin" />
+                <div className="w-5 h-5 text-blue-600 animate-spin flex items-center justify-center">
+                  <div className="w-full h-full border-2 border-blue-200 border-t-blue-600 rounded-full" />
+                </div>
                 <div>
-                  <h4 className="font-semibold text-blue-900">Processando arquivo</h4>
-                  <p className="text-sm text-blue-800">Lendo e validando os dados...</p>
+                  <h4 className="font-semibold text-blue-900">Lendo arquivo</h4>
+                  <p className="text-sm text-blue-800">Extraindo dados do Excel...</p>
                 </div>
               </div>
             )}
@@ -530,282 +392,149 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
                 <li>O arquivo deve estar em formato .xlsx (Excel)</li>
                 <li>Tamanho máximo: 10MB</li>
                 <li>A primeira linha deve conter os cabeçalhos das colunas</li>
-                <li>Colunas obrigatórias: Data, Cliente, Valor Total, Método de Pagamento</li>
+                <li>Colunas obrigatórias: Cliente, Data da Venda, Valor Total, Forma de Pagamento, Parcelas, Vencimento Inicial, Vendedor</li>
                 <li>As datas devem estar no formato DD/MM/YYYY</li>
                 <li>Os valores devem usar ponto (.) como separador decimal</li>
               </ul>
             </div>
           </div>
 
-          {/* Preview Table */}
-          {validatedRows.length > 0 && (
+          {/* Data Preview Table */}
+          {rawData.length > 0 && (
             <div className="mb-8 revgold-animate-slide-up">
-              {(() => {
-                const summary = getValidationSummary(validatedRows);
-                return (
-                  <div className="mb-6 p-6 bg-slate-50 rounded-2xl border border-slate-200 shadow-md">
-                    <h4 className="font-bold text-slate-900 mb-4">Resumo de Validação</h4>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-                        <p className="text-slate-600">Total de Linhas</p>
-                        <p className="text-2xl font-bold text-slate-900 mt-2">{summary.totalRows}</p>
-                      </div>
-                      <div className="p-4 bg-green-50 rounded-xl border border-green-200 shadow-sm">
-                        <p className="text-green-700">Válidas</p>
-                        <p className="text-2xl font-bold text-green-600 mt-2">{summary.validRows}</p>
-                      </div>
-                      <div className="p-4 bg-red-50 rounded-xl border border-red-200 shadow-sm">
-                        <p className="text-red-700">Inválidas</p>
-                        <p className="text-2xl font-bold text-red-600 mt-2">{summary.invalidRows}</p>
-                      </div>
-                    </div>
+              {/* File Metadata */}
+              <div className="mb-6 p-6 bg-slate-50 rounded-2xl border border-slate-200 shadow-md">
+                <h4 className="font-bold text-slate-900 mb-4">Informações do Arquivo</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                    <p className="text-slate-600">Arquivo</p>
+                    <p className="text-lg font-bold text-slate-900 mt-2 truncate">{selectedFile?.name}</p>
                   </div>
-                );
-              })()}
+                  <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                    <p className="text-slate-600">Total de Linhas</p>
+                    <p className="text-lg font-bold text-slate-900 mt-2">{rawData.length}</p>
+                  </div>
+                  <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                    <p className="text-slate-600">Total de Colunas</p>
+                    <p className="text-lg font-bold text-slate-900 mt-2">{columns.length}</p>
+                  </div>
+                  <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                    <p className="text-slate-600">Carregado em</p>
+                    <p className="text-sm font-bold text-slate-900 mt-2">{uploadedAt?.toLocaleTimeString('pt-BR')}</p>
+                  </div>
+                </div>
+              </div>
 
-              <h4 className="font-bold text-slate-900 mb-4">Prévia dos Dados</h4>
-              <div className="max-h-96 overflow-y-auto border border-slate-200 rounded-2xl shadow-md revgold-scrollbar">
+              {/* Legend */}
+              <div className="mb-6 p-4 bg-yellow-50 rounded-2xl border border-yellow-200">
+                <h4 className="font-bold text-yellow-900 mb-3">Legenda</h4>
+                <div className="flex items-center gap-2 text-sm text-yellow-800">
+                  <div className="w-4 h-4 bg-yellow-300 rounded border border-yellow-400" />
+                  <span>Campos obrigatórios vazios</span>
+                </div>
+              </div>
+
+              {/* Data Table */}
+              <h4 className="font-bold text-slate-900 mb-4">Dados do Arquivo</h4>
+              <div className="max-h-96 overflow-auto border border-slate-200 rounded-2xl shadow-md revgold-scrollbar">
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-gradient-to-r from-slate-100 to-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">#</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Cliente</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Data Venda</th>
-                      <th className="px-4 py-3 text-right font-semibold text-slate-700">Valor</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Pagamento</th>
-                      <th className="px-4 py-3 text-center font-semibold text-slate-700">Parcelas</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Vencimento</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Vendedor</th>
-                      <th className="px-4 py-3 text-center font-semibold text-slate-700">Status</th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-700 bg-slate-100 sticky left-0 z-10">#</th>
+                      {columns.map((column) => (
+                        <th
+                          key={column}
+                          className={`px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap ${
+                            isRequiredField(column) ? 'bg-yellow-50 text-yellow-900' : ''
+                          }`}
+                        >
+                          <div className="flex items-center gap-1">
+                            {column}
+                            {isRequiredField(column) && (
+                              <span className="text-red-500 font-bold" title="Campo obrigatório">*</span>
+                            )}
+                          </div>
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {validatedRows.map((row, idx) => (
-                      <React.Fragment key={row.rowNumber}>
-                        <tr
-                          className={`border-b border-slate-100 transition-all duration-300 hover:shadow-md ${
-                            row.isValid
-                              ? 'bg-green-50 hover:bg-green-100'
-                              : 'bg-red-50 hover:bg-red-100'
-                          }`}
-                          style={{ animationDelay: `${idx * 0.05}s` }}
-                        >
-                          <td className="px-4 py-3 font-semibold text-slate-700">{row.rowNumber}</td>
-                          <td className="px-4 py-3 text-slate-700">{row.data.cliente}</td>
-                          <td className="px-4 py-3 text-slate-700">{row.data.data_da_venda}</td>
-                          <td className="px-4 py-3 text-right text-slate-700">
-                            R$ {row.data.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </td>
-                          <td className="px-4 py-3 text-slate-700">{row.data.forma_de_pagamento}</td>
-                          <td className="px-4 py-3 text-center text-slate-700">{row.data.parcelas}</td>
-                          <td className="px-4 py-3 text-slate-700">{row.data.vencimento_inicial}</td>
-                          <td className="px-4 py-3 text-slate-700">{row.data.vendedor}</td>
-                          <td className="px-4 py-3 text-center">
-                            {row.isValid ? (
-                              <CheckCircle2 className="w-5 h-5 text-green-600 mx-auto" />
-                            ) : (
-                              <XCircle className="w-5 h-5 text-red-600 mx-auto" />
-                            )}
-                          </td>
-                        </tr>
-                        {!row.isValid && row.errors.length > 0 && (
-                          <tr className="bg-red-100 border-b border-red-300">
-                            <td colSpan={9} className="px-4 py-4">
-                              <div className="flex items-start gap-2">
-                                <AlertCircle className="w-5 h-5 text-red-700 flex-shrink-0 mt-0.5" />
-                                <div className="flex-1">
-                                  <p className="font-semibold text-red-900 mb-2">Erros encontrados:</p>
-                                  <ul className="space-y-1 text-sm text-red-800">
-                                    {row.errors.map((err, idx) => (
-                                      <li key={idx} className="flex items-start gap-2">
-                                        <span className="text-red-700 font-bold">•</span>
-                                        <span>
-                                          <strong>{err.field}:</strong> {err.message}
-                                        </span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              </div>
+                    {rawData.map((row, rowIdx) => (
+                      <tr key={rowIdx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                        <td className="px-4 py-3 font-semibold text-slate-700 bg-slate-50 sticky left-0 z-10">
+                          {rowIdx + 2}
+                        </td>
+                        {columns.map((column) => {
+                          const cellValue = row[column];
+                          const isEmpty = isEmptyCell(cellValue);
+                          const isRequired = isRequiredField(column);
+                          const shouldHighlight = isEmpty && isRequired;
+
+                          return (
+                            <td
+                              key={`${rowIdx}-${column}`}
+                              className={`px-4 py-3 text-slate-700 whitespace-nowrap ${
+                                shouldHighlight ? 'bg-yellow-300 font-semibold' : ''
+                              }`}
+                            >
+                              {cellValue !== null && cellValue !== undefined ? String(cellValue) : ''}
                             </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
+                          );
+                        })}
+                      </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
 
-              {hasAnyInvalidRows(validatedRows) && (
-                <div className="mt-4 p-5 bg-red-50 rounded-2xl border border-red-200 flex items-start gap-3 shadow-md revgold-animate-slide-up">
-                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold text-red-900">Validação não passou</h4>
-                    <p className="text-sm text-red-800 mt-1">
-                      Corrija os erros acima antes de criar as vendas. O botão "Criar vendas" será ativado quando todos os
-                      dados forem válidos.
-                    </p>
+          {/* Suggested Columns Panel */}
+          {rawData.length > 0 && (
+            <div className="mb-8">
+              <button
+                onClick={() => setShowSuggestions(!showSuggestions)}
+                className="w-full p-4 bg-gradient-to-r from-emerald-50 to-green-50 rounded-2xl border border-emerald-200 hover:shadow-md transition-shadow duration-300 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <h4 className="font-bold text-emerald-900">Colunas Sugeridas para Aprimoramento</h4>
+                  <p className="text-sm text-emerald-700">({SUGGESTED_COLUMNS.length} sugestões)</p>
+                </div>
+                <ChevronDown
+                  className={`w-5 h-5 text-emerald-900 transition-transform duration-300 ${
+                    showSuggestions ? 'transform rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {showSuggestions && (
+                <div className="mt-4 p-6 bg-emerald-50 rounded-2xl border border-emerald-200 revgold-animate-slide-up">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {SUGGESTED_COLUMNS.map((col) => (
+                      <div key={col.name} className="p-4 bg-white rounded-xl border border-emerald-100 shadow-sm hover:shadow-md transition-shadow">
+                        <h5 className="font-bold text-emerald-900 text-sm">{col.name}</h5>
+                        <p className="text-xs text-slate-600 mt-2">{col.description}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Creation Progress */}
-          {isCreating && (
-            <div className="mb-8 p-6 bg-blue-50 rounded-2xl border border-blue-200 shadow-md revgold-animate-slide-up">
-              <div className="flex items-center gap-4 mb-4">
-                <Loader className="w-6 h-6 text-blue-600 animate-spin" />
-                <div>
-                  <h4 className="font-bold text-blue-900">Criando vendas...</h4>
-                  <p className="text-sm text-blue-700">
-                    Venda {creationProgress.current} de {creationProgress.total}
-                  </p>
-                </div>
-              </div>
-              <div className="w-full bg-blue-200 rounded-full h-3 overflow-hidden shadow-sm">
-                <div
-                  className="bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 h-3 rounded-full transition-all duration-500"
-                  style={{ width: `${(creationProgress.current / creationProgress.total) * 100}%` }}
-                ></div>
-              </div>
-            </div>
-          )}
-
-          {/* Results Modal */}
-          {creationStats && !isCreating && (
-            <div className="mb-8 p-6 bg-slate-50 rounded-2xl border border-slate-200 shadow-md revgold-animate-scale-in">
-              <div className="mb-6">
-                <h4 className="text-2xl font-bold text-slate-900 mb-6">Resumo da Criação em Massa</h4>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm text-center hover:shadow-md transition-shadow duration-300">
-                    <p className="text-slate-600 text-xs font-semibold mb-2 uppercase">Total Processado</p>
-                    <p className="text-3xl font-bold text-slate-900">{creationStats.totalRows}</p>
-                  </div>
-                  <div className="p-5 bg-green-50 rounded-2xl border border-green-200 shadow-sm text-center hover:shadow-md transition-shadow duration-300">
-                    <p className="text-green-700 text-xs font-semibold mb-2 uppercase">Bem-sucedidas</p>
-                    <p className="text-3xl font-bold text-green-600">{creationStats.successCount}</p>
-                  </div>
-                  <div className="p-5 bg-red-50 rounded-2xl border border-red-200 shadow-sm text-center hover:shadow-md transition-shadow duration-300">
-                    <p className="text-red-700 text-xs font-semibold mb-2 uppercase">Falhas</p>
-                    <p className="text-3xl font-bold text-red-600">{creationStats.failureCount}</p>
-                  </div>
-                  <div className="p-5 bg-blue-50 rounded-2xl border border-blue-200 shadow-sm text-center hover:shadow-md transition-shadow duration-300">
-                    <p className="text-blue-700 text-xs font-semibold mb-2 uppercase">Taxa Sucesso</p>
-                    <p className="text-3xl font-bold text-blue-600">
-                      {((creationStats.successCount / creationStats.totalRows) * 100).toFixed(0)}%
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mb-6 p-5 bg-white rounded-2xl border border-slate-200 shadow-sm">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-slate-600 font-semibold mb-1">Valor Total Criado:</p>
-                      <p className="text-lg font-bold text-green-700">
-                        R$ {creationStats.totalValueProcessed.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-slate-600 font-semibold mb-1">Tempo de Processamento:</p>
-                      <p className="text-lg font-bold text-slate-900">
-                        {(creationStats.processingTimeMs / 1000).toFixed(1)}s
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {creationStats.successCount > 0 && (
-                  <div className="mb-6 p-5 bg-green-50 rounded-2xl border border-green-200 shadow-md max-h-64 overflow-y-auto revgold-scrollbar">
-                    <h5 className="font-bold text-green-900 mb-3 flex items-center gap-2">
-                      <span className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-sm">✓</span> Vendas Criadas com Sucesso:
-                    </h5>
-                    <ul className="space-y-2 text-sm">
-                      {creationStats.results
-                        .filter(r => r.success)
-                        .map((result, idx) => (
-                          <li key={idx} className="text-green-800 flex items-start gap-3 p-3 bg-white rounded-xl border border-green-200 hover:shadow-sm transition-shadow duration-300">
-                            <span className="font-bold flex-shrink-0 text-green-600 bg-green-100 w-6 h-6 rounded-full flex items-center justify-center text-xs">#{result.rowNumber}</span>
-                            <div className="flex-1">
-                              <p className="font-semibold">{result.clientName}</p>
-                              <p className="text-xs text-green-700">
-                                {result.paymentType} - R$ {result.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} - ID: {result.saleId}
-                              </p>
-                            </div>
-                          </li>
-                        ))}
-                    </ul>
-                  </div>
-                )}
-
-                {creationStats.failureCount > 0 && (
-                  <div className="p-5 bg-red-50 rounded-2xl border border-red-200 shadow-md max-h-64 overflow-y-auto revgold-scrollbar">
-                    <h5 className="font-bold text-red-900 mb-3 flex items-center gap-2">
-                      <span className="w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm">✕</span> Erros Detectados:
-                    </h5>
-                    <ul className="space-y-3 text-sm">
-                      {creationStats.results
-                        .filter(r => !r.success)
-                        .map((result, idx) => (
-                          <li key={idx} className="text-red-800 flex items-start gap-3 p-3 bg-white rounded-xl border border-red-200 hover:shadow-sm transition-shadow duration-300">
-                            <span className="font-bold flex-shrink-0 text-red-600 bg-red-100 w-6 h-6 rounded-full flex items-center justify-center text-xs">#{result.rowNumber}</span>
-                            <div className="flex-1">
-                              <p className="font-semibold">{result.clientName}</p>
-                              <p className="text-xs text-red-700 mt-1">{result.paymentType}</p>
-                              <p className="text-xs text-red-600 mt-1 font-mono bg-red-100 p-2 rounded-lg break-words">
-                                {result.error}
-                              </p>
-                            </div>
-                          </li>
-                        ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* Buttons */}
           <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
             <button
-              onClick={() => {
-                if (creationStats?.successCount === creationStats?.totalRows) {
-                  onClose();
-                } else {
-                  setCreationStats(null);
-                  setValidatedRows([]);
-                  setSelectedFile(null);
-                  setError(null);
-                }
-              }}
+              onClick={onClose}
               className="btn-secondary rounded-2xl transition-all duration-300 hover:shadow-md"
-              disabled={isCreating}
             >
-              {creationStats?.successCount === creationStats?.totalRows ? 'Fechar' : 'Começar Novamente'}
+              Fechar
             </button>
             <button
-              onClick={handleProcessClick}
-              disabled={!selectedFile || isProcessing || isCreating || creationStats !== null}
-              className={`px-6 py-3 rounded-2xl font-semibold transition-all duration-300 flex items-center gap-2 ${
-                selectedFile && !isProcessing && !isCreating && creationStats === null
-                  ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer modern-shadow-lg hover:shadow-xl hover:scale-105'
-                  : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
-              }`}
+              disabled={true}
+              title="Modo de visualização apenas. A criação de vendas está desativada neste painel."
+              className="px-6 py-3 rounded-2xl font-semibold transition-all duration-300 flex items-center gap-2 bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
             >
-              {isProcessing && <Loader className="w-4 h-4 animate-spin" />}
-              {isProcessing ? 'Processando...' : 'Processar arquivo'}
-            </button>
-            <button
-              onClick={handleBulkCreateSales}
-              disabled={validatedRows.length === 0 || hasAnyInvalidRows(validatedRows) || isCreating || creationStats !== null}
-              className={`px-6 py-3 rounded-2xl font-semibold transition-all duration-300 flex items-center gap-2 ${
-                validatedRows.length > 0 && !hasAnyInvalidRows(validatedRows) && !isCreating && creationStats === null
-                  ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer modern-shadow-lg hover:shadow-xl hover:scale-105'
-                  : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
-              }`}
-            >
-              {isCreating && <Loader className="w-4 h-4 animate-spin" />}
               Criar vendas
             </button>
           </div>
