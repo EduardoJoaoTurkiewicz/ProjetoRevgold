@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Upload, FileSpreadsheet, AlertCircle, Download, ChevronDown } from 'lucide-react';
+import { X, Upload, FileSpreadsheet, AlertCircle, Download, ChevronDown, CheckCircle2, XCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { validateBulkSalesRowsWithSupabase, ValidatedRowWithSupabase, getValidationSummary } from '../../lib/bulkSalesSupabaseValidator';
 
 interface BulkSalesImportModalProps {
   onClose: () => void;
@@ -43,6 +44,9 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadedAt, setUploadedAt] = useState<Date | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [validatedRows, setValidatedRows] = useState<ValidatedRowWithSupabase[]>([]);
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationRun, setValidationRun] = useState(false);
 
   const isEmptyCell = (value: any): boolean => {
     if (value === null || value === undefined) return true;
@@ -143,6 +147,23 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
     setRawData([]);
     setColumns([]);
     setUploadedAt(null);
+    setValidatedRows([]);
+    setValidationRun(false);
+  };
+
+  const handleValidate = async () => {
+    if (rawData.length === 0) return;
+
+    try {
+      setIsValidating(true);
+      const validated = await validateBulkSalesRowsWithSupabase(rawData);
+      setValidatedRows(validated);
+      setValidationRun(true);
+    } catch (err) {
+      setError('Erro ao validar dados: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
+    } finally {
+      setIsValidating(false);
+    }
   };
 
   const processExcelFile = async (file: File) => {
@@ -428,11 +449,50 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
               {/* Legend */}
               <div className="mb-6 p-4 bg-yellow-50 rounded-2xl border border-yellow-200">
                 <h4 className="font-bold text-yellow-900 mb-3">Legenda</h4>
-                <div className="flex items-center gap-2 text-sm text-yellow-800">
-                  <div className="w-4 h-4 bg-yellow-300 rounded border border-yellow-400" />
-                  <span>Campos obrigatórios vazios</span>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-yellow-800">
+                    <div className="w-4 h-4 bg-yellow-300 rounded border border-yellow-400" />
+                    <span>Campos obrigatórios vazios</span>
+                  </div>
+                  {validationRun && (
+                    <div className="flex items-center gap-2 text-sm text-red-800">
+                      <div className="w-4 h-4 bg-red-300 rounded border border-red-400" />
+                      <span>Linhas com erros de validação</span>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Validation Summary */}
+              {validationRun && (
+                <div className="mb-6 p-4 rounded-2xl border-2">
+                  {validatedRows && validatedRows.some(r => !r.isValid) ? (
+                    <div className="bg-red-50 border-red-200">
+                      <div className="flex items-center gap-3 mb-3">
+                        <XCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                        <div>
+                          <h4 className="font-bold text-red-900">Validação com Erros</h4>
+                          <p className="text-sm text-red-800 mt-1">
+                            {getValidationSummary(validatedRows).invalidRows} de {getValidationSummary(validatedRows).totalRows} linhas contêm erros
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-green-50 border-green-200">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+                        <div>
+                          <h4 className="font-bold text-green-900">Validação Bem-Sucedida</h4>
+                          <p className="text-sm text-green-800 mt-1">
+                            Todos os {getValidationSummary(validatedRows).totalRows} dados estão válidos
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Data Table */}
               <h4 className="font-bold text-slate-900 mb-4">Dados do Arquivo</h4>
@@ -456,33 +516,55 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
                           </div>
                         </th>
                       ))}
+                      {validationRun && <th className="px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap w-64 bg-slate-100">Erros</th>}
                     </tr>
                   </thead>
                   <tbody>
-                    {rawData.map((row, rowIdx) => (
-                      <tr key={rowIdx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-3 font-semibold text-slate-700 bg-slate-50 sticky left-0 z-10">
-                          {rowIdx + 2}
-                        </td>
-                        {columns.map((column) => {
-                          const cellValue = row[column];
-                          const isEmpty = isEmptyCell(cellValue);
-                          const isRequired = isRequiredField(column);
-                          const shouldHighlight = isEmpty && isRequired;
+                    {rawData.map((row, rowIdx) => {
+                      const validatedRow = validatedRows[rowIdx];
+                      const hasErrors = validatedRow && !validatedRow.isValid;
+                      const rowClass = hasErrors ? 'bg-red-100' : '';
 
-                          return (
-                            <td
-                              key={`${rowIdx}-${column}`}
-                              className={`px-4 py-3 text-slate-700 whitespace-nowrap ${
-                                shouldHighlight ? 'bg-yellow-300 font-semibold' : ''
-                              }`}
-                            >
-                              {cellValue !== null && cellValue !== undefined ? String(cellValue) : ''}
+                      return (
+                        <tr key={rowIdx} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${rowClass}`}>
+                          <td className={`px-4 py-3 font-semibold text-slate-700 sticky left-0 z-10 ${hasErrors ? 'bg-red-200' : 'bg-slate-50'}`}>
+                            {rowIdx + 2}
+                          </td>
+                          {columns.map((column) => {
+                            const cellValue = row[column];
+                            const isEmpty = isEmptyCell(cellValue);
+                            const isRequired = isRequiredField(column);
+                            const shouldHighlight = isEmpty && isRequired;
+                            const fieldError = validatedRow?.errors.find(e => e.field === column);
+
+                            return (
+                              <td
+                                key={`${rowIdx}-${column}`}
+                                className={`px-4 py-3 text-slate-700 whitespace-nowrap ${
+                                  shouldHighlight ? 'bg-yellow-300 font-semibold' : ''
+                                } ${fieldError ? 'bg-red-200 font-semibold' : ''}`}
+                                title={fieldError?.message}
+                              >
+                                {cellValue !== null && cellValue !== undefined ? String(cellValue) : ''}
+                              </td>
+                            );
+                          })}
+                          {validationRun && (
+                            <td className="px-4 py-3 text-sm text-red-700 w-64">
+                              {hasErrors && (
+                                <div className="space-y-1">
+                                  {validatedRow.errors.map((err, idx) => (
+                                    <div key={idx} className="text-xs">
+                                      <strong>{err.field}:</strong> {err.message}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
+                          )}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -530,10 +612,46 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
             >
               Fechar
             </button>
+            {rawData.length > 0 && !validationRun && (
+              <button
+                onClick={handleValidate}
+                disabled={isValidating}
+                className="px-6 py-3 rounded-2xl font-semibold transition-all duration-300 flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed"
+              >
+                {isValidating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Validando...
+                  </>
+                ) : (
+                  'Validar'
+                )}
+              </button>
+            )}
+            {validationRun && (
+              <button
+                onClick={handleValidate}
+                disabled={isValidating}
+                className="px-6 py-3 rounded-2xl font-semibold transition-all duration-300 flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed"
+              >
+                {isValidating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Revalidando...
+                  </>
+                ) : (
+                  'Revalidar'
+                )}
+              </button>
+            )}
             <button
-              disabled={true}
-              title="Modo de visualização apenas. A criação de vendas está desativada neste painel."
-              className="px-6 py-3 rounded-2xl font-semibold transition-all duration-300 flex items-center gap-2 bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+              disabled={!validationRun || validatedRows.some(r => !r.isValid)}
+              title={validationRun && validatedRows.some(r => !r.isValid) ? "Existem linhas com erros de validação" : "Modo de visualização apenas. A criação de vendas está desativada neste painel."}
+              className={`px-6 py-3 rounded-2xl font-semibold transition-all duration-300 flex items-center gap-2 ${
+                validationRun && !validatedRows.some(r => !r.isValid)
+                  ? 'bg-green-600 text-white hover:bg-green-700'
+                  : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
+              }`}
             >
               Criar vendas
             </button>
