@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, XCircle, Loader } from 'lucide-react';
+import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, XCircle, Loader, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
 import { validateBulkSalesRows, hasAnyInvalidRows, getValidationSummary, ValidatedRow } from '../../lib/bulkSalesValidator';
@@ -196,6 +196,62 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
       emp => emp.isActive && emp.isSeller && emp.name.toLowerCase() === sellerName.toLowerCase().trim()
     );
     return seller?.id || null;
+  };
+
+  const handleDownloadTemplate = () => {
+    const templateData = [
+      {
+        cliente: 'Exemplo Cliente 1',
+        data_da_venda: '15/11/2024',
+        valor_total: 1500.50,
+        forma_de_pagamento: 'cartao_credito',
+        parcelas: 3,
+        vencimento_inicial: '15/12/2024',
+        descricao: 'Produtos vendidos',
+        vendedor: 'João Silva',
+        observacoes: 'Exemplo de observação'
+      },
+      {
+        cliente: 'Exemplo Cliente 2',
+        data_da_venda: '16/11/2024',
+        valor_total: 2500.00,
+        forma_de_pagamento: 'pix',
+        parcelas: 1,
+        vencimento_inicial: '16/11/2024',
+        descricao: 'Serviços prestados',
+        vendedor: 'Maria Santos',
+        observacoes: ''
+      },
+      {
+        cliente: 'Exemplo Cliente 3',
+        data_da_venda: '17/11/2024',
+        valor_total: 800.75,
+        forma_de_pagamento: 'dinheiro',
+        parcelas: 1,
+        vencimento_inicial: '17/11/2024',
+        descricao: 'Venda de produtos',
+        vendedor: 'Pedro Costa',
+        observacoes: 'Cliente preferencial'
+      }
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(templateData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Vendas');
+
+    worksheet['!cols'] = [
+      { wch: 20 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 20 },
+      { wch: 12 },
+      { wch: 15 },
+      { wch: 25 },
+      { wch: 15 },
+      { wch: 25 }
+    ];
+
+    XLSX.writeFile(workbook, 'modelo_vendas.xlsx');
   };
 
   const mapValidatedRowToSale = (row: ValidatedRow, bulkMetadata?: { bulk_insert_id: string; origin_file_name: string }): Omit<Sale, 'id' | 'createdAt'> & { bulk_insert_id?: string; origin_file_name?: string } => {
@@ -459,7 +515,17 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
 
             {/* Instructions */}
             <div className="mt-6 p-5 bg-blue-50 rounded-2xl border border-blue-200 shadow-md">
-              <h4 className="font-bold text-blue-900 mb-3">Instruções de Formato</h4>
+              <div className="flex justify-between items-start mb-4">
+                <h4 className="font-bold text-blue-900">Instruções de Formato</h4>
+                <button
+                  type="button"
+                  onClick={handleDownloadTemplate}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-300 font-semibold text-sm hover:shadow-md hover:scale-105"
+                >
+                  <Download className="w-4 h-4" />
+                  Baixar Modelo
+                </button>
+              </div>
               <ul className="text-sm text-blue-800 space-y-2 list-disc list-inside">
                 <li>O arquivo deve estar em formato .xlsx (Excel)</li>
                 <li>Tamanho máximo: 10MB</li>
