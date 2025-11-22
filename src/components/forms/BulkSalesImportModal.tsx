@@ -1,10 +1,21 @@
 import React, { useState } from 'react';
-import { X, Upload, FileSpreadsheet, AlertCircle, Download, ChevronDown, CheckCircle2, XCircle } from 'lucide-react';
+import { X, Upload, FileSpreadsheet, AlertCircle, Download, ChevronDown, CheckCircle2, XCircle, Loader } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { validateBulkSalesRowsWithSupabase, ValidatedRowWithSupabase, getValidationSummary } from '../../lib/bulkSalesSupabaseValidator';
+import { useAppContext } from '../../context/AppContext';
+import { v4 as uuidv4 } from 'uuid';
+import { formatDateForDisplay, createDateFromInput } from '../../utils/dateUtils';
 
 interface BulkSalesImportModalProps {
   onClose: () => void;
+}
+
+interface CreationResult {
+  success: boolean;
+  rowNumber: number;
+  client: string;
+  saleId?: string;
+  error?: string;
 }
 
 interface RawRowData {
@@ -36,6 +47,7 @@ const SUGGESTED_COLUMNS = [
 ];
 
 export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
+  const { createSale, employees } = useAppContext();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +59,10 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
   const [validatedRows, setValidatedRows] = useState<ValidatedRowWithSupabase[]>([]);
   const [isValidating, setIsValidating] = useState(false);
   const [validationRun, setValidationRun] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [creationProgress, setCreationProgress] = useState(0);
+  const [creationResults, setCreationResults] = useState<CreationResult[]>([]);
+  const [showResults, setShowResults] = useState(false);
 
   const isEmptyCell = (value: any): boolean => {
     if (value === null || value === undefined) return true;
@@ -202,6 +218,149 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
     }
   };
 
+  const getEmployeeIdByName = (name: string): string | undefined => {
+    const employee = employees.find(emp => emp.name.toLowerCase().trim() === name.toLowerCase().trim() && emp.isSeller);
+    return employee?.id;
+  };
+
+  const parseDateDDMMYYYY = (dateStr: string): string | null => {
+    if (!dateStr) return null;
+
+    const trimmed = String(dateStr).trim();
+    const ddmmyyyyMatch = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(trimmed);
+
+    if (ddmmyyyyMatch) {
+      const [, day, month, year] = ddmmyyyyMatch;
+      const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      if (isNaN(dateObj.getTime())) return null;
+
+      const yearStr = dateObj.getFullYear();
+      const monthStr = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const dayStr = String(dateObj.getDate()).padStart(2, '0');
+      return `${yearStr}-${monthStr}-${dayStr}`;
+    }
+
+    const yyyymmddMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(trimmed);
+    if (yyyymmddMatch) {
+      const [, year, month, day] = yyyymmddMatch;
+      const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      if (isNaN(dateObj.getTime())) return null;
+
+      const yearStr = dateObj.getFullYear();
+      const monthStr = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const dayStr = String(dateObj.getDate()).padStart(2, '0');
+      return `${yearStr}-${monthStr}-${dayStr}`;
+    }
+
+    return null;
+  };
+
+  const calculateDueDate = (firstDueDate: string, installmentNumber: number, interval: number): string => {
+    const dateStr = parseDateDDMMYYYY(firstDueDate);
+    if (!dateStr) return firstDueDate;
+
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+
+    const dueDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    dueDate.setDate(dueDate.getDate() + (installmentNumber - 1) * interval);
+
+    const year = dueDate.getFullYear();
+    const month = String(dueDate.getMonth() + 1).padStart(2, '0');
+    const day = String(dueDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const transformRowToSale = (validatedRow: ValidatedRowWithSupabase, bulkId: string, fileName: string) => {
+    const { data } = validatedRow;
+    const installmentInterval = 30;
+    const sellerId = getEmployeeIdByName(data.vendedor);
+    const saleDate = parseDateDDMMYYYY(data.data_da_venda) || new Date().toISOString().split('T')[0];
+    const firstDueDate = parseDateDDMMYYYY(data.vencimento_inicial) || saleDate;
+
+    const paymentMethod = data.forma_de_pagamento;
+    const totalValue = data.valor_total;
+    const numInstallments = data.parcelas;
+
+    const paymentMethods = [{
+      type: paymentMethod,
+      amount: totalValue,
+      installments: numInstallments,
+      installmentValue: numInstallments > 1 ? totalValue / numInstallments : totalValue,
+      installmentInterval: installmentInterval,
+      firstInstallmentDate: firstDueDate,
+      startDate: saleDate
+    }];
+
+    const receivedAmount = ['dinheiro', 'pix'].includes(paymentMethod) ? totalValue : 0;
+    const pendingAmount = totalValue - receivedAmount;
+
+    const sale = {
+      client: data.cliente,
+      date: saleDate,
+      sellerId: sellerId,
+      products: null,
+      totalValue: totalValue,
+      paymentMethods: paymentMethods,
+      receivedAmount: receivedAmount,
+      pendingAmount: pendingAmount,
+      status: receivedAmount >= totalValue ? 'pago' : (receivedAmount > 0 ? 'parcial' : 'pendente'),
+      customCommissionRate: 5,
+      observations: `Importado em lote via arquivo Excel`,
+      bulk_insert_id: bulkId,
+      origin_file_name: fileName
+    };
+
+    return sale;
+  };
+
+  const handleBulkSalesCreation = async () => {
+    if (!validatedRows.some(r => r.isValid)) {
+      alert('Nenhuma venda válida para criar');
+      return;
+    }
+
+    setIsCreating(true);
+    setCreationResults([]);
+    setCreationProgress(0);
+
+    const validSales = validatedRows.filter(r => r.isValid);
+    const bulkId = uuidv4();
+    const fileName = selectedFile?.name || 'vendas_em_lote';
+    const results: CreationResult[] = [];
+
+    for (let i = 0; i < validSales.length; i++) {
+      const validatedRow = validSales[i];
+
+      try {
+        const saleData = transformRowToSale(validatedRow, bulkId, fileName);
+        await createSale(saleData);
+
+        results.push({
+          success: true,
+          rowNumber: validatedRow.rowNumber,
+          client: validatedRow.data.cliente,
+          saleId: undefined
+        });
+
+        setCreationProgress(((i + 1) / validSales.length) * 100);
+      } catch (err: any) {
+        results.push({
+          success: false,
+          rowNumber: validatedRow.rowNumber,
+          client: validatedRow.data.cliente,
+          error: err?.message || 'Erro ao criar venda'
+        });
+
+        setCreationProgress(((i + 1) / validSales.length) * 100);
+      }
+    }
+
+    setCreationResults(results);
+    setShowResults(true);
+    setIsCreating(false);
+  };
+
   const handleDownloadTemplate = () => {
     const templateData = [
       {
@@ -281,14 +440,26 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
             </button>
           </div>
 
-          {/* Display-Only Mode Notice */}
-          <div className="mb-6 p-4 bg-blue-50 rounded-2xl border border-blue-200 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <h4 className="font-semibold text-blue-900">Modo de Visualização</h4>
-              <p className="text-sm text-blue-800">Este painel é apenas para visualizar seus dados. Nenhum dado será salvo no banco de dados. Para proceder com a criação de vendas, entre em contato com a equipe de administração.</p>
+          {/* Creation Progress Modal */}
+          {isCreating && (
+            <div className="mb-6 p-4 bg-blue-50 rounded-2xl border border-blue-200 flex items-start gap-3">
+              <div className="w-5 h-5 text-blue-600 animate-spin flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div className="w-full h-full border-2 border-blue-200 border-t-blue-600 rounded-full" />
+              </div>
+              <div className="flex-grow">
+                <h4 className="font-semibold text-blue-900">Criando vendas em lote</h4>
+                <p className="text-sm text-blue-800 mt-1">
+                  Progresso: {Math.round(creationProgress)}%
+                </p>
+                <div className="w-full bg-blue-200 rounded-full h-2 mt-2 overflow-hidden">
+                  <div
+                    className="bg-blue-600 h-full transition-all duration-300"
+                    style={{ width: `${creationProgress}%` }}
+                  />
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* File Upload Area */}
           <div className="mb-8">
@@ -605,57 +776,135 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
           )}
 
           {/* Buttons */}
-          <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
-            <button
-              onClick={onClose}
-              className="btn-secondary rounded-2xl transition-all duration-300 hover:shadow-md"
-            >
-              Fechar
-            </button>
-            {rawData.length > 0 && !validationRun && (
+          {!showResults && (
+            <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
               <button
-                onClick={handleValidate}
-                disabled={isValidating}
-                className="px-6 py-3 rounded-2xl font-semibold transition-all duration-300 flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed"
+                onClick={onClose}
+                className="btn-secondary rounded-2xl transition-all duration-300 hover:shadow-md"
+                disabled={isCreating}
               >
-                {isValidating ? (
+                Fechar
+              </button>
+              {rawData.length > 0 && !validationRun && (
+                <button
+                  onClick={handleValidate}
+                  disabled={isValidating || isCreating}
+                  className="px-6 py-3 rounded-2xl font-semibold transition-all duration-300 flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed"
+                >
+                  {isValidating ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Validando...
+                    </>
+                  ) : (
+                    'Validar'
+                  )}
+                </button>
+              )}
+              {validationRun && (
+                <button
+                  onClick={handleValidate}
+                  disabled={isValidating || isCreating}
+                  className="px-6 py-3 rounded-2xl font-semibold transition-all duration-300 flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed"
+                >
+                  {isValidating ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Revalidando...
+                    </>
+                  ) : (
+                    'Revalidar'
+                  )}
+                </button>
+              )}
+              <button
+                disabled={!validationRun || validatedRows.some(r => !r.isValid) || isCreating}
+                onClick={handleBulkSalesCreation}
+                title={!validationRun ? "Execute a validação primeiro" : validatedRows.some(r => !r.isValid) ? "Existem linhas com erros de validação" : "Criar todas as vendas válidas"}
+                className={`px-6 py-3 rounded-2xl font-semibold transition-all duration-300 flex items-center gap-2 ${
+                  validationRun && !validatedRows.some(r => !r.isValid) && !isCreating
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
+                }`}
+              >
+                {isCreating ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Validando...
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Criando...
                   </>
                 ) : (
-                  'Validar'
+                  'Criar vendas'
                 )}
               </button>
-            )}
-            {validationRun && (
-              <button
-                onClick={handleValidate}
-                disabled={isValidating}
-                className="px-6 py-3 rounded-2xl font-semibold transition-all duration-300 flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed"
-              >
-                {isValidating ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Revalidando...
-                  </>
-                ) : (
-                  'Revalidar'
-                )}
-              </button>
-            )}
-            <button
-              disabled={!validationRun || validatedRows.some(r => !r.isValid)}
-              title={validationRun && validatedRows.some(r => !r.isValid) ? "Existem linhas com erros de validação" : "Modo de visualização apenas. A criação de vendas está desativada neste painel."}
-              className={`px-6 py-3 rounded-2xl font-semibold transition-all duration-300 flex items-center gap-2 ${
-                validationRun && !validatedRows.some(r => !r.isValid)
-                  ? 'bg-green-600 text-white hover:bg-green-700'
-                  : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
-              }`}
-            >
-              Criar vendas
-            </button>
-          </div>
+            </div>
+          )}
+
+          {/* Results Modal */}
+          {showResults && (
+            <div className="space-y-6 border-t border-slate-200 pt-6">
+              <div className="p-6 rounded-2xl" style={{
+                backgroundColor: creationResults.some(r => !r.success) ? '#fef2f2' : '#f0fdf4',
+                borderColor: creationResults.some(r => !r.success) ? '#fecaca' : '#bbf7d0',
+                borderWidth: '2px'
+              }}>
+                <div className="flex items-start gap-4">
+                  {creationResults.some(r => !r.success) ? (
+                    <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
+                  ) : (
+                    <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
+                  )}
+                  <div className="flex-grow">
+                    <h4 className={`font-bold text-lg ${creationResults.some(r => !r.success) ? 'text-red-900' : 'text-green-900'}`}>
+                      {creationResults.some(r => !r.success) ? 'Criação concluída com erros' : 'Todas as vendas foram criadas com sucesso!'}
+                    </h4>
+                    <div className="grid grid-cols-3 gap-4 mt-3 text-sm">
+                      <div>
+                        <p className="text-slate-600">Total de vendas</p>
+                        <p className="text-2xl font-bold text-slate-900">{creationResults.length}</p>
+                      </div>
+                      <div>
+                        <p className="text-green-600">Criadas com sucesso</p>
+                        <p className="text-2xl font-bold text-green-700">{creationResults.filter(r => r.success).length}</p>
+                      </div>
+                      {creationResults.some(r => !r.success) && (
+                        <div>
+                          <p className="text-red-600">Com erros</p>
+                          <p className="text-2xl font-bold text-red-700">{creationResults.filter(r => !r.success).length}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {creationResults.some(r => !r.success) && (
+                <div className="p-6 bg-red-50 rounded-2xl border border-red-200">
+                  <h5 className="font-bold text-red-900 mb-4">Vendas com erro:</h5>
+                  <div className="space-y-3 max-h-48 overflow-y-auto">
+                    {creationResults.filter(r => !r.success).map((result, idx) => (
+                      <div key={idx} className="p-3 bg-white rounded-xl border border-red-100">
+                        <p className="font-semibold text-red-900">Linha {result.rowNumber}: {result.client}</p>
+                        <p className="text-sm text-red-700 mt-1">{result.error}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-4 pt-4">
+                <button
+                  onClick={() => {
+                    setShowResults(false);
+                    clearFile();
+                    onClose();
+                  }}
+                  className="btn-primary rounded-2xl"
+                >
+                  Concluído
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
