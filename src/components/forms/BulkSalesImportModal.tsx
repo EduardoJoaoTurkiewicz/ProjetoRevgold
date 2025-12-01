@@ -63,6 +63,8 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
   const [creationProgress, setCreationProgress] = useState(0);
   const [creationResults, setCreationResults] = useState<CreationResult[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [currentSalesProcessed, setCurrentSalesProcessed] = useState(0);
+  const [totalSalesToCreate, setTotalSalesToCreate] = useState(0);
 
   const isEmptyCell = (value: any): boolean => {
     if (value === null || value === undefined) return true;
@@ -165,6 +167,9 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
     setUploadedAt(null);
     setValidatedRows([]);
     setValidationRun(false);
+    setCreationProgress(0);
+    setCurrentSalesProcessed(0);
+    setTotalSalesToCreate(0);
   };
 
   const handleValidate = async () => {
@@ -320,11 +325,13 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
       return;
     }
 
+    const validSales = validatedRows.filter(r => r.isValid);
+    setTotalSalesToCreate(validSales.length);
     setIsCreating(true);
     setCreationResults([]);
     setCreationProgress(0);
+    setCurrentSalesProcessed(0);
 
-    const validSales = validatedRows.filter(r => r.isValid);
     const bulkId = uuidv4();
     const fileName = selectedFile?.name || 'vendas_em_lote';
     const results: CreationResult[] = [];
@@ -342,8 +349,6 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
           client: validatedRow.data.cliente,
           saleId: undefined
         });
-
-        setCreationProgress(((i + 1) / validSales.length) * 100);
       } catch (err: any) {
         results.push({
           success: false,
@@ -351,9 +356,11 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
           client: validatedRow.data.cliente,
           error: err?.message || 'Erro ao criar venda'
         });
-
-        setCreationProgress(((i + 1) / validSales.length) * 100);
       }
+
+      const processedCount = i + 1;
+      setCurrentSalesProcessed(processedCount);
+      setCreationProgress((processedCount / validSales.length) * 100);
     }
 
     setCreationResults(results);
@@ -442,20 +449,59 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
 
           {/* Creation Progress Modal */}
           {isCreating && (
-            <div className="mb-6 p-4 bg-blue-50 rounded-2xl border border-blue-200 flex items-start gap-3">
-              <div className="w-5 h-5 text-blue-600 animate-spin flex items-center justify-center flex-shrink-0 mt-0.5">
-                <div className="w-full h-full border-2 border-blue-200 border-t-blue-600 rounded-full" />
-              </div>
-              <div className="flex-grow">
-                <h4 className="font-semibold text-blue-900">Criando vendas em lote</h4>
-                <p className="text-sm text-blue-800 mt-1">
-                  Progresso: {Math.round(creationProgress)}%
-                </p>
-                <div className="w-full bg-blue-200 rounded-full h-2 mt-2 overflow-hidden">
-                  <div
-                    className="bg-blue-600 h-full transition-all duration-300"
-                    style={{ width: `${creationProgress}%` }}
-                  />
+            <div className={`mb-6 p-6 rounded-2xl border-2 transition-all duration-300 ${
+              creationProgress === 100
+                ? 'bg-green-50 border-green-300 shadow-lg shadow-green-100'
+                : 'bg-blue-50 border-blue-200'
+            }`}>
+              <div className="flex items-start gap-4">
+                <div className={`w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                  creationProgress === 100
+                    ? 'text-green-600'
+                    : 'text-blue-600 animate-spin'
+                }`}>
+                  {creationProgress === 100 ? (
+                    <CheckCircle2 className="w-6 h-6" />
+                  ) : (
+                    <div className="w-full h-full border-2 border-blue-200 border-t-blue-600 rounded-full" />
+                  )}
+                </div>
+                <div className="flex-grow">
+                  <h4 className={`font-semibold text-lg ${
+                    creationProgress === 100 ? 'text-green-900' : 'text-blue-900'
+                  }`}>
+                    {creationProgress === 100 ? 'Vendas criadas com sucesso!' : 'Criando vendas em lote'}
+                  </h4>
+
+                  <div className="mt-4 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className={`text-sm font-semibold ${
+                        creationProgress === 100 ? 'text-green-800' : 'text-blue-800'
+                      }`}>
+                        {currentSalesProcessed}/{totalSalesToCreate} vendas
+                      </span>
+                      <span className={`text-lg font-black ${
+                        creationProgress === 100 ? 'text-green-700' : 'text-blue-700'
+                      }`}>
+                        {Math.round(creationProgress)}%
+                      </span>
+                    </div>
+
+                    <div className={`w-full rounded-full h-3 overflow-hidden shadow-sm ${
+                      creationProgress === 100
+                        ? 'bg-green-200'
+                        : 'bg-blue-200'
+                    }`}>
+                      <div
+                        className={`h-full transition-all duration-300 ${
+                          creationProgress === 100
+                            ? 'bg-green-600 shadow-md shadow-green-500'
+                            : 'bg-blue-600'
+                        }`}
+                        style={{ width: `${creationProgress}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -896,6 +942,9 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
                   onClick={() => {
                     setShowResults(false);
                     clearFile();
+                    setCreationProgress(0);
+                    setCurrentSalesProcessed(0);
+                    setTotalSalesToCreate(0);
                     onClose();
                   }}
                   className="btn-primary rounded-2xl"
