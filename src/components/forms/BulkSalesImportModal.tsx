@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Upload, FileSpreadsheet, AlertCircle, Download, ChevronDown, CheckCircle2, XCircle, Loader } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { validateBulkSalesRowsWithSupabase, ValidatedRowWithSupabase, getValidationSummary } from '../../lib/bulkSalesSupabaseValidator';
@@ -65,6 +65,25 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
   const [showResults, setShowResults] = useState(false);
   const [currentSalesProcessed, setCurrentSalesProcessed] = useState(0);
   const [totalSalesToCreate, setTotalSalesToCreate] = useState(0);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [isAllSuccessful, setIsAllSuccessful] = useState(false);
+
+  useEffect(() => {
+    if (showSuccessPopup && isAllSuccessful) {
+      const timer = setTimeout(() => {
+        clearFile();
+        setCreationProgress(0);
+        setCurrentSalesProcessed(0);
+        setTotalSalesToCreate(0);
+        setShowSuccessPopup(false);
+        setIsAllSuccessful(false);
+        setCreationResults([]);
+        onClose();
+      }, 1500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessPopup, isAllSuccessful]);
 
   const isEmptyCell = (value: any): boolean => {
     if (value === null || value === undefined) return true;
@@ -364,7 +383,15 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
     }
 
     setCreationResults(results);
-    setShowResults(true);
+    const allSuccessful = results.every(r => r.success);
+    setIsAllSuccessful(allSuccessful);
+
+    if (allSuccessful) {
+      setShowSuccessPopup(true);
+    } else {
+      setShowResults(true);
+    }
+
     setIsCreating(false);
   };
 
@@ -500,6 +527,31 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
                         }`}
                         style={{ width: `${creationProgress}%` }}
                       />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Success Popup */}
+          {showSuccessPopup && isAllSuccessful && (
+            <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+              <div className="animate-in fade-in zoom-in duration-300 pointer-events-auto">
+                <div className="bg-white rounded-3xl shadow-2xl overflow-hidden max-w-md mx-auto">
+                  <div className="bg-gradient-to-br from-green-400 to-green-600 p-12 text-center">
+                    <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-white shadow-lg mb-6 animate-bounce">
+                      <CheckCircle2 className="w-14 h-14 text-green-600" />
+                    </div>
+                    <h3 className="text-3xl font-bold text-white mb-2">Sucesso!</h3>
+                    <p className="text-green-50 text-sm">Todas as vendas foram criadas com sucesso</p>
+                  </div>
+                  <div className="p-8">
+                    <div className="text-center">
+                      <p className="text-5xl font-black text-green-600 mb-2">
+                        {creationResults.length}
+                      </p>
+                      <p className="text-slate-600 text-sm">vendas adicionadas ao sistema</p>
                     </div>
                   </div>
                 </div>
@@ -822,7 +874,7 @@ export function BulkSalesImportModal({ onClose }: BulkSalesImportModalProps) {
           )}
 
           {/* Buttons */}
-          {!showResults && (
+          {!showResults && !showSuccessPopup && (
             <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
               <button
                 onClick={onClose}
