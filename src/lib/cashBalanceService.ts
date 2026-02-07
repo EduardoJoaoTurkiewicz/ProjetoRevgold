@@ -93,56 +93,6 @@ export class CashBalanceService {
     }
   }
 
-  // Handle debt installment payment - creates cash outflow when paid via company cash
-  static async handleDebtInstallmentPayment(
-    debt: any,
-    installmentInfo: { number: number, total: number, amount: number },
-    paymentMethod: string,
-    paymentDate: string
-  ): Promise<void> {
-    // Payment methods that come from company cash (create outflow)
-    const cashPaymentMethods = ['dinheiro', 'pix', 'cartao_debito', 'transferencia'];
-
-    // Only create cash outflow if payment is via company cash
-    if (cashPaymentMethods.includes(paymentMethod)) {
-      const amount = safeNumber(installmentInfo.amount, 0);
-
-      await this.createCashTransaction({
-        date: paymentDate,
-        type: 'saida',
-        amount: amount,
-        description: `Pagamento parcela ${installmentInfo.number}/${installmentInfo.total} - ${debt.company} - ${debt.description}`,
-        category: 'divida',
-        relatedId: debt.id,
-        paymentMethod: paymentMethod
-      });
-
-      console.log(`✅ Cash outflow created for debt installment: R$ ${amount.toFixed(2)}`);
-    } else {
-      console.log(`ℹ️ No cash outflow for payment method: ${paymentMethod} (not a cash payment)`);
-    }
-  }
-
-  // Handle credit card debt installment payment
-  static async handleCreditCardDebtInstallmentPayment(
-    installmentData: any,
-    debtInfo: { supplierName: string, totalAmount: number }
-  ): Promise<void> {
-    const amount = safeNumber(installmentData.amount, 0);
-
-    await this.createCashTransaction({
-      date: installmentData.paid_date || new Date().toISOString().split('T')[0],
-      type: 'saida',
-      amount: amount,
-      description: `Pagamento cartão de crédito - Parcela ${installmentData.installment_number} - ${debtInfo.supplierName}`,
-      category: 'cartao',
-      relatedId: installmentData.credit_card_debt_id,
-      paymentMethod: 'cartao_credito'
-    });
-
-    console.log(`✅ Cash outflow created for credit card debt installment: R$ ${amount.toFixed(2)}`);
-  }
-
   // Handle acerto payment processing
   static async handleAcertoPayment(acerto: any, paymentData: any): Promise<void> {
     try {

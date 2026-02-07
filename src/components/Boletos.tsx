@@ -274,7 +274,7 @@ export function Boletos() {
                       <div>
                         <h3 className="text-lg font-bold text-slate-900">{sale.client}</h3>
                         <p className="text-sm text-slate-600">
-                          Data: {dbDateToDisplay(sale.date)} • 
+                          Data: {new Date(sale.date).toLocaleDateString('pt-BR')} • 
                           {sale.boletos.length} boleto(s)
                         </p>
                       </div>
@@ -309,7 +309,7 @@ export function Boletos() {
                                   Parcela {boleto.installmentNumber}/{boleto.totalInstallments}
                                 </div>
                                 <div className="text-sm text-slate-600">
-                                  Vencimento: {dbDateToDisplay(boleto.dueDate)}
+                                  Vencimento: {new Date(boleto.dueDate).toLocaleDateString('pt-BR')}
                                 </div>
                                 <div className="text-sm text-slate-600">
                                   Status: {getStatusLabel(boleto.status)}
@@ -407,7 +407,7 @@ export function Boletos() {
                       <div>
                         <h3 className="text-lg font-bold text-slate-900">{debt.company}</h3>
                         <p className="text-sm text-slate-600">
-                          Data: {dbDateToDisplay(debt.date)} • 
+                          Data: {new Date(debt.date).toLocaleDateString('pt-BR')} • 
                           {debt.boletos.length} boleto(s)
                         </p>
                       </div>
@@ -439,7 +439,7 @@ export function Boletos() {
                                   Parcela {boleto.installmentNumber}/{boleto.totalInstallments}
                                 </div>
                                 <div className="text-sm text-slate-600">
-                                  Vencimento: {dbDateToDisplay(boleto.dueDate)}
+                                  Vencimento: {new Date(boleto.dueDate).toLocaleDateString('pt-BR')}
                                 </div>
                                 <div className="text-sm text-slate-600">
                                   Status: {getStatusLabel(boleto.status)}
@@ -535,7 +535,7 @@ export function Boletos() {
                       R$ {boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="py-4 px-6 text-sm">
-                      {dbDateToDisplay(boleto.dueDate)}
+                      {new Date(boleto.dueDate).toLocaleDateString('pt-BR')}
                     </td>
                     <td className="py-4 px-6 text-sm">
                       <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(boleto.status)}`}>
@@ -644,7 +644,7 @@ export function Boletos() {
                 <div>
                   <label className="form-label">Vencimento</label>
                   <p className="text-sm text-slate-900 font-medium">
-                    {dbDateToDisplay(viewingBoleto.dueDate)}
+                    {new Date(viewingBoleto.dueDate).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
                 <div>

@@ -20,31 +20,14 @@ export function Permutas() {
   const [editingPermuta, setEditingPermuta] = useState<Permuta | null>(null);
   const [viewingPermuta, setViewingPermuta] = useState<Permuta | null>(null);
 
-  // Calcular estatísticas com valores reais das vendas
+  // Calcular estatísticas
   const stats = useMemo(() => {
     const activePermutas = permutas.filter(p => p.status === 'ativo');
     const finishedPermutas = permutas.filter(p => p.status === 'finalizado');
     const totalVehicleValue = permutas.reduce((sum, p) => sum + p.vehicleValue, 0);
-
-    // Calcular valor consumido real a partir das vendas
-    let totalConsumedValue = 0;
-    permutas.forEach(permuta => {
-      const relatedSales = sales.filter(sale =>
-        sale.paymentMethods?.some(method =>
-          method.type === 'permuta' && method.vehicleId === permuta.id
-        )
-      );
-      const consumed = relatedSales.reduce((sum, sale) => {
-        const permutaAmount = sale.paymentMethods
-          ?.filter(method => method.type === 'permuta' && method.vehicleId === permuta.id)
-          .reduce((methodSum, method) => methodSum + method.amount, 0) || 0;
-        return sum + permutaAmount;
-      }, 0);
-      totalConsumedValue += consumed;
-    });
-
-    const totalRemainingValue = totalVehicleValue - totalConsumedValue;
-
+    const totalConsumedValue = permutas.reduce((sum, p) => sum + p.consumedValue, 0);
+    const totalRemainingValue = permutas.reduce((sum, p) => sum + p.remainingValue, 0);
+    
     return {
       total: permutas.length,
       active: activePermutas.length,
@@ -53,7 +36,7 @@ export function Permutas() {
       totalConsumedValue,
       totalRemainingValue
     };
-  }, [permutas, sales]);
+  }, [permutas]);
 
   // Obter vendas relacionadas a uma permuta específica (usando vehicleId)
   const getRelatedSales = (permutaId: string) => {
@@ -63,24 +46,6 @@ export function Permutas() {
         method.type === 'permuta' && method.vehicleId === permutaId
       );
     });
-  };
-
-  // Calcular valores reais de consumo para uma permuta específica
-  const getPermutaRealValues = (permuta: Permuta) => {
-    const relatedSales = getRelatedSales(permuta.id);
-    const consumedValue = relatedSales.reduce((sum, sale) => {
-      const permutaAmount = sale.paymentMethods
-        ?.filter(method => method.type === 'permuta' && method.vehicleId === permuta.id)
-        .reduce((methodSum, method) => methodSum + method.amount, 0) || 0;
-      return sum + permutaAmount;
-    }, 0);
-    const remainingValue = permuta.vehicleValue - consumedValue;
-
-    return {
-      consumedValue,
-      remainingValue,
-      salesCount: relatedSales.length
-    };
   };
 
   const handleAddPermuta = (permuta: Omit<Permuta, 'id' | 'createdAt'>) => {
@@ -129,8 +94,7 @@ export function Permutas() {
 
   const getProgressPercentage = (permuta: Permuta) => {
     if (permuta.vehicleValue === 0) return 0;
-    const { consumedValue } = getPermutaRealValues(permuta);
-    return Math.min(100, (consumedValue / permuta.vehicleValue) * 100);
+    return Math.min(100, (permuta.consumedValue / permuta.vehicleValue) * 100);
   };
 
   if (isLoading) {
@@ -255,8 +219,7 @@ export function Permutas() {
           permutas.map((permuta) => {
             const relatedSales = getRelatedSales(permuta.id!);
             const progressPercentage = getProgressPercentage(permuta);
-            const realValues = getPermutaRealValues(permuta);
-
+            
             return (
               <div key={permuta.id} className="card modern-shadow-xl">
                 {/* Permuta Header */}
@@ -276,7 +239,7 @@ export function Permutas() {
                         </span>
                         <span className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
-                          {dbDateToDisplay(permuta.registrationDate)}
+                          {new Date(permuta.registrationDate).toLocaleDateString('pt-BR')}
                         </span>
                         <span className="font-bold text-indigo-600">
                           Placa: {permuta.vehiclePlate}
@@ -314,8 +277,8 @@ export function Permutas() {
                     ></div>
                   </div>
                   <div className="flex justify-between text-sm text-slate-600 mt-2">
-                    <span>Consumido: R$ {realValues.consumedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    <span>Restante: R$ {realValues.remainingValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span>Consumido: R$ {permuta.consumedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span>Restante: R$ {permuta.remainingValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                   </div>
                 </div>
 
@@ -332,15 +295,15 @@ export function Permutas() {
                   <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-200">
                     <h4 className="font-bold text-blue-900 mb-2">Valor Consumido</h4>
                     <p className="text-2xl font-black text-blue-700">
-                      R$ {realValues.consumedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {permuta.consumedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
-                    <p className="text-sm text-blue-600">{realValues.salesCount} venda(s)</p>
+                    <p className="text-sm text-blue-600">{relatedSales.length} venda(s)</p>
                   </div>
-
+                  
                   <div className="text-center p-4 bg-orange-50 rounded-xl border border-orange-200">
                     <h4 className="font-bold text-orange-900 mb-2">Valor Disponível</h4>
                     <p className="text-2xl font-black text-orange-700">
-                      R$ {realValues.remainingValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {permuta.remainingValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                     <p className="text-sm text-orange-600">Para futuras vendas</p>
                   </div>
@@ -398,7 +361,7 @@ export function Permutas() {
                             <div className="flex justify-between items-center">
                               <div>
                                 <p className="font-bold text-blue-900">
-                                  {dbDateToDisplay(sale.date)}
+                                  {new Date(sale.date).toLocaleDateString('pt-BR')}
                                 </p>
                                 <p className="text-sm text-blue-700">
                                   Total: R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}

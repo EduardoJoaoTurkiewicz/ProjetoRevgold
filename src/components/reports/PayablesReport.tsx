@@ -50,7 +50,7 @@ export function PayablesReport() {
                     <div>
                       <h5 className="font-bold text-red-900">{check.companyName || check.client}</h5>
                       <p className="text-sm text-red-700">
-                        Vencimento: {dbDateToDisplay(check.dueDate)}
+                        Vencimento: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
                       </p>
                       {check.installmentNumber && check.totalInstallments && (
                         <p className="text-sm text-red-700">
@@ -84,7 +84,7 @@ export function PayablesReport() {
                     <div>
                       <h5 className="font-bold text-orange-900">{boleto.companyName || boleto.client}</h5>
                       <p className="text-sm text-orange-700">
-                        Vencimento: {dbDateToDisplay(boleto.dueDate)}
+                        Vencimento: {new Date(boleto.dueDate).toLocaleDateString('pt-BR')}
                       </p>
                       <p className="text-sm text-orange-700">
                         Parcela {boleto.installmentNumber}/{boleto.totalInstallments}
@@ -116,7 +116,7 @@ export function PayablesReport() {
                     <div>
                       <h5 className="font-bold text-gray-900">{debt.company}</h5>
                       <p className="text-sm text-gray-700">
-                        Data: {dbDateToDisplay(debt.date)}
+                        Data: {new Date(debt.date).toLocaleDateString('pt-BR')}
                       </p>
                       <p className="text-sm text-gray-700 truncate max-w-48">
                         {debt.description}

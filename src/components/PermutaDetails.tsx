@@ -1,7 +1,6 @@
 import React from 'react';
 import { X, Car, User, Calendar, DollarSign, FileText, Activity, TrendingUp, CheckCircle } from 'lucide-react';
 import { Permuta, Sale } from '../types';
-import { dbDateToDisplay } from '../utils/dateUtils';
 
 interface PermutaDetailsProps {
   permuta: Permuta;
@@ -76,7 +75,7 @@ export function PermutaDetails({ permuta, relatedSales, onClose }: PermutaDetail
                   {getStatusLabel(permuta.status)}
                 </span>
                 <p className="text-sm text-indigo-600 mt-2">
-                  Registrado em {dbDateToDisplay(permuta.registrationDate)}
+                  Registrado em {new Date(permuta.registrationDate).toLocaleDateString('pt-BR')}
                 </p>
               </div>
 
@@ -213,7 +212,7 @@ export function PermutaDetails({ permuta, relatedSales, onClose }: PermutaDetail
                   <div className="flex justify-between">
                     <span className="text-slate-600">Data de Registro:</span>
                     <span className="font-bold text-slate-900">
-                      {dbDateToDisplay(permuta.registrationDate)}
+                      {new Date(permuta.registrationDate).toLocaleDateString('pt-BR')}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -268,7 +267,7 @@ export function PermutaDetails({ permuta, relatedSales, onClose }: PermutaDetail
                             <div className="flex items-center gap-2 mb-2">
                               <Calendar className="w-4 h-4 text-green-600" />
                               <span className="font-bold text-green-900">
-                                {dbDateToDisplay(sale.date)}
+                                {new Date(sale.date).toLocaleDateString('pt-BR')}
                               </span>
                               <span className={`px-2 py-1 rounded-full text-xs font-bold border ${
                                 sale.status === 'pago' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :

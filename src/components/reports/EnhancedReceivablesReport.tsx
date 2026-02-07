@@ -247,7 +247,7 @@ export function EnhancedReceivablesReport() {
                   <div className="flex-1">
                     <h4 className="font-bold text-green-900 text-lg">{receivable.client}</h4>
                     <p className="text-sm text-green-700">
-                      Data da Venda: {dbDateToDisplay(receivable.saleDate)}
+                      Data da Venda: {new Date(receivable.saleDate).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
                   <button
@@ -298,7 +298,7 @@ export function EnhancedReceivablesReport() {
                             </p>
                             {method.dueDate && (
                               <p className="text-xs text-green-600">
-                                Venc: {dbDateToDisplay(method.dueDate)}
+                                Venc: {new Date(method.dueDate).toLocaleDateString('pt-BR')}
                               </p>
                             )}
                           </div>
@@ -327,7 +327,7 @@ export function EnhancedReceivablesReport() {
                   <h3 className="text-2xl font-bold mb-2">Extrato de Recebimentos</h3>
                   <p className="text-green-100 font-medium">{selectedSale.client}</p>
                   <p className="text-green-100 text-sm">
-                    Venda em {dbDateToDisplay(selectedSale.saleDate)}
+                    Venda em {new Date(selectedSale.saleDate).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
                 <button
@@ -392,7 +392,7 @@ export function EnhancedReceivablesReport() {
                                   R$ {movement.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </p>
                                 <p className="text-xs text-slate-500">
-                                  {dbDateToDisplay(movement.date)}
+                                  {new Date(movement.date).toLocaleDateString('pt-BR')}
                                 </p>
                               </div>
                             </div>
@@ -451,7 +451,7 @@ export function EnhancedReceivablesReport() {
                           <p className="text-sm text-orange-700">{method.installment}</p>
                           {method.dueDate && (
                             <p className="text-xs text-orange-600">
-                              Vencimento: {dbDateToDisplay(method.dueDate)}
+                              Vencimento: {new Date(method.dueDate).toLocaleDateString('pt-BR')}
                             </p>
                           )}
                         </div>

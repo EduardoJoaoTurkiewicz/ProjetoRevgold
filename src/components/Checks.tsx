@@ -451,7 +451,7 @@ export function Checks() {
                       <div>
                         <h3 className="text-lg font-bold text-slate-900">{sale.client}</h3>
                         <p className="text-sm text-slate-600">
-                          Data: {dbDateToDisplay(sale.date)} • 
+                          Data: {new Date(sale.date).toLocaleDateString('pt-BR')} • 
                           {sale.checks.length} cheque(s)
                         </p>
                       </div>
@@ -486,7 +486,7 @@ export function Checks() {
                                   Parcela {check.installmentNumber}/{check.totalInstallments}
                                 </div>
                                 <div className="text-sm text-slate-600">
-                                  Vencimento: {dbDateToDisplay(check.dueDate)}
+                                  Vencimento: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
                                 </div>
                                 <div className="text-sm text-slate-600">
                                   Status: {getStatusLabel(check.status)}
@@ -681,7 +681,7 @@ export function Checks() {
                       <div>
                         <h3 className="text-lg font-bold text-slate-900">{debt.company}</h3>
                         <p className="text-sm text-slate-600">
-                          Data: {dbDateToDisplay(debt.date)} • 
+                          Data: {new Date(debt.date).toLocaleDateString('pt-BR')} • 
                           {debt.checks.length} cheque(s)
                         </p>
                       </div>
@@ -900,7 +900,7 @@ export function Checks() {
                         <div>
                           <h3 className="text-lg font-bold text-slate-900">{sale.client}</h3>
                           <p className="text-sm text-slate-600">
-                            Data: {dbDateToDisplay(sale.date)} •
+                            Data: {new Date(sale.date).toLocaleDateString('pt-BR')} •
                             {sale.checks.filter(c => c.usedInDebt).length} cheque(s) usado(s) em dívidas
                           </p>
                         </div>
@@ -924,7 +924,7 @@ export function Checks() {
                                       Parcela {check.installmentNumber}/{check.totalInstallments}
                                     </div>
                                     <div className="text-sm text-slate-600">
-                                      Vencimento Original: {dbDateToDisplay(check.dueDate)}
+                                      Vencimento Original: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
                                     </div>
                                     {check.supplierName && (
                                       <div className="text-sm text-blue-600 font-semibold mt-2">
@@ -1005,7 +1005,7 @@ export function Checks() {
                         <div>
                           <h3 className="text-lg font-bold text-slate-900">{sale.client}</h3>
                           <p className="text-sm text-slate-600">
-                            Data: {dbDateToDisplay(sale.date)} •
+                            Data: {new Date(sale.date).toLocaleDateString('pt-BR')} •
                             {sale.checks.filter(c => c.is_discounted || c.discount_date).length} cheque(s) antecipado(s)
                           </p>
                         </div>
@@ -1029,11 +1029,11 @@ export function Checks() {
                                       Parcela {check.installmentNumber}/{check.totalInstallments}
                                     </div>
                                     <div className="text-sm text-slate-600">
-                                      Vencimento Original: {dbDateToDisplay(check.dueDate)}
+                                      Vencimento Original: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
                                     </div>
                                     {check.discount_date && (
                                       <div className="text-sm text-emerald-600 font-semibold">
-                                        Antecipado em: {dbDateToDisplay(check.discount_date)}
+                                        Antecipado em: {new Date(check.discount_date).toLocaleDateString('pt-BR')}
                                       </div>
                                     )}
                                   </div>
@@ -1108,7 +1108,7 @@ export function Checks() {
                       R$ {check.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="py-4 px-6 text-sm">
-                      {dbDateToDisplay(check.dueDate)}
+                      {new Date(check.dueDate).toLocaleDateString('pt-BR')}
                     </td>
                     <td className="py-4 px-6 text-sm">
                       <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(check.status)}`}>
@@ -1208,7 +1208,7 @@ export function Checks() {
                 <div>
                   <label className="form-label">Vencimento</label>
                   <p className="text-sm text-slate-900 font-medium">
-                    {dbDateToDisplay(viewingCheck.dueDate)}
+                    {new Date(viewingCheck.dueDate).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
                 <div>

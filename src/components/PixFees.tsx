@@ -244,7 +244,7 @@ export function PixFees() {
                 {pixFees.map(pixFee => (
                   <tr key={pixFee.id} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-all duration-300">
                     <td className="py-4 px-6 text-sm font-semibold text-slate-900">
-                      {dbDateToDisplay(pixFee.date)}
+                      {new Date(pixFee.date).toLocaleDateString('pt-BR')}
                     </td>
                     <td className="py-4 px-6 text-sm font-bold text-slate-900">{pixFee.bank}</td>
                     <td className="py-4 px-6 text-sm">
@@ -341,7 +341,7 @@ export function PixFees() {
                 <div>
                   <label className="form-label">Data</label>
                   <p className="text-sm text-slate-900 font-semibold">
-                    {dbDateToDisplay(viewingPixFee.date)}
+                    {new Date(viewingPixFee.date).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
                 <div>

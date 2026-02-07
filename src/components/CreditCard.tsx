@@ -84,36 +84,6 @@ export default function CreditCard() {
     loadSales();
     loadDebts();
     processAutomaticPayments();
-
-    // Subscribe to real-time changes for credit card sales
-    const salesChannel = supabase
-      .channel('credit_card_sales_changes')
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'credit_card_sales' },
-        () => {
-          console.log('Credit card sales changed, reloading...');
-          loadSales();
-        }
-      )
-      .subscribe();
-
-    // Subscribe to real-time changes for credit card debts
-    const debtsChannel = supabase
-      .channel('credit_card_debts_changes')
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'credit_card_debts' },
-        () => {
-          console.log('Credit card debts changed, reloading...');
-          loadDebts();
-        }
-      )
-      .subscribe();
-
-    // Cleanup subscriptions on unmount
-    return () => {
-      supabase.removeChannel(salesChannel);
-      supabase.removeChannel(debtsChannel);
-    };
   }, []);
 
   useEffect(() => {
