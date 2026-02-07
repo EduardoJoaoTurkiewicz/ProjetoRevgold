@@ -73,14 +73,33 @@ export class AgendaAutoService {
     });
   }
 
-  static async registerSaleDelivery(saleId: string, deliveryDate: string, clientName: string): Promise<void> {
+  static async registerSaleDelivery(saleId: string, deliveryDate: string, clientName: string, saleDetails?: {
+    totalValue?: number;
+    products?: string;
+    paymentMethods?: string;
+  }): Promise<void> {
+    let description = `Entrega de venda para: ${clientName}`;
+
+    if (saleDetails) {
+      if (saleDetails.totalValue) {
+        description += `\nValor Total: R$ ${saleDetails.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+      }
+      if (saleDetails.products) {
+        description += `\nProdutos: ${saleDetails.products}`;
+      }
+      if (saleDetails.paymentMethods) {
+        description += `\nFormas de Pagamento: ${saleDetails.paymentMethods}`;
+      }
+    }
+
     await this.registerEvent({
-      title: `Entrega de Venda`,
-      description: `Venda para: ${clientName}`,
+      title: `Entrega de Venda - ${clientName}`,
+      description,
       date: deliveryDate,
       type: 'entrega',
       relatedType: 'venda',
       relatedId: saleId,
+      priority: 'alta',
     });
   }
 

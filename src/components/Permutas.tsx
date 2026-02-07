@@ -4,6 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import { Permuta } from '../types';
 import { PermutaForm } from './forms/PermutaForm';
 import { PermutaDetails } from './PermutaDetails';
+import { dbDateToDisplay } from '../utils/dateUtils';
 
 export function Permutas() {
   const { 
@@ -239,7 +240,7 @@ export function Permutas() {
                         </span>
                         <span className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
-                          {new Date(permuta.registrationDate).toLocaleDateString('pt-BR')}
+                          {dbDateToDisplay(permuta.registrationDate)}
                         </span>
                         <span className="font-bold text-indigo-600">
                           Placa: {permuta.vehiclePlate}
@@ -361,7 +362,7 @@ export function Permutas() {
                             <div className="flex justify-between items-center">
                               <div>
                                 <p className="font-bold text-blue-900">
-                                  {new Date(sale.date).toLocaleDateString('pt-BR')}
+                                  {dbDateToDisplay(sale.date)}
                                 </p>
                                 <p className="text-sm text-blue-700">
                                   Total: R$ {sale.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}

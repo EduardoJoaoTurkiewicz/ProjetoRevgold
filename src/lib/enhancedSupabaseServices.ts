@@ -192,6 +192,38 @@ export const enhancedSalesService = {
         console.error('❌ Error processing installments for sale:', installmentError);
       }
 
+      // Register delivery event in agenda if delivery date exists
+      if (sanitizedSale.deliveryDate) {
+        try {
+          const { AgendaAutoService } = await import('./agendaAutoService');
+
+          // Build payment methods summary
+          const paymentMethodsSummary = (sanitizedSale.paymentMethods || [])
+            .map(pm => {
+              if (pm.installments && pm.installments > 1) {
+                return `${pm.type} (${pm.installments}x)`;
+              }
+              return pm.type;
+            })
+            .join(', ');
+
+          await AgendaAutoService.registerSaleDelivery(
+            returnedSaleId,
+            sanitizedSale.deliveryDate,
+            sanitizedSale.client,
+            {
+              totalValue: sanitizedSale.totalValue,
+              products: typeof sanitizedSale.products === 'string' ? sanitizedSale.products : 'Produtos da venda',
+              paymentMethods: paymentMethodsSummary
+            }
+          );
+          console.log('✅ Delivery event registered in agenda for:', sanitizedSale.deliveryDate);
+        } catch (agendaError) {
+          console.error('❌ Error registering delivery event in agenda:', agendaError);
+          // Don't throw - agenda is not critical
+        }
+      }
+
       return returnedSaleId;
     } catch (error) {
       console.error('❌ Error creating sale:', error);
@@ -210,7 +242,7 @@ export const enhancedSalesService = {
     const cleanedSale = UUIDManager.cleanObjectUUIDs(sale);
     const sanitizedSale = sanitizeSupabaseData(cleanedSale);
     logMonetaryValues(sanitizedSale, 'Enhanced Update Sale');
-    
+
     if (!isSupabaseConfigured() || !connectionManager.isConnected()) {
       await addToSyncQueueEnhanced({
         type: 'update',
@@ -225,8 +257,45 @@ export const enhancedSalesService = {
       .from('sales')
       .update(transformToSnakeCase(sanitizedSale))
       .eq('id', id);
-    
+
     if (error) throw error;
+
+    // Update delivery event in agenda if delivery date changed
+    if (sanitizedSale.deliveryDate !== undefined) {
+      try {
+        const { AgendaAutoService } = await import('./agendaAutoService');
+
+        // Remove old delivery events
+        await AgendaAutoService.removeEventsByRelatedId('venda', id);
+
+        // Add new delivery event if delivery date exists
+        if (sanitizedSale.deliveryDate && sanitizedSale.client) {
+          const paymentMethodsSummary = (sanitizedSale.paymentMethods || [])
+            .map(pm => {
+              if (pm.installments && pm.installments > 1) {
+                return `${pm.type} (${pm.installments}x)`;
+              }
+              return pm.type;
+            })
+            .join(', ');
+
+          await AgendaAutoService.registerSaleDelivery(
+            id,
+            sanitizedSale.deliveryDate,
+            sanitizedSale.client,
+            {
+              totalValue: sanitizedSale.totalValue,
+              products: typeof sanitizedSale.products === 'string' ? sanitizedSale.products : 'Produtos da venda',
+              paymentMethods: paymentMethodsSummary
+            }
+          );
+          console.log('✅ Delivery event updated in agenda');
+        }
+      } catch (agendaError) {
+        console.error('❌ Error updating delivery event in agenda:', agendaError);
+        // Don't throw - agenda is not critical
+      }
+    }
   },
 
   async delete(id: string): Promise<void> {
@@ -244,8 +313,18 @@ export const enhancedSalesService = {
       .from('sales')
       .delete()
       .eq('id', id);
-    
+
     if (error) throw error;
+
+    // Remove delivery events from agenda
+    try {
+      const { AgendaAutoService } = await import('./agendaAutoService');
+      await AgendaAutoService.removeEventsByRelatedId('venda', id);
+      console.log('✅ Delivery events removed from agenda');
+    } catch (agendaError) {
+      console.error('❌ Error removing delivery events from agenda:', agendaError);
+      // Don't throw - agenda is not critical
+    }
   }
 };
 
