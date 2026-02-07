@@ -355,7 +355,7 @@ export function Debts() {
                     <div className="flex items-center gap-4 text-sm text-slate-600">
                       <span className="flex items-center gap-1">
                         <FileText className="w-4 h-4" />
-                        {new Date(debt.date).toLocaleDateString('pt-BR')}
+                        {dbDateToDisplay(debt.date)}
                       </span>
                     </div>
                   </div>
@@ -442,7 +442,7 @@ export function Debts() {
                             <div className="flex justify-between">
                               <span className="text-red-700">Primeira parcela:</span>
                               <span className="font-bold text-red-800">
-                                {new Date(method.firstInstallmentDate).toLocaleDateString('pt-BR')}
+                                {dbDateToDisplay(method.firstInstallmentDate)}
                               </span>
                             </div>
                           )}
@@ -583,7 +583,7 @@ export function Debts() {
                     <h4 className="font-bold text-red-900 mb-2">Informações Básicas</h4>
                     <div className="space-y-2 text-sm">
                       <p><strong>Empresa:</strong> {viewingDebt.company}</p>
-                      <p><strong>Data:</strong> {new Date(viewingDebt.date).toLocaleDateString('pt-BR')}</p>
+                      <p><strong>Data:</strong> {dbDateToDisplay(viewingDebt.date)}</p>
                       <p><strong>Status:</strong> 
                         <span className={`ml-2 px-2 py-1 rounded-full text-xs font-bold border ${
                           viewingDebt.isPaid ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'
@@ -659,7 +659,7 @@ export function Debts() {
                                       <div>
                                         <p className="text-sm font-medium text-slate-900">{check.client}</p>
                                         <p className="text-xs text-slate-600">
-                                          Vencimento: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
+                                          Vencimento: {dbDateToDisplay(check.dueDate)}
                                         </p>
                                       </div>
                                       <span className="font-bold text-yellow-600">
@@ -691,7 +691,7 @@ export function Debts() {
                             <div>
                               <p><strong className="text-red-800">Intervalo:</strong> {method.installmentInterval} dias</p>
                               {method.firstInstallmentDate && (
-                                <p><strong className="text-red-800">Primeira parcela:</strong> {new Date(method.firstInstallmentDate).toLocaleDateString('pt-BR')}</p>
+                                <p><strong className="text-red-800">Primeira parcela:</strong> {dbDateToDisplay(method.firstInstallmentDate)}</p>
                               )}
                             </div>
                           </div>

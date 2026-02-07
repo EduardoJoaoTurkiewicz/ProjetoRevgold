@@ -349,7 +349,7 @@ export function Acertos() {
                                   <div className="flex justify-between items-start">
                                     <div>
                                       <p className="font-bold text-blue-900">
-                                        Venda de {new Date(sale.date).toLocaleDateString('pt-BR')}
+                                        Venda de {dbDateToDisplay(sale.date)}
                                       </p>
                                       <p className="text-sm text-blue-700">
                                         Produtos: {typeof sale.products === 'string' ? sale.products : 'Produtos vendidos'}
@@ -522,7 +522,7 @@ export function Acertos() {
                                   <div className="flex justify-between items-start">
                                     <div>
                                       <p className="font-bold text-red-900">
-                                        Dívida de {new Date(debt.date).toLocaleDateString('pt-BR')}
+                                        Dívida de {dbDateToDisplay(debt.date)}
                                       </p>
                                       <p className="text-sm text-red-700">
                                         Descrição: {debt.description}
@@ -701,7 +701,7 @@ export function Acertos() {
                   <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
                     <h3 className="text-xl font-bold text-green-900 mb-4">Informações de Pagamento</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <p><strong className="text-green-800">Data do Pagamento:</strong> <span className="text-green-700">{new Date(viewingAcerto.paymentDate).toLocaleDateString('pt-BR')}</span></p>
+                      <p><strong className="text-green-800">Data do Pagamento:</strong> <span className="text-green-700">{dbDateToDisplay(viewingAcerto.paymentDate)}</span></p>
                       {viewingAcerto.paymentMethod && (
                         <p><strong className="text-green-800">Método:</strong> <span className="text-green-700 capitalize">{viewingAcerto.paymentMethod.replace('_', ' ')}</span></p>
                       )}
@@ -729,7 +729,7 @@ export function Acertos() {
                           <div key={sale.id} className="p-3 bg-white rounded-xl border border-slate-100">
                             <div className="flex justify-between">
                               <div>
-                                <p className="font-bold text-slate-900">{new Date(sale.date).toLocaleDateString('pt-BR')}</p>
+                                <p className="font-bold text-slate-900">{dbDateToDisplay(sale.date)}</p>
                                 <p className="text-sm text-slate-700">{typeof sale.products === 'string' ? sale.products : 'Produtos vendidos'}</p>
                               </div>
                               <span className="font-bold text-blue-600">
@@ -743,7 +743,7 @@ export function Acertos() {
                           <div key={debt.id} className="p-3 bg-white rounded-xl border border-slate-100">
                             <div className="flex justify-between">
                               <div>
-                                <p className="font-bold text-slate-900">{new Date(debt.date).toLocaleDateString('pt-BR')}</p>
+                                <p className="font-bold text-slate-900">{dbDateToDisplay(debt.date)}</p>
                                 <p className="text-sm text-slate-700">{debt.description}</p>
                               </div>
                               <span className="font-bold text-red-600">

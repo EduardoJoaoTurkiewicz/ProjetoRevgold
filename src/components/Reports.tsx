@@ -610,7 +610,7 @@ export default function Reports() {
                         <h4 className="font-bold text-green-900">{item.details.client}</h4>
                         <p className="text-sm text-green-700">{item.description}</p>
                         <p className="text-xs text-green-600">
-                          {new Date(item.date).toLocaleDateString('pt-BR')}
+                          {dbDateToDisplay(item.date)}
                         </p>
                       </div>
                       <span className="text-lg font-bold text-green-700">
@@ -650,7 +650,7 @@ export default function Reports() {
                         </h4>
                         <p className="text-sm text-red-700">{item.description}</p>
                         <p className="text-xs text-red-600">
-                          {new Date(item.date).toLocaleDateString('pt-BR')}
+                          {dbDateToDisplay(item.date)}
                         </p>
                       </div>
                       <span className="text-lg font-bold text-red-700">

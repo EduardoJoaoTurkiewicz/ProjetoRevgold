@@ -50,7 +50,7 @@ export function ReceivablesReport() {
                     <div>
                       <h5 className="font-bold text-yellow-900">{check.client}</h5>
                       <p className="text-sm text-yellow-700">
-                        Vencimento: {new Date(check.dueDate).toLocaleDateString('pt-BR')}
+                        Vencimento: {dbDateToDisplay(check.dueDate)}
                       </p>
                       {check.installmentNumber && check.totalInstallments && (
                         <p className="text-sm text-yellow-700">
@@ -84,7 +84,7 @@ export function ReceivablesReport() {
                     <div>
                       <h5 className="font-bold text-cyan-900">{boleto.client}</h5>
                       <p className="text-sm text-cyan-700">
-                        Vencimento: {new Date(boleto.dueDate).toLocaleDateString('pt-BR')}
+                        Vencimento: {dbDateToDisplay(boleto.dueDate)}
                       </p>
                       <p className="text-sm text-cyan-700">
                         Parcela {boleto.installmentNumber}/{boleto.totalInstallments}
@@ -116,7 +116,7 @@ export function ReceivablesReport() {
                     <div>
                       <h5 className="font-bold text-purple-900">{sale.client}</h5>
                       <p className="text-sm text-purple-700">
-                        Data: {new Date(sale.date).toLocaleDateString('pt-BR')}
+                        Data: {dbDateToDisplay(sale.date)}
                       </p>
                       <p className="text-sm text-purple-700">
                         Status: {sale.status}

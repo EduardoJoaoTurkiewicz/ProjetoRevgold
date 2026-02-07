@@ -308,7 +308,9 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
           alert(`Valor da parcela deve ser maior que zero para ${method.type}.`);
           return;
         }
-        if (safeNumber(method.installmentInterval, 0) <= 0) {
+        // Usar default de 30 dias para installmentInterval (mesmo padrão da inicialização)
+        const intervalValue = safeNumber(method.installmentInterval, 30);
+        if (intervalValue <= 0) {
           alert(`Intervalo entre parcelas deve ser maior que zero para ${method.type}.`);
           return;
         }
@@ -436,8 +438,8 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       return;
     }
     
-    // Limpar deliveryDate - converter string vazia para null
-    const deliveryDate = !formData.deliveryDate || formData.deliveryDate.trim() === '' ? null : formData.deliveryDate;
+    // Limpar deliveryDate - converter string vazia para null e aplicar parseInputDate
+    const deliveryDate = !formData.deliveryDate || formData.deliveryDate.trim() === '' ? null : parseInputDate(formData.deliveryDate);
     
     // Limpar observations - converter string vazia para null
     const cleanedObservations = !finalObservations || finalObservations.trim() === '' ? null : finalObservations.trim();

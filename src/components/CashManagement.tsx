@@ -419,7 +419,7 @@ export function CashManagement() {
                 {safeCurrency(cashBalance.initialBalance)}
               </p>
               <p className="text-sm text-blue-600 font-semibold">
-                {cashBalance.initialDate && new Date(cashBalance.initialDate).toLocaleDateString('pt-BR')}
+                {cashBalance.initialDate && dbDateToDisplay(cashBalance.initialDate)}
               </p>
             </div>
           </div>
@@ -560,7 +560,7 @@ export function CashManagement() {
                   return (
                     <tr key={transaction.id} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-green-50/50 hover:to-emerald-50/50 transition-all duration-300">
                       <td className="py-4 px-6 text-sm font-semibold text-slate-900">
-                        {new Date(transaction.date).toLocaleDateString('pt-BR')}
+                        {dbDateToDisplay(transaction.date)}
                       </td>
                       <td className="py-4 px-6 text-sm">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
@@ -702,7 +702,7 @@ export function CashManagement() {
                 <div>
                   <label className="form-label">Data</label>
                   <p className="text-sm text-slate-900 font-semibold">
-                    {new Date(viewingTransaction.date).toLocaleDateString('pt-BR')}
+                    {dbDateToDisplay(viewingTransaction.date)}
                   </p>
                 </div>
                 <div>

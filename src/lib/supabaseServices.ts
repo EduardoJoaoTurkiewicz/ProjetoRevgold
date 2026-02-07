@@ -322,6 +322,21 @@ export const salesService = {
         console.error('❌ Error registering agenda events:', agendaError);
       }
 
+      // Register delivery event if delivery date is specified
+      if (sanitizedSale.deliveryDate) {
+        try {
+          const { AgendaAutoService } = await import('./agendaAutoService');
+          await AgendaAutoService.registerSaleDelivery(
+            saleId,
+            sanitizedSale.deliveryDate,
+            sanitizedSale.client
+          );
+          console.log('✅ Delivery event registered for:', sanitizedSale.deliveryDate);
+        } catch (deliveryError) {
+          console.error('❌ Error registering delivery event:', deliveryError);
+        }
+      }
+
       return saleId;
     } catch (error) {
       console.error('❌ Error creating sale:', error);

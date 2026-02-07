@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { getCurrentDateString } from '../utils/dateUtils';
+import { getCurrentDateString, dbDateToDisplay } from '../utils/dateUtils';
 import {
   DollarSign,
   TrendingUp,
@@ -727,7 +727,7 @@ const Dashboard: React.FC = () => {
                     R$ {boleto.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                   <p className="text-sm text-red-700">
-                    Venceu em {new Date(boleto.dueDate).toLocaleDateString('pt-BR')}
+                    Venceu em {dbDateToDisplay(boleto.dueDate)}
                   </p>
                 </div>
               );
@@ -760,7 +760,7 @@ const Dashboard: React.FC = () => {
                     <h4 className="font-bold text-red-900">{debt.company}</h4>
                     <p className="text-sm text-red-700">{debt.description}</p>
                     <p className="text-xs text-red-600">
-                      {new Date(debt.date).toLocaleDateString('pt-BR')}
+                      {dbDateToDisplay(debt.date)}
                     </p>
                   </div>
                   <div className="text-right">
@@ -829,7 +829,7 @@ const Dashboard: React.FC = () => {
                       </p>
                     </div>
                     <p className="text-xs text-green-600 mt-2">
-                      Próximo vencimento: {new Date(item.dueDate).toLocaleDateString('pt-BR')}
+                      Próximo vencimento: {dbDateToDisplay(item.dueDate)}
                     </p>
                   </div>
                   <div className="text-right ml-4">
