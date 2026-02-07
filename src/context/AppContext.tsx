@@ -973,23 +973,21 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   }, []);
 
   // Listen for connection changes
+  // CRITICAL: Do NOT automatically reload data on connection change
+  // This prevents form state from being reset while user is editing
   useEffect(() => {
     let mounted = true;
-    
+
     const handleConnectionChange = (status: any) => {
       if (status.isOnline && mounted) {
-        // When coming back online, sync data with enhanced manager
-        enhancedSyncManager.startSync().then(() => {
-          if (mounted) {
-            // Only reload if it's been more than 5 minutes since last load
-            const lastLoad = lastLoadTime.loadAllData || 0;
-            const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
-            
-            if (lastLoad < fiveMinutesAgo) {
-              loadAllData();
-            }
-          }
+        console.log('✅ Connection restored - ready for next operation');
+        // Start background sync but DO NOT reload data automatically
+        // User can manually refresh if needed
+        enhancedSyncManager.startSync().catch(err => {
+          console.error('Background sync error:', err);
         });
+      } else if (!status.isOnline) {
+        console.log('📴 Connection lost - operating in offline mode');
       }
     };
 
@@ -998,7 +996,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       mounted = false;
       unsubscribe();
     };
-  }, [lastLoadTime]);
+  }, []);
 
   // Add function to refresh specific data types after installment operations
   const refreshInstallmentData = async () => {

@@ -29,6 +29,7 @@ const INSTALLMENT_TYPES = ['cartao_credito', 'cheque', 'boleto'];
 
 export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
   const { employees, permutas, acertos } = useAppContext();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     date: sale?.date || getCurrentDateString(),
     deliveryDate: sale?.deliveryDate || '',
@@ -256,9 +257,15 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
     };
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // Prevent double submission
+    if (isSubmitting) {
+      console.log('⏳ Submission already in progress...');
+      return;
+    }
+
     // Validações mais rigorosas
     if (!formData.client || !formData.client.trim()) {
       alert('Por favor, informe o nome do cliente.');
@@ -468,9 +475,17 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       alert('Dados da venda incompletos. Verifique todos os campos obrigatórios.');
       return;
     }
-    
+
+    setIsSubmitting(true);
     console.log('📝 Enviando venda:', saleToSubmit);
-    onSubmit(saleToSubmit as Omit<Sale, 'id' | 'createdAt'>);
+
+    try {
+      await onSubmit(saleToSubmit as Omit<Sale, 'id' | 'createdAt'>);
+    } catch (error) {
+      console.error('Erro ao criar venda:', error);
+      alert('Erro ao salvar a venda. Por favor, tente novamente.');
+      setIsSubmitting(false);
+    }
   };
 
   // Auto-update payment method amount when total value changes
@@ -1274,9 +1289,10 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
               </button>
               <button
                 type="submit"
-                className="btn-primary group"
+                disabled={isSubmitting}
+                className={`btn-primary group ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                {sale ? 'Atualizar Venda' : 'Criar Venda'}
+                {isSubmitting ? 'Salvando...' : (sale ? 'Atualizar Venda' : 'Criar Venda')}
               </button>
             </div>
           </form>
