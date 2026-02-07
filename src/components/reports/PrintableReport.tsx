@@ -144,7 +144,7 @@ export function LegacyPrintableReport({ data, filters, user }: PrintableReportPr
       {/* CAPA */}
       <div className="print-card company-header avoid-break-inside">
         <div>
-          <h1 className="report-title">Relatório Financeiro RevGold</h1>
+          <h1 className="report-title">Relatório Financeiro Montreal Tintas</h1>
           <p className="report-subtitle">
             Período: {fmtDate(filters.startDate)} até {fmtDate(filters.endDate)}
           </p>
@@ -154,9 +154,9 @@ export function LegacyPrintableReport({ data, filters, user }: PrintableReportPr
             <div>Período: {metrics.periodDays} dias</div>
           </div>
         </div>
-        <img 
-          src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
-          alt="RevGold Logo" 
+        <img
+          src="/image-removebg-preview_(8).png"
+          alt="Montreal Tintas Logo"
           className="company-logo"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
@@ -676,7 +676,7 @@ export function LegacyPrintableReport({ data, filters, user }: PrintableReportPr
 
       {/* RODAPÉ */}
       <div className="report-footer">
-        <div>Sistema RevGold - Gestão Empresarial Profissional</div>
+        <div>Sistema Montreal Tintas - Gestão Empresarial Profissional</div>
         <div>Relatório gerado em {nowBR()}</div>
         <div>Este documento contém informações confidenciais da empresa</div>
       </div>

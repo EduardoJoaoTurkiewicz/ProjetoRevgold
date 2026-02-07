@@ -439,19 +439,19 @@ export function ComprehensiveReport({ filters }: ComprehensiveReportProps) {
       {/* Print Header */}
       <div className="print-card company-header avoid-break-inside">
         <div>
-          <h1 className="report-title">Relatório Financeiro Completo RevGold</h1>
+          <h1 className="report-title">Relatório Financeiro Completo Montreal Tintas</h1>
           <p className="report-subtitle">
             Período: {fmtDate(filters.startDate)} até {fmtDate(filters.endDate)}
           </p>
           <div className="subtle" style={{ marginTop: '12px' }}>
             <div>Gerado em: {nowBR()}</div>
-            <div>Usuário: Sistema RevGold</div>
+            <div>Usuário: Sistema Montreal Tintas</div>
             <div>Período: {metrics.periodDays} dias</div>
           </div>
         </div>
-        <img 
-          src="/cb880374-320a-47bb-bad0-66f68df2b834-removebg-preview.png" 
-          alt="RevGold Logo" 
+        <img
+          src="/image-removebg-preview_(8).png"
+          alt="Montreal Tintas Logo"
           className="company-logo"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
@@ -894,7 +894,7 @@ export function ComprehensiveReport({ filters }: ComprehensiveReportProps) {
 
       {/* Footer */}
       <div className="report-footer">
-        <div>Sistema RevGold - Gestão Empresarial Profissional</div>
+        <div>Sistema Montreal Tintas - Gestão Empresarial Profissional</div>
         <div>Relatório gerado em {nowBR()}</div>
         <div>Este documento contém informações confidenciais da empresa</div>
       </div>

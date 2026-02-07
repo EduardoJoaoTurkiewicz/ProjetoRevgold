@@ -23,7 +23,7 @@ export function ExportButtons({ filters, data }: ExportButtonsProps) {
       endDate: filters.endDate,
       status: filters.status || 'all',
       reportType: (filters as any).reportType || 'comprehensive',
-      user: 'Sistema RevGold',
+      user: 'Sistema Montreal Tintas',
       auto: autoprint ? '1' : '0'
     });
 
@@ -138,7 +138,7 @@ export function ExportButtons({ filters, data }: ExportButtonsProps) {
       // Create download link
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Relatorio_RevGold_${filters.startDate.replace(/-/g, '')}_${filters.endDate.replace(/-/g, '')}.pdf`;
+      a.download = `Relatorio_MontrealTintas_${filters.startDate.replace(/-/g, '')}_${filters.endDate.replace(/-/g, '')}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
