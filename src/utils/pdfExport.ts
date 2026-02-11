@@ -6,7 +6,7 @@ export function openPrintPreview(filters: any) {
     startDate: filters.startDate,
     endDate: filters.endDate,
     status: filters.status || 'all',
-    user: 'Sistema RevGold'
+    user: 'Sistema Montreal'
   });
 
   if (filters.categories && filters.categories.length > 0) {

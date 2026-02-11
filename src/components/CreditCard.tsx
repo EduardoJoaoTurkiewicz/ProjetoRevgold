@@ -224,105 +224,89 @@ export default function CreditCard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg">
-            <CreditCardIcon className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Cartão de Crédito</h1>
-            <p className="text-sm text-gray-500 mt-1">Gerencie vendas e dívidas no cartão</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-200 p-6">
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
-            <label className="block text-sm font-semibold text-blue-900 mb-2">Filtrar por Período</label>
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <label className="block text-xs text-blue-700 mb-1">Data Inicial</label>
-                <input
-                  type="date"
-                  value={dateRange.start}
-                  onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                  className="w-full px-4 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="block text-xs text-blue-700 mb-1">Data Final</label>
-                <input
-                  type="date"
-                  value={dateRange.end}
-                  onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                  className="w-full px-4 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                />
-              </div>
+      <div className="glass-card-primary p-8 hover-lift">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-4 bg-gradient-to-br from-blue-500 to-sky-600 rounded-3xl shadow-2xl hover:scale-110 transition-transform duration-300">
+              <CreditCardIcon className="w-10 h-10 text-white" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-black text-slate-900 mb-1">Cartão de Crédito</h1>
+              <p className="text-base text-slate-600 font-medium">Gerencie vendas e dívidas no cartão</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex gap-2 border-b border-gray-200 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab('sales')}
-          className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
-            activeTab === 'sales'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Vendas
-        </button>
-        <button
-          onClick={() => setActiveTab('sales-installments')}
-          className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
-            activeTab === 'sales-installments'
-              ? 'text-cyan-600 border-b-2 border-cyan-600'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Parcelas a Receber
-        </button>
-        <button
-          onClick={() => setActiveTab('debts')}
-          className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
-            activeTab === 'debts'
-              ? 'text-red-600 border-b-2 border-red-600'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Dívidas
-        </button>
-        <button
-          onClick={() => setActiveTab('debts-installments')}
-          className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
-            activeTab === 'debts-installments'
-              ? 'text-rose-600 border-b-2 border-rose-600'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Parcelas a Pagar
-        </button>
+      <div className="liquid-glass p-8 hover-lift-sm">
+        <label className="block text-base font-bold text-slate-800 mb-4">Filtrar por Período</label>
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <label className="block text-sm text-slate-600 mb-2 font-semibold">Data Inicial</label>
+            <input
+              type="date"
+              value={dateRange.start}
+              onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+              className="w-full px-5 py-3 border-0 rounded-2xl focus:ring-2 focus:ring-blue-400 bg-white/90 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200 font-medium"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm text-slate-600 mb-2 font-semibold">Data Final</label>
+            <input
+              type="date"
+              value={dateRange.end}
+              onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+              className="w-full px-5 py-3 border-0 rounded-2xl focus:ring-2 focus:ring-blue-400 bg-white/90 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200 font-medium"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="glass-card p-4">
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          <button
+            onClick={() => setActiveTab('sales')}
+            className={`apple-tab ${activeTab === 'sales' ? 'active' : ''}`}
+          >
+            Vendas
+          </button>
+          <button
+            onClick={() => setActiveTab('sales-installments')}
+            className={`apple-tab ${activeTab === 'sales-installments' ? 'active' : ''}`}
+          >
+            Parcelas a Receber
+          </button>
+          <button
+            onClick={() => setActiveTab('debts')}
+            className={`apple-tab ${activeTab === 'debts' ? 'active' : ''}`}
+          >
+            Dívidas
+          </button>
+          <button
+            onClick={() => setActiveTab('debts-installments')}
+            className={`apple-tab ${activeTab === 'debts-installments' ? 'active' : ''}`}
+          >
+            Parcelas a Pagar
+          </button>
+        </div>
       </div>
 
       {activeTab === 'sales' && (
-        <div className="space-y-4">
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-lg border-2 border-green-300 p-6">
+        <div className="space-y-5">
+          <div className="glass-card-success p-8 apple-shadow-lg hover-lift">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-green-700 font-semibold mb-1 uppercase tracking-wide">Total a Receber (Período Filtrado)</p>
-                <p className="text-4xl font-black text-green-800">
+                <p className="text-sm text-green-700 font-bold mb-2 uppercase tracking-wider">Total a Receber (Período Filtrado)</p>
+                <p className="text-5xl font-black text-green-800 mb-2">
                   R$ {calculateTotalToReceive().toFixed(2)}
                 </p>
-                <p className="text-sm text-green-600 font-medium mt-2">
+                <p className="text-base text-green-600 font-semibold">
                   {sales.filter(s => s.status === 'active' && s.sale_date >= dateRange.start && s.sale_date <= dateRange.end).length} vendas ativas
                 </p>
               </div>
               <button
                 onClick={() => setShowSaleForm(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="pill-button ripple-effect flex items-center gap-2 px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 apple-shadow hover:apple-shadow-lg font-bold"
               >
                 <Plus className="w-5 h-5" />
                 Nova Venda
@@ -330,71 +314,69 @@ export default function CreditCard() {
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             {sales.filter(sale =>
               sale.sale_date >= dateRange.start &&
               sale.sale_date <= dateRange.end
             ).map((sale) => (
-              <div key={sale.id} className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div key={sale.id} className="glass-card apple-press hover-lift-sm">
                 <div
-                  className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="p-6 cursor-pointer"
                   onClick={() => toggleSaleExpansion(sale.id)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <h3 className="font-semibold text-gray-900">{sale.client_name}</h3>
+                      <div className="flex items-center gap-3 mb-3">
+                        <h3 className="text-xl font-bold text-slate-900">{sale.client_name}</h3>
                         {sale.anticipated && (
-                          <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded flex items-center gap-1">
+                          <span className="apple-badge bg-yellow-100/80 text-yellow-700 flex items-center gap-1">
                             <Zap className="w-3 h-3" />
                             Antecipada
                           </span>
                         )}
-                        <span className={`px-2 py-1 text-xs font-medium rounded ${
+                        <span className={`apple-badge ${
                           sale.status === 'completed'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-blue-100 text-blue-700'
+                            ? 'bg-green-100/80 text-green-700'
+                            : 'bg-blue-100/80 text-blue-700'
                         }`}>
                           {sale.status === 'completed' ? 'Completa' : 'Ativa'}
                         </span>
                       </div>
-                      <div className="mt-2 grid grid-cols-4 gap-4 text-sm">
+                      <div className="grid grid-cols-4 gap-6 text-sm">
                         <div>
-                          <p className="text-gray-500">Data da Venda</p>
-                          <p className="font-medium text-gray-900">{formatDate(new Date(sale.sale_date))}</p>
+                          <p className="text-slate-500 font-medium mb-1">Data da Venda</p>
+                          <p className="font-bold text-slate-900">{formatDate(new Date(sale.sale_date))}</p>
                         </div>
                         <div>
-                          <p className="text-gray-500">Valor Total</p>
-                          <p className="font-medium text-gray-900">R$ {sale.total_amount.toFixed(2)}</p>
+                          <p className="text-slate-500 font-medium mb-1">Valor Total</p>
+                          <p className="font-bold text-slate-900">R$ {sale.total_amount.toFixed(2)}</p>
                         </div>
                         <div>
-                          <p className="text-gray-500">Falta Receber</p>
-                          <p className="font-medium text-red-600">R$ {sale.remaining_amount.toFixed(2)}</p>
+                          <p className="text-slate-500 font-medium mb-1">Falta Receber</p>
+                          <p className="font-bold text-red-600">R$ {sale.remaining_amount.toFixed(2)}</p>
                         </div>
                         <div>
-                          <p className="text-gray-500">Parcelas</p>
-                          <p className="font-medium text-gray-900">{sale.installments}x</p>
+                          <p className="text-slate-500 font-medium mb-1">Parcelas</p>
+                          <p className="font-bold text-slate-900">{sale.installments}x</p>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3 ml-4">
                       {!sale.anticipated && sale.status === 'active' && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleAnticipateSale(sale);
                           }}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors text-sm"
+                          className="pill-button ripple-effect flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white hover:from-yellow-600 hover:to-yellow-700 font-semibold text-sm"
                         >
                           <Zap className="w-4 h-4" />
                           Antecipar
                         </button>
                       )}
-                      {expandedSales.has(sale.id) ? (
-                        <ChevronUp className="w-5 h-5 text-gray-400" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5 text-gray-400" />
-                      )}
+                      <div className="transition-transform duration-300" style={{ transform: expandedSales.has(sale.id) ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                        <ChevronDown className="w-6 h-6 text-slate-400" />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -458,21 +440,21 @@ export default function CreditCard() {
       )}
 
       {activeTab === 'debts' && (
-        <div className="space-y-4">
-          <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-xl shadow-lg border-2 border-red-300 p-6">
+        <div className="space-y-5">
+          <div className="glass-card-danger p-8 apple-shadow-lg hover-lift">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-red-700 font-semibold mb-1 uppercase tracking-wide">Total a Pagar (Período Filtrado)</p>
-                <p className="text-4xl font-black text-red-800">
+                <p className="text-sm text-red-700 font-bold mb-2 uppercase tracking-wider">Total a Pagar (Período Filtrado)</p>
+                <p className="text-5xl font-black text-red-800 mb-2">
                   R$ {calculateTotalToPay().toFixed(2)}
                 </p>
-                <p className="text-sm text-red-600 font-medium mt-2">
+                <p className="text-base text-red-600 font-semibold">
                   {monthlyBillsCount} faturas a pagar este mês
                 </p>
               </div>
               <button
                 onClick={() => setShowDebtForm(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="pill-button ripple-effect flex items-center gap-2 px-6 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 apple-shadow hover:apple-shadow-lg font-bold"
               >
                 <Plus className="w-5 h-5" />
                 Nova Dívida

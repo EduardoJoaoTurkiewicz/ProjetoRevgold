@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { getCurrentDateString } from '../utils/dateUtils';
+import { getFullGreeting } from '../utils/greetingUtils';
 import {
   DollarSign,
   TrendingUp,
@@ -437,7 +438,7 @@ const Dashboard: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="w-24 h-24 bg-gradient-to-br from-green-600 to-emerald-700 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+          <div className="w-24 h-24 bg-gradient-to-br from-blue-600 to-sky-700 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
             <Activity className="w-12 h-12 text-white" />
           </div>
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Carregando Dashboard...</h2>
@@ -490,20 +491,30 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-8">
+      {/* Dynamic Greeting */}
+      <div className="revgold-animate-fade-in">
+        <h2 className="text-5xl md:text-6xl font-black bg-gradient-to-r from-blue-600 via-sky-600 to-blue-500 bg-clip-text text-transparent mb-2">
+          {getFullGreeting()}
+        </h2>
+        <p className="text-slate-600 text-lg font-medium">
+          {new Date().toLocaleDateString('pt-BR', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })}
+        </p>
+      </div>
+
       {/* Header */}
-      <div className="flex items-center gap-6">
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-xl">
+      <div className="flex items-center gap-6 revgold-animate-fade-in revgold-stagger-1">
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-700 modern-shadow-xl">
           <Activity className="w-8 h-8 text-white" />
         </div>
         <div>
-          <h1 className="text-4xl font-black text-slate-900">Dashboard RevGold</h1>
+          <h1 className="text-4xl font-black text-slate-900">Dashboard Montreal</h1>
           <p className="text-slate-600 text-lg font-semibold">
-            Visão geral completa do seu negócio - {new Date().toLocaleDateString('pt-BR', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
+            Visão geral completa do seu negócio
           </p>
         </div>
       </div>
@@ -511,17 +522,17 @@ const Dashboard: React.FC = () => {
       {/* Widgets Principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
         {/* Total de Vendas Hoje */}
-        <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
+        <div className="card bg-gradient-to-br from-blue-50 to-sky-50 border-blue-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
           <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 modern-shadow-lg">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-700 modern-shadow-lg">
               <DollarSign className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-green-900 text-lg">Vendas Hoje</h3>
-              <p className="text-3xl font-black text-green-700">
+              <h3 className="font-bold text-blue-900 text-lg">Vendas Hoje</h3>
+              <p className="text-3xl font-black text-blue-700">
                 R$ {dailyMetrics.totalSalesToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-sm text-green-600 font-semibold">
+              <p className="text-sm text-blue-600 font-semibold">
                 {dailyMetrics.todaySales} venda(s)
               </p>
             </div>
@@ -529,17 +540,17 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Valor Recebido Hoje */}
-        <div className="card bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
+        <div className="card bg-gradient-to-br from-sky-50 to-blue-50 border-sky-200 modern-shadow-xl hover:modern-shadow-lg transition-all duration-300 hover:scale-105">
           <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-600 to-green-700 modern-shadow-lg">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-sky-600 to-blue-700 modern-shadow-lg">
               <ArrowUpCircle className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-emerald-900 text-lg">Recebido Hoje</h3>
-              <p className="text-3xl font-black text-emerald-700">
+              <h3 className="font-bold text-sky-900 text-lg">Recebido Hoje</h3>
+              <p className="text-3xl font-black text-sky-700">
                 R$ {dailyMetrics.totalReceivedToday.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-sm text-emerald-600 font-semibold">
+              <p className="text-sm text-sky-600 font-semibold">
                 Entradas efetivas
               </p>
             </div>
@@ -786,29 +797,29 @@ const Dashboard: React.FC = () => {
         {/* Valores a Receber */}
         <div className="card modern-shadow-xl">
           <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-green-600">
+            <div className="p-3 rounded-xl bg-blue-600">
               <Receipt className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-green-900">Valores a Receber</h3>
-              <p className="text-green-700 font-semibold">
+              <h3 className="text-xl font-bold text-blue-900">Valores a Receber</h3>
+              <p className="text-blue-700 font-semibold">
                 Total: R$ {valuesToReceive.reduce((sum, item) => sum + item.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
           </div>
-          
+
           <div className="space-y-3 max-h-80 overflow-y-auto modern-scrollbar">
             {valuesToReceive.slice(0, 10).map(item => (
-              <div key={item.id} className="p-4 bg-green-50 rounded-xl border border-green-200">
+              <div key={item.id} className="p-4 bg-blue-50 rounded-xl border border-blue-200">
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">
+                      <span className="px-2 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
                         Venda
                       </span>
                       <span className={`text-xs px-2 py-1 rounded-full font-bold ${
                         new Date(item.dueDate) < new Date() ? 'bg-red-100 text-red-800' :
-                        new Date(item.dueDate).toDateString() === new Date().toDateString() ? 'bg-blue-100 text-blue-800' :
+                        new Date(item.dueDate).toDateString() === new Date().toDateString() ? 'bg-sky-100 text-sky-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>
                         {new Date(item.dueDate) < new Date() ? 'Vencido' :
@@ -816,27 +827,27 @@ const Dashboard: React.FC = () => {
                          'Pendente'}
                       </span>
                     </div>
-                    <h4 className="font-bold text-green-900 text-lg mb-1">{item.client}</h4>
-                    <div className="text-sm text-green-700 space-y-1">
+                    <h4 className="font-bold text-blue-900 text-lg mb-1">{item.client}</h4>
+                    <div className="text-sm text-blue-700 space-y-1">
                       <p className="font-semibold">
                         Valor da venda: R$ {item.totalValue?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                       <p>
                         Já recebido: R$ {item.receivedAmount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
-                      <p className="font-bold text-green-800">
+                      <p className="font-bold text-blue-800">
                         Falta receber: R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
-                    <p className="text-xs text-green-600 mt-2">
+                    <p className="text-xs text-blue-600 mt-2">
                       Próximo vencimento: {new Date(item.dueDate).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
                   <div className="text-right ml-4">
-                    <p className="text-2xl font-black text-green-600">
+                    <p className="text-2xl font-black text-blue-600">
                       R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
-                    <p className="text-xs text-green-700 mt-1">
+                    <p className="text-xs text-blue-700 mt-1">
                       A receber
                     </p>
                   </div>
@@ -968,19 +979,19 @@ const Dashboard: React.FC = () => {
         {/* Status das Vendas */}
         <div className="card modern-shadow-xl">
           <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-green-600">
+            <div className="p-3 rounded-xl bg-blue-600">
               <Target className="w-6 h-6 text-white" />
             </div>
             <h3 className="text-xl font-bold text-slate-900">Status das Vendas</h3>
           </div>
-          
+
           <div className="space-y-4">
             {[
-              { 
-                status: 'pago', 
-                label: 'Pagas', 
+              {
+                status: 'pago',
+                label: 'Pagas',
                 count: sales.filter(s => s.status === 'pago').length,
-                color: 'bg-green-50 border-green-200 text-green-800'
+                color: 'bg-blue-50 border-blue-200 text-blue-800'
               },
               { 
                 status: 'parcial', 
@@ -1022,12 +1033,12 @@ const Dashboard: React.FC = () => {
           
           <div className="space-y-4">
             {[
-              { 
-                status: true, 
-                label: 'Pagas', 
+              {
+                status: true,
+                label: 'Pagas',
                 count: debts.filter(d => d.isPaid).length,
                 total: debts.filter(d => d.isPaid).reduce((sum, d) => sum + d.totalValue, 0),
-                color: 'bg-green-50 border-green-200 text-green-800'
+                color: 'bg-blue-50 border-blue-200 text-blue-800'
               },
               { 
                 status: false, 
@@ -1061,12 +1072,12 @@ const Dashboard: React.FC = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center p-6 bg-green-50 rounded-2xl border border-green-200">
-            <h4 className="font-bold text-green-900 mb-2">Cheques Pendentes</h4>
-            <p className="text-2xl font-black text-green-700">
+          <div className="text-center p-6 bg-blue-50 rounded-2xl border border-blue-200">
+            <h4 className="font-bold text-blue-900 mb-2">Cheques Pendentes</h4>
+            <p className="text-2xl font-black text-blue-700">
               {checks.filter(c => c.status === 'pendente' && !c.isOwnCheck).length}
             </p>
-            <p className="text-sm text-green-600 font-semibold">
+            <p className="text-sm text-blue-600 font-semibold">
               R$ {checks
                 .filter(c => c.status === 'pendente' && !c.isOwnCheck)
                 .reduce((sum, c) => sum + c.value, 0)
@@ -1117,11 +1128,11 @@ const Dashboard: React.FC = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="text-center p-6 bg-white rounded-2xl border border-blue-200 modern-shadow-lg">
-            <div className="p-3 rounded-xl bg-green-600 w-fit mx-auto mb-4">
+            <div className="p-3 rounded-xl bg-blue-600 w-fit mx-auto mb-4">
               <DollarSign className="w-6 h-6 text-white" />
             </div>
             <h4 className="font-bold text-blue-900 mb-2">Faturamento</h4>
-            <p className="text-3xl font-black text-green-600">
+            <p className="text-3xl font-black text-blue-600">
               R$ {monthlyMetrics.totalSalesMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </p>
           </div>
