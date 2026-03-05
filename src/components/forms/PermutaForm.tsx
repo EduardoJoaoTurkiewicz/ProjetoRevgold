@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Car } from 'lucide-react';
 import { Permuta } from '../../types';
 import { getCurrentDateString } from '../../utils/dateUtils';
+import { CurrencyInput } from '../CurrencyInput';
 
 interface PermutaFormProps {
   permuta?: Permuta | null;
@@ -279,12 +280,9 @@ export function PermutaForm({ permuta, onSubmit, onCancel }: PermutaFormProps) {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="form-group">
                   <label className="form-label">Valor Avaliado do Veículo *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                  <CurrencyInput
                     value={formData.vehicleValue}
-                    onChange={(e) => setFormData(prev => ({ ...prev, vehicleValue: parseFloat(e.target.value) || 0 }))}
+                    onChange={(val) => setFormData(prev => ({ ...prev, vehicleValue: val }))}
                     className="input-field"
                     placeholder="0,00"
                     required
@@ -293,15 +291,12 @@ export function PermutaForm({ permuta, onSubmit, onCancel }: PermutaFormProps) {
 
                 <div className="form-group">
                   <label className="form-label">Valor Já Consumido</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max={formData.vehicleValue}
+                  <CurrencyInput
                     value={formData.consumedValue}
-                    onChange={(e) => setFormData(prev => ({ ...prev, consumedValue: parseFloat(e.target.value) || 0 }))}
+                    onChange={(val) => setFormData(prev => ({ ...prev, consumedValue: val }))}
                     className="input-field"
                     placeholder="0,00"
+                    max={formData.vehicleValue}
                   />
                   <p className="text-xs text-green-600 mt-1 font-semibold">
                     Valor já usado em vendas anteriores
@@ -310,15 +305,14 @@ export function PermutaForm({ permuta, onSubmit, onCancel }: PermutaFormProps) {
 
                 <div className="form-group">
                   <label className="form-label">Valor Disponível</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <CurrencyInput
                     value={formData.remainingValue}
+                    onChange={() => {}}
                     className="input-field bg-gray-50"
                     readOnly
                   />
                   <p className="text-xs text-blue-600 mt-1 font-bold">
-                    ✓ Calculado automaticamente
+                    Calculado automaticamente
                   </p>
                 </div>
               </div>

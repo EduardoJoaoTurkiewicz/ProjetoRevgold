@@ -282,18 +282,36 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       throw err;
     }
   };
+  // Refresh permutas data
+  const refreshPermutasData = async () => {
+    try {
+      if (connectionManager.isConnected()) {
+        const permutasData = await supabaseServices.permutas.getPermutas();
+        setPermutas(DeduplicationService.removeDuplicatesById(permutasData || []));
+      }
+    } catch (error) {
+      ErrorHandler.logProjectError(error, 'Refresh Permutas Data');
+    }
+  };
+
   // CRUD functions for sales
   const createSale = async (saleData: any) => {
     try {
       console.log('🔄 AppContext.createSale - Enhanced creation');
       const result = await enhancedSupabaseServices.sales.create(saleData);
-      
+
       // Refresh only sales data with enhanced deduplication
       await refreshSalesData();
-      
+
       // Also refresh installment-related data to show new checks/boletos immediately
       await refreshInstallmentData();
-      
+
+      // Refresh permutas to reflect consumed/remaining values after permuta payment
+      const hasPermutaPayment = saleData?.paymentMethods?.some((m: any) => m.type === 'permuta');
+      if (hasPermutaPayment) {
+        await refreshPermutasData();
+      }
+
       return result;
     } catch (err) {
       console.error('Error creating sale:', err);
@@ -307,6 +325,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       const { id, ...updateData } = saleData;
       const result = await enhancedSupabaseServices.sales.update(id, updateData);
       await refreshSalesData();
+      // Refresh permutas in case payment methods changed
+      await refreshPermutasData();
       return result;
     } catch (err) {
       console.error('Error updating sale:', err);
@@ -319,6 +339,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     try {
       await enhancedSupabaseServices.sales.delete(id);
       await refreshSalesData();
+      // Refresh permutas since a sale using permuta may have been deleted
+      await refreshPermutasData();
     } catch (err) {
       console.error('Error deleting sale:', err);
       ErrorHandler.logProjectError(err, 'Delete Sale');
