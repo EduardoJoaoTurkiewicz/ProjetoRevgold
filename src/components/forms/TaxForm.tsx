@@ -3,6 +3,7 @@ import { X, Upload } from 'lucide-react';
 import { Tax } from '../../types';
 import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
 import { getCurrentDateString } from '../../utils/dateUtils';
+import { CurrencyInput } from '../CurrencyInput';
 
 interface TaxFormProps {
   tax?: Tax | null;
@@ -102,15 +103,12 @@ export function TaxForm({ tax, onSubmit, onCancel }: TaxFormProps) {
 
               <div className="form-group">
                 <label className="form-label">Valor Pago *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <CurrencyInput
                   value={formData.amount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
+                  onChange={(val) => setFormData(prev => ({ ...prev, amount: val }))}
                   className="input-field"
-                  placeholder="0,00"
                   required
+                  aria-label="Valor do Imposto Pago"
                 />
               </div>
 

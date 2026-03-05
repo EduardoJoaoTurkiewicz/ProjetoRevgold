@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { Check } from '../../types';
 import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
 import { getCurrentDateString } from '../../utils/dateUtils';
+import { CurrencyInput } from '../CurrencyInput';
 
 interface CheckFormProps {
   check?: Check | null;
@@ -92,15 +93,12 @@ export function CheckForm({ check, onSubmit, onCancel }: CheckFormProps) {
 
               <div className="form-group">
                 <label className="form-label">Valor *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <CurrencyInput
                   value={formData.value}
-                  onChange={(e) => setFormData(prev => ({ ...prev, value: parseFloat(e.target.value) || 0 }))}
+                  onChange={(val) => setFormData(prev => ({ ...prev, value: val }))}
                   className="input-field"
-                  placeholder="0,00"
                   required
+                  aria-label="Valor do Cheque"
                 />
               </div>
 

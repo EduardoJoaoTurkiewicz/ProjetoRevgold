@@ -12,6 +12,7 @@ interface CurrencyInputProps {
   max?: number;
   id?: string;
   name?: string;
+  'aria-label'?: string;
 }
 
 function formatCurrency(cents: number): string {
@@ -33,6 +34,7 @@ export function CurrencyInput({
   max,
   id,
   name,
+  'aria-label': ariaLabel,
 }: CurrencyInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const displayValue = value === 0 ? '' : formatCurrency(Math.round(value * 100));
@@ -103,6 +105,7 @@ export function CurrencyInput({
       required={required}
       disabled={disabled}
       readOnly={readOnly}
+      aria-label={ariaLabel}
     />
   );
 }

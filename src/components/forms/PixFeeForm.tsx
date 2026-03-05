@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { PixFee } from '../../types';
 import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
 import { getCurrentDateString } from '../../utils/dateUtils';
+import { CurrencyInput } from '../CurrencyInput';
 
 interface PixFeeFormProps {
   pixFee?: PixFee | null;
@@ -85,15 +86,12 @@ export function PixFeeForm({ pixFee, onSubmit, onCancel }: PixFeeFormProps) {
 
               <div className="form-group">
                 <label className="form-label">Valor da Tarifa *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <CurrencyInput
                   value={formData.amount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
+                  onChange={(val) => setFormData(prev => ({ ...prev, amount: val }))}
                   className="input-field"
-                  placeholder="0,00"
                   required
+                  aria-label="Valor da Tarifa PIX"
                 />
               </div>
 

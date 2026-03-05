@@ -6,6 +6,7 @@ import { useAppContext } from '../../context/AppContext';
 import { safeNumber, validateFormNumber, logMonetaryValues } from '../../utils/numberUtils';
 import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
 import { getCurrentDateString } from '../../utils/dateUtils';
+import { CurrencyInput } from '../CurrencyInput';
 
 interface SaleFormProps {
   sale?: Sale | null;
@@ -600,15 +601,12 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
 
               <div className="form-group">
                 <label className="form-label">Valor Total da Venda *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <CurrencyInput
                   value={safeNumber(formData.totalValue, 0)}
-                  onChange={(e) => setFormData(prev => ({ ...prev, totalValue: safeNumber(e.target.value, 0) }))}
+                  onChange={(val) => setFormData(prev => ({ ...prev, totalValue: val }))}
                   className="input-field"
-                  placeholder="0,00"
                   required
+                  aria-label="Valor Total da Venda"
                 />
               </div>
 
@@ -686,14 +684,11 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
 
                       <div>
                         <label className="form-label">Valor</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
+                        <CurrencyInput
                           value={safeNumber(method.amount, 0)}
-                          onChange={(e) => updatePaymentMethod(index, 'amount', safeNumber(e.target.value, 0))}
+                          onChange={(val) => updatePaymentMethod(index, 'amount', val)}
                           className="input-field"
-                          placeholder="0,00"
+                          aria-label={`Valor do método de pagamento ${index + 1}`}
                         />
                       </div>
 
@@ -730,15 +725,12 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                               {!method.useCustomValues && safeNumber(method.installments, 1) > 1 && (
                                 <div>
                                   <label className="form-label">Valor por Parcela</label>
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
+                                  <CurrencyInput
                                     value={safeNumber(method.installmentValue, 0)}
-                                    onChange={(e) => updatePaymentMethod(index, 'installmentValue', safeNumber(e.target.value, 0))}
+                                    onChange={(val) => updatePaymentMethod(index, 'installmentValue', val)}
                                     className="input-field"
-                                    placeholder="0,00"
                                     readOnly
+                                    aria-label="Valor por parcela calculado automaticamente"
                                   />
                                   <p className="text-xs text-blue-600 mt-1 font-bold">
                                     ✓ Calculado automaticamente: R$ {safeNumber(method.amount, 0) && safeNumber(method.installments, 1) ? (safeNumber(method.amount, 0) / safeNumber(method.installments, 1)).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'} por parcela
@@ -758,14 +750,11 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                                           <label className="text-xs font-medium text-blue-700">
                                             Parcela {installmentIndex + 1}
                                           </label>
-                                          <input
-                                            type="number"
-                                            step="0.01"
-                                            min="0"
+                                          <CurrencyInput
                                             value={safeNumber(value, 0)}
-                                            onChange={(e) => updateCustomInstallmentValue(index, installmentIndex, safeNumber(e.target.value, 0))}
+                                            onChange={(val) => updateCustomInstallmentValue(index, installmentIndex, val)}
                                             className="input-field text-sm"
-                                            placeholder="0,00"
+                                            aria-label={`Valor da parcela ${installmentIndex + 1}`}
                                           />
                                         </div>
                                       ))}

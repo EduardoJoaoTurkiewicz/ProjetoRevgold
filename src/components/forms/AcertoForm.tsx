@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Users, Building2, Calculator } from 'lucide-react';
 import { Acerto } from '../../types';
 import { useAppContext } from '../../context/AppContext';
+import { CurrencyInput } from '../CurrencyInput';
 
 interface AcertoFormProps {
   acerto?: Acerto | null;
@@ -208,16 +209,13 @@ export function AcertoForm({ acerto, onSubmit, onCancel }: AcertoFormProps) {
 
               <div className="form-group md:col-span-2">
                 <label className="form-label">Valor Total do Acerto *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <CurrencyInput
                   value={formData.totalAmount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, totalAmount: parseFloat(e.target.value) || 0 }))}
+                  onChange={(val) => setFormData(prev => ({ ...prev, totalAmount: val }))}
                   className="input-field bg-gray-50"
-                  placeholder="0,00"
                   required
                   readOnly={!acerto}
+                  aria-label="Valor Total do Acerto calculado automaticamente"
                 />
                 {!acerto && formData.totalAmount > 0 && (
                   <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2">
@@ -236,26 +234,23 @@ export function AcertoForm({ acerto, onSubmit, onCancel }: AcertoFormProps) {
 
               <div className="form-group">
                 <label className="form-label">Valor Já Pago</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max={formData.totalAmount}
+                <CurrencyInput
                   value={formData.paidAmount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, paidAmount: parseFloat(e.target.value) || 0 }))}
+                  onChange={(val) => setFormData(prev => ({ ...prev, paidAmount: val }))}
                   className="input-field"
-                  placeholder="0,00"
+                  max={formData.totalAmount}
+                  aria-label="Valor já pago do acerto"
                 />
               </div>
 
               <div className="form-group">
                 <label className="form-label">Valor Pendente</label>
-                <input
-                  type="number"
-                  step="0.01"
+                <CurrencyInput
                   value={formData.pendingAmount}
+                  onChange={() => {}}
                   className="input-field bg-gray-50"
                   readOnly
+                  aria-label="Valor pendente calculado automaticamente"
                 />
                 <p className="text-xs text-green-600 mt-1 font-bold">
                   ✓ Calculado automaticamente

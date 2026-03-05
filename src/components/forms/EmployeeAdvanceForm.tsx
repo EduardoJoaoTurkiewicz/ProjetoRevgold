@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { EmployeeAdvance } from '../../types';
 import { useAppContext } from '../../context/AppContext';
 import { getCurrentDateString } from '../../utils/dateUtils';
+import { CurrencyInput } from '../CurrencyInput';
 
 interface EmployeeAdvanceFormProps {
   employeeId?: string;
@@ -115,15 +116,12 @@ export function EmployeeAdvanceForm({ employeeId, employeeName, onSubmit, onCanc
 
               <div className="form-group">
                 <label className="form-label">Valor *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <CurrencyInput
                   value={formData.amount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
+                  onChange={(val) => setFormData(prev => ({ ...prev, amount: val }))}
                   className="input-field"
-                  placeholder="0,00"
                   required
+                  aria-label="Valor do Adiantamento"
                 />
               </div>
 
