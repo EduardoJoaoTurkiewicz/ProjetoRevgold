@@ -4,16 +4,18 @@ import { useAppContext } from '../context/AppContext';
 import { AgendaEvent } from '../types';
 import { AgendaEventForm } from './forms/AgendaEventForm';
 import DueDatesSection from './duedates/DueDatesSection';
+import { toISODateOnly } from '../lib/dateOnly';
 import toast from 'react-hot-toast';
 
 export default function Agenda() {
-  const { 
-    agendaEvents, 
-    isLoading, 
-    error, 
-    createAgendaEvent, 
-    updateAgendaEvent, 
-    deleteAgendaEvent 
+  const {
+    agendaEvents,
+    isLoading,
+    error,
+    createAgendaEvent,
+    updateAgendaEvent,
+    deleteAgendaEvent,
+    navigateToPage
   } = useAppContext();
   
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -133,7 +135,13 @@ export default function Agenda() {
     }
   };
 
-  const handleNavigateToRelated = async (event: AgendaEvent) => {
+  const handleMarkAsDone = (event: AgendaEvent) => {
+    updateAgendaEvent({ ...event, status: 'concluido' })
+      .then(() => toast.success('Tarefa marcada como realizada!'))
+      .catch(err => alert('Erro ao atualizar evento: ' + err.message));
+  };
+
+  const handleNavigateToRelated = (event: AgendaEvent) => {
     if (!event.relatedType || !event.relatedId) return;
 
     const routeMap: Record<string, string> = {
@@ -148,7 +156,7 @@ export default function Agenda() {
 
     const route = routeMap[event.relatedType];
     if (route) {
-      window.location.hash = route;
+      navigateToPage(route);
 
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('filterByRelatedId', {
@@ -315,7 +323,7 @@ export default function Agenda() {
             {/* Dias do Calendário */}
             <div className="grid grid-cols-7 gap-1">
               {calendarDays.map((day, index) => {
-                const dateStr = day.toISOString().split('T')[0];
+                const dateStr = toISODateOnly(day);
                 const dayEvents = getEventsForDate(dateStr);
                 const isSelected = selectedDate === dateStr;
                 const isTodayDate = isToday(day);
@@ -507,11 +515,21 @@ export default function Agenda() {
                           {event.relatedType && event.relatedId && (
                             <button
                               onClick={() => handleNavigateToRelated(event)}
-                              className="px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border-2 border-purple-300 hover:bg-purple-200 transition-all flex items-center gap-1 shadow-sm hover:shadow-md"
+                              className="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border-2 border-blue-300 hover:bg-blue-200 transition-all flex items-center gap-1 shadow-sm hover:shadow-md"
                               title="Ir para o registro relacionado"
                             >
                               <ExternalLink className="w-3 h-3" />
                               VER {event.relatedType.toUpperCase()}
+                            </button>
+                          )}
+                          {event.status !== 'concluido' && (
+                            <button
+                              onClick={() => handleMarkAsDone(event)}
+                              className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border-2 border-emerald-300 hover:bg-emerald-200 transition-all flex items-center gap-1 shadow-sm hover:shadow-md"
+                              title="Marcar como realizado"
+                            >
+                              <CheckCircle className="w-3 h-3" />
+                              TAREFA REALIZADA
                             </button>
                           )}
                         </div>

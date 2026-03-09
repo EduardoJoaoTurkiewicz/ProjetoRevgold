@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
   const removeFloating = () => {
   document.querySelectorAll('[style*="position: fixed"][style*="bottom: 1rem"][style*="right: 1rem"][style*="z-index: 2147483647"]').forEach(el => el.remove());
@@ -11,7 +11,7 @@ removeFloating();
 const observer = new MutationObserver(removeFloating);
 observer.observe(document.body, { childList: true, subtree: true });
 
-import { AppProvider } from './context/AppContext';
+import { AppProvider, useAppContext } from './context/AppContext';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ConnectionStatus } from './components/ConnectionStatus';
@@ -77,6 +77,11 @@ function App() {
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const { setNavigateToPage } = useAppContext();
+
+  useEffect(() => {
+    setNavigateToPage(setCurrentPage);
+  }, [setNavigateToPage]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50/30 to-emerald-50/50">

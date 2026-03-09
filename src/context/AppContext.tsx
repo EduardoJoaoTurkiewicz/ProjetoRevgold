@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { supabaseServices, enhancedSupabaseServices } from '../lib/supabaseServices';
 import { enhancedSyncManager } from '../lib/enhancedSyncManager';
 import { getOfflineDataEnhanced, mergeOnlineOfflineDataEnhanced } from '../lib/enhancedOfflineStorage';
@@ -91,6 +91,10 @@ interface AppContextType {
   createPermuta: (permutaData: any) => Promise<any>;
   updatePermuta: (permutaData: any) => Promise<any>;
   deletePermuta: (id: string) => Promise<void>;
+
+  // Navigation
+  navigateToPage: (page: string) => void;
+  setNavigateToPage: (fn: (page: string) => void) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -126,16 +130,23 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   // Track loading state for each data type to prevent multiple loads
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
   const [lastLoadTime, setLastLoadTime] = useState<Record<string, number>>({});
+  const isLoadingAllDataRef = useRef(false);
+
+  // Navigation function - can be set by App component
+  const [_navigateFn, _setNavigateFn] = useState<(page: string) => void>(() => () => {});
+  const navigateToPage = (page: string) => _navigateFn(page);
+  const setNavigateToPage = (fn: (page: string) => void) => _setNavigateFn(() => fn);
 
   // Load all data function
   const loadAllData = async () => {
-    // Prevent multiple simultaneous loads
-    if (loadingStates.loadAllData) {
+    // Prevent multiple simultaneous loads using ref to avoid stale closure issues
+    if (isLoadingAllDataRef.current) {
       console.log('🔄 Data loading already in progress, skipping...');
       return;
     }
 
     try {
+      isLoadingAllDataRef.current = true;
       setLoading(true);
       setError(null);
       setLoadingStates(prev => ({ ...prev, loadAllData: true }));
@@ -247,6 +258,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       ErrorHandler.logProjectError(err, 'Load All Data');
       setError(ErrorHandler.handleSupabaseError(err));
     } finally {
+      isLoadingAllDataRef.current = false;
       setLoading(false);
       setLoadingStates(prev => ({ ...prev, loadAllData: false }));
     }
@@ -306,6 +318,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       // Also refresh installment-related data to show new checks/boletos immediately
       await refreshInstallmentData();
 
+      // Refresh agenda to show delivery events created automatically
+      await refreshAgendaData();
+
       // Refresh permutas to reflect consumed/remaining values after permuta payment
       const hasPermutaPayment = saleData?.paymentMethods?.some((m: any) => m.type === 'permuta');
       if (hasPermutaPayment) {
@@ -325,6 +340,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       const { id, ...updateData } = saleData;
       const result = await enhancedSupabaseServices.sales.update(id, updateData);
       await refreshSalesData();
+      // Refresh agenda in case delivery date changed
+      await refreshAgendaData();
       // Refresh permutas in case payment methods changed
       await refreshPermutasData();
       return result;
@@ -1020,6 +1037,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     };
   }, []);
 
+  const refreshAgendaData = async () => {
+    try {
+      const eventsData = await supabaseServices.agendaEvents.getEvents();
+      setAgendaEvents(eventsData || []);
+    } catch (error) {
+      console.error('❌ Error refreshing agenda data:', error);
+    }
+  };
+
   // Add function to refresh specific data types after installment operations
   const refreshInstallmentData = async () => {
     try {
@@ -1117,6 +1143,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     createPermuta,
     updatePermuta,
     deletePermuta,
+
+    // Navigation
+    navigateToPage,
+    setNavigateToPage,
   };
 
   return (

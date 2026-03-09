@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { safeNumber, transformToSnakeCase } from '../utils/numberUtils';
 import { Sale, Acerto } from '../types';
+import { getCurrentDateISO } from './dateOnly';
 
 export class AcertoPaymentService {
   /**
@@ -75,7 +76,7 @@ export class AcertoPaymentService {
             amount: methodAmount,
             description: `Pagamento de acerto - Cliente: ${acerto.clientName}`,
             category: 'acerto_cliente',
-            date: new Date().toISOString().split('T')[0],
+            date: getCurrentDateISO(),
             created_at: new Date().toISOString()
           });
           console.log('✅ Cash transaction created for:', method.type);
@@ -89,7 +90,7 @@ export class AcertoPaymentService {
             amount: actualAmount,
             description: `Pagamento de acerto (Cartão de Débito) - Cliente: ${acerto.clientName}`,
             category: 'acerto_cliente',
-            date: new Date().toISOString().split('T')[0],
+            date: getCurrentDateISO(),
             created_at: new Date().toISOString()
           });
           console.log('✅ Cash transaction created for debit card');
@@ -103,8 +104,8 @@ export class AcertoPaymentService {
             clientName: acerto.clientName,
             totalAmount: methodAmount,
             installments: safeNumber(method.installments, 1),
-            paymentDate: new Date().toISOString().split('T')[0],
-            firstDueDate: method.firstInstallmentDate || new Date().toISOString().split('T')[0]
+            paymentDate: getCurrentDateISO(),
+            firstDueDate: method.firstInstallmentDate || getCurrentDateISO()
           });
           console.log('✅ Credit card record created');
         }
@@ -198,7 +199,7 @@ export class AcertoPaymentService {
           paid_amount: newPaidAmount,
           pending_amount: Math.max(0, newPendingAmount),
           status: newStatus,
-          payment_date: new Date().toISOString().split('T')[0],
+          payment_date: getCurrentDateISO(),
           updated_at: new Date().toISOString()
         })
         .eq('id', acerto.id);

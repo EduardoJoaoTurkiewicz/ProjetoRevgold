@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { safeNumber } from '../utils/numberUtils';
+import { getCurrentDateISO, toISODateOnly, fromISODateOnly } from './dateOnly';
 import toast from 'react-hot-toast';
 
 export interface CreditCardSale {
@@ -90,13 +91,13 @@ export const CreditCardService = {
 
     const installmentsData = [];
     for (let i = 0; i < installments; i++) {
-      const dueDate = new Date(firstDueDate);
+      const dueDate = fromISODateOnly(firstDueDate);
       dueDate.setMonth(dueDate.getMonth() + i);
       installmentsData.push({
         credit_card_sale_id: sale.id,
         installment_number: i + 1,
         amount: installmentAmount,
-        due_date: dueDate.toISOString().split('T')[0],
+        due_date: toISODateOnly(dueDate),
         status: 'pending',
       });
     }
@@ -140,13 +141,13 @@ export const CreditCardService = {
 
     const installmentsData = [];
     for (let i = 0; i < installments; i++) {
-      const dueDate = new Date(firstDueDate);
+      const dueDate = fromISODateOnly(firstDueDate);
       dueDate.setMonth(dueDate.getMonth() + i);
       installmentsData.push({
         credit_card_debt_id: debt.id,
         installment_number: i + 1,
         amount: installmentAmount,
-        due_date: dueDate.toISOString().split('T')[0],
+        due_date: toISODateOnly(dueDate),
         status: 'pending',
       });
     }
@@ -158,6 +159,57 @@ export const CreditCardService = {
     if (installmentsError) throw installmentsError;
 
     return debt.id;
+  },
+
+  async createFromAcerto(params: {
+    acertoId: string | undefined;
+    clientName: string;
+    totalAmount: number;
+    installments: number;
+    paymentDate: string;
+    firstDueDate: string;
+  }): Promise<string> {
+    const { clientName, totalAmount, installments, paymentDate, firstDueDate } = params;
+    const installmentAmount = totalAmount / installments;
+
+    const { data: sale, error: saleError } = await supabase
+      .from('credit_card_sales')
+      .insert({
+        sale_id: null,
+        client_name: clientName,
+        total_amount: totalAmount,
+        remaining_amount: totalAmount,
+        installments: installments,
+        sale_date: paymentDate,
+        first_due_date: firstDueDate,
+        status: 'active',
+        anticipated: false,
+      })
+      .select()
+      .single();
+
+    if (saleError) throw saleError;
+
+    const installmentsData = [];
+    for (let i = 0; i < installments; i++) {
+      const dueDate = fromISODateOnly(firstDueDate);
+      dueDate.setMonth(dueDate.getMonth() + i);
+      installmentsData.push({
+        credit_card_sale_id: sale.id,
+        installment_number: i + 1,
+        amount: installmentAmount,
+        due_date: toISODateOnly(dueDate),
+        status: 'pending',
+      });
+    }
+
+    const { error: installmentsError } = await supabase
+      .from('credit_card_sale_installments')
+      .insert(installmentsData);
+
+    if (installmentsError) throw installmentsError;
+
+    return sale.id;
   },
 
   async anticipateSale(saleId: string, anticipationFee: number): Promise<void> {
@@ -176,7 +228,7 @@ export const CreditCardService = {
       .from('credit_card_sales')
       .update({
         anticipated: true,
-        anticipated_date: new Date().toISOString().split('T')[0],
+        anticipated_date: getCurrentDateISO(),
         anticipated_fee: anticipationFee,
         anticipated_amount: anticipatedAmount,
         remaining_amount: 0,
@@ -190,7 +242,7 @@ export const CreditCardService = {
       .from('credit_card_sale_installments')
       .update({
         status: 'received',
-        received_date: new Date().toISOString().split('T')[0]
+        received_date: getCurrentDateISO()
       })
       .eq('credit_card_sale_id', saleId)
       .eq('status', 'pending');
@@ -200,7 +252,7 @@ export const CreditCardService = {
     const { error: cashError } = await supabase
       .from('cash_transactions')
       .insert([{
-        date: new Date().toISOString().split('T')[0],
+        date: getCurrentDateISO(),
         type: 'entrada',
         amount: anticipatedAmount,
         description: `Antecipação de venda (Cartão de Crédito) - ${sale.client_name}`,
@@ -342,7 +394,7 @@ export const CreditCardService = {
   },
 
   async checkAndProcessDueInstallments(): Promise<void> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getCurrentDateISO();
 
     const { data: dueInstallments, error: queryError } = await supabase
       .from('credit_card_sale_installments')
