@@ -84,6 +84,13 @@ export default function CreditCard() {
     loadSales();
     loadDebts();
     processAutomaticPayments();
+
+    const handleDataChanged = () => {
+      loadSales();
+      loadDebts();
+    };
+    window.addEventListener('creditCardDataChanged', handleDataChanged);
+    return () => window.removeEventListener('creditCardDataChanged', handleDataChanged);
   }, []);
 
   useEffect(() => {

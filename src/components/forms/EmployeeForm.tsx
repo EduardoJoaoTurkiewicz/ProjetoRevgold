@@ -27,6 +27,7 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
     setFormData(prev => ({
       ...prev,
       isSeller: checked,
+      position: checked && !prev.position.trim() ? 'Vendedor' : prev.position,
       salary: checked ? 0 : prev.salary
     }));
   };
@@ -44,7 +45,7 @@ export function EmployeeForm({ employee, onSubmit, onCancel }: EmployeeFormProps
       return;
     }
     
-    if (!formData.salary || formData.salary < 0) {
+    if (!formData.isSeller && formData.salary < 0) {
       alert('O salário deve ser maior ou igual a zero.');
       return;
     }

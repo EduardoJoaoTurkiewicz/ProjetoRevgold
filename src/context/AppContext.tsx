@@ -327,6 +327,18 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         await refreshPermutasData();
       }
 
+      // Notify CreditCard component to reload if credit card payment was used
+      const hasCreditCardPayment = saleData?.paymentMethods?.some((m: any) => m.type === 'cartao_credito');
+      if (hasCreditCardPayment) {
+        window.dispatchEvent(new CustomEvent('creditCardDataChanged'));
+      }
+
+      // Notify Acertos component to reload if acerto payment was used
+      const hasAcertoPayment = saleData?.paymentMethods?.some((m: any) => m.type === 'acerto');
+      if (hasAcertoPayment) {
+        await refreshInstallmentData();
+      }
+
       return result;
     } catch (err) {
       console.error('Error creating sale:', err);
@@ -407,10 +419,16 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     try {
       const result = await enhancedSupabaseServices.debts.create(debtData);
       await refreshDebtsData();
-      
+
       // Also refresh installment-related data to show new checks/boletos immediately
       await refreshInstallmentData();
-      
+
+      // Notify CreditCard component to reload if credit card payment was used
+      const hasCreditCardPayment = debtData?.paymentMethods?.some((m: any) => m.type === 'cartao_credito');
+      if (hasCreditCardPayment) {
+        window.dispatchEvent(new CustomEvent('creditCardDataChanged'));
+      }
+
       return result;
     } catch (err) {
       console.error('Error creating debt:', err);

@@ -7,17 +7,18 @@ import { AcertoPaymentForm } from './forms/AcertoPaymentForm';
 import { CompanyPaymentNegotiationForm } from './forms/CompanyPaymentNegotiationForm';
 
 export function Acertos() {
-  const { 
-    acertos, 
-    sales, 
-    debts, 
-    checks, 
-    boletos, 
-    isLoading, 
-    error, 
-    createAcerto, 
-    updateAcerto, 
-    deleteAcerto 
+  const {
+    acertos,
+    sales,
+    debts,
+    checks,
+    boletos,
+    isLoading,
+    error,
+    createAcerto,
+    updateAcerto,
+    deleteAcerto,
+    updateDebt
   } = useAppContext();
   
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -113,8 +114,7 @@ export function Acertos() {
         console.log('✅ Acerto payment processed successfully');
         alert('Pagamento registrado com sucesso!');
         setPaymentAcerto(null);
-
-        // Recarregar dados (isso será feito automaticamente pelo context)
+        window.dispatchEvent(new CustomEvent('acertoDataChanged'));
       } catch (error: any) {
         console.error('❌ Error processing acerto payment:', error);
         alert('Erro ao registrar pagamento: ' + (error.message || 'Erro desconhecido'));
@@ -122,13 +122,24 @@ export function Acertos() {
     }
   };
 
-  const handleNegotiationSubmit = (paymentData: any) => {
+  const handleNegotiationSubmit = async (paymentData: any) => {
     if (negotiatingAcerto) {
-      updateAcerto({ ...negotiatingAcerto, ...paymentData, id: negotiatingAcerto.id, updatedAt: new Date().toISOString() }).then(() => {
+      try {
+        await updateAcerto({ ...negotiatingAcerto, ...paymentData, id: negotiatingAcerto.id, updatedAt: new Date().toISOString() });
+
+        if (paymentData.status === 'pago') {
+          const relatedDebts = getRelatedDebts(negotiatingAcerto.companyName || negotiatingAcerto.clientName);
+          for (const debt of relatedDebts) {
+            if (!debt.isPaid) {
+              await updateDebt({ id: debt.id, isPaid: true, paidAmount: debt.totalValue, pendingAmount: 0, updatedAt: new Date().toISOString() });
+            }
+          }
+        }
+
         setNegotiatingAcerto(null);
-      }).catch(error => {
+      } catch (error: any) {
         alert('Erro ao processar negociação: ' + error.message);
-      });
+      }
     }
   };
 

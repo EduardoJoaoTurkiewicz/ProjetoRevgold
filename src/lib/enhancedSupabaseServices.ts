@@ -192,6 +192,74 @@ export const enhancedSalesService = {
         console.error('❌ Error processing installments for sale:', installmentError);
       }
 
+      // Process credit card sales - create records in credit_card_sales table
+      try {
+        for (const method of sanitizedSale.paymentMethods || []) {
+          if (method.type === 'cartao_credito') {
+            const { CreditCardService } = await import('./creditCardService');
+            const installments = safeNumber(method.installments, 1);
+            await CreditCardService.createFromSale({
+              saleId: returnedSaleId,
+              clientName: sanitizedSale.client,
+              totalAmount: safeNumber(method.amount, 0),
+              installments: installments,
+              saleDate: sanitizedSale.date,
+              firstDueDate: method.firstInstallmentDate || sanitizedSale.date
+            });
+            console.log('✅ Credit card sale created successfully with', installments, 'installment(s)');
+          }
+        }
+      } catch (creditCardError) {
+        console.error('❌ Error creating credit card sale:', creditCardError);
+      }
+
+      // Process acertos for sales
+      try {
+        for (const method of sanitizedSale.paymentMethods || []) {
+          if (method.type === 'acerto') {
+            const clientName = method.acertoClientName === '__novo__' || !method.acertoClientName
+              ? sanitizedSale.client
+              : method.acertoClientName;
+
+            const { data: existingAcerto, error: acertosError } = await supabase
+              .from('acertos')
+              .select('*')
+              .eq('client_name', clientName)
+              .eq('type', 'cliente')
+              .maybeSingle();
+
+            if (acertosError && acertosError.code !== 'PGRST116') {
+              console.error('❌ Error finding existing acerto:', acertosError);
+            }
+
+            if (existingAcerto) {
+              const newTotal = safeNumber(existingAcerto.total_amount, 0) + safeNumber(method.amount, 0);
+              const newPending = safeNumber(existingAcerto.pending_amount, 0) + safeNumber(method.amount, 0);
+              await supabase
+                .from('acertos')
+                .update({ total_amount: newTotal, pending_amount: newPending, updated_at: new Date().toISOString() })
+                .eq('id', existingAcerto.id);
+            } else {
+              await supabase
+                .from('acertos')
+                .insert({
+                  client_name: clientName,
+                  type: 'cliente',
+                  total_amount: safeNumber(method.amount, 0),
+                  paid_amount: 0,
+                  pending_amount: safeNumber(method.amount, 0),
+                  payment_installments: 1,
+                  payment_installment_value: safeNumber(method.amount, 0),
+                  payment_interval: 30,
+                  status: 'pendente'
+                });
+            }
+          }
+        }
+      } catch (acertoError) {
+        console.error('❌ Error processing acerto for sale:', acertoError);
+      }
+
       // Register delivery event in agenda if delivery date exists
       if (sanitizedSale.deliveryDate) {
         try {
@@ -422,9 +490,74 @@ export const enhancedDebtsService = {
         console.log('✅ Installments processed successfully for debt:', data.id);
       } catch (installmentError) {
         console.error('❌ Error processing installments for debt:', installmentError);
-        // Don't throw here - debt was created successfully, installments are secondary
       }
-      
+
+      // Process credit card debts - create records in credit_card_debts table
+      try {
+        for (const method of sanitizedDebt.paymentMethods || []) {
+          if (method.type === 'cartao_credito') {
+            const { CreditCardService } = await import('./creditCardService');
+            const installments = safeNumber(method.installments, 1);
+            await CreditCardService.createFromDebt({
+              debtId: data.id,
+              supplierName: sanitizedDebt.company,
+              totalAmount: safeNumber(method.amount, 0),
+              installments: installments,
+              purchaseDate: sanitizedDebt.date,
+              firstDueDate: method.firstInstallmentDate || sanitizedDebt.date
+            });
+            console.log('✅ Credit card debt created successfully with', installments, 'installment(s)');
+          }
+        }
+      } catch (creditCardError) {
+        console.error('❌ Error creating credit card debt:', creditCardError);
+      }
+
+      // Process acertos for debts
+      try {
+        for (const method of sanitizedDebt.paymentMethods || []) {
+          if (method.type === 'acerto') {
+            const companyName = sanitizedDebt.company;
+
+            const { data: existingAcerto, error: acertosError } = await supabase
+              .from('acertos')
+              .select('*')
+              .eq('client_name', companyName)
+              .eq('type', 'empresa')
+              .maybeSingle();
+
+            if (acertosError && acertosError.code !== 'PGRST116') {
+              console.error('❌ Error finding existing acerto for debt:', acertosError);
+            }
+
+            if (existingAcerto) {
+              const newTotal = safeNumber(existingAcerto.total_amount, 0) + safeNumber(method.amount, 0);
+              const newPending = safeNumber(existingAcerto.pending_amount, 0) + safeNumber(method.amount, 0);
+              await supabase
+                .from('acertos')
+                .update({ total_amount: newTotal, pending_amount: newPending, updated_at: new Date().toISOString() })
+                .eq('id', existingAcerto.id);
+            } else {
+              await supabase
+                .from('acertos')
+                .insert({
+                  client_name: companyName,
+                  type: 'empresa',
+                  total_amount: safeNumber(method.amount, 0),
+                  paid_amount: 0,
+                  pending_amount: safeNumber(method.amount, 0),
+                  payment_installments: 1,
+                  payment_installment_value: safeNumber(method.amount, 0),
+                  payment_interval: 30,
+                  status: 'pendente'
+                });
+            }
+          }
+        }
+      } catch (acertoError) {
+        console.error('❌ Error processing acerto for debt:', acertoError);
+      }
+
       return data.id;
     } catch (error) {
       console.error('❌ Error creating debt:', error);

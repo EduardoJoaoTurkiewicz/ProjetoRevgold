@@ -7,6 +7,7 @@ import { safeNumber, validateFormNumber, logMonetaryValues } from '../../utils/n
 import { formatDateForInput, parseInputDate } from '../../utils/dateUtils';
 import { getCurrentDateString } from '../../utils/dateUtils';
 import { CurrencyInput } from '../CurrencyInput';
+import { ThirdPartyCheckVisual } from './ThirdPartyCheckVisual';
 
 interface SaleFormProps {
   sale?: Sale | null;
@@ -145,6 +146,11 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
             delete updatedMethod.isOwnCheck;
             delete updatedMethod.useCustomValues;
             delete updatedMethod.customInstallmentValues;
+          }
+
+          if (field === 'type' && INSTALLMENT_TYPES.includes(value)) {
+            if (!updatedMethod.installments) updatedMethod.installments = 1;
+            if (!updatedMethod.installmentInterval) updatedMethod.installmentInterval = 30;
           }
 
           return updatedMethod;
@@ -316,7 +322,7 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
           alert(`Valor da parcela deve ser maior que zero para ${method.type}.`);
           return;
         }
-        if (safeNumber(method.installmentInterval, 0) <= 0) {
+        if (safeNumber(method.installmentInterval, 30) <= 0) {
           alert(`Intervalo entre parcelas deve ser maior que zero para ${method.type}.`);
           return;
         }
@@ -1098,123 +1104,54 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
                           
                           {method.isThirdPartyCheck && method.installments && method.installments > 1 && (
                             <div className="md:col-span-2">
-                              <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
-                                <div className="flex items-center gap-2 mb-4">
-                                  <Info className="w-5 h-5 text-blue-600" />
-                                  <h4 className="font-bold text-blue-900">
-                                    Dados dos Cheques de Terceiros ({safeNumber(method.installments, 1)} cheques)
-                                  </h4>
+                              <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                                <div className="flex items-center justify-between mb-4">
+                                  <div className="flex items-center gap-2">
+                                    <Info className="w-5 h-5 text-amber-600" />
+                                    <h4 className="font-bold text-amber-900">
+                                      Cheques de Terceiros ({safeNumber(method.installments, 1)} cheques)
+                                    </h4>
+                                  </div>
                                   <button
                                     type="button"
                                     onClick={() => addThirdPartyCheck(index)}
-                                    className="btn-secondary text-xs py-1 px-2"
+                                    className="btn-secondary text-xs py-1 px-3"
                                   >
-                                    Adicionar Cheque
+                                    + Adicionar Cheque
                                   </button>
                                 </div>
-                                
+
                                 {(!method.thirdPartyDetails || method.thirdPartyDetails.length < (method.installments || 1)) && (
-                                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
                                     <p className="text-sm text-yellow-700 font-medium">
-                                      ⚠️ Você precisa adicionar {safeNumber(method.installments, 1) - (method.thirdPartyDetails?.length || 0)} cheque(s) de terceiros
+                                      Adicione {safeNumber(method.installments, 1) - (method.thirdPartyDetails?.length || 0)} cheque(s) de terceiros para continuar
                                     </p>
                                   </div>
                                 )}
-                                
-                                <div className="space-y-4">
-                                  {(method.thirdPartyDetails || []).map((check, checkIndex) => (
-                                    <div key={checkIndex} className="p-4 bg-white rounded-lg border border-blue-100">
-                                      <div className="flex justify-between items-center mb-3">
-                                        <h5 className="font-bold text-blue-900">Cheque {checkIndex + 1}</h5>
-                                        <button
-                                          type="button"
-                                          onClick={() => removeThirdPartyCheck(index, checkIndex)}
-                                          className="text-red-600 hover:text-red-800"
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                        </button>
-                                      </div>
-                                      
-                                      <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                          <label className="text-xs font-medium text-blue-700">Banco *</label>
-                                          <input
-                                            type="text"
-                                            value={check.bank}
-                                            onChange={(e) => updateThirdPartyCheck(index, checkIndex, 'bank', e.target.value)}
-                                            className="input-field text-sm"
-                                            placeholder="Nome do banco"
-                                            required
-                                          />
-                                        </div>
-                                        <div>
-                                          <label className="text-xs font-medium text-blue-700">Agência *</label>
-                                          <input
-                                            type="text"
-                                            value={check.agency}
-                                            onChange={(e) => updateThirdPartyCheck(index, checkIndex, 'agency', e.target.value)}
-                                            className="input-field text-sm"
-                                            placeholder="0000"
-                                            required
-                                          />
-                                        </div>
-                                        <div>
-                                          <label className="text-xs font-medium text-blue-700">Conta *</label>
-                                          <input
-                                            type="text"
-                                            value={check.account}
-                                            onChange={(e) => updateThirdPartyCheck(index, checkIndex, 'account', e.target.value)}
-                                            className="input-field text-sm"
-                                            placeholder="00000-0"
-                                            required
-                                          />
-                                        </div>
-                                        <div>
-                                          <label className="text-xs font-medium text-blue-700">Nº do Cheque *</label>
-                                          <input
-                                            type="text"
-                                            value={check.checkNumber}
-                                            onChange={(e) => updateThirdPartyCheck(index, checkIndex, 'checkNumber', e.target.value)}
-                                            className="input-field text-sm"
-                                            placeholder="000000"
-                                            required
-                                          />
-                                        </div>
-                                        <div>
-                                          <label className="text-xs font-medium text-blue-700">Emissor *</label>
-                                          <input
-                                            type="text"
-                                            value={check.issuer}
-                                            onChange={(e) => updateThirdPartyCheck(index, checkIndex, 'issuer', e.target.value)}
-                                            className="input-field text-sm"
-                                            placeholder="Nome do emissor"
-                                            required
-                                          />
-                                        </div>
-                                        <div>
-                                          <label className="text-xs font-medium text-blue-700">CPF/CNPJ *</label>
-                                          <input
-                                            type="text"
-                                            value={check.cpfCnpj}
-                                            onChange={(e) => updateThirdPartyCheck(index, checkIndex, 'cpfCnpj', e.target.value)}
-                                            className="input-field text-sm"
-                                            placeholder="000.000.000-00"
-                                            required
-                                          />
-                                        </div>
-                                        <div className="col-span-2">
-                                          <label className="text-xs font-medium text-blue-700">Observações</label>
-                                          <input
-                                            type="text"
-                                            value={check.observations || ''}
-                                            onChange={(e) => updateThirdPartyCheck(index, checkIndex, 'observations', e.target.value)}
-                                            className="input-field text-sm"
-                                            placeholder="Observações sobre o cheque"
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
+
+                                <div>
+                                  {(method.thirdPartyDetails || []).map((check, checkIndex) => {
+                                    const checkDueDate = method.firstInstallmentDate
+                                      ? (() => {
+                                          const d = new Date(method.firstInstallmentDate + 'T00:00:00');
+                                          d.setDate(d.getDate() + checkIndex * safeNumber(method.installmentInterval, 30));
+                                          return d.toISOString().split('T')[0];
+                                        })()
+                                      : undefined;
+                                    return (
+                                      <ThirdPartyCheckVisual
+                                        key={checkIndex}
+                                        check={check}
+                                        checkIndex={checkIndex}
+                                        checkNumber={checkIndex + 1}
+                                        totalChecks={safeNumber(method.installments, 1)}
+                                        amount={safeNumber(method.installmentValue, 0) || (safeNumber(method.amount, 0) / safeNumber(method.installments, 1))}
+                                        dueDate={checkDueDate}
+                                        onUpdate={(field, value) => updateThirdPartyCheck(index, checkIndex, field, value)}
+                                        onRemove={() => removeThirdPartyCheck(index, checkIndex)}
+                                      />
+                                    );
+                                  })}
                                 </div>
                               </div>
                             </div>
