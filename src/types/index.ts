@@ -446,3 +446,32 @@ export interface EstoqueProdutoCompleto extends EstoqueProduto {
   variacoes: EstoqueVariacao[];
   saldos: EstoqueSaldo[];
 }
+
+export interface Producao {
+  id: string;
+  titulo: string;
+  lote: string;
+  fabricacaoDate: string;
+  validadeDate: string;
+  createdAt: string;
+}
+
+export interface ProducaoItem {
+  id: string;
+  producaoId: string;
+  produtoId: string;
+  variacaoId: string;
+  corId?: string;
+  quantidade: number;
+  createdAt: string;
+}
+
+export interface ProducaoItemCompleto extends ProducaoItem {
+  nomeProduto: string;
+  nomeVariacao: string;
+  nomeCor?: string;
+}
+
+export interface ProducaoCompleta extends Producao {
+  itens: ProducaoItemCompleto[];
+}

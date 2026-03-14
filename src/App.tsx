@@ -33,6 +33,7 @@ import { PrintReportPage } from './components/reports/PrintReportPage';
 import { Permutas } from './components/Permutas';
 import CreditCard from './components/CreditCard';
 import Estoque from './components/Estoque';
+import Producao from './components/Producao';
 
 function App() {
   return (
@@ -123,6 +124,8 @@ function renderPage(currentPage: string) {
       return <Permutas />;
     case 'estoque':
       return <Estoque />;
+    case 'producao':
+      return <Producao />;
     default:
       return <Dashboard />;
   }

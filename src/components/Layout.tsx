@@ -14,6 +14,7 @@ import {
   Zap,
   Car,
   Package,
+  Factory,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -39,6 +40,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
     { id: 'agenda', label: 'Agenda', icon: Calendar, color: 'from-blue-600 to-sky-700' },
     { id: 'permutas', label: 'Permutas', icon: Car, color: 'from-blue-600 to-sky-700' },
     { id: 'estoque', label: 'Estoque', icon: Package, color: 'from-teal-600 to-emerald-700' },
+    { id: 'producao', label: 'Produção', icon: Factory, color: 'from-orange-600 to-amber-700' },
   ];
 
   return (

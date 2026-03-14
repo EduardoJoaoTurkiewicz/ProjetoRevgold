@@ -7,7 +7,8 @@ import { UUIDManager } from '../lib/uuidManager';
 import { connectionManager } from '../lib/connectionManager';
 import { ErrorHandler } from '../lib/errorHandler';
 import { estoqueService } from '../lib/estoqueService';
-import type { EstoqueProdutoCompleto } from '../types';
+import { producaoService } from '../lib/producaoService';
+import type { EstoqueProdutoCompleto, ProducaoCompleta } from '../types';
 
 interface AppContextType {
   // Loading and error states
@@ -118,6 +119,18 @@ interface AppContextType {
   updateEstoqueSaldo: (saldoId: string, quantidadeAtual: number) => Promise<void>;
   addEstoqueCor: (produtoId: string, nomeCor: string) => Promise<void>;
   addEstoqueVariacao: (produtoId: string, nomeVariacao: string, valorUnitarioPadrao: number, descricao?: string) => Promise<void>;
+
+  // Producao
+  producoes: ProducaoCompleta[];
+  isLoadingProducao: boolean;
+  loadProducaoData: () => Promise<void>;
+  createProducao: (
+    titulo: string,
+    lote: string,
+    fabricacaoDate: Date,
+    itens: { produtoId: string; variacaoId: string; corId?: string; quantidade: number }[]
+  ) => Promise<ProducaoCompleta>;
+  gerarProximoLote: (data: Date) => Promise<string>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -151,6 +164,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [permutas, setPermutas] = useState<any[]>([]);
   const [estoqueProdutos, setEstoqueProdutos] = useState<EstoqueProdutoCompleto[]>([]);
   const [isLoadingEstoque, setIsLoadingEstoque] = useState(false);
+  const [producoes, setProducoes] = useState<ProducaoCompleta[]>([]);
+  const [isLoadingProducao, setIsLoadingProducao] = useState(false);
 
   // Track loading state for each data type to prevent multiple loads
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
@@ -1191,6 +1206,34 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     await loadEstoqueData();
   };
 
+  const loadProducaoData = async (): Promise<void> => {
+    try {
+      setIsLoadingProducao(true);
+      const data = await producaoService.getProducoes();
+      setProducoes(data);
+    } catch (err) {
+      console.error('Error loading producao data:', err);
+    } finally {
+      setIsLoadingProducao(false);
+    }
+  };
+
+  const createProducao = async (
+    titulo: string,
+    lote: string,
+    fabricacaoDate: Date,
+    itens: { produtoId: string; variacaoId: string; corId?: string; quantidade: number }[]
+  ): Promise<ProducaoCompleta> => {
+    const result = await producaoService.createProducao(titulo, lote, fabricacaoDate, itens);
+    await loadProducaoData();
+    await loadEstoqueData();
+    return result;
+  };
+
+  const gerarProximoLote = async (data: Date): Promise<string> => {
+    return producaoService.gerarProximoLote(data);
+  };
+
   const value: AppContextType = {
     // Loading and error states
     isLoading,
@@ -1284,6 +1327,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     updateEstoqueSaldo,
     addEstoqueCor,
     addEstoqueVariacao,
+
+    // Producao
+    producoes,
+    isLoadingProducao,
+    loadProducaoData,
+    createProducao,
+    gerarProximoLote,
   };
 
   return (
