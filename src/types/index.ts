@@ -407,3 +407,42 @@ export interface Installment {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface EstoqueProduto {
+  id: string;
+  nome: string;
+  descricao?: string;
+  temCor: boolean;
+  createdAt: string;
+}
+
+export interface EstoqueCor {
+  id: string;
+  produtoId: string;
+  nomeCor: string;
+  createdAt: string;
+}
+
+export interface EstoqueVariacao {
+  id: string;
+  produtoId: string;
+  nomeVariacao: string;
+  valorUnitarioPadrao: number;
+  descricao?: string;
+  createdAt: string;
+}
+
+export interface EstoqueSaldo {
+  id: string;
+  produtoId: string;
+  variacaoId: string;
+  corId?: string;
+  quantidadeAtual: number;
+  updatedAt: string;
+}
+
+export interface EstoqueProdutoCompleto extends EstoqueProduto {
+  cores: EstoqueCor[];
+  variacoes: EstoqueVariacao[];
+  saldos: EstoqueSaldo[];
+}

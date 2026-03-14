@@ -6,6 +6,8 @@ import { DeduplicationService } from '../lib/deduplicationService';
 import { UUIDManager } from '../lib/uuidManager';
 import { connectionManager } from '../lib/connectionManager';
 import { ErrorHandler } from '../lib/errorHandler';
+import { estoqueService } from '../lib/estoqueService';
+import type { EstoqueProdutoCompleto } from '../types';
 
 interface AppContextType {
   // Loading and error states
@@ -95,6 +97,27 @@ interface AppContextType {
   // Navigation
   navigateToPage: (page: string) => void;
   setNavigateToPage: (fn: (page: string) => void) => void;
+
+  // Estoque
+  estoqueProdutos: EstoqueProdutoCompleto[];
+  isLoadingEstoque: boolean;
+  loadEstoqueData: () => Promise<void>;
+  createEstoqueProduto: (
+    nome: string,
+    descricao: string | undefined,
+    temCor: boolean,
+    cores: string[],
+    variacoes: { nomeVariacao: string; valorUnitarioPadrao: number; descricao?: string }[]
+  ) => Promise<EstoqueProdutoCompleto>;
+  updateEstoqueProduto: (id: string, nome: string, descricao?: string) => Promise<void>;
+  updateEstoqueVariacao: (id: string, nomeVariacao: string, valorUnitarioPadrao: number, descricao?: string) => Promise<void>;
+  updateEstoqueCor: (id: string, nomeCor: string) => Promise<void>;
+  removeEstoqueVariacao: (variacaoId: string) => Promise<void>;
+  removeEstoqueCor: (corId: string) => Promise<void>;
+  deleteEstoqueProduto: (produtoId: string) => Promise<void>;
+  updateEstoqueSaldo: (saldoId: string, quantidadeAtual: number) => Promise<void>;
+  addEstoqueCor: (produtoId: string, nomeCor: string) => Promise<void>;
+  addEstoqueVariacao: (produtoId: string, nomeVariacao: string, valorUnitarioPadrao: number, descricao?: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -126,6 +149,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [cashBalance, setCashBalance] = useState<any>(null);
   const [cashTransactions, setCashTransactions] = useState<any[]>([]);
   const [permutas, setPermutas] = useState<any[]>([]);
+  const [estoqueProdutos, setEstoqueProdutos] = useState<EstoqueProdutoCompleto[]>([]);
+  const [isLoadingEstoque, setIsLoadingEstoque] = useState(false);
 
   // Track loading state for each data type to prevent multiple loads
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
@@ -1087,6 +1112,85 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       console.error('❌ Error refreshing installment data:', error);
     }
   };
+  const loadEstoqueData = async () => {
+    try {
+      setIsLoadingEstoque(true);
+      const data = await estoqueService.getProdutos();
+      setEstoqueProdutos(data);
+    } catch (err) {
+      console.error('Error loading estoque data:', err);
+    } finally {
+      setIsLoadingEstoque(false);
+    }
+  };
+
+  const createEstoqueProduto = async (
+    nome: string,
+    descricao: string | undefined,
+    temCor: boolean,
+    cores: string[],
+    variacoes: { nomeVariacao: string; valorUnitarioPadrao: number; descricao?: string }[]
+  ): Promise<EstoqueProdutoCompleto> => {
+    const result = await estoqueService.createProduto(nome, descricao, temCor, cores, variacoes);
+    await loadEstoqueData();
+    return result;
+  };
+
+  const updateEstoqueProduto = async (id: string, nome: string, descricao?: string): Promise<void> => {
+    await estoqueService.updateProduto(id, nome, descricao);
+    await loadEstoqueData();
+  };
+
+  const updateEstoqueVariacao = async (
+    id: string,
+    nomeVariacao: string,
+    valorUnitarioPadrao: number,
+    descricao?: string
+  ): Promise<void> => {
+    await estoqueService.updateVariacao(id, nomeVariacao, valorUnitarioPadrao, descricao);
+    await loadEstoqueData();
+  };
+
+  const updateEstoqueCor = async (id: string, nomeCor: string): Promise<void> => {
+    await estoqueService.updateCor(id, nomeCor);
+    await loadEstoqueData();
+  };
+
+  const removeEstoqueVariacao = async (variacaoId: string): Promise<void> => {
+    await estoqueService.removeVariacao(variacaoId);
+    await loadEstoqueData();
+  };
+
+  const removeEstoqueCor = async (corId: string): Promise<void> => {
+    await estoqueService.removeCor(corId);
+    await loadEstoqueData();
+  };
+
+  const deleteEstoqueProduto = async (produtoId: string): Promise<void> => {
+    await estoqueService.deleteProduto(produtoId);
+    await loadEstoqueData();
+  };
+
+  const updateEstoqueSaldo = async (saldoId: string, quantidadeAtual: number): Promise<void> => {
+    await estoqueService.updateSaldo(saldoId, quantidadeAtual);
+    await loadEstoqueData();
+  };
+
+  const addEstoqueCor = async (produtoId: string, nomeCor: string): Promise<void> => {
+    await estoqueService.addCor(produtoId, nomeCor);
+    await loadEstoqueData();
+  };
+
+  const addEstoqueVariacao = async (
+    produtoId: string,
+    nomeVariacao: string,
+    valorUnitarioPadrao: number,
+    descricao?: string
+  ): Promise<void> => {
+    await estoqueService.addVariacao(produtoId, nomeVariacao, valorUnitarioPadrao, descricao);
+    await loadEstoqueData();
+  };
+
   const value: AppContextType = {
     // Loading and error states
     isLoading,
@@ -1165,6 +1269,21 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     // Navigation
     navigateToPage,
     setNavigateToPage,
+
+    // Estoque
+    estoqueProdutos,
+    isLoadingEstoque,
+    loadEstoqueData,
+    createEstoqueProduto,
+    updateEstoqueProduto,
+    updateEstoqueVariacao,
+    updateEstoqueCor,
+    removeEstoqueVariacao,
+    removeEstoqueCor,
+    deleteEstoqueProduto,
+    updateEstoqueSaldo,
+    addEstoqueCor,
+    addEstoqueVariacao,
   };
 
   return (

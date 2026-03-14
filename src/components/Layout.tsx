@@ -1,11 +1,11 @@
 import React from 'react';
 import { OfflineIndicator } from './OfflineIndicator';
-import { 
-  Home, 
-  Users, 
-  ShoppingCart, 
-  CreditCard, 
-  FileText, 
+import {
+  Home,
+  Users,
+  ShoppingCart,
+  CreditCard,
+  FileText,
   Calendar,
   Receipt,
   DollarSign,
@@ -13,6 +13,7 @@ import {
   TrendingUp,
   Zap,
   Car,
+  Package,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -37,6 +38,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
     { id: 'reports', label: 'Relatórios', icon: TrendingUp, color: 'from-blue-600 to-sky-700' },
     { id: 'agenda', label: 'Agenda', icon: Calendar, color: 'from-blue-600 to-sky-700' },
     { id: 'permutas', label: 'Permutas', icon: Car, color: 'from-blue-600 to-sky-700' },
+    { id: 'estoque', label: 'Estoque', icon: Package, color: 'from-teal-600 to-emerald-700' },
   ];
 
   return (

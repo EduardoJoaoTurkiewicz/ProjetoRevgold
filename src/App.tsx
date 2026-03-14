@@ -32,6 +32,7 @@ import { Acertos } from './components/Acertos';
 import { PrintReportPage } from './components/reports/PrintReportPage';
 import { Permutas } from './components/Permutas';
 import CreditCard from './components/CreditCard';
+import Estoque from './components/Estoque';
 
 function App() {
   return (
@@ -120,6 +121,8 @@ function renderPage(currentPage: string) {
       return <Acertos />;
     case 'permutas':
       return <Permutas />;
+    case 'estoque':
+      return <Estoque />;
     default:
       return <Dashboard />;
   }
