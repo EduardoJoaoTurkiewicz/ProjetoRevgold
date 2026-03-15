@@ -436,6 +436,7 @@ export function ComprehensiveReport({ filters }: ComprehensiveReportProps) {
 
   return (
     <div className="space-y-8 print-container">
+      <style>{`@media print { @page { size: A4 portrait; margin: 14mm 12mm 16mm 12mm; } }`}</style>
       {/* Print Header */}
       <div className="print-card company-header avoid-break-inside">
         <div>

@@ -5,11 +5,9 @@ html, body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* Formato e margens A4 */
-@page {
-  size: A4 portrait;
-  margin: 14mm 12mm 16mm 12mm;
-}
+/* @page A4 rule removed from global stylesheet.
+   Each report component defines its own @page rule inline to avoid
+   conflicting with label pages that use 70mm x 30mm format. */
 
 /* Print container */
 .print-container {
@@ -44,8 +42,8 @@ html, body {
     box-shadow: none !important;
   }
   
-  /* Ensure text is readable */
-  * {
+  /* Ensure text is readable inside report containers only */
+  .print-container * {
     color: #000 !important;
     background: white !important;
   }

@@ -91,7 +91,7 @@ export default function ProductionLabelsPrint() {
             window.print();
           });
         });
-      }, 300);
+      }, 800);
       window.onafterprint = () => window.close();
       return () => clearTimeout(timer);
     }
@@ -165,11 +165,15 @@ export default function ProductionLabelsPrint() {
           box-sizing: border-box;
           margin: 0;
           padding: 0;
+          transition: none !important;
+          animation: none !important;
         }
 
-        body {
+        html, body {
           font-family: Arial, Helvetica, sans-serif;
-          background: #fff;
+          background: #f3f4f6 !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
 
         .label-header {
@@ -290,10 +294,12 @@ export default function ProductionLabelsPrint() {
             height: 30mm;
             margin: 0 !important;
             padding: 0 !important;
+            background: white !important;
           }
           body {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
           }
           .print-root {
             width: 70mm;
@@ -309,6 +315,34 @@ export default function ProductionLabelsPrint() {
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            background: white !important;
+          }
+          .logo-box {
+            background: #f97316 !important;
+            color: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .marca {
+            color: #374151 !important;
+          }
+          .produto {
+            color: #111827 !important;
+          }
+          .descricao {
+            color: #f97316 !important;
+          }
+          .separator {
+            background: #e5e7eb !important;
+          }
+          .info-label {
+            color: #9ca3af !important;
+          }
+          .info-value {
+            color: #374151 !important;
+          }
+          .info-value.lote {
+            color: #1f2937 !important;
           }
           .no-print, .no-print-bar {
             display: none !important;
