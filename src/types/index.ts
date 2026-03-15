@@ -475,3 +475,57 @@ export interface ProducaoItemCompleto extends ProducaoItem {
 export interface ProducaoCompleta extends Producao {
   itens: ProducaoItemCompleto[];
 }
+
+export interface Cliente {
+  id: string;
+  tipo: 'PF' | 'PJ';
+  razaoSocial?: string | null;
+  nomeFantasia?: string | null;
+  nomeCompleto?: string | null;
+  cnpj?: string | null;
+  cpf?: string | null;
+  telefone: string;
+  email?: string | null;
+  enderecoRua?: string | null;
+  enderecoNumero?: string | null;
+  enderecoBairro?: string | null;
+  enderecoCidade: string;
+  enderecoUf: string;
+  enderecoCep?: string | null;
+  enderecoComplemento?: string | null;
+  vendedorResponsavelId?: string | null;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+  vendedorNome?: string;
+  inadimplente?: boolean;
+}
+
+export interface ClienteFormData {
+  tipo: 'PF' | 'PJ';
+  razaoSocial: string;
+  nomeFantasia: string;
+  nomeCompleto: string;
+  cnpj: string;
+  cpf: string;
+  telefone: string;
+  email: string;
+  enderecoRua: string;
+  enderecoNumero: string;
+  enderecoBairro: string;
+  enderecoCidade: string;
+  enderecoUf: string;
+  enderecoCep: string;
+  enderecoComplemento: string;
+  vendedorResponsavelId: string;
+  tags: string[];
+}
+
+export interface ClienteFiltros {
+  busca: string;
+  tipo: '' | 'PF' | 'PJ';
+  cidade: string;
+  tags: string[];
+  vendedorId: string;
+  inadimplente: '' | 'sim' | 'nao';
+}

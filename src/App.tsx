@@ -35,6 +35,7 @@ import CreditCard from './components/CreditCard';
 import Estoque from './components/Estoque';
 import Producao from './components/Producao';
 import ProductionLabelsPrint from './components/print/ProductionLabelsPrint';
+import { ClientesPage } from './components/ClientesPage';
 
 function App() {
   return (
@@ -128,6 +129,8 @@ function renderPage(currentPage: string) {
       return <Estoque />;
     case 'producao':
       return <Producao />;
+    case 'clientes':
+      return <ClientesPage />;
     default:
       return <Dashboard />;
   }

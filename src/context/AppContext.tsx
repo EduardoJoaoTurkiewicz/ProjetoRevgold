@@ -8,7 +8,8 @@ import { connectionManager } from '../lib/connectionManager';
 import { ErrorHandler } from '../lib/errorHandler';
 import { estoqueService } from '../lib/estoqueService';
 import { producaoService } from '../lib/producaoService';
-import type { EstoqueProdutoCompleto, ProducaoCompleta } from '../types';
+import { listarClientes, criarCliente, atualizarCliente, deletarCliente } from '../lib/clienteService';
+import type { EstoqueProdutoCompleto, ProducaoCompleta, Cliente, ClienteFormData } from '../types';
 
 interface AppContextType {
   // Loading and error states
@@ -131,6 +132,14 @@ interface AppContextType {
     itens: { produtoId: string; variacaoId: string; corId?: string; quantidade: number }[]
   ) => Promise<ProducaoCompleta>;
   gerarProximoLote: (data: Date) => Promise<string>;
+
+  // Clientes
+  clientes: Cliente[];
+  isLoadingClientes: boolean;
+  loadClientesData: () => Promise<void>;
+  createCliente: (data: ClienteFormData) => Promise<Cliente>;
+  updateCliente: (id: string, data: Partial<ClienteFormData>) => Promise<Cliente>;
+  deleteCliente: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -166,6 +175,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [isLoadingEstoque, setIsLoadingEstoque] = useState(false);
   const [producoes, setProducoes] = useState<ProducaoCompleta[]>([]);
   const [isLoadingProducao, setIsLoadingProducao] = useState(false);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [isLoadingClientes, setIsLoadingClientes] = useState(false);
 
   // Track loading state for each data type to prevent multiple loads
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
@@ -1234,6 +1245,35 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     return producaoService.gerarProximoLote(data);
   };
 
+  const loadClientesData = async (): Promise<void> => {
+    try {
+      setIsLoadingClientes(true);
+      const data = await listarClientes();
+      setClientes(data);
+    } catch (err) {
+      console.error('Error loading clientes data:', err);
+    } finally {
+      setIsLoadingClientes(false);
+    }
+  };
+
+  const createCliente = async (data: ClienteFormData): Promise<Cliente> => {
+    const result = await criarCliente(data);
+    await loadClientesData();
+    return result;
+  };
+
+  const updateCliente = async (id: string, data: Partial<ClienteFormData>): Promise<Cliente> => {
+    const result = await atualizarCliente(id, data);
+    await loadClientesData();
+    return result;
+  };
+
+  const deleteCliente = async (id: string): Promise<void> => {
+    await deletarCliente(id);
+    await loadClientesData();
+  };
+
   const value: AppContextType = {
     // Loading and error states
     isLoading,
@@ -1334,6 +1374,14 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     loadProducaoData,
     createProducao,
     gerarProximoLote,
+
+    // Clientes
+    clientes,
+    isLoadingClientes,
+    loadClientesData,
+    createCliente,
+    updateCliente,
+    deleteCliente,
   };
 
   return (
