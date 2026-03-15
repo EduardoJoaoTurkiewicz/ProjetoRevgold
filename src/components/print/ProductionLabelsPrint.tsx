@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import '../../styles/print-labels.css';
 
 interface ProducaoData {
   id: string;
@@ -86,7 +85,13 @@ export default function ProductionLabelsPrint() {
 
   useEffect(() => {
     if (!loading && !error && producao) {
-      const timer = setTimeout(() => window.print(), 350);
+      const timer = setTimeout(() => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            window.print();
+          });
+        });
+      }, 300);
       window.onafterprint = () => window.close();
       return () => clearTimeout(timer);
     }
@@ -111,6 +116,7 @@ export default function ProductionLabelsPrint() {
           <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px' }}>{error}</div>
           <button
             onClick={() => window.close()}
+            className="no-print"
             style={{ padding: '10px 24px', background: '#f97316', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}
           >
             Fechar
@@ -154,6 +160,162 @@ export default function ProductionLabelsPrint() {
 
   return (
     <>
+      <style>{`
+        * {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+        }
+
+        body {
+          font-family: Arial, Helvetica, sans-serif;
+          background: #fff;
+        }
+
+        .label-header {
+          display: flex;
+          align-items: center;
+          gap: 2mm;
+        }
+
+        .logo-box {
+          width: 7mm;
+          height: 7mm;
+          background: #f97316;
+          color: white;
+          font-weight: 900;
+          font-size: 5pt;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 1mm;
+          flex-shrink: 0;
+          letter-spacing: -0.5pt;
+        }
+
+        .marca {
+          font-size: 5.5pt;
+          font-weight: 700;
+          color: #374151;
+          line-height: 1.1;
+          text-transform: uppercase;
+          letter-spacing: 0.3pt;
+        }
+
+        .produto {
+          font-size: 7.5pt;
+          font-weight: 900;
+          color: #111827;
+          line-height: 1.15;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .descricao {
+          font-size: 6pt;
+          font-weight: 700;
+          color: #f97316;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          line-height: 1.2;
+        }
+
+        .separator {
+          height: 0.3mm;
+          background: #e5e7eb;
+          margin: 0.5mm 0;
+        }
+
+        .info-row {
+          display: flex;
+          align-items: center;
+          gap: 1.5mm;
+          line-height: 1.2;
+        }
+
+        .info-label {
+          font-size: 4.5pt;
+          font-weight: 700;
+          color: #9ca3af;
+          text-transform: uppercase;
+          letter-spacing: 0.3pt;
+          width: 6mm;
+          flex-shrink: 0;
+        }
+
+        .info-value {
+          font-size: 5.5pt;
+          font-weight: 800;
+          color: #374151;
+        }
+
+        .info-value.lote {
+          font-family: 'Courier New', monospace;
+          color: #1f2937;
+          font-size: 5pt;
+        }
+
+        @media screen {
+          body {
+            background: #f3f4f6;
+            padding: 48px 10px 10px;
+          }
+          .label {
+            width: 70mm;
+            height: 30mm;
+            border: 1px dashed #d1d5db;
+            margin: 8px;
+            padding: 2mm;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+          }
+          .no-print-bar {
+            display: flex;
+          }
+        }
+
+        @media print {
+          @page {
+            size: 70mm 30mm;
+            margin: 0;
+          }
+          html, body {
+            width: 70mm;
+            height: 30mm;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .print-root {
+            width: 70mm;
+          }
+          .label {
+            width: 70mm;
+            height: 30mm;
+            box-sizing: border-box;
+            padding: 2mm;
+            overflow: hidden;
+            page-break-after: always;
+            break-after: page;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+          }
+          .no-print, .no-print-bar {
+            display: none !important;
+          }
+        }
+      `}</style>
+
       <div
         className="no-print-bar"
         style={{
@@ -173,24 +335,13 @@ export default function ProductionLabelsPrint() {
           gap: '12px',
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          <span>
-            Etiquetas: <strong>{producao.lote}</strong> — {etiquetas.length} etiqueta{etiquetas.length !== 1 ? 's' : ''}
-          </span>
-          <span
-            className="no-print-warning"
-            style={{
-              fontSize: '11px',
-              color: '#fbbf24',
-              fontWeight: 500,
-            }}
-          >
-            Para imprimir correto: Margens = Nenhuma, Escala = 100%, Paginas por folha = 1.
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+        <span>
+          Etiquetas: <strong>{producao.lote}</strong> — {etiquetas.length} etiqueta{etiquetas.length !== 1 ? 's' : ''}
+        </span>
+        <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={() => window.print()}
+            className="no-print"
             style={{
               padding: '6px 18px',
               background: '#f97316',
@@ -206,6 +357,7 @@ export default function ProductionLabelsPrint() {
           </button>
           <button
             onClick={() => window.close()}
+            className="no-print"
             style={{
               padding: '6px 18px',
               background: '#475569',
@@ -222,7 +374,7 @@ export default function ProductionLabelsPrint() {
         </div>
       </div>
 
-      <div className="labels-root">
+      <div className="print-root">
         {etiquetas}
       </div>
     </>
