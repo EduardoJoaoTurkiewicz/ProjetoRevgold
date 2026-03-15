@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Package } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Plus, Trash2, Package, Info, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import type { EstoqueProdutoCompleto } from '../../types';
 
@@ -121,32 +121,34 @@ const EstoqueForm: React.FC<EstoqueFormProps> = ({ produto, onClose, onSuccess }
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-600 to-emerald-700 flex items-center justify-center">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto">
+
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-5 flex items-center justify-between rounded-t-2xl z-10">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-sm">
               <Package className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-bold text-gray-900 leading-tight">
                 {isEditing ? 'Editar Produto' : 'Novo Produto'}
               </h2>
-              <p className="text-xs text-gray-500">
-                {isEditing ? 'Atualize nome e descricao' : 'Cadastre um produto no estoque'}
+              <p className="text-xs text-gray-500 mt-0.5">
+                {isEditing ? 'Atualize o nome e descricao do produto' : 'Cadastre um novo produto no estoque'}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400 hover:text-gray-600"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+
+          <div className="space-y-1.5">
+            <label className="block text-sm font-semibold text-gray-700">
               Nome do Produto <span className="text-red-500">*</span>
             </label>
             <input
@@ -154,145 +156,194 @@ const EstoqueForm: React.FC<EstoqueFormProps> = ({ produto, onClose, onSuccess }
               value={nome}
               onChange={e => setNome(e.target.value)}
               placeholder="Ex: Tinta Emborrachada, Lixa, Selador..."
-              className={`w-full px-4 py-2.5 rounded-xl border ${errors.nome ? 'border-red-400 bg-red-50' : 'border-gray-200'} focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm`}
+              className={`w-full px-4 py-3 rounded-xl border text-sm transition-all outline-none ${
+                errors.nome
+                  ? 'border-red-300 bg-red-50 focus:ring-2 focus:ring-red-200'
+                  : 'border-gray-200 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+              }`}
             />
-            {errors.nome && <p className="text-xs text-red-500 mt-1">{errors.nome}</p>}
+            {errors.nome && (
+              <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                <AlertCircle className="w-3.5 h-3.5" />
+                {errors.nome}
+              </p>
+            )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Descricao <span className="text-gray-400 font-normal">(opcional)</span>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-semibold text-gray-700">
+              Descricao <span className="text-gray-400 font-normal text-xs">(opcional)</span>
             </label>
             <textarea
               value={descricao}
               onChange={e => setDescricao(e.target.value)}
               placeholder="Descricao adicional do produto..."
               rows={2}
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm resize-none"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none transition-all text-sm resize-none"
             />
           </div>
 
           {!isEditing && (
             <>
-              <div className="border border-gray-100 rounded-xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-800">Cores</h3>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={semCor}
-                      onChange={e => setSemCor(e.target.checked)}
-                      className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
-                    />
-                    <span className="text-xs text-gray-600">Nao se aplica</span>
+              <div className="border border-gray-100 rounded-2xl overflow-hidden">
+                <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-b border-gray-100">
+                  <h3 className="text-sm font-bold text-gray-800">Cores</h3>
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <div
+                      onClick={() => setSemCor(v => !v)}
+                      className={`relative w-9 h-5 rounded-full transition-colors ${semCor ? 'bg-blue-500' : 'bg-gray-200'}`}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${semCor ? 'translate-x-4' : 'translate-x-0'}`}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-600 font-medium">Nao se aplica</span>
                   </label>
                 </div>
 
-                {!semCor && (
-                  <div className="space-y-2">
-                    {cores.map((cor, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={cor}
-                          onChange={e => updateCor(index, e.target.value)}
-                          placeholder={`Cor ${index + 1} (Ex: Vermelha, Azul...)`}
-                          className="flex-1 px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
-                        />
-                        {cores.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeCor(index)}
-                            className="p-2 hover:bg-red-50 text-red-400 hover:text-red-600 rounded-lg transition-colors"
+                <div className="p-4">
+                  {!semCor ? (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        {cores.map((cor, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-xl px-3 py-1.5 group"
                           >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
+                            <input
+                              type="text"
+                              value={cor}
+                              onChange={e => updateCor(index, e.target.value)}
+                              placeholder={`Cor ${index + 1}`}
+                              className="w-28 text-sm bg-transparent outline-none text-blue-800 placeholder:text-blue-300 font-medium"
+                            />
+                            {cores.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeCor(index)}
+                                className="text-blue-300 hover:text-red-400 transition-colors ml-1"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={addCor}
+                          className="flex items-center gap-1.5 border-2 border-dashed border-blue-200 hover:border-blue-400 text-blue-400 hover:text-blue-600 rounded-xl px-3 py-1.5 text-sm font-medium transition-colors"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Adicionar cor
+                        </button>
                       </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={addCor}
-                      className="flex items-center gap-1.5 text-teal-600 hover:text-teal-700 text-sm font-medium transition-colors"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Adicionar cor
-                    </button>
-                    {errors.cores && <p className="text-xs text-red-500">{errors.cores}</p>}
-                  </div>
-                )}
-                {semCor && (
-                  <p className="text-xs text-gray-400 italic">Produto sem variacao de cor (ex: lixas, solventes)</p>
-                )}
+                      {errors.cores && (
+                        <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          {errors.cores}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">Produto sem variacao de cor (ex: lixas, solventes)</p>
+                  )}
+                </div>
               </div>
 
-              <div className="border border-gray-100 rounded-xl p-4 space-y-3">
-                <h3 className="text-sm font-semibold text-gray-800">
-                  Variacoes <span className="text-red-500">*</span>
-                </h3>
-                <div className="space-y-3">
+              <div className="border border-gray-100 rounded-2xl overflow-hidden">
+                <div className="bg-gray-50 px-4 py-3 border-b border-gray-100">
+                  <h3 className="text-sm font-bold text-gray-800">
+                    Variacoes <span className="text-red-500">*</span>
+                  </h3>
+                </div>
+                <div className="p-4 space-y-3">
                   {variacoes.map((variacao, index) => (
-                    <div key={variacao.id} className="p-3 bg-gray-50 rounded-xl space-y-2">
+                    <div
+                      key={variacao.id}
+                      className="border border-gray-100 rounded-xl p-3.5 bg-white shadow-sm space-y-3"
+                    >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-600">Variacao {index + 1}</span>
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                          Variacao {index + 1}
+                        </span>
                         {variacoes.length > 1 && (
                           <button
                             type="button"
                             onClick={() => removeVariacao(variacao.id)}
-                            className="p-1 hover:bg-red-50 text-red-400 hover:text-red-600 rounded transition-colors"
+                            className="p-1 hover:bg-red-50 text-gray-300 hover:text-red-400 rounded-lg transition-colors"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-gray-500">Nome</label>
                           <input
                             type="text"
                             value={variacao.nomeVariacao}
                             onChange={e => updateVariacao(variacao.id, 'nomeVariacao', e.target.value)}
                             placeholder="Ex: 18 Litros, 25 KG..."
-                            className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm bg-white"
+                            className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none text-sm transition-all"
                           />
                         </div>
-                        <div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-gray-500">Valor unitario (R$)</label>
                           <input
                             type="number"
                             value={variacao.valorUnitarioPadrao}
                             onChange={e => updateVariacao(variacao.id, 'valorUnitarioPadrao', e.target.value)}
-                            placeholder="Valor unitario (R$)"
+                            placeholder="0,00"
                             min="0"
                             step="0.01"
-                            className={`w-full px-3 py-2 rounded-lg border ${errors[`variacao_valor_${index}`] ? 'border-red-400' : 'border-gray-200'} focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm bg-white`}
+                            className={`w-full px-3 py-2 rounded-lg border outline-none text-sm transition-all ${
+                              errors[`variacao_valor_${index}`]
+                                ? 'border-red-300 bg-red-50 focus:ring-2 focus:ring-red-200'
+                                : 'border-gray-200 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400'
+                            }`}
                           />
                         </div>
                       </div>
-                      <input
-                        type="text"
-                        value={variacao.descricao}
-                        onChange={e => updateVariacao(variacao.id, 'descricao', e.target.value)}
-                        placeholder="Descricao da variacao (opcional)"
-                        className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm bg-white"
-                      />
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-gray-500">Descricao <span className="text-gray-300">(opcional)</span></label>
+                        <input
+                          type="text"
+                          value={variacao.descricao}
+                          onChange={e => updateVariacao(variacao.id, 'descricao', e.target.value)}
+                          placeholder="Descricao da variacao..."
+                          className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none text-sm transition-all"
+                        />
+                      </div>
                     </div>
                   ))}
+
                   <button
                     type="button"
                     onClick={addVariacao}
-                    className="flex items-center gap-1.5 text-teal-600 hover:text-teal-700 text-sm font-medium transition-colors"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-blue-200 hover:border-blue-400 text-blue-400 hover:text-blue-600 rounded-xl text-sm font-medium transition-colors"
                   >
                     <Plus className="w-4 h-4" />
                     Adicionar variacao
                   </button>
-                  {errors.variacoes && <p className="text-xs text-red-500">{errors.variacoes}</p>}
+                  {errors.variacoes && (
+                    <p className="text-xs text-red-500 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      {errors.variacoes}
+                    </p>
+                  )}
                 </div>
               </div>
 
               {variacoesValidas > 0 && (
-                <div className="bg-teal-50 border border-teal-100 rounded-xl px-4 py-3">
-                  <p className="text-sm text-teal-700">
-                    Serao criados <strong>{totalSaldos}</strong> registro{totalSaldos !== 1 ? 's' : ''} de saldo zerado
-                    {!semCor && coresValidas > 0 ? ` (${variacoesValidas} variacoes x ${coresValidas} cores)` : ` (${variacoesValidas} variacoes)`}
+                <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+                  <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-blue-700 leading-snug">
+                    Serao criados{' '}
+                    <strong className="font-bold">{totalSaldos}</strong>{' '}
+                    registro{totalSaldos !== 1 ? 's' : ''} de saldo zerado
+                    {!semCor && coresValidas > 0
+                      ? ` — ${variacoesValidas} variacao${variacoesValidas !== 1 ? 'es' : ''} x ${coresValidas} cor${coresValidas !== 1 ? 'es' : ''}`
+                      : ` — ${variacoesValidas} variacao${variacoesValidas !== 1 ? 'es' : ''}`}
                   </p>
                 </div>
               )}
@@ -300,25 +351,47 @@ const EstoqueForm: React.FC<EstoqueFormProps> = ({ produto, onClose, onSuccess }
           )}
 
           {errors.submit && (
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-              <p className="text-sm text-red-600">{errors.submit}</p>
+            <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm text-red-700 font-medium">Erro ao salvar produto</p>
+                <p className="text-xs text-red-500 mt-0.5">{errors.submit}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setErrors(prev => { const n = { ...prev }; delete n.submit; return n; })}
+                className="text-red-400 hover:text-red-600 transition-colors flex-shrink-0"
+                title="Tentar novamente"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
             </div>
           )}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-1">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors text-sm font-medium"
+              className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors text-sm font-semibold"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 px-4 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-700 text-white rounded-xl hover:from-teal-700 hover:to-emerald-800 disabled:opacity-60 disabled:cursor-not-allowed transition-all text-sm font-medium shadow-sm"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white rounded-xl disabled:opacity-60 disabled:cursor-not-allowed transition-all text-sm font-bold shadow-sm"
             >
-              {submitting ? 'Salvando...' : isEditing ? 'Salvar Alteracoes' : 'Criar Produto'}
+              {submitting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Package className="w-4 h-4" />
+                  {isEditing ? 'Salvar Alteracoes' : 'Criar Produto'}
+                </>
+              )}
             </button>
           </div>
         </form>

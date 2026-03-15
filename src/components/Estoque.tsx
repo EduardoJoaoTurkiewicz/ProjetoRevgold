@@ -11,6 +11,7 @@ import {
   Boxes,
   PackageCheck,
   PackageX,
+  Filter,
 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import type { EstoqueProdutoCompleto } from '../types';
@@ -75,37 +76,29 @@ const Estoque: React.FC = () => {
     });
   };
 
-  const getSaldoLabel = (produto: EstoqueProdutoCompleto) => {
-    if (produto.saldos.length === 0) return [];
+  const getSaldoLabels = (produto: EstoqueProdutoCompleto) => {
     const labels: string[] = [];
-
     if (produto.temCor) {
       for (const saldo of produto.saldos) {
         if (saldo.quantidadeAtual > 0) {
           const variacao = produto.variacoes.find(v => v.id === saldo.variacaoId);
           const cor = produto.cores.find(c => c.id === saldo.corId);
-          if (variacao && cor) {
-            labels.push(`${saldo.quantidadeAtual} ${variacao.nomeVariacao} ${cor.nomeCor}`);
-          }
+          if (variacao && cor) labels.push(`${saldo.quantidadeAtual} ${variacao.nomeVariacao} ${cor.nomeCor}`);
         }
       }
     } else {
       for (const saldo of produto.saldos) {
         if (saldo.quantidadeAtual > 0) {
           const variacao = produto.variacoes.find(v => v.id === saldo.variacaoId);
-          if (variacao) {
-            labels.push(`${saldo.quantidadeAtual} ${variacao.nomeVariacao}`);
-          }
+          if (variacao) labels.push(`${saldo.quantidadeAtual} ${variacao.nomeVariacao}`);
         }
       }
     }
-
     return labels;
   };
 
   const getAllSaldoRows = (produto: EstoqueProdutoCompleto) => {
     const rows: { label: string; quantidade: number; hasStock: boolean }[] = [];
-
     if (produto.temCor) {
       for (const variacao of produto.variacoes) {
         for (const cor of produto.cores) {
@@ -129,7 +122,6 @@ const Estoque: React.FC = () => {
         });
       }
     }
-
     return rows;
   };
 
@@ -147,59 +139,58 @@ const Estoque: React.FC = () => {
     setEditingProduto(null);
   };
 
-  const refreshDetalhes = () => {
+  useEffect(() => {
     if (!showDetalhes) return;
     const updated = estoqueProdutos.find(p => p.id === showDetalhes.id);
     if (updated) setShowDetalhes(updated);
-  };
-
-  useEffect(() => {
-    refreshDetalhes();
   }, [estoqueProdutos]);
+
+  const hasActiveFilters = search || filterCor || filterVariacao;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Estoque</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Controle de produtos e saldos</p>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Estoque</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Controle de produtos, variacoes e saldos</p>
           </div>
           <button
             onClick={() => { setEditingProduto(null); setShowForm(true); }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-700 hover:from-teal-700 hover:to-emerald-800 text-white rounded-xl text-sm font-medium shadow-sm transition-all"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white rounded-xl text-sm font-bold shadow-sm transition-all"
           >
             <Plus className="w-4 h-4" />
-            Adicionar novo produto
+            Adicionar Produto
           </button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm flex items-center gap-4">
-            <div className="w-11 h-11 bg-blue-50 rounded-xl flex items-center justify-center">
-              <Boxes className="w-5 h-5 text-blue-600" />
+            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center flex-shrink-0">
+              <Boxes className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-xs text-gray-500 font-medium">Total de Produtos</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Total de Produtos</p>
+              <p className="text-3xl font-bold text-gray-900 leading-none mt-1">{stats.total}</p>
             </div>
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm flex items-center gap-4">
-            <div className="w-11 h-11 bg-teal-50 rounded-xl flex items-center justify-center">
-              <PackageCheck className="w-5 h-5 text-teal-600" />
+            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center flex-shrink-0">
+              <PackageCheck className="w-6 h-6 text-blue-500" />
             </div>
             <div>
-              <p className="text-xs text-gray-500 font-medium">Com Estoque</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.comSaldo}</p>
+              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Com Estoque</p>
+              <p className="text-3xl font-bold text-blue-600 leading-none mt-1">{stats.comSaldo}</p>
             </div>
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm flex items-center gap-4">
-            <div className="w-11 h-11 bg-red-50 rounded-xl flex items-center justify-center">
-              <PackageX className="w-5 h-5 text-red-500" />
+            <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center flex-shrink-0">
+              <PackageX className="w-6 h-6 text-red-400" />
             </div>
             <div>
-              <p className="text-xs text-gray-500 font-medium">Zerados</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.zerados}</p>
+              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Zerados</p>
+              <p className="text-3xl font-bold text-red-500 leading-none mt-1">{stats.zerados}</p>
             </div>
           </div>
         </div>
@@ -207,36 +198,50 @@ const Estoque: React.FC = () => {
         <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Buscar por nome do produto..."
-                className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-all"
               />
             </div>
-            <select
-              value={filterCor}
-              onChange={e => setFilterCor(e.target.value)}
-              className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white min-w-[140px]"
-            >
-              <option value="">Todas as cores</option>
-              {allCores.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-            <select
-              value={filterVariacao}
-              onChange={e => setFilterVariacao(e.target.value)}
-              className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white min-w-[160px]"
-            >
-              <option value="">Todas as variacoes</option>
-              {allVariacoes.map(v => (
-                <option key={v} value={v}>{v}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <select
+                value={filterCor}
+                onChange={e => setFilterCor(e.target.value)}
+                className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 bg-white min-w-[130px] transition-all"
+              >
+                <option value="">Todas as cores</option>
+                {allCores.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <select
+                value={filterVariacao}
+                onChange={e => setFilterVariacao(e.target.value)}
+                className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 bg-white min-w-[150px] transition-all"
+              >
+                <option value="">Todas as variacoes</option>
+                {allVariacoes.map(v => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+            </div>
           </div>
+          {hasActiveFilters && (
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-xs text-gray-500">{filteredProdutos.length} produto{filteredProdutos.length !== 1 ? 's' : ''} encontrado{filteredProdutos.length !== 1 ? 's' : ''}</span>
+              <button
+                onClick={() => { setSearch(''); setFilterCor(''); setFilterVariacao(''); }}
+                className="text-xs text-blue-500 hover:text-blue-700 font-medium transition-colors"
+              >
+                Limpar filtros
+              </button>
+            </div>
+          )}
         </div>
 
         {isLoadingEstoque ? (
@@ -244,32 +249,35 @@ const Estoque: React.FC = () => {
             {[1, 2, 3].map(i => (
               <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm animate-pulse">
                 <div className="flex items-center justify-between">
-                  <div className="space-y-2">
-                    <div className="h-4 bg-gray-200 rounded w-48" />
-                    <div className="h-3 bg-gray-100 rounded w-32" />
+                  <div className="space-y-2.5">
+                    <div className="h-5 bg-gray-200 rounded-lg w-52" />
+                    <div className="flex gap-2">
+                      <div className="h-4 bg-gray-100 rounded-full w-16" />
+                      <div className="h-4 bg-gray-100 rounded-full w-20" />
+                    </div>
                   </div>
-                  <div className="h-8 bg-gray-100 rounded-lg w-24" />
+                  <div className="h-8 bg-gray-100 rounded-xl w-28" />
                 </div>
               </div>
             ))}
           </div>
         ) : filteredProdutos.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-12 shadow-sm text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Package className="w-8 h-8 text-gray-400" />
+          <div className="bg-white rounded-2xl border border-gray-100 p-16 shadow-sm text-center">
+            <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-5">
+              <Package className="w-10 h-10 text-blue-300" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-700 mb-1">
+            <h3 className="text-xl font-bold text-gray-700 mb-2">
               {estoqueProdutos.length === 0 ? 'Nenhum produto cadastrado' : 'Nenhum produto encontrado'}
             </h3>
-            <p className="text-sm text-gray-400 mb-5">
+            <p className="text-sm text-gray-400 mb-6 max-w-xs mx-auto">
               {estoqueProdutos.length === 0
-                ? 'Adicione o primeiro produto ao estoque para comecar.'
+                ? 'Adicione o primeiro produto ao estoque para comecar a controlar os saldos.'
                 : 'Tente ajustar os filtros de busca.'}
             </p>
             {estoqueProdutos.length === 0 && (
               <button
                 onClick={() => { setEditingProduto(null); setShowForm(true); }}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-700 text-white rounded-xl text-sm font-medium shadow-sm transition-all hover:from-teal-700 hover:to-emerald-800"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white rounded-xl text-sm font-bold shadow-sm transition-all"
               >
                 <Plus className="w-4 h-4" />
                 Adicionar primeiro produto
@@ -281,63 +289,65 @@ const Estoque: React.FC = () => {
             {filteredProdutos.map(produto => {
               const isExpanded = expandedIds.has(produto.id);
               const total = getTotalSaldo(produto);
-              const saldoLabels = getSaldoLabel(produto);
+              const saldoLabels = getSaldoLabels(produto);
               const allRows = getAllSaldoRows(produto);
               const hasStock = total > 0;
 
               return (
                 <div
                   key={produto.id}
-                  className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all"
+                  className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-gray-200 hover:shadow-md"
                 >
                   <div className="p-5">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2.5">
-                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${hasStock ? 'bg-teal-500' : 'bg-gray-300'}`} />
-                          <h3 className="text-base font-semibold text-gray-900 truncate">{produto.nome}</h3>
+                          <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${hasStock ? 'bg-blue-500' : 'bg-gray-300'}`} />
+                          <h3 className="text-base font-bold text-gray-900 truncate">{produto.nome}</h3>
                           {!produto.temCor && (
-                            <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-500 flex-shrink-0">Sem cor</span>
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-500 font-medium flex-shrink-0">
+                              Sem cor
+                            </span>
                           )}
                         </div>
-                        <div className="mt-1 ml-4.5 flex flex-wrap gap-1.5">
+                        <div className="mt-2 ml-5 flex flex-wrap gap-1.5">
                           {produto.temCor && produto.cores.slice(0, 4).map(c => (
-                            <span key={c.id} className="px-1.5 py-0.5 rounded text-xs bg-blue-50 text-blue-600">
+                            <span key={c.id} className="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-600 font-medium border border-blue-100">
                               {c.nomeCor}
                             </span>
                           ))}
                           {produto.temCor && produto.cores.length > 4 && (
-                            <span className="px-1.5 py-0.5 rounded text-xs bg-gray-50 text-gray-500">
-                              +{produto.cores.length - 4} cores
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-gray-50 text-gray-400 border border-gray-100">
+                              +{produto.cores.length - 4}
                             </span>
                           )}
                           {produto.variacoes.slice(0, 3).map(v => (
-                            <span key={v.id} className="px-1.5 py-0.5 rounded text-xs bg-amber-50 text-amber-600">
+                            <span key={v.id} className="px-2 py-0.5 rounded-full text-xs bg-slate-50 text-slate-600 font-medium border border-slate-100">
                               {v.nomeVariacao}
                             </span>
                           ))}
                           {produto.variacoes.length > 3 && (
-                            <span className="px-1.5 py-0.5 rounded text-xs bg-gray-50 text-gray-500">
-                              +{produto.variacoes.length - 3} variacoes
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-gray-50 text-gray-400 border border-gray-100">
+                              +{produto.variacoes.length - 3} var.
                             </span>
                           )}
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${hasStock ? 'bg-teal-100 text-teal-700' : 'bg-gray-100 text-gray-400'}`}>
+                        <span className={`px-3.5 py-1.5 rounded-xl text-sm font-bold ${hasStock ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>
                           {total} un.
                         </span>
                         <button
                           onClick={() => setShowDetalhes(produto)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors font-medium"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-600 hover:bg-blue-50 hover:text-blue-700 border border-gray-200 hover:border-blue-200 rounded-lg transition-colors font-semibold"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           Ver detalhes
                         </button>
                         <button
                           onClick={() => { setEditingProduto(produto); setShowForm(true); }}
-                          className="p-1.5 text-gray-400 hover:text-teal-600 hover:bg-gray-100 rounded-lg transition-colors"
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title="Editar produto"
                         >
                           <Pencil className="w-3.5 h-3.5" />
@@ -352,14 +362,14 @@ const Estoque: React.FC = () => {
                     </div>
 
                     {!isExpanded && saldoLabels.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-1.5">
+                      <div className="mt-3 ml-5 flex flex-wrap gap-1.5">
                         {saldoLabels.slice(0, 6).map((label, i) => (
-                          <span key={i} className="px-2 py-0.5 rounded-lg text-xs bg-teal-50 text-teal-700 border border-teal-100">
+                          <span key={i} className="px-2 py-0.5 rounded-lg text-xs bg-blue-50 text-blue-600 border border-blue-100 font-medium">
                             {label}
                           </span>
                         ))}
                         {saldoLabels.length > 6 && (
-                          <span className="px-2 py-0.5 rounded-lg text-xs bg-gray-50 text-gray-500">
+                          <span className="px-2 py-0.5 rounded-lg text-xs bg-gray-50 text-gray-400 border border-gray-100">
                             +{saldoLabels.length - 6} mais
                           </span>
                         )}
@@ -368,18 +378,22 @@ const Estoque: React.FC = () => {
                   </div>
 
                   {isExpanded && (
-                    <div className="border-t border-gray-50 px-5 pb-5 pt-4">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                    <div className="border-t border-gray-50 px-5 pb-5 pt-4 bg-gray-50/50">
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
                         Especificacoes e Saldos
                       </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                         {allRows.map((row, i) => (
                           <div
                             key={i}
-                            className={`flex items-center justify-between px-3 py-2 rounded-lg border ${row.hasStock ? 'border-teal-100 bg-teal-50' : 'border-gray-100 bg-gray-50'}`}
+                            className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl border ${
+                              row.hasStock
+                                ? 'border-blue-100 bg-blue-50'
+                                : 'border-gray-100 bg-white'
+                            }`}
                           >
-                            <span className="text-xs text-gray-600 truncate pr-2">{row.label}</span>
-                            <span className={`text-sm font-bold flex-shrink-0 ${row.hasStock ? 'text-teal-700' : 'text-gray-400'}`}>
+                            <span className="text-xs text-gray-600 truncate pr-2 font-medium">{row.label}</span>
+                            <span className={`text-sm font-bold flex-shrink-0 ${row.hasStock ? 'text-blue-700' : 'text-gray-300'}`}>
                               {row.quantidade}
                             </span>
                           </div>
