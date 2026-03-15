@@ -19,8 +19,7 @@ export function imprimirEtiquetas(producao: ProducaoCompleta): void {
       linhas.push(`
         <div class="etiqueta">
           <div class="etiqueta-header">
-            <div class="logo-box">MT</div>
-            <div class="marca">Montreal Tintas</div>
+            <img src="${window.location.origin}/LOGO_MONTREAL_TINTAS_A_MAIOR_INDUSTRIA_DE_TINTAS_DO_PARANA-removebg-preview.png" class="logo-img" alt="Montreal Tintas" />
           </div>
           <div class="produto">${nomeProduto}</div>
           <div class="descricao">${descricao}</div>
@@ -84,28 +83,11 @@ export function imprimirEtiquetas(producao: ProducaoCompleta): void {
       gap: 2mm;
     }
 
-    .logo-box {
-      width: 7mm;
-      height: 7mm;
-      background: #f97316;
-      color: white;
-      font-weight: 900;
-      font-size: 5pt;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 1mm;
+    .logo-img {
+      height: 8mm;
+      width: auto;
+      object-fit: contain;
       flex-shrink: 0;
-      letter-spacing: -0.5pt;
-    }
-
-    .marca {
-      font-size: 5.5pt;
-      font-weight: 700;
-      color: #374151;
-      line-height: 1.1;
-      text-transform: uppercase;
-      letter-spacing: 0.3pt;
     }
 
     .produto {
@@ -121,7 +103,7 @@ export function imprimirEtiquetas(producao: ProducaoCompleta): void {
     .descricao {
       font-size: 6pt;
       font-weight: 700;
-      color: #f97316;
+      color: #1a3a8f;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;

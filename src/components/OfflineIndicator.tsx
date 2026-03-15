@@ -37,7 +37,7 @@ export function OfflineIndicator() {
   }
 
   return (
-    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 no-print">
       <div className={`
         px-6 py-3 rounded-2xl shadow-xl border-2 transition-all duration-300 cursor-pointer
         ${!isOnline 

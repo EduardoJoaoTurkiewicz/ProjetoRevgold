@@ -114,7 +114,7 @@ export function ConnectionStatus() {
   const StatusIcon = getStatusIcon();
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="fixed bottom-4 right-4 z-50 no-print">
       <div className={`bg-white rounded-2xl shadow-xl border-2 transition-all duration-300 ${
         isExpanded ? 'w-80' : 'w-auto'
       }`}>

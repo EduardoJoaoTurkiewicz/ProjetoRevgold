@@ -135,8 +135,7 @@ export default function ProductionLabelsPrint() {
       etiquetas.push(
         <div key={`${item.id}-${i}`} className="label">
           <div className="label-header">
-            <div className="logo-box">MT</div>
-            <div className="marca">Montreal Tintas</div>
+            <img src="/LOGO_MONTREAL_TINTAS_A_MAIOR_INDUSTRIA_DE_TINTAS_DO_PARANA-removebg-preview.png" className="logo-img" alt="Montreal Tintas" />
           </div>
           <div className="produto">{item.nomeProduto}</div>
           {descricao && <div className="descricao">{descricao}</div>}
@@ -182,28 +181,11 @@ export default function ProductionLabelsPrint() {
           gap: 2mm;
         }
 
-        .logo-box {
-          width: 7mm;
-          height: 7mm;
-          background: #f97316;
-          color: white;
-          font-weight: 900;
-          font-size: 5pt;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 1mm;
+        .logo-img {
+          height: 8mm;
+          width: auto;
+          object-fit: contain;
           flex-shrink: 0;
-          letter-spacing: -0.5pt;
-        }
-
-        .marca {
-          font-size: 5.5pt;
-          font-weight: 700;
-          color: #374151;
-          line-height: 1.1;
-          text-transform: uppercase;
-          letter-spacing: 0.3pt;
         }
 
         .produto {
@@ -219,7 +201,7 @@ export default function ProductionLabelsPrint() {
         .descricao {
           font-size: 6pt;
           font-weight: 700;
-          color: #f97316;
+          color: #1a3a8f;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -317,20 +299,16 @@ export default function ProductionLabelsPrint() {
             justify-content: space-between;
             background: white !important;
           }
-          .logo-box {
-            background: #f97316 !important;
-            color: white !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          .marca {
-            color: #374151 !important;
+          .logo-img {
+            height: 8mm !important;
+            width: auto !important;
+            object-fit: contain !important;
           }
           .produto {
             color: #111827 !important;
           }
           .descricao {
-            color: #f97316 !important;
+            color: #1a3a8f !important;
           }
           .separator {
             background: #e5e7eb !important;
@@ -378,7 +356,7 @@ export default function ProductionLabelsPrint() {
             className="no-print"
             style={{
               padding: '6px 18px',
-              background: '#f97316',
+              background: '#1a3a8f',
               color: '#fff',
               border: 'none',
               borderRadius: '6px',
