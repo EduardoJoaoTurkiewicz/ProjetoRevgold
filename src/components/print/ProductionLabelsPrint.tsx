@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import '../../styles/print-labels.css';
 
 interface ProducaoData {
   id: string;
@@ -86,12 +87,8 @@ export default function ProductionLabelsPrint() {
   useEffect(() => {
     if (!loading && !error && producao) {
       const timer = setTimeout(() => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            window.print();
-          });
-        });
-      }, 300);
+        window.print();
+      }, 350);
       window.onafterprint = () => window.close();
       return () => clearTimeout(timer);
     }
@@ -179,8 +176,8 @@ export default function ProductionLabelsPrint() {
         }
 
         .logo-box {
-          width: 7mm;
-          height: 7mm;
+          width: 6mm;
+          height: 6mm;
           background: #f97316;
           color: white;
           font-weight: 900;
@@ -260,13 +257,18 @@ export default function ProductionLabelsPrint() {
         @media screen {
           body {
             background: #f3f4f6;
-            padding: 48px 10px 10px;
+            padding: 60px 10px 10px;
+          }
+          .labels-root {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
           }
           .label {
             width: 70mm;
             height: 30mm;
             border: 1px dashed #d1d5db;
-            margin: 8px;
+            margin: 8px 0;
             padding: 2mm;
             background: white;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
@@ -279,41 +281,6 @@ export default function ProductionLabelsPrint() {
             display: flex;
           }
         }
-
-        @media print {
-          @page {
-            size: 70mm 30mm;
-            margin: 0;
-          }
-          html, body {
-            width: 70mm;
-            height: 30mm;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          body {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .print-root {
-            width: 70mm;
-          }
-          .label {
-            width: 70mm;
-            height: 30mm;
-            box-sizing: border-box;
-            padding: 2mm;
-            overflow: hidden;
-            page-break-after: always;
-            break-after: page;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-          }
-          .no-print, .no-print-bar {
-            display: none !important;
-          }
-        }
       `}</style>
 
       <div
@@ -323,58 +290,78 @@ export default function ProductionLabelsPrint() {
           top: 0,
           left: 0,
           right: 0,
-          background: '#1e293b',
-          color: '#fff',
-          padding: '8px 16px',
-          alignItems: 'center',
-          justifyContent: 'space-between',
           zIndex: 9999,
           fontFamily: 'Arial, sans-serif',
-          fontSize: '13px',
-          fontWeight: 600,
-          gap: '12px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 0,
         }}
       >
-        <span>
-          Etiquetas: <strong>{producao.lote}</strong> — {etiquetas.length} etiqueta{etiquetas.length !== 1 ? 's' : ''}
-        </span>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={() => window.print()}
-            className="no-print"
-            style={{
-              padding: '6px 18px',
-              background: '#f97316',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              fontWeight: 700,
-              fontSize: '13px',
-              cursor: 'pointer',
-            }}
-          >
-            Imprimir
-          </button>
-          <button
-            onClick={() => window.close()}
-            className="no-print"
-            style={{
-              padding: '6px 18px',
-              background: '#475569',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              fontWeight: 700,
-              fontSize: '13px',
-              cursor: 'pointer',
-            }}
-          >
-            Fechar
-          </button>
+        <div
+          style={{
+            background: '#f59e0b',
+            color: '#1c1917',
+            padding: '7px 16px',
+            fontSize: '12px',
+            fontWeight: 600,
+            textAlign: 'center',
+            borderBottom: '1px solid #d97706',
+          }}
+        >
+          Para imprimir corretamente: <strong>Margens = Nenhuma</strong>, <strong>Escala = 100%</strong>, <strong>Paginas por folha = 1</strong>
+        </div>
+        <div
+          style={{
+            background: '#1e293b',
+            color: '#fff',
+            padding: '8px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '13px',
+            fontWeight: 600,
+            gap: '12px',
+          }}
+        >
+          <span>
+            Etiquetas: <strong>{producao.lote}</strong> — {etiquetas.length} etiqueta{etiquetas.length !== 1 ? 's' : ''}
+          </span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => window.print()}
+              style={{
+                padding: '6px 18px',
+                background: '#f97316',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: 700,
+                fontSize: '13px',
+                cursor: 'pointer',
+              }}
+            >
+              Imprimir
+            </button>
+            <button
+              onClick={() => window.close()}
+              style={{
+                padding: '6px 18px',
+                background: '#475569',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: 700,
+                fontSize: '13px',
+                cursor: 'pointer',
+              }}
+            >
+              Fechar
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="print-root">
+      <div className="labels-root">
         {etiquetas}
       </div>
     </>
