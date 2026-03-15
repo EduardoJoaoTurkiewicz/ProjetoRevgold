@@ -34,6 +34,7 @@ import { Permutas } from './components/Permutas';
 import CreditCard from './components/CreditCard';
 import Estoque from './components/Estoque';
 import Producao from './components/Producao';
+import ProductionLabelsPrint from './components/print/ProductionLabelsPrint';
 
 function App() {
   return (
@@ -69,6 +70,7 @@ function App() {
           <ConnectionStatus />
           <Routes>
             <Route path="/print/reports" element={<PrintReportPage />} />
+            <Route path="/print/etiquetas/:id" element={<ProductionLabelsPrint />} />
             <Route path="/*" element={<AppContent />} />
           </Routes>
         </AppProvider>

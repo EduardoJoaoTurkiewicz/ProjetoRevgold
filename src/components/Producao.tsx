@@ -15,7 +15,6 @@ import {
 import { useAppContext } from '../context/AppContext';
 import { ProducaoForm } from './forms/ProducaoForm';
 import type { ProducaoCompleta } from '../types';
-import { imprimirEtiquetas } from '../utils/etiquetasPrint';
 
 function formatDateBR(dateStr: string): string {
   if (!dateStr) return '';
@@ -244,7 +243,7 @@ export default function Producao() {
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <button
-                            onClick={() => imprimirEtiquetas(producao)}
+                            onClick={() => window.open(`/print/etiquetas/${producao.id}`, '_blank')}
                             className="flex items-center gap-1.5 px-3 py-2 bg-slate-700 text-white rounded-xl font-bold text-xs hover:bg-slate-800 transition-colors"
                           >
                             <Printer className="w-3.5 h-3.5" />
