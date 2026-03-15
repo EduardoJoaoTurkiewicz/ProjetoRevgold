@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Plus, CreditCard as Edit, Trash2, Eye, ShoppingCart, FileText, AlertCircle, X, DollarSign, Calendar, User, Package, TrendingUp, CheckCircle, Clock, Filter, Upload } from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Eye, ShoppingCart, AlertCircle, X, DollarSign, Calendar, User, Package, TrendingUp, CheckCircle, Clock, Filter, Upload, FileDown } from 'lucide-react';
 import { formatDateForDisplay } from '../utils/dateUtils';
 import { useAppContext } from '../context/AppContext';
-import { Sale } from '../types';
+import { Sale, SaleItem } from '../types';
 import { SaleForm } from './forms/SaleForm';
 import { BulkSalesImportModal } from './forms/BulkSalesImportModal';
 import { DeduplicationService } from '../lib/deduplicationService';
@@ -10,9 +10,11 @@ import { UUIDManager } from '../lib/uuidManager';
 import { DebugPanel } from './DebugPanel';
 import { TestSaleCreation } from './TestSaleCreation';
 import { OfflineDataViewer } from './OfflineDataViewer';
+import { getSaleItems, saveSaleItems, aplicarBaixaEstoque, reverterBaixaEstoque, aplicarDeltaEstoque } from '../lib/saleStockService';
+import { gerarComprovantePDF } from '../utils/saleReceiptPdf';
 
 export default function Sales() {
-  const { sales, employees, permutas, isLoading, error, createSale, updateSale, deleteSale } = useAppContext();
+  const { sales, employees, permutas, isLoading, error, createSale, updateSale, deleteSale, estoqueProdutos, loadEstoqueData } = useAppContext();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [viewingSale, setViewingSale] = useState<Sale | null>(null);
@@ -94,85 +96,95 @@ export default function Sales() {
     };
   }, [deduplicatedSales]);
 
-  const handleAddSale = (sale: Omit<Sale, 'id' | 'createdAt'>) => {
-    console.log('🔄 Adicionando nova venda:', sale);
-    
-    // Validate sale data before submitting
+  const handleAddSale = async (sale: Omit<Sale, 'id' | 'createdAt'>, saleItems: SaleItem[]) => {
     if (!sale.client || !sale.client.trim()) {
       alert('Por favor, informe o nome do cliente.');
       return;
     }
-    
     if (sale.totalValue <= 0) {
       alert('O valor total da venda deve ser maior que zero.');
       return;
     }
-    
-    // Validar estrutura dos métodos de pagamento
-    if (sale.paymentMethods && sale.paymentMethods.length > 0) {
-      for (const method of sale.paymentMethods) {
-        if (!method.type || typeof method.type !== 'string') {
-          alert('Todos os métodos de pagamento devem ter um tipo válido.');
-          return;
-        }
-        if (typeof method.amount !== 'number' || method.amount < 0) {
-          alert('Todos os métodos de pagamento devem ter um valor válido.');
-          return;
-        }
-      }
-    }
-    
-    createSale(sale).then(() => {
-      console.log('✅ Venda adicionada com sucesso');
+
+    try {
+      const saleId: string = await createSale(sale);
       setIsFormOpen(false);
-      
-      // Show success message with installment info
-      const hasInstallments = sale.paymentMethods?.some(method => 
+
+      if (saleItems.length > 0) {
+        await saveSaleItems(saleId, saleItems);
+        await aplicarBaixaEstoque(saleId, saleItems);
+        await loadEstoqueData();
+      }
+
+      const hasInstallments = sale.paymentMethods?.some(method =>
         (method.type === 'cheque' || method.type === 'boleto') && method.installments > 1
       );
-      
       if (hasInstallments) {
         setTimeout(() => {
-          alert('✅ Venda criada com sucesso!\n\nOs cheques e boletos foram criados automaticamente e já estão disponíveis nas respectivas abas.');
+          alert('Venda criada com sucesso!\n\nOs cheques e boletos foram criados automaticamente e já estão disponíveis nas respectivas abas.');
         }, 1000);
       }
-    }).catch(error => {
-      console.error('❌ Erro ao adicionar venda:', error);
+    } catch (err: any) {
       let errorMessage = 'Erro ao criar venda';
-      
-      if (error?.message) {
-        if (error.message.includes('duplicate key') || error.message.includes('unique constraint') || error.message.includes('já existe')) {
+      if (err?.message) {
+        if (err.message.includes('duplicate key') || err.message.includes('unique constraint') || err.message.includes('já existe')) {
           errorMessage = 'Esta venda já existe no sistema. O sistema previne duplicatas automaticamente.';
-        } else if (error.message.includes('constraint') || error.message.includes('violates')) {
+        } else if (err.message.includes('constraint') || err.message.includes('violates')) {
           errorMessage = 'Dados inválidos ou duplicados. Verifique as informações inseridas.';
-        } else if (error.message.includes('invalid input syntax')) {
+        } else if (err.message.includes('invalid input syntax')) {
           errorMessage = 'Formato de dados inválido. Verifique os valores inseridos.';
-        } else if (error.message.includes('null value')) {
+        } else if (err.message.includes('null value')) {
           errorMessage = 'Campos obrigatórios não preenchidos. Verifique todos os campos.';
         } else {
-          errorMessage = error.message;
+          errorMessage = err.message;
         }
       }
-      
       alert('Erro ao criar venda: ' + errorMessage);
-    });
-  };
-
-  const handleEditSale = (sale: Omit<Sale, 'id' | 'createdAt'>) => {
-    if (editingSale) {
-      updateSale({ ...sale, id: editingSale.id, createdAt: editingSale.createdAt }).then(() => {
-        setEditingSale(null);
-      }).catch(error => {
-        alert('Erro ao atualizar venda: ' + error.message);
-      });
     }
   };
 
-  const handleDeleteSale = (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta venda? Esta ação não pode ser desfeita.')) {
-      deleteSale(id).catch(error => {
-        alert('Erro ao excluir venda: ' + error.message);
-      });
+  const handleEditSale = async (sale: Omit<Sale, 'id' | 'createdAt'>, saleItems: SaleItem[]) => {
+    if (!editingSale) return;
+    try {
+      const itensAntigos = await getSaleItems(editingSale.id);
+      await updateSale({ ...sale, id: editingSale.id, createdAt: editingSale.createdAt });
+
+      if (saleItems.length > 0 || itensAntigos.length > 0) {
+        await saveSaleItems(editingSale.id, saleItems);
+        const erros = await aplicarDeltaEstoque(editingSale.id, itensAntigos, saleItems, estoqueProdutos);
+        if (erros.length > 0) {
+          const msg = erros.map(e => `${e.nomeProduto} (${e.nomeVariacao}${e.nomeCor ? ' / ' + e.nomeCor : ''}): solicitado ${e.solicitado}, disponivel ${e.disponivel}`).join('\n');
+          alert('Aviso: estoque insuficiente para alguns itens editados:\n' + msg);
+        }
+        await loadEstoqueData();
+      }
+
+      setEditingSale(null);
+    } catch (err: any) {
+      alert('Erro ao atualizar venda: ' + (err?.message ?? 'Erro desconhecido'));
+    }
+  };
+
+  const handleDeleteSale = async (id: string) => {
+    if (!window.confirm('Tem certeza que deseja excluir esta venda? Esta ação não pode ser desfeita.')) return;
+    try {
+      const itens = await getSaleItems(id);
+      await deleteSale(id);
+      if (itens.length > 0) {
+        await reverterBaixaEstoque(id, itens);
+        await loadEstoqueData();
+      }
+    } catch (err: any) {
+      alert('Erro ao excluir venda: ' + (err?.message ?? 'Erro desconhecido'));
+    }
+  };
+
+  const handleDownloadPDF = async (sale: Sale) => {
+    try {
+      const items = await getSaleItems(sale.id);
+      gerarComprovantePDF(sale, items.length > 0 ? items : undefined);
+    } catch {
+      gerarComprovantePDF(sale);
     }
   };
 
@@ -619,6 +631,13 @@ export default function Sales() {
 
                 {/* Actions */}
                 <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
+                  <button
+                    onClick={() => handleDownloadPDF(sale)}
+                    className="text-slate-600 hover:text-slate-800 p-2 rounded-lg hover:bg-slate-100 transition-modern"
+                    title="Baixar PDF"
+                  >
+                    <FileDown className="w-5 h-5" />
+                  </button>
                   <button
                     onClick={() => setViewingSale(sale)}
                     className="text-green-600 hover:text-green-800 p-2 rounded-lg hover:bg-green-50 transition-modern"

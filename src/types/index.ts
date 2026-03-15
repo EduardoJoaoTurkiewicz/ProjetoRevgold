@@ -49,6 +49,35 @@ export interface ThirdPartyCheckDetails {
   updatedAt?: string;
 }
 
+// Sale item (line item linked to estoque)
+export interface SaleItem {
+  id?: string;
+  saleId?: string;
+  produtoId: string;
+  variacaoId: string;
+  corId?: string | null;
+  quantidade: number;
+  valorUnitario: number;
+  valorTotal: number;
+  nomeProduto?: string;
+  nomeVariacao?: string;
+  nomeCor?: string;
+  createdAt?: string;
+}
+
+// Estoque movement audit record
+export interface EstoqueMovimento {
+  id?: string;
+  tipo: 'IN' | 'OUT' | 'ADJUST';
+  origem: 'SALE_CREATE' | 'SALE_EDIT' | 'SALE_DELETE' | 'PRODUCAO' | 'MANUAL';
+  saleId?: string | null;
+  produtoId: string;
+  variacaoId: string;
+  corId?: string | null;
+  quantidade: number;
+  createdAt?: string;
+}
+
 // Sale interface
 export interface Sale {
   id: string;
@@ -57,6 +86,7 @@ export interface Sale {
   client: string;
   sellerId?: string | null;
   products: Product[] | null;
+  saleItems?: SaleItem[];
   observations?: string | null;
   totalValue: number;
   paymentMethods: PaymentMethod[];
