@@ -299,7 +299,7 @@ const Estoque: React.FC = () => {
               return (
                 <div
                   key={produto.id}
-                  className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:border-gray-200 hover:shadow-md"
+                  className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden transition-all duration-200 hover:border-blue-100 hover:shadow-md"
                 >
                   <div className="p-5">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
@@ -350,7 +350,7 @@ const Estoque: React.FC = () => {
                         </button>
                         <button
                           onClick={() => setVendaModalProduto(produto)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-emerald-700 hover:bg-emerald-50 border border-emerald-200 hover:border-emerald-300 rounded-lg transition-colors font-semibold"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-blue-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-300 rounded-lg transition-colors font-semibold"
                           title="Ver vendas deste produto"
                         >
                           <ShoppingCart className="w-3.5 h-3.5" />

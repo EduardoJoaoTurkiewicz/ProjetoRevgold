@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Plus, CreditCard as Edit, Trash2, Eye, Users, DollarSign, Calendar, AlertCircle, X, Star, Clock, TrendingUp, ShoppingCart } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Plus, CreditCard as Edit, Trash2, Eye, Users, DollarSign, Calendar, AlertCircle, X, Star, Clock, TrendingUp, ShoppingCart, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
-import { Employee } from '../types';
+import { Employee, EmployeeAdvance, EmployeeOvertime, EmployeeCommission } from '../types';
 import { EmployeeForm } from './forms/EmployeeForm';
 import { EmployeeAdvanceForm } from './forms/EmployeeAdvanceForm';
 import { EmployeeOvertimeForm } from './forms/EmployeeOvertimeForm';
@@ -9,6 +9,160 @@ import { VendasDoVendedorModal } from './modals/VendasDoVendedorModal';
 import { ClientesDoVendedorModal } from './modals/ClientesDoVendedorModal';
 import { formatDateForDisplay, getCurrentDateString } from '../utils/dateUtils';
 import { safeCurrency } from '../utils/numberUtils';
+
+interface PaySalaryModalProps {
+  employee: Employee;
+  advances: EmployeeAdvance[];
+  overtimes: EmployeeOvertime[];
+  commissions: EmployeeCommission[];
+  onConfirm: (amount: number, observations: string) => Promise<void>;
+  onClose: () => void;
+}
+
+function PaySalaryModal({ employee, advances, overtimes, commissions, onConfirm, onClose }: PaySalaryModalProps) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const monthAdvances = useMemo(() => {
+    return advances.filter(a => {
+      const d = new Date(a.date + 'T00:00:00');
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+  }, [advances, currentMonth, currentYear]);
+
+  const monthOvertimes = useMemo(() => {
+    return overtimes.filter(o => {
+      const d = new Date(o.date + 'T00:00:00');
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+  }, [overtimes, currentMonth, currentYear]);
+
+  const monthCommissions = useMemo(() => {
+    return commissions.filter(c => {
+      const d = new Date(c.date + 'T00:00:00');
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+  }, [commissions, currentMonth, currentYear]);
+
+  const totalAdvances = monthAdvances.reduce((sum, a) => sum + a.amount, 0);
+  const totalOvertimes = monthOvertimes.reduce((sum, o) => sum + o.totalAmount, 0);
+  const totalCommissions = monthCommissions.reduce((sum, c) => sum + c.commissionAmount, 0);
+
+  const base = employee.isSeller ? totalCommissions : employee.salary;
+  const finalAmount = base - totalAdvances + totalOvertimes;
+
+  const monthLabel = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+  const handleConfirm = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const obs = employee.isSeller
+        ? `Pagamento de salário (vendedor) - ${monthLabel}`
+        : `Pagamento de salário - ${monthLabel}`;
+      await onConfirm(finalAmount, obs);
+    } catch (err: any) {
+      setError(err?.message || 'Erro ao registrar pagamento.');
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+              <DollarSign className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-800">Pagar Salário</h3>
+              <p className="text-sm text-slate-500">{employee.name}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{monthLabel}</p>
+
+          <div className="space-y-2">
+            {employee.isSeller ? (
+              <div className="flex items-center justify-between py-2.5 px-3 bg-slate-50 rounded-xl">
+                <span className="text-sm text-slate-600">Comissões do mês</span>
+                <span className="text-sm font-bold text-slate-800">{safeCurrency(totalCommissions)}</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between py-2.5 px-3 bg-slate-50 rounded-xl">
+                <span className="text-sm text-slate-600">Salário mensal</span>
+                <span className="text-sm font-bold text-slate-800">{safeCurrency(employee.salary)}</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between py-2.5 px-3 bg-red-50 rounded-xl">
+              <span className="text-sm text-red-600">− Adiantamentos ({monthAdvances.length})</span>
+              <span className="text-sm font-bold text-red-700">−{safeCurrency(totalAdvances)}</span>
+            </div>
+
+            <div className="flex items-center justify-between py-2.5 px-3 bg-blue-50 rounded-xl">
+              <span className="text-sm text-blue-600">+ Horas extras ({monthOvertimes.length})</span>
+              <span className="text-sm font-bold text-blue-700">+{safeCurrency(totalOvertimes)}</span>
+            </div>
+
+            <div className="border-t border-slate-200 pt-3">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-slate-700">Valor final</span>
+                <span className={`text-xl font-black ${finalAmount < 0 ? 'text-red-600' : 'text-slate-800'}`}>
+                  {safeCurrency(finalAmount)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {finalAmount < 0 && (
+            <div className="flex items-start gap-2.5 p-3 bg-red-50 rounded-xl border border-red-200">
+              <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-red-700">
+                O valor calculado é negativo. Os adiantamentos excedem o valor base. Confirme somente se desejado.
+              </p>
+            </div>
+          )}
+
+          {error && (
+            <div className="flex items-start gap-2.5 p-3 bg-red-50 rounded-xl border border-red-200">
+              <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 px-6 pb-5">
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="flex-1 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={saving}
+            className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <CheckCircle className="w-4 h-4" />
+            {saving ? 'Registrando...' : 'Confirmar Pagamento'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function Employees() {
   const { 
@@ -34,6 +188,7 @@ export function Employees() {
   const [overtimeEmployee, setOvertimeEmployee] = useState<Employee | null>(null);
   const [vendasVendedor, setVendasVendedor] = useState<Employee | null>(null);
   const [clientesVendedor, setClientesVendedor] = useState<Employee | null>(null);
+  const [paySalaryEmployee, setPaySalaryEmployee] = useState<Employee | null>(null);
 
   const activeEmployees = employees.filter(emp => emp.isActive);
   const sellers = employees.filter(emp => emp.isActive && emp.isSeller);
@@ -81,21 +236,7 @@ export function Employees() {
   };
 
   const handlePaySalary = (employee: Employee) => {
-    const confirmMessage = `Pagar salário de ${employee.name}?\n\nValor: ${safeCurrency(employee.salary)}\n\nEste valor será descontado do caixa da empresa.`;
-    
-    if (window.confirm(confirmMessage)) {
-      const paymentData = {
-        employeeId: employee.id,
-        amount: employee.salary,
-        paymentDate: getCurrentDateString(),
-        isPaid: true,
-        observations: `Pagamento de salário - ${new Date().toLocaleDateString('pt-BR')}`
-      };
-      
-      createEmployeePayment(paymentData).catch(error => {
-        alert('Erro ao registrar pagamento: ' + error.message);
-      });
-    }
+    setPaySalaryEmployee(employee);
   };
 
   const getEmployeeCommissions = (employeeId: string) => {
@@ -494,6 +635,28 @@ export function Employees() {
           vendedorId={clientesVendedor.id}
           vendedorNome={clientesVendedor.name}
           onClose={() => setClientesVendedor(null)}
+        />
+      )}
+
+      {/* Pay Salary Modal */}
+      {paySalaryEmployee && (
+        <PaySalaryModal
+          employee={paySalaryEmployee}
+          advances={employeeAdvances.filter(a => a.employeeId === paySalaryEmployee.id)}
+          overtimes={employeeOvertimes.filter(o => o.employeeId === paySalaryEmployee.id)}
+          commissions={employeeCommissions.filter(c => c.employeeId === paySalaryEmployee.id)}
+          onConfirm={async (amount, obs) => {
+            const paymentData = {
+              employeeId: paySalaryEmployee.id,
+              amount,
+              paymentDate: getCurrentDateString(),
+              isPaid: true,
+              observations: obs,
+            };
+            await createEmployeePayment(paymentData);
+            setPaySalaryEmployee(null);
+          }}
+          onClose={() => setPaySalaryEmployee(null)}
         />
       )}
 

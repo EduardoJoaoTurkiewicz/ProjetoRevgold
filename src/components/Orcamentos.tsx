@@ -33,7 +33,7 @@ function diasParaVencer(dataValidade: string): number {
 function StatusBadge({ status }: { status: Orcamento['status'] }) {
   if (status === 'convertido') {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
         <CheckCircle2 className="w-3 h-3" />
         Convertido
       </span>
@@ -199,7 +199,7 @@ export function Orcamentos() {
       {/* Page header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-teal-200">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
             <ClipboardList className="w-6 h-6 text-white" />
           </div>
           <div>
@@ -211,7 +211,7 @@ export function Orcamentos() {
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-teal-200 transition-all"
+          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-200 transition-all duration-200 active:scale-95"
         >
           <Plus className="w-4 h-4" />
           Novo Orçamento
@@ -220,23 +220,27 @@ export function Orcamentos() {
 
       {/* Metric cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Pendentes</div>
-          <div className="text-2xl font-bold text-slate-800">{pendentes.length}</div>
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow duration-200">
+          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Pendentes</div>
+          <div className="text-3xl font-bold text-slate-800">{pendentes.length}</div>
+          <div className="text-xs text-slate-400 mt-1">orçamentos ativos</div>
         </div>
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Valor em Aberto</div>
-          <div className="text-2xl font-bold text-teal-700">{fmtBRL(valorPendente)}</div>
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl p-5 shadow-sm border border-blue-100 hover:shadow-md transition-shadow duration-200">
+          <div className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-2">Valor em Aberto</div>
+          <div className="text-2xl font-bold text-blue-700">{fmtBRL(valorPendente)}</div>
+          <div className="text-xs text-blue-400 mt-1">total pendente</div>
         </div>
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Vencem em 3 dias</div>
-          <div className={`text-2xl font-bold ${prox3dias.length > 0 ? 'text-amber-600' : 'text-slate-800'}`}>
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow duration-200">
+          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Vencem em 3 dias</div>
+          <div className={`text-3xl font-bold ${prox3dias.length > 0 ? 'text-amber-600' : 'text-slate-800'}`}>
             {prox3dias.length}
           </div>
+          <div className="text-xs text-slate-400 mt-1">requer atenção</div>
         </div>
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Convertidos</div>
-          <div className="text-2xl font-bold text-emerald-600">{convertidos.length}</div>
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow duration-200">
+          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Convertidos</div>
+          <div className="text-3xl font-bold text-blue-600">{convertidos.length}</div>
+          <div className="text-xs text-slate-400 mt-1">virou venda</div>
         </div>
       </div>
 
@@ -250,7 +254,7 @@ export function Orcamentos() {
               placeholder="Buscar por cliente ou número..."
               value={busca}
               onChange={(e) => { setBusca(e.target.value); setPage(1); }}
-              className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-400"
+              className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-400"
             />
           </div>
           <select
@@ -268,7 +272,7 @@ export function Orcamentos() {
               type="date"
               value={filterDataInicio}
               onChange={(e) => { setFilterDataInicio(e.target.value); setPage(1); }}
-              className="px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-400"
+              className="px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-400"
               placeholder="Início"
             />
             <span className="text-slate-400 text-sm">–</span>
@@ -276,7 +280,7 @@ export function Orcamentos() {
               type="date"
               value={filterDataFim}
               onChange={(e) => { setFilterDataFim(e.target.value); setPage(1); }}
-              className="px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-400"
+              className="px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-400"
               placeholder="Fim"
             />
           </div>
@@ -295,11 +299,18 @@ export function Orcamentos() {
       {/* Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         {isLoadingOrcamentos ? (
-          <div className="flex items-center justify-center py-20 text-slate-400">
-            <div className="text-center">
-              <ClipboardList className="w-8 h-8 mx-auto mb-3 opacity-40 animate-pulse" />
-              <p className="text-sm">Carregando orçamentos...</p>
-            </div>
+          <div className="p-6 space-y-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="animate-pulse flex items-center gap-4 py-3 px-5 border-b border-slate-50">
+                <div className="h-4 bg-slate-200 rounded w-16"></div>
+                <div className="h-4 bg-slate-200 rounded flex-1"></div>
+                <div className="h-4 bg-slate-200 rounded w-24 hidden md:block"></div>
+                <div className="h-4 bg-slate-200 rounded w-24"></div>
+                <div className="h-4 bg-slate-200 rounded w-20"></div>
+                <div className="h-6 bg-slate-200 rounded-full w-20"></div>
+                <div className="h-7 bg-slate-200 rounded-lg w-28"></div>
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex items-center justify-center py-20 text-slate-400">
@@ -390,7 +401,7 @@ export function Orcamentos() {
                               <button
                                 onClick={() => handleSubirParaVenda(o)}
                                 title="Subir para Venda"
-                                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm"
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-all duration-200 shadow-sm active:scale-95"
                               >
                                 <ShoppingCart className="w-3.5 h-3.5" />
                                 Venda

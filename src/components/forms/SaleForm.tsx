@@ -728,18 +728,7 @@ export function SaleForm({ sale, prefillOrcamento, onSubmit, onCancel }: SaleFor
                       </tfoot>
                     </table>
                   </div>
-                ) : (
-                  <div className="form-group">
-                    <label className="form-label">Descricao dos Produtos (texto livre)</label>
-                    <textarea
-                      value={typeof formData.products === 'string' ? formData.products : 'Produtos vendidos'}
-                      onChange={(e) => setFormData(prev => ({ ...prev, products: e.target.value }))}
-                      className="input-field"
-                      rows={2}
-                      placeholder="Descreva os produtos vendidos ou use o botao acima..."
-                    />
-                  </div>
-                )}
+                ) : null}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

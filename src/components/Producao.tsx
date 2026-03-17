@@ -104,7 +104,7 @@ export default function Producao() {
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-2xl font-black shadow-lg hover:shadow-orange-200 hover:scale-105 transition-all"
+          className="flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-lg shadow-blue-200 hover:scale-105 transition-all duration-200 active:scale-95"
         >
           <Plus className="w-5 h-5" />
           Nova Produção
@@ -112,26 +112,32 @@ export default function Producao() {
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl p-5 text-white shadow-lg">
-          <div className="flex items-center gap-3 mb-2">
-            <Factory className="w-6 h-6 opacity-80" />
-            <span className="text-sm font-bold opacity-90 uppercase tracking-wider">Total de Produções</span>
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow duration-200">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-sm">
+              <Factory className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total de Produções</span>
           </div>
-          <p className="text-4xl font-black">{stats.total}</p>
+          <p className="text-3xl font-black text-slate-800">{stats.total}</p>
         </div>
-        <div className="bg-gradient-to-br from-slate-600 to-slate-700 rounded-2xl p-5 text-white shadow-lg">
-          <div className="flex items-center gap-3 mb-2">
-            <Calendar className="w-6 h-6 opacity-80" />
-            <span className="text-sm font-bold opacity-90 uppercase tracking-wider">Este Mês</span>
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow duration-200">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-slate-600 rounded-xl flex items-center justify-center shadow-sm">
+              <Calendar className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Este Mês</span>
           </div>
-          <p className="text-4xl font-black">{stats.totalMes}</p>
+          <p className="text-3xl font-black text-slate-800">{stats.totalMes}</p>
         </div>
-        <div className="bg-gradient-to-br from-teal-500 to-emerald-600 rounded-2xl p-5 text-white shadow-lg">
-          <div className="flex items-center gap-3 mb-2">
-            <Package className="w-6 h-6 opacity-80" />
-            <span className="text-sm font-bold opacity-90 uppercase tracking-wider">Unidades este Mês</span>
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl p-5 shadow-sm border border-blue-100 hover:shadow-md transition-shadow duration-200">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-sm">
+              <Package className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xs font-semibold text-blue-500 uppercase tracking-wider">Unidades este Mês</span>
           </div>
-          <p className="text-4xl font-black">{stats.unidadesMes}</p>
+          <p className="text-3xl font-black text-blue-700">{stats.unidadesMes}</p>
         </div>
       </div>
 
@@ -144,12 +150,12 @@ export default function Producao() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar por título, lote ou produto..."
-              className="w-full pl-9 pr-4 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-orange-400 transition-colors"
+              className="w-full pl-9 pr-4 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-blue-400 transition-colors"
             />
           </div>
           <button
             onClick={() => setShowFilters(v => !v)}
-            className={`flex items-center gap-2 px-4 py-2.5 border-2 rounded-xl font-bold text-sm transition-colors ${showFilters ? 'border-orange-400 bg-orange-50 text-orange-700' : 'border-slate-200 text-slate-600 hover:border-orange-300'}`}
+            className={`flex items-center gap-2 px-4 py-2.5 border-2 rounded-xl font-bold text-sm transition-colors ${showFilters ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600 hover:border-blue-300'}`}
           >
             <Filter className="w-4 h-4" />
             Filtros
@@ -173,7 +179,7 @@ export default function Producao() {
                 type="date"
                 value={filterDataDe}
                 onChange={e => setFilterDataDe(e.target.value)}
-                className="border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:border-orange-400 transition-colors"
+                className="border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:border-blue-400 transition-colors"
               />
             </div>
             <div>
@@ -182,7 +188,7 @@ export default function Producao() {
                 type="date"
                 value={filterDataAte}
                 onChange={e => setFilterDataAte(e.target.value)}
-                className="border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:border-orange-400 transition-colors"
+                className="border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:border-blue-400 transition-colors"
               />
             </div>
           </div>
@@ -191,7 +197,7 @@ export default function Producao() {
 
       {isLoadingProducao ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-10 h-10 text-orange-400 animate-spin" />
+          <Loader2 className="w-10 h-10 text-blue-400 animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20">
@@ -207,7 +213,7 @@ export default function Producao() {
           {producoes.length === 0 && (
             <button
               onClick={() => setShowForm(true)}
-              className="px-6 py-3 bg-orange-500 text-white rounded-2xl font-black hover:bg-orange-600 transition-colors"
+              className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-colors duration-200"
             >
               <Plus className="w-4 h-4 inline mr-2" />
               Nova Produção
@@ -219,39 +225,39 @@ export default function Producao() {
           {filtered.map(producao => {
             const isExpanded = expandedIds.has(producao.id);
             return (
-              <div key={producao.id} className="bg-white border-2 border-slate-100 rounded-2xl shadow-sm overflow-hidden hover:border-orange-100 transition-colors">
+              <div key={producao.id} className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden hover:shadow-md hover:border-blue-100 transition-all duration-200">
                 <div className="px-5 py-4">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                    <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
                       <Factory className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <h3 className="font-black text-slate-800 text-lg leading-tight">{producao.titulo}</h3>
-                          <div className="flex items-center gap-3 mt-1 flex-wrap">
-                            <span className="font-mono text-xs font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded-lg border border-orange-100">
+                          <h3 className="font-bold text-slate-800 text-lg leading-tight">{producao.titulo}</h3>
+                          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                            <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
                               {producao.lote}
                             </span>
-                            <span className="text-xs text-slate-500 font-semibold">
+                            <span className="text-xs text-slate-400">
                               {formatDateTimeBR(producao.createdAt)}
                             </span>
-                            <span className="text-xs text-slate-500 font-semibold">
-                              Validade: {formatDateBR(producao.validadeDate)}
+                            <span className="text-xs text-slate-400">
+                              Val: {formatDateBR(producao.validadeDate)}
                             </span>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <button
                             onClick={() => window.open(`/print/etiquetas/${producao.id}`, '_blank')}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-slate-700 text-white rounded-xl font-bold text-xs hover:bg-slate-800 transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-xs transition-colors duration-200"
                           >
                             <Printer className="w-3.5 h-3.5" />
                             Etiquetas
                           </button>
                           <button
                             onClick={() => toggleExpanded(producao.id)}
-                            className="p-2 text-slate-400 hover:text-orange-500 hover:bg-orange-50 rounded-xl transition-colors"
+                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors duration-200"
                           >
                             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                           </button>
@@ -260,15 +266,15 @@ export default function Producao() {
 
                       <div className="flex items-center gap-4 mt-3">
                         <div className="text-sm">
-                          <span className="text-slate-500 font-semibold">{producao.itens.length} item(ns) · </span>
-                          <span className="font-black text-orange-600">{totalItens(producao)} unidades</span>
+                          <span className="text-slate-400">{producao.itens.length} item(ns) · </span>
+                          <span className="font-bold text-blue-600">{totalItens(producao)} unidades</span>
                         </div>
                         <div className="flex gap-1 flex-wrap">
                           {Array.from(new Set(producao.itens.map(i => i.nomeProduto))).slice(0, 3).map(nome => (
-                            <span key={nome} className="text-xs font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{nome}</span>
+                            <span key={nome} className="text-xs font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{nome}</span>
                           ))}
                           {new Set(producao.itens.map(i => i.nomeProduto)).size > 3 && (
-                            <span className="text-xs font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
+                            <span className="text-xs font-medium bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
                               +{new Set(producao.itens.map(i => i.nomeProduto)).size - 3}
                             </span>
                           )}
@@ -279,27 +285,27 @@ export default function Producao() {
                 </div>
 
                 {isExpanded && (
-                  <div className="border-t-2 border-slate-100 bg-slate-50 px-5 py-4">
+                  <div className="border-t border-slate-100 bg-slate-50/60 px-5 py-4">
                     <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
                       <div>
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Fabricação</span>
-                        <p className="font-bold text-slate-700">{formatDateBR(producao.fabricacaoDate)}</p>
+                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Fabricação</span>
+                        <p className="font-semibold text-slate-700 mt-0.5">{formatDateBR(producao.fabricacaoDate)}</p>
                       </div>
                       <div>
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Validade</span>
-                        <p className="font-bold text-slate-700">{formatDateBR(producao.validadeDate)}</p>
+                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Validade</span>
+                        <p className="font-semibold text-slate-700 mt-0.5">{formatDateBR(producao.validadeDate)}</p>
                       </div>
                     </div>
                     <div className="space-y-2">
                       {producao.itens.map(item => (
                         <div key={item.id} className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-4 py-2.5">
                           <div>
-                            <p className="font-bold text-slate-800 text-sm">{item.nomeProduto}</p>
-                            <p className="text-xs text-slate-500">
+                            <p className="font-semibold text-slate-800 text-sm">{item.nomeProduto}</p>
+                            <p className="text-xs text-slate-400">
                               {item.nomeVariacao}{item.nomeCor ? ` · ${item.nomeCor}` : ''}
                             </p>
                           </div>
-                          <span className="font-black text-orange-600">{item.quantidade}</span>
+                          <span className="font-bold text-blue-600 text-sm bg-blue-50 px-2.5 py-1 rounded-lg">{item.quantidade}</span>
                         </div>
                       ))}
                     </div>

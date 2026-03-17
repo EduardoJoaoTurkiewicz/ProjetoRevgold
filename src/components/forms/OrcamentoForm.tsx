@@ -174,7 +174,7 @@ export function OrcamentoForm({ onClose, onSuccess }: OrcamentoFormProps) {
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-slate-100">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center">
                 <FileText className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -203,20 +203,20 @@ export function OrcamentoForm({ onClose, onSuccess }: OrcamentoFormProps) {
                   onClick={() => setShowClienteModal(true)}
                   className={`w-full flex items-center gap-3 px-4 py-3 border-2 rounded-xl text-left transition-colors ${
                     clienteSelecionado
-                      ? 'border-teal-300 bg-teal-50'
+                      ? 'border-blue-300 bg-blue-50'
                       : errors.cliente
                       ? 'border-red-300 bg-red-50'
-                      : 'border-slate-200 hover:border-teal-300 bg-slate-50 hover:bg-teal-50'
+                      : 'border-slate-200 hover:border-blue-300 bg-slate-50 hover:bg-blue-50'
                   }`}
                 >
                   <User
                     className={`w-4 h-4 flex-shrink-0 ${
-                      clienteSelecionado ? 'text-teal-600' : 'text-slate-400'
+                      clienteSelecionado ? 'text-blue-600' : 'text-slate-400'
                     }`}
                   />
                   <span
                     className={`text-sm font-medium truncate ${
-                      clienteSelecionado ? 'text-teal-800' : 'text-slate-500'
+                      clienteSelecionado ? 'text-blue-800' : 'text-slate-500'
                     }`}
                   >
                     {clienteSelecionado
@@ -244,7 +244,7 @@ export function OrcamentoForm({ onClose, onSuccess }: OrcamentoFormProps) {
                   value={vendedor}
                   onChange={(e) => setVendedor(e.target.value)}
                   placeholder="Vendedor responsável"
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-400 bg-slate-50"
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 bg-slate-50"
                 />
               </div>
             </div>
@@ -265,7 +265,7 @@ export function OrcamentoForm({ onClose, onSuccess }: OrcamentoFormProps) {
                       setErrors((prev) => ({ ...prev, dataValidade: '' }));
                     }}
                     min={getTodayString()}
-                    className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl text-sm focus:outline-none focus:border-teal-400 bg-slate-50 ${
+                    className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl text-sm focus:outline-none focus:border-blue-400 bg-slate-50 ${
                       errors.dataValidade ? 'border-red-300' : 'border-slate-200'
                     }`}
                   />
@@ -286,7 +286,7 @@ export function OrcamentoForm({ onClose, onSuccess }: OrcamentoFormProps) {
                   onChange={(e) => setObservacoes(e.target.value)}
                   placeholder="Observações opcionais..."
                   rows={2}
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-teal-400 bg-slate-50 resize-none"
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 bg-slate-50 resize-none"
                 />
               </div>
             </div>
@@ -300,7 +300,7 @@ export function OrcamentoForm({ onClose, onSuccess }: OrcamentoFormProps) {
                 <button
                   type="button"
                   onClick={() => setShowProdutoModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-medium transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors"
                 >
                   <Package className="w-4 h-4" />
                   {itens.length > 0 ? 'Editar Produtos' : 'Adicionar Produtos'}
@@ -348,7 +348,7 @@ export function OrcamentoForm({ onClose, onSuccess }: OrcamentoFormProps) {
                               step="0.001"
                               value={item.quantidade}
                               onChange={(e) => handleQuantidadeChange(idx, e.target.value)}
-                              className="w-full text-center px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-400"
+                              className="w-full text-center px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400"
                             />
                           </td>
                           <td className="px-3 py-3">
@@ -358,7 +358,7 @@ export function OrcamentoForm({ onClose, onSuccess }: OrcamentoFormProps) {
                               step="0.01"
                               value={item.valorUnitario}
                               onChange={(e) => handleValorUnitarioChange(idx, e.target.value)}
-                              className="w-full text-right px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal-400"
+                              className="w-full text-right px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400"
                             />
                           </td>
                           <td className="px-3 py-3 text-right font-semibold text-slate-800">
@@ -376,12 +376,12 @@ export function OrcamentoForm({ onClose, onSuccess }: OrcamentoFormProps) {
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot className="bg-teal-50 border-t-2 border-teal-100">
+                    <tfoot className="bg-blue-50 border-t-2 border-blue-100">
                       <tr>
-                        <td colSpan={3} className="px-4 py-3 font-semibold text-teal-700 text-right">
+                        <td colSpan={3} className="px-4 py-3 font-semibold text-blue-700 text-right">
                           Total do Orçamento
                         </td>
-                        <td className="px-3 py-3 text-right font-bold text-teal-800 text-base">
+                        <td className="px-3 py-3 text-right font-bold text-blue-800 text-base">
                           {fmtBRL(valorTotal)}
                         </td>
                         <td></td>
@@ -405,7 +405,7 @@ export function OrcamentoForm({ onClose, onSuccess }: OrcamentoFormProps) {
             <button
               type="button"
               onClick={handleConcluir}
-              className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-teal-200 transition-all"
+              className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-200 transition-all"
             >
               <CheckCircle className="w-4 h-4" />
               Concluir Orçamento
@@ -419,8 +419,8 @@ export function OrcamentoForm({ onClose, onSuccess }: OrcamentoFormProps) {
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-teal-600" />
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-blue-600" />
               </div>
               <div>
                 <h3 className="text-lg font-bold text-slate-800">Confirmar Orçamento</h3>
@@ -447,7 +447,7 @@ export function OrcamentoForm({ onClose, onSuccess }: OrcamentoFormProps) {
               </div>
               <div className="flex justify-between border-t border-slate-200 pt-2 mt-2">
                 <span className="font-semibold text-slate-700">Total</span>
-                <span className="font-bold text-teal-700 text-base">{fmtBRL(valorTotal)}</span>
+                <span className="font-bold text-blue-700 text-base">{fmtBRL(valorTotal)}</span>
               </div>
             </div>
 
@@ -464,7 +464,7 @@ export function OrcamentoForm({ onClose, onSuccess }: OrcamentoFormProps) {
                 type="button"
                 onClick={handleConfirmSave}
                 disabled={saving}
-                className="flex-1 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+                className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
               >
                 {saving ? 'Salvando...' : 'Confirmar e Salvar'}
               </button>
