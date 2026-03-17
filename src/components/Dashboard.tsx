@@ -46,20 +46,21 @@ import {
 const COLORS = ['#3b82f6', '#0ea5e9', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#22c55e', '#f97316'];
 
 const Dashboard: React.FC = () => {
-  const { 
-    sales, 
-    employees, 
-    debts, 
-    checks, 
-    boletos, 
+  const {
+    sales,
+    employees,
+    debts,
+    checks,
+    boletos,
     employeeCommissions,
     employeePayments,
     employeeAdvances,
     employeeOvertimes,
     pixFees,
     cashBalance,
+    cashTransactions,
     recalculateCashBalance,
-    loading, 
+    loading,
     isLoading,
     error,
     setError,
@@ -119,6 +120,13 @@ const Dashboard: React.FC = () => {
       }
     });
 
+    // Parcelas de cartão de crédito recebidas hoje (via cash_transactions)
+    cashTransactions.forEach((tx: any) => {
+      if (tx.date === today && tx.category === 'recebimento_cartao' && tx.type === 'entrada') {
+        totalReceivedToday += tx.amount;
+      }
+    });
+
     // 3. Total de Dívidas do dia
     const todayDebts = debts.filter(debt => debt.date === today);
     const totalDebtsToday = todayDebts.reduce((sum, debt) => sum + debt.totalValue, 0);
@@ -163,7 +171,7 @@ const Dashboard: React.FC = () => {
       todaySales: todaySales.length,
       todayDebts: todayDebts.length
     };
-  }, [sales, debts, checks, boletos, employeePayments, pixFees, today]);
+  }, [sales, debts, checks, boletos, employeePayments, pixFees, cashTransactions, today]);
 
   // Calcular métricas do mês
   const monthlyMetrics = useMemo(() => {
@@ -239,6 +247,25 @@ const Dashboard: React.FC = () => {
           receivedAmount += method.amount;
         }
       });
+
+      // 1b. Parcelas de cartão de crédito parcelado recebidas (via cash_transactions)
+      // Para cada pagamento de cartão de crédito parcelado desta venda, somamos o que
+      // já entrou no caixa como 'recebimento_cartao' associado a esta venda via data e cliente
+      const hasMultiInstallmentCC = (sale.paymentMethods || []).some(
+        (m: any) => m.type === 'cartao_credito' && m.installments && m.installments > 1
+      );
+      if (hasMultiInstallmentCC) {
+        cashTransactions.forEach((tx: any) => {
+          if (
+            tx.category === 'recebimento_cartao' &&
+            tx.type === 'entrada' &&
+            tx.description &&
+            tx.description.includes(sale.client)
+          ) {
+            receivedAmount += tx.amount;
+          }
+        });
+      }
 
       // 2. Cheques desta venda que foram EFETIVAMENTE RECEBIDOS (não pendentes)
       checks.forEach(check => {
@@ -339,7 +366,7 @@ const Dashboard: React.FC = () => {
 
     // Ordenar por data de vencimento
     return toReceive.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-  }, [checks, boletos, sales]);
+  }, [checks, boletos, sales, cashTransactions]);
 
   // Dados para gráfico de fluxo financeiro (30 dias)
   const flowChartData = useMemo(() => {

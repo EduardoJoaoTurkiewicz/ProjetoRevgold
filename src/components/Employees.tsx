@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Plus, CreditCard as Edit, Trash2, Eye, Users, DollarSign, Calendar, AlertCircle, X, Star, Clock, TrendingUp } from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Eye, Users, DollarSign, Calendar, AlertCircle, X, Star, Clock, TrendingUp, ShoppingCart } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Employee } from '../types';
 import { EmployeeForm } from './forms/EmployeeForm';
 import { EmployeeAdvanceForm } from './forms/EmployeeAdvanceForm';
 import { EmployeeOvertimeForm } from './forms/EmployeeOvertimeForm';
+import { VendasDoVendedorModal } from './modals/VendasDoVendedorModal';
+import { ClientesDoVendedorModal } from './modals/ClientesDoVendedorModal';
 import { formatDateForDisplay, getCurrentDateString } from '../utils/dateUtils';
 import { safeCurrency } from '../utils/numberUtils';
 
@@ -30,6 +32,8 @@ export function Employees() {
   const [viewingEmployee, setViewingEmployee] = useState<Employee | null>(null);
   const [advanceEmployee, setAdvanceEmployee] = useState<Employee | null>(null);
   const [overtimeEmployee, setOvertimeEmployee] = useState<Employee | null>(null);
+  const [vendasVendedor, setVendasVendedor] = useState<Employee | null>(null);
+  const [clientesVendedor, setClientesVendedor] = useState<Employee | null>(null);
 
   const activeEmployees = employees.filter(emp => emp.isActive);
   const sellers = employees.filter(emp => emp.isActive && emp.isSeller);
@@ -330,6 +334,25 @@ export function Employees() {
                     <Clock className="w-4 h-4" />
                     Hora Extra
                   </button>
+
+                  {employee.isSeller && (
+                    <>
+                      <button
+                        onClick={() => setVendasVendedor(employee)}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-xl transition-colors text-sm"
+                      >
+                        <ShoppingCart className="w-4 h-4" />
+                        Vendas do vendedor(a)
+                      </button>
+                      <button
+                        onClick={() => setClientesVendedor(employee)}
+                        className="flex items-center gap-2 px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 font-medium rounded-xl transition-colors text-sm"
+                      >
+                        <Users className="w-4 h-4" />
+                        Clientes
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 {/* Recent Activity */}
@@ -453,6 +476,24 @@ export function Employees() {
           employeeName={overtimeEmployee.name}
           onSubmit={handleOvertimeSubmit}
           onCancel={() => setOvertimeEmployee(null)}
+        />
+      )}
+
+      {/* Vendas do Vendedor Modal */}
+      {vendasVendedor && (
+        <VendasDoVendedorModal
+          sellerId={vendasVendedor.id}
+          sellerName={vendasVendedor.name}
+          onClose={() => setVendasVendedor(null)}
+        />
+      )}
+
+      {/* Clientes do Vendedor Modal */}
+      {clientesVendedor && (
+        <ClientesDoVendedorModal
+          vendedorId={clientesVendedor.id}
+          vendedorNome={clientesVendedor.name}
+          onClose={() => setClientesVendedor(null)}
         />
       )}
 

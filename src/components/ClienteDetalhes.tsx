@@ -1,9 +1,28 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Building2, User, Phone, Mail, MapPin, Tag, CreditCard as Edit3, Trash2, ShoppingCart, AlertTriangle, BarChart2, Calendar, BadgeCheck, UserCheck } from 'lucide-react';
-import type { Cliente } from '../types';
+import React, { useState, useMemo } from 'react';
+import { ArrowLeft, Building2, User, Phone, Mail, MapPin, Tag, CreditCard as Edit3, Trash2, ShoppingCart, AlertTriangle, BarChart2, Calendar, BadgeCheck, UserCheck, Clock } from 'lucide-react';
+import type { Cliente, Sale } from '../types';
 import { obterNomeExibicao, obterDocumento } from '../lib/clienteService';
 import { ClienteFormModal } from './forms/ClienteFormModal';
 import { useAppContext } from '../context/AppContext';
+import { fmtBRL, fmtDate } from '../utils/format';
+
+const STATUS_INFO: Record<string, { label: string; color: string }> = {
+  pago: { label: 'Pago', color: 'bg-emerald-100 text-emerald-700' },
+  pendente: { label: 'Pendente', color: 'bg-amber-100 text-amber-700' },
+  parcial: { label: 'Parcial', color: 'bg-blue-100 text-blue-700' },
+};
+
+const PAYMENT_LABELS: Record<string, string> = {
+  dinheiro: 'Dinheiro',
+  pix: 'PIX',
+  cartao_credito: 'Cart. Crédito',
+  cartao_debito: 'Cart. Débito',
+  cheque: 'Cheque',
+  boleto: 'Boleto',
+  transferencia: 'Transferência',
+  acerto: 'Acerto',
+  permuta: 'Permuta',
+};
 
 interface Props {
   cliente: Cliente;
@@ -11,7 +30,7 @@ interface Props {
 }
 
 export function ClienteDetalhes({ cliente, onVoltar }: Props) {
-  const { deleteCliente } = useAppContext();
+  const { deleteCliente, sales, checks, boletos } = useAppContext();
   const [editando, setEditando] = useState(false);
   const [deletando, setDeletando] = useState(false);
   const [confirmarExclusao, setConfirmarExclusao] = useState(false);
@@ -33,6 +52,91 @@ export function ClienteDetalhes({ cliente, onVoltar }: Props) {
       setConfirmarExclusao(false);
     }
   };
+
+  const vendasDoCliente = useMemo(() => {
+    return (sales as Sale[]).filter(s => s.client === nome);
+  }, [sales, nome]);
+
+  const vendasFiltradas = useMemo(() => {
+    let result = vendasDoCliente;
+    if (periodoInicio) result = result.filter(s => s.date >= periodoInicio);
+    if (periodoFim) result = result.filter(s => s.date <= periodoFim);
+    return result.sort((a, b) => b.date.localeCompare(a.date));
+  }, [vendasDoCliente, periodoInicio, periodoFim]);
+
+  const resumoVendas = useMemo(() => {
+    const total = vendasFiltradas.reduce((s, v) => s + (v.totalValue || 0), 0);
+    const count = vendasFiltradas.length;
+    return { total, count, ticket: count > 0 ? total / count : 0 };
+  }, [vendasFiltradas]);
+
+  const pendencias = useMemo(() => {
+    const hoje = new Date().toISOString().split('T')[0];
+    const result: Array<{
+      tipo: string;
+      descricao: string;
+      vencimento: string;
+      valor: number;
+      vencido: boolean;
+      saleClient: string;
+    }> = [];
+
+    vendasDoCliente.forEach(sale => {
+      const checksVenda = (checks as any[]).filter(
+        c => c.saleId === sale.id && c.status === 'pendente'
+      );
+      checksVenda.forEach(c => {
+        result.push({
+          tipo: 'Cheque',
+          descricao: `Venda - ${sale.client}`,
+          vencimento: c.dueDate || '',
+          valor: c.value || 0,
+          vencido: c.dueDate ? c.dueDate < hoje : false,
+          saleClient: sale.client,
+        });
+      });
+
+      const boletosVenda = (boletos as any[]).filter(
+        b => b.saleId === sale.id && (b.status === 'pendente' || b.status === 'vencido')
+      );
+      boletosVenda.forEach(b => {
+        result.push({
+          tipo: 'Boleto',
+          descricao: `Venda - ${sale.client}`,
+          vencimento: b.dueDate || '',
+          valor: b.value || 0,
+          vencido: b.status === 'vencido' || (b.dueDate ? b.dueDate < hoje : false),
+          saleClient: sale.client,
+        });
+      });
+
+      if (sale.pendingAmount > 0) {
+        const hasCheck = checks.some((c: any) => c.saleId === sale.id && c.status === 'pendente');
+        const hasBoleto = boletos.some((b: any) => b.saleId === sale.id && (b.status === 'pendente' || b.status === 'vencido'));
+        const payTypes = (sale.paymentMethods || []).map((m: any) => m.type);
+        const hasPendingDoc = hasCheck || hasBoleto;
+        const hasInstantOnly = payTypes.every((t: string) => ['dinheiro', 'pix', 'cartao_debito'].includes(t));
+
+        if (!hasPendingDoc && !hasInstantOnly && sale.pendingAmount > 0) {
+          result.push({
+            tipo: 'Saldo',
+            descricao: `Venda - ${sale.client}`,
+            vencimento: sale.deliveryDate || sale.date || '',
+            valor: sale.pendingAmount,
+            vencido: (sale.deliveryDate || sale.date) < hoje,
+            saleClient: sale.client,
+          });
+        }
+      }
+    });
+
+    return result.sort((a, b) => a.vencimento.localeCompare(b.vencimento));
+  }, [vendasDoCliente, checks, boletos]);
+
+  const totalPendente = useMemo(
+    () => pendencias.reduce((s, p) => s + p.valor, 0),
+    [pendencias]
+  );
 
   return (
     <div className="space-y-6">
@@ -129,20 +233,80 @@ export function ClienteDetalhes({ cliente, onVoltar }: Props) {
             </div>
           </SectionCard>
 
-          <SectionCard icon={<ShoppingCart className="w-5 h-5" />} title="Histórico de Compras">
-            <div className="text-center py-10 text-slate-400">
-              <ShoppingCart className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="font-semibold">Nenhuma compra registrada</p>
-              <p className="text-xs mt-1">O histórico será exibido após a integração com o módulo de Vendas</p>
-            </div>
+          <SectionCard icon={<ShoppingCart className="w-5 h-5" />} title={`Histórico de Compras (${vendasDoCliente.length})`}>
+            {vendasDoCliente.length === 0 ? (
+              <div className="text-center py-8 text-slate-400">
+                <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                <p className="font-semibold text-sm">Nenhuma compra registrada</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {vendasDoCliente.slice(0, 20).map(sale => {
+                  const st = STATUS_INFO[sale.status] || { label: sale.status, color: 'bg-gray-100 text-gray-600' };
+                  const payNames = (sale.paymentMethods || [])
+                    .map((m: any) => PAYMENT_LABELS[m.type] || m.type)
+                    .join(', ');
+                  return (
+                    <div key={sale.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${st.color}`}>{st.label}</span>
+                          <span className="text-xs text-slate-500">{fmtDate(sale.date)}</span>
+                        </div>
+                        {payNames && <p className="text-xs text-slate-400 mt-0.5 truncate">{payNames}</p>}
+                      </div>
+                      <span className="text-sm font-bold text-slate-800 flex-shrink-0">{fmtBRL(sale.totalValue)}</span>
+                    </div>
+                  );
+                })}
+                {vendasDoCliente.length > 20 && (
+                  <p className="text-xs text-center text-slate-400 pt-1">
+                    +{vendasDoCliente.length - 20} vendas não exibidas
+                  </p>
+                )}
+              </div>
+            )}
           </SectionCard>
 
           <SectionCard icon={<AlertTriangle className="w-5 h-5" />} title="Pendências Financeiras">
-            <div className="text-center py-10 text-slate-400">
-              <BadgeCheck className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="font-semibold">Nenhuma pendência encontrada</p>
-              <p className="text-xs mt-1">As parcelas vencidas e a vencer aparecerão aqui após a integração com Vendas</p>
-            </div>
+            {pendencias.length === 0 ? (
+              <div className="text-center py-8 text-slate-400">
+                <BadgeCheck className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                <p className="font-semibold text-sm">Nenhuma pendência encontrada</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-3 p-3 bg-amber-50 rounded-xl border border-amber-100">
+                  <span className="text-sm font-bold text-amber-800">Total pendente</span>
+                  <span className="text-base font-black text-amber-700">{fmtBRL(totalPendente)}</span>
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {pendencias.map((p, i) => (
+                    <div key={i} className={`flex items-center justify-between p-3 rounded-xl border ${p.vencido ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-transparent'}`}>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.vencido ? 'bg-red-100 text-red-700' : 'bg-slate-200 text-slate-600'}`}>
+                            {p.tipo}
+                          </span>
+                          {p.vencido && (
+                            <span className="flex items-center gap-0.5 text-xs text-red-600">
+                              <Clock className="w-3 h-3" />
+                              Vencido
+                            </span>
+                          )}
+                        </div>
+                        {p.vencimento && (
+                          <p className="text-xs text-slate-500 mt-0.5">Venc.: {fmtDate(p.vencimento)}</p>
+                        )}
+                      </div>
+                      <span className={`text-sm font-bold flex-shrink-0 ${p.vencido ? 'text-red-700' : 'text-slate-800'}`}>
+                        {fmtBRL(p.valor)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </SectionCard>
         </div>
 
@@ -198,13 +362,15 @@ export function ClienteDetalhes({ cliente, onVoltar }: Props) {
               </div>
             </div>
             <div className="space-y-3">
-              <SummaryRow label="Total vendido" value="R$ 0,00" />
-              <SummaryRow label="Número de vendas" value="0" />
-              <SummaryRow label="Ticket médio" value="R$ 0,00" />
+              <SummaryRow label="Total vendido" value={fmtBRL(resumoVendas.total)} />
+              <SummaryRow label="Número de vendas" value={String(resumoVendas.count)} />
+              <SummaryRow label="Ticket médio" value={fmtBRL(resumoVendas.ticket)} />
             </div>
-            <p className="text-xs text-slate-400 mt-4 text-center">
-              Dados disponíveis após integração com Vendas
-            </p>
+            {(periodoInicio || periodoFim) && (
+              <p className="text-xs text-slate-400 mt-3 text-center">
+                Filtrado por período
+              </p>
+            )}
           </SectionCard>
 
           <SectionCard icon={<Calendar className="w-5 h-5" />} title="Cadastro">

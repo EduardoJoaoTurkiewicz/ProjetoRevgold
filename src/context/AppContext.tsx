@@ -390,6 +390,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         await refreshInstallmentData();
       }
 
+      // Refresh commissions so widget updates automatically after sale creation
+      await refreshCommissionsData();
+
       return result;
     } catch (err) {
       console.error('Error creating sale:', err);
@@ -407,6 +410,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       await refreshAgendaData();
       // Refresh permutas in case payment methods changed
       await refreshPermutasData();
+      // Refresh commissions in case seller or value changed
+      await refreshCommissionsData();
       return result;
     } catch (err) {
       console.error('Error updating sale:', err);
@@ -421,6 +426,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       await refreshSalesData();
       // Refresh permutas since a sale using permuta may have been deleted
       await refreshPermutasData();
+      // Refresh commissions since commission for this sale is deleted by cascade
+      await refreshCommissionsData();
     } catch (err) {
       console.error('Error deleting sale:', err);
       ErrorHandler.logProjectError(err, 'Delete Sale');
@@ -1112,6 +1119,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setAgendaEvents(eventsData || []);
     } catch (error) {
       console.error('❌ Error refreshing agenda data:', error);
+    }
+  };
+
+  const refreshCommissionsData = async () => {
+    try {
+      if (connectionManager.isConnected()) {
+        const commissionsData = await supabaseServices.employeeCommissions.getCommissions();
+        setEmployeeCommissions(commissionsData || []);
+      }
+    } catch (error) {
+      console.error('❌ Error refreshing commissions data:', error);
     }
   };
 

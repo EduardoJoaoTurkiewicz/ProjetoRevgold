@@ -12,11 +12,13 @@ import {
   PackageCheck,
   PackageX,
   Filter,
+  ShoppingCart,
 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import type { EstoqueProdutoCompleto } from '../types';
 import EstoqueForm from './forms/EstoqueForm';
 import EstoqueDetalhes from './forms/EstoqueDetalhes';
+import { VendasDoProdutoModal } from './modals/VendasDoProdutoModal';
 
 const Estoque: React.FC = () => {
   const { estoqueProdutos, isLoadingEstoque, loadEstoqueData, deleteEstoqueProduto } = useAppContext();
@@ -29,6 +31,7 @@ const Estoque: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingProduto, setEditingProduto] = useState<EstoqueProdutoCompleto | null>(null);
   const [showDetalhes, setShowDetalhes] = useState<EstoqueProdutoCompleto | null>(null);
+  const [vendaModalProduto, setVendaModalProduto] = useState<EstoqueProdutoCompleto | null>(null);
 
   useEffect(() => {
     loadEstoqueData();
@@ -346,6 +349,14 @@ const Estoque: React.FC = () => {
                           Ver detalhes
                         </button>
                         <button
+                          onClick={() => setVendaModalProduto(produto)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-emerald-700 hover:bg-emerald-50 border border-emerald-200 hover:border-emerald-300 rounded-lg transition-colors font-semibold"
+                          title="Ver vendas deste produto"
+                        >
+                          <ShoppingCart className="w-3.5 h-3.5" />
+                          Ver vendas
+                        </button>
+                        <button
                           onClick={() => { setEditingProduto(produto); setShowForm(true); }}
                           className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title="Editar produto"
@@ -432,6 +443,14 @@ const Estoque: React.FC = () => {
             setShowForm(true);
           }}
           onDelete={handleDeleteFromDetalhes}
+        />
+      )}
+
+      {vendaModalProduto && (
+        <VendasDoProdutoModal
+          produtoId={vendaModalProduto.id}
+          produtoNome={vendaModalProduto.nome}
+          onClose={() => setVendaModalProduto(null)}
         />
       )}
     </div>

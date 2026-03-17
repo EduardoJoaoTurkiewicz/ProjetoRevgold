@@ -291,17 +291,29 @@ export const CreditCardService = {
       })
       .eq('id', installmentId);
 
-    await supabase
+    const description = `Recebimento parcela ${installment.installment_number}/${sale.installments} - ${sale.client_name} (Cartão de Crédito)${observations ? ` - ${observations}` : ''}`;
+
+    const { data: existing } = await supabase
       .from('cash_transactions')
-      .insert([{
-        date: receivedDate,
-        type: 'entrada',
-        amount: installment.amount,
-        description: `Recebimento parcela ${installment.installment_number}/${sale.installments} - ${sale.client_name} (Cartão de Crédito)${observations ? ` - ${observations}` : ''}`,
-        category: 'recebimento_cartao',
-        related_id: sale.id,
-        payment_method: 'cartao_credito'
-      }]);
+      .select('id')
+      .eq('related_id', sale.id)
+      .eq('category', 'recebimento_cartao')
+      .ilike('description', `%parcela ${installment.installment_number}/%`)
+      .maybeSingle();
+
+    if (!existing) {
+      await supabase
+        .from('cash_transactions')
+        .insert([{
+          date: receivedDate,
+          type: 'entrada',
+          amount: installment.amount,
+          description,
+          category: 'recebimento_cartao',
+          related_id: sale.id,
+          payment_method: 'cartao_credito'
+        }]);
+    }
 
     const { data: allInstallments } = await supabase
       .from('credit_card_sale_installments')
@@ -418,17 +430,27 @@ export const CreditCardService = {
         })
         .eq('id', installment.id);
 
-      await supabase
+      const { data: existingTx } = await supabase
         .from('cash_transactions')
-        .insert([{
-          date: today,
-          type: 'entrada',
-          amount: installment.amount,
-          description: `Recebimento parcela ${installment.installment_number} - ${sale.client_name} (Cartão de Crédito)`,
-          category: 'recebimento_cartao',
-          related_id: sale.id,
-          payment_method: 'cartao_credito'
-        }]);
+        .select('id')
+        .eq('related_id', sale.id)
+        .eq('category', 'recebimento_cartao')
+        .ilike('description', `%parcela ${installment.installment_number} %`)
+        .maybeSingle();
+
+      if (!existingTx) {
+        await supabase
+          .from('cash_transactions')
+          .insert([{
+            date: today,
+            type: 'entrada',
+            amount: installment.amount,
+            description: `Recebimento parcela ${installment.installment_number} - ${sale.client_name} (Cartão de Crédito)`,
+            category: 'recebimento_cartao',
+            related_id: sale.id,
+            payment_method: 'cartao_credito'
+          }]);
+      }
 
       const { data: allInstallments } = await supabase
         .from('credit_card_sale_installments')
