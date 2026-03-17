@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, Info, User, Package, AlertTriangle, CreditCard as Edit2 } from 'lucide-react';
-import { Sale, PaymentMethod, SaleItem } from '../../types';
+import { Sale, PaymentMethod, SaleItem, Orcamento } from '../../types';
 import { ThirdPartyCheckDetails } from '../../types';
 import { useAppContext } from '../../context/AppContext';
 import { safeNumber, validateFormNumber, logMonetaryValues } from '../../utils/numberUtils';
@@ -15,6 +15,7 @@ import type { Cliente } from '../../types';
 
 interface SaleFormProps {
   sale?: Sale | null;
+  prefillOrcamento?: Orcamento | null;
   onSubmit: (sale: Omit<Sale, 'id' | 'createdAt'>, saleItems: SaleItem[]) => void;
   onCancel: () => void;
 }
@@ -33,8 +34,8 @@ const PAYMENT_TYPES = [
 
 const INSTALLMENT_TYPES = ['cartao_credito', 'cheque', 'boleto'];
 
-export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
-  const { employees, permutas, acertos, estoqueProdutos } = useAppContext();
+export function SaleForm({ sale, prefillOrcamento, onSubmit, onCancel }: SaleFormProps) {
+  const { employees, permutas, acertos, estoqueProdutos, clientes } = useAppContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showClienteModal, setShowClienteModal] = useState(false);
   const [showProdutoModal, setShowProdutoModal] = useState(false);
@@ -90,6 +91,38 @@ export function SaleForm({ sale, onSubmit, onCancel }: SaleFormProps) {
       setFormData(prev => ({ ...prev, totalValue: totalItens }));
     }
   }, [totalItens, saleItems.length]);
+
+  useEffect(() => {
+    if (!prefillOrcamento) return;
+
+    const orcItens: SaleItem[] = prefillOrcamento.itens.map((item) => ({
+      produtoId: item.produtoId,
+      variacaoId: item.variacaoId,
+      corId: item.corId ?? null,
+      nomeProduto: item.nomeProduto,
+      nomeVariacao: item.nomeVariacao,
+      nomeCor: item.nomeCor ?? undefined,
+      quantidade: item.quantidade,
+      valorUnitario: item.valorUnitario,
+      valorTotal: item.subtotal,
+    }));
+    setSaleItems(orcItens);
+
+    const clienteEncontrado = clientes.find((c) => c.id === prefillOrcamento.clienteId);
+    if (clienteEncontrado) {
+      setClienteSelecionado(clienteEncontrado);
+    }
+
+    const total = orcItens.reduce((s, i) => s + i.valorTotal, 0);
+
+    setFormData((prev) => ({
+      ...prev,
+      client: prefillOrcamento.clienteNome,
+      sellerId: clienteEncontrado?.vendedorResponsavelId ?? prev.sellerId,
+      totalValue: total,
+      paymentMethods: [],
+    }));
+  }, [prefillOrcamento]);
 
   function handleClienteSelect(cliente: Cliente) {
     setClienteSelecionado(cliente);

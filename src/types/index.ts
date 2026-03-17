@@ -559,3 +559,35 @@ export interface ClienteFiltros {
   vendedorId: string;
   inadimplente: '' | 'sim' | 'nao';
 }
+
+export interface OrcamentoItem {
+  id?: string;
+  orcamentoId?: string;
+  produtoId: string;
+  variacaoId: string;
+  corId?: string | null;
+  nomeProduto: string;
+  nomeVariacao: string;
+  nomeCor?: string | null;
+  quantidade: number;
+  valorUnitario: number;
+  subtotal: number;
+  createdAt?: string;
+}
+
+export interface Orcamento {
+  id: string;
+  numero: number;
+  clienteId?: string | null;
+  clienteNome: string;
+  vendedor: string;
+  dataCriacao: string;
+  dataValidade: string;
+  valorTotal: number;
+  status: 'pendente' | 'convertido' | 'vencido';
+  observacoes?: string | null;
+  vendaId?: string | null;
+  itens: OrcamentoItem[];
+  createdAt: string;
+  updatedAt: string;
+}

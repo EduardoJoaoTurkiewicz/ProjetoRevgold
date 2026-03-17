@@ -14,7 +14,7 @@ import { getSaleItems, saveSaleItems, aplicarBaixaEstoque, reverterBaixaEstoque,
 import { gerarComprovantePDF } from '../utils/saleReceiptPdf';
 
 export default function Sales() {
-  const { sales, employees, permutas, isLoading, error, createSale, updateSale, deleteSale, estoqueProdutos, loadEstoqueData } = useAppContext();
+  const { sales, employees, permutas, isLoading, error, createSale, updateSale, deleteSale, estoqueProdutos, loadEstoqueData, orcamentoPrefill, setOrcamentoPrefill, marcarOrcamentoConvertido } = useAppContext();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [viewingSale, setViewingSale] = useState<Sale | null>(null);
@@ -96,6 +96,12 @@ export default function Sales() {
     };
   }, [deduplicatedSales]);
 
+  React.useEffect(() => {
+    if (orcamentoPrefill) {
+      setIsFormOpen(true);
+    }
+  }, [orcamentoPrefill]);
+
   const handleAddSale = async (sale: Omit<Sale, 'id' | 'createdAt'>, saleItems: SaleItem[]) => {
     if (!sale.client || !sale.client.trim()) {
       alert('Por favor, informe o nome do cliente.');
@@ -109,6 +115,11 @@ export default function Sales() {
     try {
       const saleId: string = await createSale(sale);
       setIsFormOpen(false);
+
+      if (orcamentoPrefill) {
+        await marcarOrcamentoConvertido(orcamentoPrefill.id, saleId);
+        setOrcamentoPrefill(null);
+      }
 
       if (saleItems.length > 0) {
         await saveSaleItems(saleId, saleItems);
@@ -684,10 +695,12 @@ export default function Sales() {
       {(isFormOpen || editingSale) && (
         <SaleForm
           sale={editingSale}
+          prefillOrcamento={!editingSale ? orcamentoPrefill : null}
           onSubmit={editingSale ? handleEditSale : handleAddSale}
           onCancel={() => {
             setIsFormOpen(false);
             setEditingSale(null);
+            setOrcamentoPrefill(null);
           }}
         />
       )}

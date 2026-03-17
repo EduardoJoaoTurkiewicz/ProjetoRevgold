@@ -16,6 +16,7 @@ import {
   Package,
   Factory,
   UserCheck,
+  ClipboardList,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -43,6 +44,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
     { id: 'estoque', label: 'Estoque', icon: Package, color: 'from-teal-600 to-emerald-700' },
     { id: 'producao', label: 'Produção', icon: Factory, color: 'from-orange-600 to-amber-700' },
     { id: 'clientes', label: 'Clientes', icon: UserCheck, color: 'from-blue-600 to-sky-700' },
+    { id: 'orcamentos', label: 'Orçamentos', icon: ClipboardList, color: 'from-teal-600 to-emerald-700' },
   ];
 
   return (

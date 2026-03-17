@@ -9,7 +9,8 @@ import { ErrorHandler } from '../lib/errorHandler';
 import { estoqueService } from '../lib/estoqueService';
 import { producaoService } from '../lib/producaoService';
 import { listarClientes, criarCliente, atualizarCliente, deletarCliente } from '../lib/clienteService';
-import type { EstoqueProdutoCompleto, ProducaoCompleta, Cliente, ClienteFormData } from '../types';
+import { orcamentoService } from '../lib/orcamentoService';
+import type { EstoqueProdutoCompleto, ProducaoCompleta, Cliente, ClienteFormData, Orcamento, OrcamentoItem } from '../types';
 
 interface AppContextType {
   // Loading and error states
@@ -140,6 +141,19 @@ interface AppContextType {
   createCliente: (data: ClienteFormData) => Promise<Cliente>;
   updateCliente: (id: string, data: Partial<ClienteFormData>) => Promise<Cliente>;
   deleteCliente: (id: string) => Promise<void>;
+
+  // Orcamentos
+  orcamentos: Orcamento[];
+  isLoadingOrcamentos: boolean;
+  loadOrcamentosData: () => Promise<void>;
+  createOrcamento: (payload: Omit<Orcamento, 'id' | 'numero' | 'createdAt' | 'updatedAt' | 'itens'> & { itens: OrcamentoItem[] }) => Promise<Orcamento | null>;
+  updateOrcamento: (id: string, updates: Partial<Omit<Orcamento, 'itens'>>) => Promise<Orcamento | null>;
+  deleteOrcamento: (id: string) => Promise<void>;
+  marcarOrcamentoConvertido: (id: string, vendaId: string) => Promise<void>;
+
+  // Pending quote-to-sale prefill
+  orcamentoPrefill: Orcamento | null;
+  setOrcamentoPrefill: (o: Orcamento | null) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -177,6 +191,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [isLoadingProducao, setIsLoadingProducao] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [isLoadingClientes, setIsLoadingClientes] = useState(false);
+  const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
+  const [isLoadingOrcamentos, setIsLoadingOrcamentos] = useState(false);
+  const [orcamentoPrefill, setOrcamentoPrefill] = useState<Orcamento | null>(null);
 
   // Track loading state for each data type to prevent multiple loads
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
@@ -1156,6 +1173,42 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       console.error('❌ Error refreshing installment data:', error);
     }
   };
+  const loadOrcamentosData = async (): Promise<void> => {
+    try {
+      setIsLoadingOrcamentos(true);
+      const data = await orcamentoService.getAll();
+      setOrcamentos(data);
+    } catch (err) {
+      console.error('Error loading orcamentos data:', err);
+    } finally {
+      setIsLoadingOrcamentos(false);
+    }
+  };
+
+  const createOrcamento = async (
+    payload: Omit<Orcamento, 'id' | 'numero' | 'createdAt' | 'updatedAt' | 'itens'> & { itens: OrcamentoItem[] }
+  ): Promise<Orcamento | null> => {
+    const result = await orcamentoService.create(payload);
+    await loadOrcamentosData();
+    return result;
+  };
+
+  const updateOrcamento = async (id: string, updates: Partial<Omit<Orcamento, 'itens'>>): Promise<Orcamento | null> => {
+    const result = await orcamentoService.update(id, updates);
+    await loadOrcamentosData();
+    return result;
+  };
+
+  const deleteOrcamento = async (id: string): Promise<void> => {
+    await orcamentoService.delete(id);
+    await loadOrcamentosData();
+  };
+
+  const marcarOrcamentoConvertido = async (id: string, vendaId: string): Promise<void> => {
+    await orcamentoService.marcarComoConvertido(id, vendaId);
+    await loadOrcamentosData();
+  };
+
   const loadEstoqueData = async () => {
     try {
       setIsLoadingEstoque(true);
@@ -1400,6 +1453,19 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     createCliente,
     updateCliente,
     deleteCliente,
+
+    // Orcamentos
+    orcamentos,
+    isLoadingOrcamentos,
+    loadOrcamentosData,
+    createOrcamento,
+    updateOrcamento,
+    deleteOrcamento,
+    marcarOrcamentoConvertido,
+
+    // Pending quote-to-sale prefill
+    orcamentoPrefill,
+    setOrcamentoPrefill,
   };
 
   return (

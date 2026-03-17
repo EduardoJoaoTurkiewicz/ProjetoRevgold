@@ -36,6 +36,7 @@ import Estoque from './components/Estoque';
 import Producao from './components/Producao';
 import ProductionLabelsPrint from './components/print/ProductionLabelsPrint';
 import { ClientesPage } from './components/ClientesPage';
+import { Orcamentos } from './components/Orcamentos';
 
 function App() {
   return (
@@ -131,6 +132,8 @@ function renderPage(currentPage: string) {
       return <Producao />;
     case 'clientes':
       return <ClientesPage />;
+    case 'orcamentos':
+      return <Orcamentos />;
     default:
       return <Dashboard />;
   }
