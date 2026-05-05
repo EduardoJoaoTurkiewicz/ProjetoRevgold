@@ -6,6 +6,7 @@ import { DebtForm } from './forms/DebtForm';
 import { DeduplicationService } from '../lib/deduplicationService';
 import { UUIDManager } from '../lib/uuidManager';
 import { dbDateToDisplay } from '../utils/dateUtils';
+import { StatusCalculationService } from '../lib/statusCalculationService';
 
 export function Debts() {
   const { debts, checks, isLoading, error, createDebt, updateDebt, deleteDebt } = useAppContext();
@@ -65,6 +66,24 @@ export function Debts() {
 
     return filteredDebts;
   }, [debts, filters]);
+
+  // Summary totals for the debts tab header cards
+  const totals = React.useMemo(() => {
+    const totalDebt = deduplicatedDebts.reduce((sum, d) => sum + d.totalValue, 0);
+    const totalPaid = deduplicatedDebts.reduce((sum, d) => sum + d.paidAmount, 0);
+    const totalPending = deduplicatedDebts.reduce((sum, d) => sum + d.pendingAmount, 0);
+    const paidCount = deduplicatedDebts.filter(d =>
+      StatusCalculationService.deriveDebtDisplayStatus(d) === 'pago'
+    ).length;
+    const partialCount = deduplicatedDebts.filter(d =>
+      StatusCalculationService.deriveDebtDisplayStatus(d) === 'parcial'
+    ).length;
+    const pendingCount = deduplicatedDebts.filter(d =>
+      StatusCalculationService.deriveDebtDisplayStatus(d) === 'pendente'
+    ).length;
+    return { totalDebt, totalPaid, totalPending, paidCount, partialCount, pendingCount, totalCount: deduplicatedDebts.length };
+  }, [deduplicatedDebts]);
+
   const handleAddDebt = (debt: Omit<Debt, 'id' | 'createdAt'>) => {
     console.log('🔄 Adicionando nova dívida:', debt);
     
@@ -333,6 +352,67 @@ export function Debts() {
         </div>
       )}
 
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="card bg-gradient-to-br from-red-50 to-rose-50 border-red-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-red-600 modern-shadow-lg">
+              <CreditCard className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-red-900 text-lg">Total em Dívidas</h3>
+              <p className="text-3xl font-black text-red-700">
+                R$ {totals.totalDebt.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-red-600 font-semibold">{totals.totalCount} dívida(s)</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-green-600 modern-shadow-lg">
+              <FileText className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-green-900 text-lg">Valor Pago</h3>
+              <p className="text-3xl font-black text-green-700">
+                R$ {totals.totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-green-600 font-semibold">{totals.paidCount} paga(s)</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-orange-600 modern-shadow-lg">
+              <AlertCircle className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-orange-900 text-lg">Valor Pendente</h3>
+              <p className="text-3xl font-black text-orange-700">
+                R$ {totals.totalPending.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-orange-600 font-semibold">{totals.pendingCount + totals.partialCount} pendente(s)</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200 modern-shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-yellow-600 modern-shadow-lg">
+              <Eye className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-yellow-900 text-lg">Parcialmente Pagas</h3>
+              <p className="text-3xl font-black text-yellow-700">{totals.partialCount}</p>
+              <p className="text-sm text-yellow-600 font-semibold">dívida(s) parcial</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Debts List */}
       <div className="space-y-6">
         {deduplicatedDebts.length > 0 ? (
@@ -366,11 +446,18 @@ export function Debts() {
                   <p className="text-3xl font-black text-red-600">
                     R$ {debt.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
-                  <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full border ${
-                    debt.isPaid ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'
-                  }`}>
-                    {debt.isPaid ? 'Pago' : 'Pendente'}
-                  </span>
+                  {(() => {
+                    const displayStatus = StatusCalculationService.deriveDebtDisplayStatus(debt);
+                    return (
+                      <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full border ${
+                        displayStatus === 'pago' ? 'bg-green-100 text-green-800 border-green-200' :
+                        displayStatus === 'parcial' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                        'bg-red-100 text-red-800 border-red-200'
+                      }`}>
+                        {displayStatus === 'pago' ? 'Pago' : displayStatus === 'parcial' ? 'Parcial' : 'Pendente'}
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
 

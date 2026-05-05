@@ -10,6 +10,7 @@ import { estoqueService } from '../lib/estoqueService';
 import { producaoService } from '../lib/producaoService';
 import { listarClientes, criarCliente, atualizarCliente, deletarCliente } from '../lib/clienteService';
 import { orcamentoService } from '../lib/orcamentoService';
+import { StatusCalculationService } from '../lib/statusCalculationService';
 import type { EstoqueProdutoCompleto, ProducaoCompleta, Cliente, ClienteFormData, Orcamento, OrcamentoItem } from '../types';
 
 interface AppContextType {
@@ -633,33 +634,41 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const updateCheck = async (checkData: any) => {
     try {
       const { id, ...updateData } = checkData;
-     const oldCheck = checks.find(c => c.id === id);
+      const oldCheck = checks.find(c => c.id === id);
       const result = await supabaseServices.checks.update(id, updateData);
-      
-      // Refresh only checks data for better performance
+
+      // Refresh checks data
       const checksData = await supabaseServices.checks.getChecks();
       setChecks(checksData || []);
-      
-     // Handle cash balance update for status changes
-     if (oldCheck && updateData.status && oldCheck.status !== updateData.status) {
-       const { CashBalanceService } = await import('../lib/cashBalanceService');
-       await CashBalanceService.handleCheckPayment(
-         { ...oldCheck, ...updateData }, 
-         oldCheck.status, 
-         updateData.status
-       );
-     }
-     
-      // Also refresh cash data since check updates might affect cash
+
+      // Handle cash balance update and parent status sync for status changes
+      if (oldCheck && updateData.status && oldCheck.status !== updateData.status) {
+        const { CashBalanceService } = await import('../lib/cashBalanceService');
+        await CashBalanceService.handleCheckPayment(
+          { ...oldCheck, ...updateData },
+          oldCheck.status,
+          updateData.status
+        );
+
+        // Force recalculation of parent sale/debt status via DB function
+        if (oldCheck.saleId) {
+          await StatusCalculationService.syncSaleStatus(oldCheck.saleId);
+        }
+        if (oldCheck.debtId) {
+          await StatusCalculationService.syncDebtStatus(oldCheck.debtId);
+        }
+      }
+
+      // Refresh cash data
       const balanceData = await supabaseServices.cashBalance.getCurrentBalance();
       setCashBalance(balanceData);
       const transactionsData = await supabaseServices.cashTransactions.getTransactions();
       setCashTransactions(transactionsData || []);
-      
-      // Refresh related sales and debts to update their status
+
+      // Refresh related sales and debts to reflect updated status
       await refreshSalesData();
       await refreshDebtsData();
-      
+
       return result;
     } catch (err) {
       console.error('Error updating check:', err);
@@ -705,33 +714,41 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const updateBoleto = async (boletoData: any) => {
     try {
       const { id, ...updateData } = boletoData;
-     const oldBoleto = boletos.find(b => b.id === id);
+      const oldBoleto = boletos.find(b => b.id === id);
       const result = await supabaseServices.boletos.update(id, updateData);
-      
-      // Refresh only boletos data for better performance
+
+      // Refresh boletos data
       const boletosData = await supabaseServices.boletos.getBoletos();
       setBoletos(boletosData || []);
-      
-     // Handle cash balance update for status changes
-     if (oldBoleto && updateData.status && oldBoleto.status !== updateData.status) {
-       const { CashBalanceService } = await import('../lib/cashBalanceService');
-       await CashBalanceService.handleBoletoPayment(
-         { ...oldBoleto, ...updateData }, 
-         oldBoleto.status, 
-         updateData.status
-       );
-     }
-     
-      // Also refresh cash data since boleto updates might affect cash
+
+      // Handle cash balance update and parent status sync for status changes
+      if (oldBoleto && updateData.status && oldBoleto.status !== updateData.status) {
+        const { CashBalanceService } = await import('../lib/cashBalanceService');
+        await CashBalanceService.handleBoletoPayment(
+          { ...oldBoleto, ...updateData },
+          oldBoleto.status,
+          updateData.status
+        );
+
+        // Force recalculation of parent sale/debt status via DB function
+        if (oldBoleto.saleId) {
+          await StatusCalculationService.syncSaleStatus(oldBoleto.saleId);
+        }
+        if (oldBoleto.debtId) {
+          await StatusCalculationService.syncDebtStatus(oldBoleto.debtId);
+        }
+      }
+
+      // Refresh cash data
       const balanceData = await supabaseServices.cashBalance.getCurrentBalance();
       setCashBalance(balanceData);
       const transactionsData = await supabaseServices.cashTransactions.getTransactions();
       setCashTransactions(transactionsData || []);
-      
-      // Refresh related sales and debts to update their status
+
+      // Refresh related sales and debts to reflect updated status
       await refreshSalesData();
       await refreshDebtsData();
-      
+
       return result;
     } catch (err) {
       console.error('Error updating boleto:', err);
