@@ -213,53 +213,6 @@ export const enhancedSalesService = {
         console.error('❌ Error creating credit card sale:', creditCardError);
       }
 
-      // Process acertos for sales
-      try {
-        for (const method of sanitizedSale.paymentMethods || []) {
-          if (method.type === 'acerto') {
-            const clientName = method.acertoClientName === '__novo__' || !method.acertoClientName
-              ? sanitizedSale.client
-              : method.acertoClientName;
-
-            const { data: existingAcerto, error: acertosError } = await supabase
-              .from('acertos')
-              .select('*')
-              .eq('client_name', clientName)
-              .eq('type', 'cliente')
-              .maybeSingle();
-
-            if (acertosError && acertosError.code !== 'PGRST116') {
-              console.error('❌ Error finding existing acerto:', acertosError);
-            }
-
-            if (existingAcerto) {
-              const newTotal = safeNumber(existingAcerto.total_amount, 0) + safeNumber(method.amount, 0);
-              const newPending = safeNumber(existingAcerto.pending_amount, 0) + safeNumber(method.amount, 0);
-              await supabase
-                .from('acertos')
-                .update({ total_amount: newTotal, pending_amount: newPending, updated_at: new Date().toISOString() })
-                .eq('id', existingAcerto.id);
-            } else {
-              await supabase
-                .from('acertos')
-                .insert({
-                  client_name: clientName,
-                  type: 'cliente',
-                  total_amount: safeNumber(method.amount, 0),
-                  paid_amount: 0,
-                  pending_amount: safeNumber(method.amount, 0),
-                  payment_installments: 1,
-                  payment_installment_value: safeNumber(method.amount, 0),
-                  payment_interval: 30,
-                  status: 'pendente'
-                });
-            }
-          }
-        }
-      } catch (acertoError) {
-        console.error('❌ Error processing acerto for sale:', acertoError);
-      }
-
       // Register delivery event in agenda if delivery date exists
       if (sanitizedSale.deliveryDate) {
         try {

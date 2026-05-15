@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, CreditCard as Edit, Trash2, Eye, Clock, DollarSign, Calendar, AlertCircle, X, Building2, CreditCard, FileText, Users, Receipt, ChevronDown, ChevronRight } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAppContext } from '../context/AppContext';
 import { Acerto } from '../types';
 import { AcertoForm } from './forms/AcertoForm';
@@ -18,7 +19,8 @@ export function Acertos() {
     createAcerto,
     updateAcerto,
     deleteAcerto,
-    updateDebt
+    updateDebt,
+    loadAllData
   } = useAppContext();
   
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -112,12 +114,12 @@ export function Acertos() {
         );
 
         console.log('✅ Acerto payment processed successfully');
-        alert('Pagamento registrado com sucesso!');
+        toast.success('Pagamento registrado com sucesso!');
         setPaymentAcerto(null);
-        window.dispatchEvent(new CustomEvent('acertoDataChanged'));
+        await loadAllData();
       } catch (error: any) {
         console.error('❌ Error processing acerto payment:', error);
-        alert('Erro ao registrar pagamento: ' + (error.message || 'Erro desconhecido'));
+        toast.error('Erro ao registrar pagamento: ' + (error.message || 'Erro desconhecido'));
       }
     }
   };
